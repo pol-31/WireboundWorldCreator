@@ -1,0 +1,72 @@
+MOVEMENT:
+cursor always show (default OS cursor); cam move arbitrary over the window and beyong;
+movement: wasd (always) for position movement, but for camera need to hold
+  pressed mouse_btn_3 (scroll pressed) -- while pressed glfw_cursor_hide and centered (disabled?)
+
+
+
+1) N points (let's take 64 points max, so its uniform(?) vec2[64])
+2) while choosing points we draw GL_LINE_LOOP(smt like this).
+3) for the area inside the lines (then can we draw GL_POLYGONE) we get bool for each cell
+inside the duplicate_height_map and take its max/(or little bit lower?) and fill it.
+4) flood fill path: for each pixel around we check is there any pixels with higher height and contains water. If yes - we fill it again. We run it untill there's no changes.
+!!! We can check changes simply using XOR operation on array of these _prev_ and _cur_.
+So we pass this compute shader multiple times.
+5) get hew height map (approximate - no material).
+5.1) __ how can we take into account its mass/avg_height or smt?
+6) NEXT_STAGE - fixing underlying terrain... (coming soon)
+
+TOTAL: GL_POLYGONE + picking_id of polygon -> collect all {pos_x, pos_y, id}
+THEN SPENCIL/CSIRROS test?? Hm....................... looks like an idea....
+but still we need to generate mesh.... ...or just height map is enough? hope so
+
+
+
+GL_POLYGON is deprecated, but we simply use GL_TRIANGLE_FAN.
+We don't need a mesh (simply not used), but we need height map (both for render and grapr repres.).
+
+
+(all lines rather draw with tessellated convex spline, but height map with the same resolution)
+(to draw "rivers" we GL_TRIANGLE_STRAP with N = simply amount? indirect draw? -idk
+
+
+OPENGL TYPES??!!!!!!!!!!!!!!!???!!!!
+
+
+
+
+
+
+
+
+
+
+STAGE 1:
+render all terrain to framebuffer;
+each terrain height has an id which we render in PickingStage to uint texture;
+set points (either one or multiple: if multiple - we create ngon with adding vertices by ccw order);
+terrain[cursor_pos_x][cursor_pos_y] + flood fill - HOW? Idk let's think...;
+
+STAGE 2: point modification ...
+STAGE 3: bake to mesh ...
+
+
+1) click -> GetCurPos() -> CurPosToWorldSpace() -> GetTerrainHeightByPos() -> SetTerrainHeight(pos) -> update terrain height map both on CPU and GPU
+2) set N points as a n-gon and fill it with water clamping to the tile size (terrain tile) +
++ flood fill algo
+
+___
+water represented as a graph, where root is initial point and child nodes are where water was filled:
+- if water is stable/calm (sigle height value) we have one point/node, while
+different height points transformed to different nodes.
+- Resolution is the same as terarin resolution.
+
+for each graph node we can modify its: width, 3d position(including depth)
+
++ material (but it's later)
+
+___
+we don't need just modify the height, but see its possible water result
+
+
+
