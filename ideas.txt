@@ -33,10 +33,24 @@ We don't need a mesh (simply not used), but we need height map (both for render 
 OPENGL TYPES??!!!!!!!!!!!!!!!???!!!!
 
 
+(180 degrees = surface; 90 degrees = straight down (max - we have terrain-surface no Y-overlapp))
+slope == 180							|	calm water
+slope <180 && > 120 (30)	|	river
+slope < 120								| waterfall
 
+at this stage we don't have flow map (will be generated), so lets assign:
+waterfall - fast scroll _flow_tex_ (depends on degree) with dark-blue attenuation;
+river - fast scroll _flow_tex_ (depends on degree) with mid-blue attenuation;
+calm water - no scroll _flow_tex_ with light-blue attenuation;
 
-
-
+^
+|
+|
+NOW (two compute shaders from ChatGPT)
+NOW
+NOW
+NOW
+NOW
 
 
 

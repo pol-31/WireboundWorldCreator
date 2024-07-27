@@ -15,9 +15,10 @@ creating water roads. Because all Wirebound placement is procedural,
 we can also see all such objects in real-time with set-up shaders.
 
 Goal (borowed from [Water Rendering in Far Cry 5](https://www.youtube.com/watch?v=4oDtGnQNCx4&list=PPSV)):
-![desired_result.png](assets/desired_result.png)
+![desired_result.png](progress/desired_result.png)
 
 Current:
-![current_result.png](assets/current_result.png)
+![current_result.png](progress/June27.png)
 
+(FloodFill algorithm bug)
 Don't worry, I'll take it :]

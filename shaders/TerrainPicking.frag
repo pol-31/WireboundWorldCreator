@@ -1,8 +1,9 @@
 #version 460 core
 
-out vec4 vert_data;
-in vec4 in_vert_data;
+out uint id;
+flat in uint vert_id;
 
 void main(void) {
-    vert_data = in_vert_data;
+    // Provoking Vertex's id
+    id = vert_id;
 }

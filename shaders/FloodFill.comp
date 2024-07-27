@@ -1,0 +1,43 @@
+#version 430
+
+// TODO: currently wrong and not in use
+//  (now processed on CPU because of a lot of if branches)
+
+layout(local_size_x = 32, local_size_y = 32) in;
+//layout(binding = 0, r32f) uniform image2D terrainHeightMap;
+//layout(binding = 1, r32f) uniform image2D waterHeightMap;
+
+void main() {
+    /*ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+
+    float terrainHeight = imageLoad(terrainHeightMap, coords).r;
+    float waterHeight = imageLoad(waterHeightMap, coords).r;
+
+    if (waterHeight == 0.0) {
+        float newHeight = 0.0;
+        int count = 0;
+
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                if (x == 0 && y == 0) continue;
+
+                ivec2 neighborCoords = coords + ivec2(x, y);
+                float neighborHeight = imageLoad(waterHeightMap, neighborCoords).r;
+
+                if (neighborHeight > 0.0) {
+                    newHeight += neighborHeight;
+                    count++;
+                }
+            }
+        }
+
+        if (count > 0) {
+            newHeight /= count;
+            imageStore(newWaterHeightMap, coords, vec4(newHeight));
+        } else {
+            imageStore(newWaterHeightMap, coords, vec4(0.0));
+        }
+    } else {
+        imageStore(newWaterHeightMap, coords, vec4(waterHeight));
+    }*/
+}
