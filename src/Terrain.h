@@ -279,7 +279,6 @@ class Terrain {
         return false;
       }
     }
-    std::cout << "returned true" << std::endl;
     return true;
   }
 
@@ -326,10 +325,10 @@ class Terrain {
   void FloodFillCPUPass() {
     int total_changed = 0;
     //TODO; can we rewrite it with compute shader?..
-    GLuint cur_water_height, cur_terrain_height,
+    std::uint8_t cur_water_height, cur_terrain_height,
         near_water_height, near_terrain_height;
-    for (int y = 0; y < 1024; ++y) {
-      for (int x = 0; x < 1024; ++x) {
+    for (int y = 1; y < 1023; ++y) {
+      for (int x = 1; x < 1023; ++x) {
         int cur_idx = y * 1024 + x;
         cur_water_height = water_heights_[cur_idx];
         if (cur_water_height == 0) {
@@ -338,7 +337,9 @@ class Terrain {
         cur_terrain_height = terrain_heights_[cur_idx];
         for (int i = -1; i <= 1; ++i) {
           for (int j = -1; j <= 1; ++j) {
-            //TODO: borders !!!
+            if (i == 0 && j == 0) {
+              continue;
+            }
             int near_idx = cur_idx + i * 1024 + j;
             near_water_height = water_heights_[near_idx];
             near_terrain_height = terrain_heights_[near_idx];
@@ -350,15 +351,14 @@ class Terrain {
               } else {
                 new_water_height = near_terrain_height +
                                    (cur_water_height - cur_terrain_height);
+                new_water_height = std::min(int(new_water_height), int(cur_water_height));
               }
-              if (water_heights_[near_water_height] !=
-                  static_cast<std::uint8_t>(
-                      std::max(cur_water_height, new_water_height))) {
+              if (near_water_height < new_water_height) {
                 ++total_changed;
-                water_heights_[near_water_height] =
-                    static_cast<std::uint8_t>(
-                        std::max(cur_water_height, new_water_height));
+                water_heights_[near_idx] =
+                    static_cast<std::uint8_t>(new_water_height);
               }
+              // TODO: we can add here "volume" and how high from starting point
             }
           }
         }
@@ -367,6 +367,19 @@ class Terrain {
     }
     std::cout << "total changed: " << total_changed << std::endl;
   }
+
+  // TODO:
+  //  - we render water separately from terrain (we have different shaders)
+  //  - we have few FloodFill algorithms: Pond/River/Waterfall
+  //  - we have std::vector<std::vector<GLuint>> water_headers_; to draw
+  //    multiple water areas. GLFW_KEY_0-9 to switch (chosen highlighted in shader)
+  //  - we can remove/add new header, but after each such move we recalculate all water
+  /**
+   generate 3 types: pond (take the highest point and fill everything below),
+   river(inside the polygon generate pond, but the take bottom
+   height of pond and for outside point if height less than
+   pond bottom - reduce water height on difference), waterfall(fill only below)
+   */
 
   void FloodFill(const std::vector<Point>& water_points) {
     water_heights_.resize(terrain_heights_.size(), 0);
@@ -381,6 +394,7 @@ class Terrain {
       FloodFillCPUPass();
       std::cout << "-------__--__---___-___--__--___-_flood fill iteration# "
                 << ++counter << std::endl;
+//    } while (counter <= 100);
     } while (!IsWaterHeightMapGenCompleted());
     water_height_map_.Bind();
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED,

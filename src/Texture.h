@@ -1,9 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC__TEXTURE_H_
 #define WIREBOUNDWORLDCREATOR_SRC__TEXTURE_H_
 
-#include <memory>
 #include <string_view>
-
 
 #include <glad/glad.h>
 
@@ -16,13 +14,15 @@ class Texture {
   explicit Texture(GLuint opengl_id, GLsizei width,
                    GLsizei height, GLint format);
 
-  Texture(const Texture& other) = default;
-  Texture& operator=(const Texture& other);
+  Texture(const Texture& other) = delete;
+  Texture& operator=(const Texture& other) = delete;
 
-  Texture(Texture&& other) noexcept = default;
+  Texture(Texture&& other) noexcept;
   Texture& operator=(Texture&& other) noexcept;
 
-  ~Texture();
+  ~Texture() {
+    DeInit();
+  }
 
   // technically it's not const, because internal data
   // can be affected by other OpenGL functions
@@ -53,36 +53,12 @@ class Texture {
 
  private:
   void Init(std::string_view path);
-
-  void DeleteTexture();
-
-  /// we need only counter
-  std::shared_ptr<void> copies_counter_{}; // TODO: is it deprecated
+  void DeInit();
 
   GLuint opengl_id_{0};
   GLsizei width_{0};
   GLsizei height_{0};
   GLint format_{0};
-};
-
-class TextureRef {
- public:
-  constexpr TextureRef() = default;
-
-  [[nodiscard]] constexpr GLuint GetId() const {
-    return id_;
-  }
-
-  constexpr void SetId(GLuint id) {
-    id_ = id;
-  }
-
-  void Bind() const {
-    glBindTexture(GL_TEXTURE_2D, id_);
-  }
-
- private:
-  GLuint id_{0};
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC__TEXTURE_H_

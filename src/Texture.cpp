@@ -67,40 +67,26 @@ void Texture::Init(std::string_view path) {
     throw std::runtime_error("Failed to load texture");
   }
   stbi_image_free(data);
-  copies_counter_ = std::make_shared<int>(0);
 }
 
-Texture& Texture::operator=(const Texture& other) {
-  if (other.opengl_id_ == this->opengl_id_) {
-    return *this;
-  }
-  DeleteTexture();
-  copies_counter_ = other.copies_counter_;
+Texture::Texture(Texture&& other) noexcept {
   opengl_id_ = other.opengl_id_;
+  other.opengl_id_ = 0;
   width_ = other.width_;
   height_ = other.height_;
   format_ = other.format_;
-  return *this;
 }
-
 Texture& Texture::operator=(Texture&& other) noexcept {
-  DeleteTexture();
   opengl_id_ = other.opengl_id_;
+  other.opengl_id_ = 0;
   width_ = other.width_;
   height_ = other.height_;
   format_ = other.format_;
-  copies_counter_ = other.copies_counter_;
   return *this;
 }
 
-void Texture::DeleteTexture() {
-  if (copies_counter_.use_count() == 1) {
-    glDeleteTextures(1, &opengl_id_);
-  }
-}
-
-Texture::~Texture() {
-  DeleteTexture();
+void Texture::DeInit() {
+  glDeleteTextures(1, &opengl_id_);
 }
 
 void Texture::Bind() const {

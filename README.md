@@ -18,7 +18,9 @@ Goal (borowed from [Water Rendering in Far Cry 5](https://www.youtube.com/watch?
 ![desired_result.png](progress/desired_result.png)
 
 Current:
-![current_result.png](progress/June27.png)
+![progress/June28.png](progress/June28.png)
 
-(FloodFill algorithm bug)
+Ui scratch:
+![ui.png](ui.png)
+
 Don't worry, I'll take it :]
