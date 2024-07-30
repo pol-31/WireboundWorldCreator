@@ -7,6 +7,7 @@
 #include "GlWrappers.h"
 
 /// tex_id + tex_coords wrapper, that NOT OWNS texture id (otherwise unnecessary overhead)
+/// doesn't keep position, so it should bind from the outside
 class Sprite {
  public:
   Sprite(const Texture& tex, const TexCoords& tex_coords)

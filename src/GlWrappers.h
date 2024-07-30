@@ -14,16 +14,17 @@ class GlWrapperBase {
  public:
   constexpr GlWrapperBase() = default;
 
-  /*constexpr explicit GlWrapperBase(const Rectangle& rect) {
-    data_[0] = rect.right;
-    data_[1] = rect.bottom;
-    data_[2] = rect.right;
-    data_[3] = rect.top;
-    data_[4] = rect.left;
-    data_[5] = rect.bottom;
-    data_[6] = rect.left;
-    data_[7] = rect.top;
-  }*/
+  constexpr GlWrapperBase(float left, float right,
+                          float top, float bottom) {
+    data_[0] = right;
+    data_[1] = bottom;
+    data_[2] = right;
+    data_[3] = top;
+    data_[4] = left;
+    data_[5] = bottom;
+    data_[6] = left;
+    data_[7] = top;
+  }
 
   [[nodiscard]] float Width() const {
     return data_[0] - data_[6];
@@ -56,6 +57,8 @@ class GlWrapperBase {
 class TexCoords : public GlWrapperBase {
  public:
   constexpr TexCoords() = default;
+
+  using GlWrapperBase::GlWrapperBase;
 
   void Bind() const {
     glBufferSubData(GL_ARRAY_BUFFER, details::kTexPositionSize,

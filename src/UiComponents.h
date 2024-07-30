@@ -1,29 +1,49 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_UICOMPONENTS_H_
 #define WIREBOUNDWORLDCREATOR_SRC_UICOMPONENTS_H_
 
-#include <cmath>
+#include <array>
 #include <vector>
 
 #include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include "Shader.h"
 #include "Sprite.h"
+#include "Aabb.h"
+
+/// the rest of the "potential" ui components has single usage across
+/// all modes, so they were directly embedded to modes
 
 //TODO: this like sprite... and... with Contains() method... idk how to name
 /// class used for all "buttons", so here we render and say, was cursor_pos click on it
 class UiCollisionSprite {
  public:
-  bool Contains(); // based on position
+  UiCollisionSprite(const Texture& tex, const TexCoords& tex_coords)
+      : sprite_(tex, tex_coords), pos_() {}
 
-  //TODO: shader should be already bind? ... let's give an appropriate name
-  bool Bind(const Shader& already_bind_shader) {
-    already_bind_shader.SetUniformMat2v("transform", 1, false, glm::value_ptr(pos_));
-    sprite_.Bind(); // here bind both tex_id_ and tex_coords_
+  UiCollisionSprite(const Texture& tex, const TexCoords& tex_coords,
+                    glm::mat2 pos)
+      : sprite_(tex, tex_coords), pos_(pos) {
+    ComputeAabb();
   }
 
+  void SetPosition(glm::mat2 pos) {
+    pos_ = pos;
+    ComputeAabb();
+  }
+
+  [[nodiscard]] bool Contains(glm::vec2 pos) const {
+    return aabb_.DoContain(pos);
+  }
+
+  void ComputeAabb();
+
+  void Render(const Shader& already_bind_shader);
+
+  void Bind(const Shader& already_bind_shader);
+
  private:
-  glm::mat2 pos_; // mat2 is enough, because we need only scale and transform in 2d (no rotation)
+  glm::mat2 pos_;
+  TexCoordsAabb aabb_;
   Sprite sprite_;
 };
 
@@ -32,76 +52,112 @@ class UiCollisionSprite {
 // don't store buttons, only idx, which MUST be invalidated with Add() or Remove()
 class UiSlots {
  public:
-  // render only ui component
-  // vao, vbo of single rectangular texture as well as shader
-  void Render(const Shader& shader) {
-    shader.SetUniform("brightness", 0.5f); // for all non-selected
-    if (total_ < 5) {
-      //TODO: we need gray
-    }
-    if (selected_ != -1) {
-      //TODO: how to... brightness!
-      shader.SetUniform("brightness", 1.0f);
-    }
-    // there's 6 colors in total: black, orange, green, red, blue, grey (details:: ?);
-    // where grey means "empty slot".
-    // all painted by modulus, so if start_idx == 0, we have black, orange, green, red, blue,
-    // while for start_idx == 3, we have red, blue, black, orange, green
+  struct GraphNode {
+    /// let's keep it as much simpler as possible;
+    /// for water always children.size() == 1 (I could bear it to another
+    /// class, but I'm too lazy for it now)
+    GraphNode* parent{nullptr};
+    std::vector<GraphNode> children;
+    GLuint id;
+  };
 
-    //TODO: for this purpose we can simply use one 1x5 texture and GL_REPEAT on GL_WRAP_S
+  struct Slot {
+    UiCollisionSprite sprite;
+    glm::vec4 color;
+  };
+
+  /// not std::map, because we don't need to add/remove single points,
+  /// only modify their positions
+  using PointSetType = std::vector<GraphNode>;
+
+  UiSlots(const TexPosition& position, const Texture& tex)
+      : btn_next_(tex, details::kBtnSlotsNext),
+        btn_prev_(tex, details::kBtnSlotsPrev),
+        slots_({{UiCollisionSprite(tex, details::kBtnSlot), {}},
+                {UiCollisionSprite(tex, details::kBtnSlot), {}},
+                {UiCollisionSprite(tex, details::kBtnSlot), {}},
+                {UiCollisionSprite(tex, details::kBtnSlot), {}},
+                {UiCollisionSprite(tex, details::kBtnSlot)}}) {
+    InitPositions(position);
+    InitColors();
   }
 
-  // returns id of point_set, so caller MODE could set it
-  int Press() { // this function called from GlfwCallback on GLFW_MOUSE_LEFT && GLFW_PRESS
-    if (cur_pos.y < btn_next.y) {
-      if (total_ - start_idx > 5) {
-        ++start_idx_;
-      }
-      selected_ = -1; // reset current_point_set
-    } else if (cur_pos.y < btn_prev.y) {
-      if (start_idx > 0) {
-        --start_idx_;
-      }
-      selected_ = -1; // reset current_point_set
-    } else {
-      //TODO:
-      /*if (<10) {} else if (<20) {} else if ... () <100 // wrt non-existing
-            selected_ = "1-5";*/
-    }
+  // vao, vbo of single rectangular texture as well as shader
+  void Render(const Shader& shader);
+
+  // this function called from GlfwCallback on GLFW_MOUSE_LEFT && GLFW_PRESS
+  /// returns idx of point_set
+  int Press(glm::vec2 pos);
+
+  /// we can't open "raw mode" in any other way except AddNew;
+  /// we can't modify existing set of point, but only its graph representation;
+
+  /// how graph is crated:
+  /// water (assume it's circle-like) is one 1:1 graph (may be looped)
+
+
+  /// we it only for adding a new point set, not a point to already existent,
+  /// because if we baked, we already have all needed points (for each
+  /// terrain grid), while unbaked just can't be saved - consequently modified
+  void Add(PointSetType new_point_set);
+
+  void Remove(int idx);
+
+  [[nodiscard]] const std::vector<PointSetType>& GetPointSets() const {
+    return point_sets_;
+  }
+
+  [[nodiscard]] int GetSelectedIdx() const {
     return selected_;
   }
 
-  // after each Add() or Remove() from the outside we should update it
-  void Add() {
-    selected_ = total_;
-    ++total_;
-    start_idx_ = std::max(total_ - 5, 0);
-  }
-  void Remove() {
-    if (total_ < 1) {
-      return;
-    }
-    --total_;
-    start_idx_ = std::max(total_ - 5, 0);
-    selected_ = -1;
-  }
-
- protected:
-  // point_sets_ as protected or as public in getter const& ?
  private:
-  TexPosition position_; // where to draw
+  void InitPositions(const TexPosition& position);
 
-  // 1x5 colors for each slow tigh GL_WRAP_S==GL_REPEAT; color_grey set in shader...
-  // no, let's use single texture and the same shader as static_sprite_shader;
-  Texture texture_;
+  void InitColors();
 
-  int total_{0};
+  UiCollisionSprite btn_next_;
+  UiCollisionSprite btn_prev_;
+  std::array<Slot, 5> slots_;
+
   int selected_{-1};
   int start_idx_{0}; // from where in view to start
 
-  std::vector<std::vector<GLuint>> point_sets_; // point idx in ccw order, convex polygons only
+  std::vector<PointSetType> point_sets_;
 };
 
-class UiSlider; // TODO:
+/// used to set amount of points captured by
+/// single vertex transform (falloff, radius)
+class UiSlider {
+ public:
+  UiSlider(const TexPosition& position, const Texture& tex)
+      : sprite_max_threshold_(tex, details::kBtnSliderMax),
+        sprite_min_threshold_(tex, details::kBtnSliderMin),
+        sprite_slider_obj_(tex, details::kBtnSliderObjLow),
+        slider_area_(tex, details::kBtnSliderArea) {
+    InitPositions(position);
+    SetProgress(0.0f);
+  }
+
+  void Render(const Shader& shader);
+
+  [[nodiscard]] float GetProgress() const {
+    return progress_;
+  }
+
+  void SetProgress(float progress);
+
+ private:
+  void InitPositions(const TexPosition& position);
+
+  //TODO: we don't use collision here, can be optimized
+  UiCollisionSprite sprite_max_threshold_;
+  UiCollisionSprite sprite_min_threshold_;
+  UiCollisionSprite sprite_slider_obj_;
+
+  UiCollisionSprite slider_area_;
+
+  float progress_{0.0f}; // [0;1]
+};
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_UICOMPONENTS_H_

@@ -1,0 +1,19 @@
+#version 460 core
+
+// invoke for each pixel of 1024x1024
+
+uniform vec2 draw_point;
+
+//TODO: rather GL_RED texture than buffer
+layout(binding = 0) buffer HeightMap {
+  uint height; //ubyte?
+} height_map;
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+void main() {
+    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+    float length = length(draw_point - coords);
+
+    height_map[coords.y][coords.x] = mix(0, max_height_value, Distribute(length));
+}

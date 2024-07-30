@@ -18,6 +18,9 @@
 
 #include "GlobalGlfwCallbackData.h"
 
+#include "UiComponents.h"
+#include "UiCore.h"
+
 void RunLoop(GLFWwindow* window) {
   Shader shader_static_sprite("../shaders/StaticSprite.vert",
                               "../shaders/StaticSprite.frag");

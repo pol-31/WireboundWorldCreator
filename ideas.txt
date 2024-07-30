@@ -53,6 +53,9 @@ NOW
 NOW
 
 
+we don't have check-box on/off (because it's not descriptive), but draw icon for each button
+and adjust transparency/color/brightness for selected and non-selected
+
 
 
 STAGE 1:
