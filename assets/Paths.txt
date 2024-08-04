@@ -1,0 +1,32 @@
+* this file contains all paths used in WireboundWorldCreator;
+* the main purpose is to achieve dynamic textures/shaders/etc updating
+* without rebuilding and recompiling the application;
+* what field names are allowed, see at src/PathsParses.h
+* lines without "equal" sign are ignored
+
+texture_ui=../assets/ui.png
+texture_text=../assets/Text.png
+shader_ui_vert=../shaders/StaticSprite.vert
+shader_ui_frag=../shaders/StaticSprite.frag
+texture_cursor=../assets/cursor.png
+shader_cubemap_vert=../shaders/Skybox.vert
+shader_cubemap_frag=../shaders/Skybox.frag
+shader_terrain_vert=../shaders/Terrain.vert
+shader_terrain_frag=../shaders/Terrain.frag
+shader_terrain_picking_vert=../shaders/TerrainPicking.vert
+shader_terrain_picking_frag=../shaders/TerrainPicking.frag
+world_map=../assets/AllTiles.txt
+
+texture_skybox1_right=../assets/skybox/sky_right.jpg
+texture_skybox1_left=../assets/skybox/sky_left_.jpg
+texture_skybox1_top=../assets/skybox/sky_top.jpg
+texture_skybox1_bottom=../assets/skybox/sky_bottom.jpg
+texture_skybox1_front=../assets/skybox/sky_front.jpg
+texture_skybox1_back=../assets/skybox/sky_back.jpg
+
+texture_skybox2_right=../assets/skybox/hills_right.tga
+texture_skybox2_left=../assets/skybox/hills_left_.tga
+texture_skybox2_top=../assets/skybox/hills_top.tga
+texture_skybox2_bottom=../assets/skybox/hills_bottom.tga
+texture_skybox2_front=../assets/skybox/hills_front.tga
+texture_skybox2_back=../assets/skybox/hills_back.tga

@@ -1,0 +1,33 @@
+* such file should be fed as a program argument, but for debug we use this file;
+* we've added number to accelerate parsing/comparing;
+* tile_pos_x, tile_pos_y can't be empty, while all other can;
+* what we need for each tile (terrain material depends on tile::biomes):
+* - terrain (height_map; 3 erosion: wear, flow, deposition; cavity(ssao), ao)
+* - water (height_map, flow_map, text_file: graph point id:pos:traits)
+* - roads (text_file: graph point id:pos:traits)
+* - fences (text_file: graph point id:pos:traits)
+* - placement (4: tree, bush, tall grass, undergrowth)
+* - objects (text_file: pos(sorted_by), id, rotation, (scale? - don't think so))
+* - biomes (text_file: id, pos(sorted_by))
+* - tile_id (global x,y with the centre in 0;0)
+*
+1_tile_pos_x=0
+2_tile_pos_y=0
+3_terrain_height_map=../assets/terrain/map_terrain_height.png
+4_terrain_erosion_wear=../assets/terrain/map_erosion_wear.png
+5_terrain_erosion_flow=../assets/terrain/map_erosion_flow.png
+6_terrain_erosion_deposition=../assets/terrain/map_erosion_deposition.png
+7_terrain_cavity=
+8_terrain_ao=../assets/terrain/map_terrain_occlusion.png
+9_water_height_map=
+10_water_flow_map=
+11_water_graph_data=
+12_roads_graph_data=
+13_roads_fences=
+14_placement_trees=
+15_placement_bushes=
+16_placement_tall_grass=
+17_placement_undergrowth=
+18_objects_points_data=
+19_biomes_points_data=
+--- --- delimiter --- ---
