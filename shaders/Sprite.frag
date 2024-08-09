@@ -10,8 +10,9 @@ uniform vec3 color;
 out vec4 FragColor;
 
 void main() {
-    vec3 texel = texture(tex_bitmap_ascii, texcoord);
-    texel = mix(texel, color);
-    texel *= brightness;
-    FragColor = vec4(texel, transparency);
+//    vec3 texel = texture(tex, texcoord).xyz;
+//    texel = mix(texel, color, 0.5f);
+//    texel *= brightness;
+//    FragColor = vec4(texel, transparency);
+    FragColor = texture(tex, texcoord);
 }

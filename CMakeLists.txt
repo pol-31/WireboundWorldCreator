@@ -17,10 +17,18 @@ add_subdirectory(external EXCLUDE_FROM_ALL)
 
 add_executable(WireboundWorldCreator
         src/main.cpp
-        src/Shader.cpp
-        src/Cursor.cpp
-        src/Texture.cpp
-        src/SetupWindow.cpp
+        src/common/Shader.cpp
+        src/common/Texture.cpp
+        src/core/Interface.cpp
+        src/core/Tile.cpp
+        src/core/TileRenderer.cpp
+        src/core/Ui.cpp
+        src/core/WireboundWorldCreator.cpp
+        src/io/Camera.cpp
+        src/io/Cursor.cpp
+        src/io/Window.cpp
+        src/modes/SharedResources.cpp
+        src/modes/TerrainMode.cpp
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

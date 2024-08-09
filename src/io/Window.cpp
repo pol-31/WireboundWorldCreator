@@ -1,25 +1,20 @@
 #include "Window.h"
 
+#include <iostream>
+
+#include "../common/Details.h"
+#include "../common/GlobalGlfwCallbackData.h"
+
 float lastX = static_cast<float>(details::kWindowWidth) / 2.0;
 float lastY = static_cast<float>(details::kWindowHeight) / 2.0;
 
-float delta_time = 0.0f;
+float gDeltaTime = 0.0f;
 float last_frame = 0.0f;
 
 GLFWwindow* gWindow = nullptr;
 
 void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
   glViewport(0, 0, width, height);
-}
-
-void CallbackScroll(GLFWwindow* window, double xoffset, double yoffset) {
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
-  if (yoffset < 0.0f) {
-    global_data->renderer_.DownScale();
-  } else {
-    global_data->renderer_.UpScale();
-  }
 }
 
 void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {
@@ -34,81 +29,36 @@ void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {
   camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
-
-// TODO: each mode has its own versions of these two:
-//   CallbackMouseButton, CallbackKey. BUT:
-//  because GLFW needs function which is not a method (isn't it?), so
-//  we need dynamic cast
-
-// this callback is for terrain, so we dynamic cast it
-void CallbackMouseButton(GLFWwindow* window, int button,
-                         int action, int mods) {
-  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
-  auto* cur_mode = global_data->GetCurMode();
-  auto terrain = dynamic_cast<TerrainMode>(cur_mode);
-  //TODO: here related to TerrainMode functionality/calls like selecting point
-  // and their moving, slider
-  if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
-    void* global_data = glfwGetWindowUserPointer(window);
-    Cursor& cursor = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->cursor_;
-    cursor.SwitchMode(window);
-  } else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-    // TODO: identify is it a button or terrain and then remember/ignore, etc...
-    // TODO: identify is it a button or terrain and then remember/ignore, etc...
-    // TODO: identify is it a button or terrain and then remember/ignore, etc...
-    // TODO: identify is it a button or terrain and then remember/ignore, etc...
-    // TODO: identify is it a button or terrain and then remember/ignore, etc...
-    // TODO: identify is it a button or terrain and then remember/ignore, etc...
-//    if (mouse_btn_pressed) { global_data.tab_pressed_? menu.Press() : cur_mode->Press()
-
-
-    // we've updated cursor pos at Renderer::RunRenderLoop iteration,
-    // so now just use it
-    auto point_data = global_data->terrain.GetHeightId(
-        global_data->renderer_.GetMousePos());
-    terrain->SelectPoint(point_data);
-
-  }
-}
-void CallbackKey(GLFWwindow* window, int key,
-                 int scancode, int action, int mods) {
+/// wasd movement (for debugging purposes)
+/// each IEditMode has its own set of callbacks (scroll, mouse / keyboard btn),
+/// so they are bind at mode switching (Menu.h)
+void WasdKeyCallback(GLFWwindow* window, int key,
+                     int scancode, int action, int mods) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(window);
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
   if (action == GLFW_PRESS) {
-    if (key == GLFW_KEY_ESCAPE) {
+    std::cout << "moove" << std::endl;
+    if (key == GLFW_KEY_W) {
+      global_data->camera_.SetMoveForward();
+    } else if (key == GLFW_KEY_A) {
+      global_data->camera_.SetMoveLeft();
+    } else if (key == GLFW_KEY_S) {
+      global_data->camera_.SetMoveBackward();
+    } else if (key == GLFW_KEY_D) {
+      global_data->camera_.SetMoveRight();
+    } else if (key == GLFW_KEY_ESCAPE) {
       glfwSetWindowShouldClose(window, true);
-    } else if (key == GLFW_KEY_LEFT_SHIFT) {
-      global_data->camera_.SpeedUp();
-    } else if (key == GLFW_KEY_BACKSPACE) {
-      global_data->terrain_.ClearPoints();
-    } else if (key == GLFW_KEY_ENTER) {
-      global_data->terrain_.Bake();
-    } else if (key == GLFW_KEY_TAB) {
-      global_data->tab_pressed_ = true;
     }
   } else if (action == GLFW_RELEASE) {
-    if (key == GLFW_KEY_LEFT_SHIFT) {
-      global_data->camera_.SlowDown();
-    } else if (key == GLFW_KEY_TAB) {
-      global_data->tab_pressed_ = false;
+    if (key == GLFW_KEY_W) {
+      global_data->camera_.UnSetMoveForward();
+    } else if (key == GLFW_KEY_A) {
+      global_data->camera_.UnSetMoveLeft();
+    } else if (key == GLFW_KEY_S) {
+      global_data->camera_.UnSetMoveBackward();
+    } else if (key == GLFW_KEY_D) {
+      global_data->camera_.UnSetMoveRight();
     }
-  }
-}
-
-void ProcessInput(GLFWwindow* window, Camera& camera) {
-  float velocity = camera.GetSpeed() * delta_time;
-  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-    camera.MoveForward(velocity);
-  }
-  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-    camera.MoveBackward(velocity);
-  }
-  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-    camera.MoveLeft(velocity);
-  }
-  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-    camera.MoveRight(velocity);
   }
 }
 
@@ -219,11 +169,9 @@ void SetupWindow() {
     throw std::runtime_error("Failed to create GLFW window");
   }
   glfwMakeContextCurrent(gWindow);
-  glfwSetKeyCallback(gWindow, CallbackKey);
-  glfwSetMouseButtonCallback(gWindow, CallbackMouseButton);
+  glfwSetKeyCallback(gWindow, WasdKeyCallback);
   glfwSetCursorPosCallback(gWindow, CallbackCursorPos);
   glfwSetFramebufferSizeCallback(gWindow, CallbackFramebufferSize);
-  glfwSetScrollCallback(gWindow, CallbackScroll);
 
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     throw std::runtime_error("Failed to initialize GLAD");

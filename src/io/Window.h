@@ -1,17 +1,11 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC__SETUPWINDOW_H_
 #define WIREBOUNDWORLDCREATOR_SRC__SETUPWINDOW_H_
 
-#include <iostream>
-
 #define GLFW_INCLUDE_NONE
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "Details.h"
-
 #include "Camera.h"
-#include "Terrain.h"
-#include "GlobalGlfwCallbackData.h"
 
 /// we made this variable global, because to GLFW internally uses functions
 /// related to some global state/object, therefore callback functions or those,
@@ -29,7 +23,7 @@ extern GLFWwindow* gWindow;
 /// for the same reason. Moreover here it's absolutely safe
 extern float lastX;
 extern float lastY;
-extern float delta_time;
+extern float gDeltaTime;
 extern float last_frame;
 
 //TODO; maybe we can remove global variables, but this is not for now
@@ -39,17 +33,10 @@ void SetupWindow();
 
 void CallbackFramebufferSize(GLFWwindow* window, int width, int height);
 
-void CallbackScroll(GLFWwindow* window, double xoffset, double yoffset);
-
 void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos);
 
-void CallbackMouseButton(GLFWwindow* window, int button,
-                         int action, int mods);
-
-void CallbackKey(GLFWwindow* window, int key,
-                   int scancode, int action, int mods);
-
-void ProcessInput(GLFWwindow* window, Camera& camera);
+void WasdKeyCallback(GLFWwindow* window, int key,
+                     int scancode, int action, int mods);
 
 void APIENTRY glDebugOutput(
     GLenum source, GLenum type, GLuint id,

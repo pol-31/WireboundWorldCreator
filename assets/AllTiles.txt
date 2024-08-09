@@ -10,24 +10,52 @@
 * - objects (text_file: pos(sorted_by), id, rotation, (scale? - don't think so))
 * - biomes (text_file: id, pos(sorted_by))
 * - tile_id (global x,y with the centre in 0;0)
-*
-1_tile_pos_x=0
-2_tile_pos_y=0
-3_terrain_height_map=../assets/terrain/map_terrain_height.png
-4_terrain_erosion_wear=../assets/terrain/map_erosion_wear.png
-5_terrain_erosion_flow=../assets/terrain/map_erosion_flow.png
-6_terrain_erosion_deposition=../assets/terrain/map_erosion_deposition.png
-7_terrain_cavity=
-8_terrain_ao=../assets/terrain/map_terrain_occlusion.png
-9_water_height_map=
-10_water_flow_map=
-11_water_graph_data=
-12_roads_graph_data=
-13_roads_fences=
-14_placement_trees=
-15_placement_bushes=
-16_placement_tall_grass=
-17_placement_undergrowth=
-18_objects_points_data=
-19_biomes_points_data=
+* To separate tiles data write "equal" in a row
+* everything without sign "equal" is ignored
+* all data fields (order arbitrary):
+* pos_x
+* pos_y
+* map_terrain_height
+* map_erosion_wear
+* map_erosion_flow
+* map_erosion_deposition
+* map_terrain_cavity
+* map_terrain_occlusion
+* map_terrain_normal
+* map_terrain_wetness
+* map_water_height
+* map_water_flow
+* graph_water
+* graph_roads
+* graph_fences
+* map_placement_trees
+* map_placement_bushes
+* map_placement_tall_grass
+* map_placement_undergrowth
+* points_objects
+* points_biomes
 --- --- delimiter --- ---
+pos_x=0
+pos_y=0
+map_terrain_height=../assets/terrain/map_terrain_height.png
+map_erosion_wear=../assets/terrain/map_erosion_wear.png
+map_erosion_flow=../assets/terrain/map_erosion_flow.png
+map_erosion_deposition=../assets/terrain/map_erosion_deposition.png
+map_terrain_occlusion=../assets/terrain/map_terrain_occlusion.png
+=
+pos_x=1
+pos_y=0
+map_terrain_height=../assets/terrain/map_terrain_height.png
+map_erosion_wear=../assets/terrain/map_erosion_wear.png
+map_erosion_flow=../assets/terrain/map_erosion_flow.png
+map_erosion_deposition=../assets/terrain/map_erosion_deposition.png
+map_terrain_occlusion=../assets/terrain/map_terrain_occlusion.png
+=
+pos_x=2
+pos_y=0
+terrain_height_map=../assets/terrain/map_terrain_height.png
+terrain_erosion_wear=../assets/terrain/map_erosion_wear.png
+terrain_erosion_flow=../assets/terrain/map_erosion_flow.png
+terrain_erosion_deposition=../assets/terrain/map_erosion_deposition.png
+terrain_ao=../assets/terrain/map_terrain_occlusion.png
+=
