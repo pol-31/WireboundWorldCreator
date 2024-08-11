@@ -5,57 +5,47 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../modes/TerrainMode.h"
+#include "../modes/WaterMode.h"
 #include "../common/Colors.h"
 
-[[nodiscard]] bool UiButton::AabbContains(glm::vec2 position) const {
-  return position.x >= GetLeftBorder() && position.x <= GetRightBorder() &&
-         position.y <= GetTopBorder() && position.y >= GetBottomBorder();
+void UiButton::Render() const {
+  glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
-void UiButton::Render() const {
-  shader_.Bind();
-  glDrawArrays(GL_TRIANGLE_STRIP, vbo_offset_, 4);
+void UiButton::RenderPicking(const Shader& picking_shader) const {
+  picking_shader.SetUniform("id", static_cast<uint32_t>(ui_data_.id));
+  glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
 // see src/vbos/UiDataMain.h for explanation
 float UiButton::GetLeftBorder() const {
-  return details::kUiVboDataMain[vbo_offset_ + 8];
+  return details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 8];
 }
 
 float UiButton::GetRightBorder() const {
-  return details::kUiVboDataMain[vbo_offset_];
+  return details::kUiVboDataMain[ui_data_.vbo_offset * 4];
 }
 
 float UiButton::GetTopBorder() const {
-  return details::kUiVboDataMain[vbo_offset_ + 5];
+  return details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 5];
 }
 
 float UiButton::GetBottomBorder() const {
-  return details::kUiVboDataMain[vbo_offset_ + 1];
+  return details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 1];
 }
 
-void UiButtonTerrainModeBake::Press(glm::vec2 position [[maybe_unused]]) {
-  terrain_mode_.Bake();
+void UiSliderHandle::Render(const Shader& slider_shader) const {
+  slider_shader.Bind();
+  slider_shader.SetUniform("pos_y_down_offset_", pos_y_down_offset_);
+  glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
-void UiButtonTerrainModeSmooth::Press(glm::vec2 position [[maybe_unused]]) {
-  terrain_mode_.SwitchSmooth();
-}
-
-void UiSliderHandle::Render() const {
-  shader_.Bind();
-  shader_.SetUniform("pos_y_down_offset_", pos_y_down_offset_);
-  glDrawArrays(GL_TRIANGLE_STRIP, vbo_offset_, 4);
-}
-
-UiSlots::UiSlots(const Shader& shader, std::string_view description,
-                 PointDataType points_data, UiStaticSprite& btn_next,
-                 UiStaticSprite& btn_prev, UiStaticSprite& slot1,
-                 UiStaticSprite& slot2, UiStaticSprite& slot3,
-                 UiStaticSprite& slot4, UiStaticSprite& slot5,
+UiSlots::UiSlots(PointDataType points_data, UiButton&& btn_next,
+                 UiButton&& btn_prev, UiButton&& slot1,
+                 UiButton&& slot2, UiButton&& slot3,
+                 UiButton&& slot4, UiButton&& slot5,
                  int& edit_mode_selected_sample_id)
-    : IUi(shader, description),
-      points_data_(points_data),
+    : points_data_(points_data),
       btn_next_(btn_next),
       btn_prev_(btn_prev),
       slot1_(slot1),
@@ -64,103 +54,75 @@ UiSlots::UiSlots(const Shader& shader, std::string_view description,
       slot4_(slot4),
       slot5_(slot5),
       edit_mode_selected_sample_id_(edit_mode_selected_sample_id) {
-  InitAabb();
   InitColors();
 }
 
-bool UiSlots::AabbContains(glm::vec2 position) const {
-  return position.x >= aabb_.left && position.x <= aabb_.right &&
-         position.y <= aabb_.top && position.y >= aabb_.bottom;
-}
-
-void UiSlots::Render() const {
-  shader_.SetUniform("brightness", 1.0f);
+void UiSlots::Render(const Shader& shader) const {
+//  shader_.SetUniform("brightness", 1.0f);
   btn_next_.Render();
   btn_prev_.Render();
-
-  //TODO: smells a little bit...
-  RenderSlot(slot1_, 0);
-  RenderSlot(slot2_, 1);
-  RenderSlot(slot3_, 2);
-  RenderSlot(slot4_, 3);
-  RenderSlot(slot5_, 4);
-
-  //TODO: render points
+  //TODO: maybe we should pass shader to ctor?
+  RenderSlot(shader, slot1_, 0);
+  RenderSlot(shader, slot2_, 1);
+  RenderSlot(shader, slot3_, 2);
+  RenderSlot(shader, slot4_, 3);
+  RenderSlot(shader, slot5_, 4);
 }
 
-//TODO: binary search / bvh
-void UiSlots::Press(glm::vec2 position) {
-  if (slot1_.AabbContains(position)) {
+void UiSlots::RenderPicking(const Shader& shader) const {
+  btn_next_.RenderPicking(shader);
+  btn_prev_.RenderPicking(shader);
+  slot1_.RenderPicking(shader);
+  slot2_.RenderPicking(shader);
+  slot3_.RenderPicking(shader);
+  slot4_.RenderPicking(shader);
+  slot5_.RenderPicking(shader);
+}
+
+bool UiSlots::Press(std::uint32_t id) {
+  //TODO: bvh
+  if (id == slot1_.GetId()) {
     edit_mode_selected_sample_id_ = start_idx_ + 0;
-  } else if (slot2_.AabbContains(position)) {
+  } else if (id == slot2_.GetId()) {
     edit_mode_selected_sample_id_ = start_idx_ + 1;
-  } else if (slot3_.AabbContains(position)) {
+  } else if (id == slot3_.GetId()) {
     edit_mode_selected_sample_id_ = start_idx_ + 2;
-  } else if (slot4_.AabbContains(position)) {
+  } else if (id == slot4_.GetId()) {
     edit_mode_selected_sample_id_ = start_idx_ + 3;
-  } else if (slot5_.AabbContains(position)) {
+  } else if (id == slot5_.GetId()) {
     edit_mode_selected_sample_id_ = start_idx_ + 4;
-  } else if (btn_next_.AabbContains(position)) {
+  } else if (id == btn_next_.GetId()) {
     if (start_idx_ + 5 < points_data_.size()) {
       ++start_idx_;
     }
-  } else if (btn_prev_.AabbContains(position)) {
+  } else if (id == btn_prev_.GetId()) {
     if (start_idx_ > 0) {
       --start_idx_;
     }
-  }
-}
-
-//TODO: binary search / bvh
-std::string_view UiSlots::Hover(glm::vec2 position) const {
-  if (slot1_.AabbContains(position)) {
-    return slot1_.Hover(position);
-  } else if (slot2_.AabbContains(position)) {
-    return slot2_.Hover(position);
-  } else if (slot3_.AabbContains(position)) {
-    return slot3_.Hover(position);
-  } else if (slot4_.AabbContains(position)) {
-    return slot4_.Hover(position);
-  } else if (slot5_.AabbContains(position)) {
-    return slot5_.Hover(position);
-  } else if (btn_next_.AabbContains(position)) {
-    return btn_next_.Hover(position);
-  } else if (btn_prev_.AabbContains(position)) {
-    return btn_prev_.Hover(position);
   } else {
-    return {};
+    return false;
   }
+  return true;
 }
 
-void UiSlots::InitAabb() {
-  std::array<float, 7> borders{
-      btn_next_.GetLeftBorder(), btn_prev_.GetLeftBorder(),
-      slot1_.GetLeftBorder(), slot2_.GetLeftBorder(),
-      slot3_.GetLeftBorder(), slot4_.GetLeftBorder(),
-      slot5_.GetLeftBorder()
-  };
-  aabb_.left = *std::min(borders.begin(), borders.end());
-  borders = {
-      btn_next_.GetRightBorder(), btn_prev_.GetRightBorder(),
-      slot1_.GetRightBorder(), slot2_.GetRightBorder(),
-      slot3_.GetRightBorder(), slot4_.GetRightBorder(),
-      slot5_.GetRightBorder()
-  };
-  aabb_.right = *std::max(borders.begin(), borders.end());
-  borders = {
-      btn_next_.GetTopBorder(), btn_prev_.GetTopBorder(),
-      slot1_.GetTopBorder(), slot2_.GetTopBorder(),
-      slot3_.GetTopBorder(), slot4_.GetTopBorder(),
-      slot5_.GetTopBorder()
-  };
-  aabb_.top = *std::max(borders.begin(), borders.end());
-  borders = {
-      btn_next_.GetBottomBorder(), btn_prev_.GetBottomBorder(),
-      slot1_.GetBottomBorder(), slot2_.GetBottomBorder(),
-      slot3_.GetBottomBorder(), slot4_.GetBottomBorder(),
-      slot5_.GetBottomBorder()
-  };
-  aabb_.bottom = *std::min(borders.begin(), borders.end());
+std::string_view UiSlots::Hover(std::uint32_t id) const {
+  //TODO: bvh
+  if (id == btn_next_.GetId()) {
+    return btn_next_.Hover();
+  } else if (id == btn_prev_.GetId()) {
+    return btn_prev_.Hover();
+  } else if (id == slot1_.GetId()) {
+    return slot1_.Hover();
+  } else if (id == slot2_.GetId()) {
+    return slot2_.Hover();
+  } else if (id == slot3_.GetId()) {
+    return slot3_.Hover();
+  } else if (id == slot4_.GetId()) {
+    return slot4_.Hover();
+  } else if (id == slot5_.GetId()) {
+    return slot5_.Hover();
+  }
+  return {};
 }
 
 void UiSlots::InitColors() {
@@ -174,31 +136,30 @@ void UiSlots::InitColors() {
   colors_[7] = colors::kLightGrey;
 }
 
-void UiSlots::RenderSlot(UiStaticSprite& slot, int i) const {
+void UiSlots::RenderSlot(
+    const Shader& shader, const UiButton& slot, int i) const {
   if (start_idx_ + i == edit_mode_selected_sample_id_) {
-    shader_.SetUniform("brightness", 0.5f);
+    shader.SetUniform("brightness", 0.5f);
   } else {
-    shader_.SetUniform("brightness", 1.0f);
+    shader.SetUniform("brightness", 1.0f);
   }
   if (points_data_.size() - 1 > start_idx_ + i) {
-    int pos_in_slots = i & colors_.size();
-    shader_.SetUniformVec4(
+    int pos_in_slots = static_cast<int>(i & colors_.size());
+    shader.SetUniformVec4(
         "color", 1, glm::value_ptr(colors_[pos_in_slots]));
   } else {
-    shader_.SetUniformVec4(
+    shader.SetUniformVec4(
         "color", 1, glm::value_ptr(colors::kBlack));
   }
   slot.Render();
 }
 
 UiBiomesList::UiBiomesList(
-    const Shader& shader, std::string_view description,
     int vbo_offset_tex_cell, int vbo_offset_tex_all,
-    int total_num, int vbo_pos_offset, int instances_num)
-    : IUi(shader, description) {}
+    int total_num, int vbo_pos_offset, int instances_num) {}
 
 //TODO; binary search again
-void UiBiomesList::Press(glm::vec2 position) {
+void UiBiomesList::Press(glm::vec2 position, std::uint32_t id) {
   //TODO: return instanced id or -1
   //  affects cur_page_offset_
   //TODO: check like binary search (from the centre) - we can allow ourselves to do so
@@ -212,121 +173,55 @@ void UiBiomesList::Render() const {
   //TODO: render points
 }
 
-std::string_view UiBiomesList::Hover(glm::vec2 position) const {
+std::string_view UiBiomesList::Hover(std::uint32_t id) const {
+  return {};
   //TODO:
 }
 
 UiSlider::UiSlider(
-    const Shader& shader, std::string_view description,
-    UiStaticSprite&& min_handle, UiStaticSprite&& max_handle,
-    UiStaticSprite&& track, UiSliderHandle&& handle)
-    : IUi(shader, description),
-      min_handle_(min_handle),
+    UiButton&& min_handle, UiButton&& max_handle,
+    UiButton&& track, UiSliderHandle&& handle)
+    : min_handle_(min_handle),
       max_handle_(max_handle),
       track_(track),
       handle_(handle) {
-  InitAabb();
+  height_ = track_.GetTopBorder() - track_.GetBottomBorder();
 }
 
-bool UiSlider::AabbContains(glm::vec2 position) const {
-  return position.x >= aabb_.left && position.x <= aabb_.right &&
-         position.y <= aabb_.top && position.y >= aabb_.bottom;
-}
-
-void UiSlider::Render() const {
+void UiSlider::Render(const Shader& sprite_shader, const Shader& slider_shader) const {
+  sprite_shader.Bind();
   min_handle_.Render();
   max_handle_.Render();
   track_.Render();
-  handle_.Render();
+  slider_shader.Bind();
+  handle_.Render(slider_shader);
+}
+void UiSlider::RenderPicking(const Shader& picking_shader) const {
+  track_.RenderPicking(picking_shader);
+  // there's no point in rendering picking for the rest nested components
 }
 
-std::string_view UiSlider::Hover(glm::vec2 position) const {
-  if (min_handle_.AabbContains(position)) {
-    return min_handle_.Hover(position);
-  } else if (max_handle_.AabbContains(position)) {
-    return max_handle_.Hover(position);
-  } else if (track_.AabbContains(position)) {
-    return track_.Hover(position);
-  } else if (handle_.AabbContains(position)) {
-    return handle_.Hover(position);
-  } else {
-    return {};
+std::string_view UiSlider::Hover(std::uint32_t id) const {
+  //TODO: bvh
+  if (id == min_handle_.GetId()) {
+    return min_handle_.Hover();
+  } else if (id == max_handle_.GetId()) {
+    return max_handle_.Hover();
+  } else if (id == track_.GetId()) {
+    return track_.Hover();
+  } else if (id == handle_.GetId()) {
+    return handle_.Hover();
   }
-}
-
-void UiSlider::Press(glm::vec2 position) {
-  std::cout << "we don't use it" << std::endl;
-  /*if (!TrackAreaAabbContains(position)) {
-    return;
-  }
-  progress_ = (position.y - track_.GetBottomBorder()) / height_;
-  handle_.SetPositionOffset(progress_, -height_ * progress_);*/
+  return {};
 }
 
 void UiSlider::UpdateSliderPos(glm::vec2 position) {
   float new_y_pos = std::clamp(position.y, track_.GetBottomBorder(),
                                track_.GetTopBorder());
   progress_ = (new_y_pos - track_.GetBottomBorder()) / height_;
-  handle_.SetPositionOffset(progress_, -height_ * progress_);
+  handle_.SetPositionOffset(progress_, progress_ * height_);
 }
 
-void UiSlider::InitAabb() {
-  std::array<float, 4> borders{
-      min_handle_.GetLeftBorder(), max_handle_.GetLeftBorder(),
-      track_.GetLeftBorder(), handle_.GetLeftBorder()
-  };
-  aabb_.left = *std::min(borders.begin(), borders.end());
-  borders = {
-      min_handle_.GetRightBorder(), max_handle_.GetRightBorder(),
-      track_.GetRightBorder(), handle_.GetRightBorder()
-  };
-  aabb_.right = *std::max(borders.begin(), borders.end());
-  borders = {
-      min_handle_.GetTopBorder(), max_handle_.GetTopBorder(),
-      track_.GetTopBorder(), handle_.GetTopBorder()
-  };
-  aabb_.top = *std::max(borders.begin(), borders.end());
-  borders = {
-      min_handle_.GetBottomBorder(), max_handle_.GetBottomBorder(),
-      track_.GetBottomBorder(), handle_.GetBottomBorder()
-  };
-  aabb_.bottom = *std::min(borders.begin(), borders.end());
-
-  height_ = track_.GetTopBorder() - track_.GetBottomBorder();
-}
-
-bool UiSlider::TrackAreaAabbContains(glm::vec2 position) {
-  return position.x >= track_.GetLeftBorder() &&
-         position.x <= track_.GetRightBorder() &&
-         position.y <= track_.GetTopBorder() &&
-         position.y >= track_.GetBottomBorder();
-}
-
-void BvhNode::Render() const {
-  left_child_->Render();
-  right_child_->Render();
-}
-
-void BvhNode::Press(glm::vec2 position) {
-  if (left_child_->AabbContains(position)) {
-    left_child_->Press(position);
-  } else if (right_child_->AabbContains(position)) {
-    right_child_->Press(position);
-  }
-}
-
-std::string_view BvhNode::Hover(glm::vec2 position) const {
-  if (left_child_->AabbContains(position)) {
-    return left_child_->Hover(position);
-  } else if (right_child_->AabbContains(position)) {
-    return right_child_->Hover(position);
-  } else {
-    return {};
-  }
-}
-
-//TODO: each Edit Mode stores this rather that std::vector
-//  as an acceleration structure for Press() and Hover()
-BvhNode* GenBvhHierarchy(std::vector<IUi*> components) {
-  // sah by Y-coord?
+std::uint32_t UiSlider::GetTrackId() const {
+  return track_.GetId();
 }

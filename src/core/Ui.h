@@ -12,7 +12,11 @@
 #include "../common/ArbitraryGraph.h"
 #include "../common/Shader.h"
 #include "../common/Colors.h"
-#include "../vbos/UiDataMain.h"
+#include "../common/Vbos.h"
+
+//TODO: we can accelerate our search by binary search, but
+//  looks like the best way to do this is "in-place" binary search and
+//  direct if-else branching
 
 /** All components stores vbo offset and provides AABB-like functions:
  * GetLeftBorder(), GetRightBorder(), GetTopBorder(), GetBottomBorder()
@@ -21,60 +25,33 @@
  * everything on the right side before ui_component.GetRightBorder()
  * */
 
-struct Aabb {
-  float left{std::numeric_limits<float>::max()};
-  float right{std::numeric_limits<float>::min()};
-  float top{std::numeric_limits<float>::min()};
-  float bottom{std::numeric_limits<float>::max()};
-};
+/// if function doesn't have shader in parameters,
+/// you should bind it before the call
 
-// TODO: at program init we create button,
-//  put it to std::vector<IUiBase all_buttons_ and then pass it as a pointer
-//  to composite ui components or bvh (SIMPLE POINTER).
-//  BUT need guarantee destruction safety
-//TODO: NO, we store it locally for each edit mode
-//   - there's no need to make it global
-
-class IUi {
+class UiButton {
  public:
-  IUi(const Shader& shader, std::string_view description)
-      : shader_(shader),
-        description_(description) {}
-  virtual ~IUi() = default;
+  UiButton(std::string_view description,
+           UiData ui_data)
+      : description_(description),
+        ui_data_(ui_data) {}
 
-  [[nodiscard]] virtual bool AabbContains(glm::vec2 position) const = 0;
-
-  virtual void Render() const = 0;
-
-  /// we still need position for UiSlider (set progress) or composite
-  /// ui components to check AabbContains(pos) and only then Press()
-  virtual void Press(glm::vec2 position) = 0;
+  void Render() const;
 
   /// returns description & draw outlining / draw with higher brightness, etc
-  [[nodiscard]] virtual std::string_view Hover(glm::vec2 position) const {
+  [[nodiscard]] virtual std::string_view Hover() const {
     return description_;
   }
 
- protected:
-  const Shader& shader_;
+  /// when we operate on arrays of buttons we don't want
+  /// bind the same shader 20 times, so this function don't bind shader
+  //TODO: inilne
+  void RenderPicking(const Shader& picking_shader) const;
 
-  /// comparing to Wirebound, here we add description for each button,
-  /// which showed in some specific area externally
-  std::string_view description_;
-};
-
-class UiButton : public IUi {
- public:
-  UiButton(const Shader& shader, std::string_view description,
-           int vbo_offset)
-      : IUi(shader, description),
-        vbo_offset_(vbo_offset) {}
-
-  [[nodiscard]] bool AabbContains(glm::vec2 position) const override;
-
-  void Render() const override;
-
-  void Press(glm::vec2 position) override = 0;
+  //TODO: looks like we don't need it
+  /// we still need position for UiSlider (set progress) or composite
+  /// ui components to check id and only then Press();
+  /// position is needed for ui components like slider
+  /// void Press(glm::vec2 position, std::uint32_t id) = 0;
 
   [[nodiscard]] float GetLeftBorder() const;
 
@@ -84,55 +61,25 @@ class UiButton : public IUi {
 
   [[nodiscard]] float GetBottomBorder() const;
 
+  [[nodiscard]] std::uint32_t GetId() const {
+    return ui_data_.id;
+  }
+
  protected:
-  int vbo_offset_{0};
-};
-
-class TerrainMode;
-
-class UiButtonTerrainModeBake final : public UiButton {
- public:
-  UiButtonTerrainModeBake(
-      const Shader& shader, std::string_view description,
-      int vbo_offset, TerrainMode& terrain_mode)
-      : UiButton(shader, description, vbo_offset),
-        terrain_mode_(terrain_mode) {}
-
-  void Press(glm::vec2 position) override;
-
- private:
-  TerrainMode& terrain_mode_;
-};
-
-class UiButtonTerrainModeSmooth final : public UiButton {
- public:
-  UiButtonTerrainModeSmooth(
-      const Shader& shader, std::string_view description,
-      int vbo_offset, TerrainMode& terrain_mode)
-      : UiButton(shader, description, vbo_offset),
-        terrain_mode_(terrain_mode) {}
-
-  void Press(glm::vec2 position [[maybe_unused]]) override;
-
- private:
-  TerrainMode& terrain_mode_;
-};
-
-class UiStaticSprite final : public UiButton {
- public:
-  using UiButton::UiButton;
-  void Press(glm::vec2 position) override {}
+  /// comparing to Wirebound, here we add description for each button,
+  /// which showed in some specific area externally
+  std::string_view description_;
+  UiData ui_data_;
 };
 
 class UiSliderHandle final : public UiButton {
  public:
-  UiSliderHandle(const Shader& shader, std::string_view description,
-                 int vbo_offset, float& edit_mode_progres_ref)
-      : UiButton(shader, description, vbo_offset),
+  UiSliderHandle(std::string_view description,
+                 UiData ui_data, float& edit_mode_progres_ref)
+      : UiButton(description, ui_data),
         edit_mode_progres_ref_(edit_mode_progres_ref) {}
 
-  void Press(glm::vec2 position) override {}
-  void Render() const override;
+  void Render(const Shader& slider_shader) const;
 
   void SetPositionOffset(float progress, float pos_offset) {
     edit_mode_progres_ref_ = progress;
@@ -144,44 +91,40 @@ class UiSliderHandle final : public UiButton {
   float& edit_mode_progres_ref_;
 };
 
-class UiSlots final : public IUi {
+/// to check was it pressed see UiSlots::Press(id)
+class UiSlots {
  public:
   using PointDataType = const std::vector<ArbitraryGraph::Point>&;
-  UiSlots(const Shader& shader, std::string_view description,
-          PointDataType points_data, UiStaticSprite& btn_next,
-          UiStaticSprite& btn_prev, UiStaticSprite& slot1,
-          UiStaticSprite& slot2, UiStaticSprite& slot3,
-          UiStaticSprite& slot4, UiStaticSprite& slot5,
+  UiSlots(PointDataType points_data, UiButton&& btn_next,
+          UiButton&& btn_prev, UiButton&& slot1,
+          UiButton&& slot2, UiButton&& slot3,
+          UiButton&& slot4, UiButton&& slot5,
           int& edit_mode_selected_sample_id);
 
-  [[nodiscard]] bool AabbContains(glm::vec2 position) const override;
+  void Render(const Shader& shader) const;
+  void RenderPicking(const Shader& shader) const;
 
-  void Render() const override;
+  /// return true if there was a button with such id
+  bool Press(std::uint32_t id);
 
-  void Press(glm::vec2 position) override;
-
-  [[nodiscard]] std::string_view Hover(glm::vec2 position) const override;
+  [[nodiscard]] std::string_view Hover(std::uint32_t id) const;
 
  private:
-  void InitAabb();
-
   void InitColors();
 
-  void RenderSlot(UiStaticSprite& slot, int i) const;
+  void RenderSlot(const Shader& shader, const UiButton& slot, int i) const;
 
   std::array<glm::vec4, 8> colors_{};
 
   //TODO: array of pointers IUi* + sort by Y and then binary search
-  UiStaticSprite& btn_next_;
-  UiStaticSprite& btn_prev_;
+  UiButton btn_next_;
+  UiButton btn_prev_;
 
-  UiStaticSprite& slot1_;
-  UiStaticSprite& slot2_;
-  UiStaticSprite& slot3_;
-  UiStaticSprite& slot4_;
-  UiStaticSprite& slot5_;
-
-  Aabb aabb_;
+  UiButton slot1_;
+  UiButton slot2_;
+  UiButton slot3_;
+  UiButton slot4_;
+  UiButton slot5_;
 
   // we don't own it and all what we need it its size (dynamically)
   PointDataType points_data_;
@@ -191,17 +134,16 @@ class UiSlots final : public IUi {
 
 // UiBiomesList, UiObjectTable, UiTilesMap all use instanced vbo
 // from stc/vbos/UiDataInstanced.h
-class UiBiomesList final : public IUi {
+class UiBiomesList {
  public:
-  UiBiomesList(const Shader& shader, std::string_view description,
-               int vbo_offset_tex_cell, int vbo_offset_tex_all,
+  UiBiomesList(int vbo_offset_tex_cell, int vbo_offset_tex_all,
                int total_num, int vbo_pos_offset, int instances_num);
 
-  void Press(glm::vec2 position) override;
+  void Press(glm::vec2 position, std::uint32_t id);
 
-  void Render() const override;
+  void Render() const;
 
-  std::string_view Hover(glm::vec2 position) const override;
+  std::string_view Hover(std::uint32_t id) const;
 
  private:
   int cur_page_offset_{-1}; // when scrolling pages
@@ -212,59 +154,34 @@ class UiObjectTable {};
 class UiTilesMap {};
 
 /// used to set amount of points captured by
-/// single vertex transform (falloff, radius)
-//TODO: looks like we don't need inheritance here
-class UiSlider final : public IUi {
+/// single vertex transform (falloff, radius).
+/// To deduce was it pressed you should use GetTrackId() and compare
+class UiSlider {
  public:
-  UiSlider(const Shader& shader, std::string_view description,
-           UiStaticSprite&& min_handle, UiStaticSprite&& max_handle,
-           UiStaticSprite&& track, UiSliderHandle&& handle);
+  UiSlider(UiButton&& min_handle, UiButton&& max_handle,
+           UiButton&& track, UiSliderHandle&& handle);
 
-  [[nodiscard]] bool AabbContains(glm::vec2 position) const override;
+  void Render(const Shader& sprite_shader, const Shader& slider_shader) const;
+  void RenderPicking(const Shader& picking_shader) const;
 
-  void Render() const override;
-
-  [[nodiscard]] std::string_view Hover(glm::vec2 position) const override;
-
-  void Press(glm::vec2 position) override;
+  [[nodiscard]] std::string_view Hover(std::uint32_t id) const;
 
   void UpdateSliderPos(glm::vec2 position);
 
-  bool TrackAreaAabbContains(glm::vec2 position);
+  /// UiSlider has the same id as a track_, so it's like its wrapper.
+  /// We don't render UiSlider id, but
+  /// for comparison (e.g. in key callback) we directly slider.GetId()
+  [[nodiscard]] std::uint32_t GetTrackId() const;
 
  private:
-  void InitAabb();
-
-  const UiStaticSprite& min_handle_;
-  const UiStaticSprite& max_handle_;
-  const UiStaticSprite& track_;
-  UiSliderHandle& handle_;
-
-  Aabb aabb_;
+  UiButton min_handle_;
+  UiButton max_handle_;
+  UiButton track_;
+  UiSliderHandle handle_;
 
   /// to not to calculate it each time at Press()
   float height_{0.0f};
   float progress_{0.0f}; // [0;1]
 };
-
-class BvhNode {
- public:
-  explicit BvhNode(IUi* left_child, IUi* right_child)
-      : left_child_(left_child), right_child_(right_child) {}
-
-  void Render() const;
-
-  void Press(glm::vec2 position);
-
-  std::string_view Hover(glm::vec2 position) const;
-
- private:
-  IUi* left_child_;
-  IUi* right_child_;
-};
-
-//TODO: each Edit Mode stores this rather that std::vector
-//  as an acceleration structure for Press() and Hover()
-BvhNode* GenBvhHierarchy(std::vector<IUi*> components);
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_UI_H_
