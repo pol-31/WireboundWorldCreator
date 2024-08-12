@@ -132,26 +132,43 @@ class UiSlots {
   int& edit_mode_selected_sample_id_;
 };
 
-// UiBiomesList, UiObjectTable, UiTilesMap all use instanced vbo
-// from stc/vbos/UiDataInstanced.h
+/// UiBiomesList, UiObjectTable, UiTilesMap all use instanced vbo
+/// from stc/vbos/UiDataInstanced.h
+
+/// to check was it pressed see UiSlots::Press(id)
 class UiBiomesList {
  public:
-  UiBiomesList(int vbo_offset_tex_cell, int vbo_offset_tex_all,
-               int total_num, int vbo_pos_offset, int instances_num);
-
-  void Press(glm::vec2 position, std::uint32_t id);
+  // vbo_offset for instanced
+  UiBiomesList(int vbo_offset, int instances_num,
+               UiButton&& btn_next, UiButton&& btn_prev);
 
   void Render() const;
+  void RenderPicking() const;
+
+  /// return true if there was a button with such id
+  bool Press(std::uint32_t id);
 
   std::string_view Hover(std::uint32_t id) const;
 
  private:
+  int vbo_offset_;
+  int instances_num_;
+
+  UiButton btn_next_;
+  UiButton btn_prev_;
+
+  int cur_page_offset_{-1}; // when scrolling pages
+  int selected_id_{-1}; // from 0 to 8 (8 biomes at once)
+};
+
+class UiObjectTable {
   int cur_page_offset_{-1}; // when scrolling pages
   int selected_id_{-1}; // from 0 to 8x4 (if we have n=8x4 buttons)
 };
-
-class UiObjectTable {};
-class UiTilesMap {};
+class UiTilesMap {
+  int cur_page_offset_{-1}; // when scrolling pages
+  int selected_id_{-1}; // from 0 to 6x6 (if we have n=6x6 tiles at once)
+};
 
 /// used to set amount of points captured by
 /// single vertex transform (falloff, radius).

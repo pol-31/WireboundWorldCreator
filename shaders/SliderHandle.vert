@@ -7,6 +7,9 @@ uniform float pos_y_down_offset_;
 out vec2 texcoords;
 
 void main() {
-    gl_Position = vec4(in_position.x, in_position.y - pos_y_down_offset_, 0.0f, 1.0f);
+    gl_Position = vec4(
+      in_position.x, in_position.y + pos_y_down_offset_,
+      -1.0f, 1.0f
+    );
     texcoords = in_texcoord;
 }

@@ -5,14 +5,14 @@ uniform sampler2D tex;
 
 uniform float transparency;
 uniform float brightness;
-uniform vec3 color;
+uniform vec4 color;
 
 out vec4 FragColor;
 
 void main() {
-//    vec3 texel = texture(tex, texcoord).xyz;
-//    texel = mix(texel, color, 0.5f);
-//    texel *= brightness;
-//    FragColor = vec4(texel, transparency);
-    FragColor = texture(tex, texcoord);
+    vec4 texel = texture(tex, texcoord);
+//    texel *= color;
+    texel *= brightness;
+    FragColor = texel;
+//    FragColor = texture(tex, texcoord);
 }

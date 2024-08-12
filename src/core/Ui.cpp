@@ -154,28 +154,45 @@ void UiSlots::RenderSlot(
   slot.Render();
 }
 
+/*
 UiBiomesList::UiBiomesList(
-    int vbo_offset_tex_cell, int vbo_offset_tex_all,
-    int total_num, int vbo_pos_offset, int instances_num) {}
+    int vbo_offset, int instances_num,
+    UiButton&& btn_next, UiButton&& btn_prev)
+    : vbo_offset_(vbo_offset),
+      instances_num_(instances_num),
+      points_data_(points_data),
+      btn_next_(btn_next),
+      btn_prev_(btn_prev),
+      edit_mode_selected_sample_id_(edit_mode_selected_sample_id) {
+  // vao has been already created at shared_resources initialization
+}
+*/
 
-//TODO; binary search again
-void UiBiomesList::Press(glm::vec2 position, std::uint32_t id) {
-  //TODO: return instanced id or -1
-  //  affects cur_page_offset_
-  //TODO: check like binary search (from the centre) - we can allow ourselves to do so
+/*TODO:
+ * instanced draw:
+_pass_1: draw boxes (simply draw with the same sprites but different positions);
+_pass_2: draw possible biomes (if less - simply don't draw - the same for picking)
+
+_pass_picking: only _pass_2:
+    */
+void UiBiomesList::Render() const {
+  btn_next_.Render();
+  btn_prev_.Render();
+//  TODO: vao_.Bind(); here?
+  glDrawArraysInstanced(GL_TRIANGLE_STRIP, vbo_offset_, 4, instances_num_);
 }
 
-void UiBiomesList::Render() const {
-  //TODO:
-  // render non-existing cells (tex - black)
-  // render non-selected cells (brightness - 0.5f)
-  // render selected cell (brightness 1.0f)
-  //TODO: render points
+void UiBiomesList::RenderPicking() const {
+  //
+}
+
+/// return true if there was a button with such id
+bool UiBiomesList::Press(std::uint32_t id) {
+  //
 }
 
 std::string_view UiBiomesList::Hover(std::uint32_t id) const {
-  return {};
-  //TODO:
+  //
 }
 
 UiSlider::UiSlider(

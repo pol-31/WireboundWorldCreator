@@ -1,19 +1,22 @@
 #include "SharedResources.h"
 
-#include "../vbos/AllVbos.h"
+#include "../common/Vbos.h"
 #include "../core/TileRenderer.h"
 
 SharedResources::SharedResources(
     const Paths& paths, TileRenderer& tile_renderer_,
-    GlobalGlfwCallbackData& global_glfw_callback_data_)
+    GlobalGlfwCallbackData& global_glfw_callback_data)
     : tex_text_(paths.texture_text),
       tex_ui_(paths.texture_ui),
       static_sprite_shader(paths.shader_static_sprite_vert,
                            paths.shader_static_sprite_frag),
+      //TODO: move to paths
+      global_glfw_callback_data_(global_glfw_callback_data),
+      static_sprite_picking_shader(paths.shader_static_sprite_pick_vert,
+                                   paths.shader_static_sprite_pick_frag),
       slider_handle_shader(paths.shader_slider_handle_vert,
                            paths.shader_slider_handle_frag),
-      tile_renderer(tile_renderer_),
-      global_glfw_callback_data(global_glfw_callback_data_) {
+      tile_renderer(tile_renderer_)  {
   Init();
 }
 
@@ -26,8 +29,11 @@ void SharedResources::Init() {
   tex_text_.Bind();
   static_sprite_shader.Bind();
   static_sprite_shader.SetUniform("tex", 0);
+  static_sprite_shader.SetUniform("brightness", 1.0f);
   slider_handle_shader.Bind();
   slider_handle_shader.SetUniform("tex", 0);
+  static_sprite_picking_shader.Bind();
+  static_sprite_picking_shader.SetUniform("tex", 0);
 }
 
 void SharedResources::InitVbos() {

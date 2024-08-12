@@ -15,7 +15,7 @@ class SharedResources {
  public:
   SharedResources(const Paths& paths,
                   TileRenderer& tile_renderer_,
-                  GlobalGlfwCallbackData& global_glfw_callback_data_);
+                  GlobalGlfwCallbackData& global_glfw_callback_data);
 
   ~SharedResources() {
     DeInit();
@@ -32,13 +32,15 @@ class SharedResources {
   // BiomesMode, ObjectMode, TilesMode also has their own VAOs with
   // instanced position data
 
+  GlobalGlfwCallbackData& global_glfw_callback_data_;
+
   GLuint vbo_ui_;
   GLuint vbo_text_;
   GLuint vbo_instanced_;
 
   TileRenderer& tile_renderer;
-  GlobalGlfwCallbackData& global_glfw_callback_data;
   Shader static_sprite_shader;
+  Shader static_sprite_picking_shader;
   Shader slider_handle_shader;
 
  private:

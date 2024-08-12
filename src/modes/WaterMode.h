@@ -1,49 +1,56 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_WATERMODE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_WATERMODE_H_
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "IEditMode.h"
+#include "../core/Ui.h"
+
+void WaterModeScrollCallback(
+    GLFWwindow* window, double xoffset, double yoffset);
+
+void WaterModeMouseButtonCallback(
+    GLFWwindow* window, int button, int action, int mods);
+
+void WaterModeKeyCallback(
+    GLFWwindow* window, int key, int scancode, int action, int mods);
 
 class WaterMode final : public IEditMode {
  public:
-  WaterMode(SharedResources& shared_resources)
-      : IEditMode(shared_resources) {
-    Init();
-  }
+  WaterMode(SharedResources& shared_resources);
 
-  void Render() override {
-    shared_resources_.tile_renderer.RenderPickingTerrain();
-    shared_resources_.tile_renderer.Render();
+  void Render() override;
+  void RenderPicking() override;
 
-    //TODO: here bind shader, vbo, vao, but... its all default static_sprite and rect vbo, so once
-    shared_resources_.static_sprite_shader.Bind(); // TODO: or already bind? (don't think so)
-//    vertex_mode_btn_.Bind(shared_resources_.static_sprite_shader);
-//    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-//    if (selected) {} // ... set appropriate color/brightness in shader
+  void Create(GLuint id);
 
-    RenderPoints();
-  }
+  void Remove();
 
-  void AddPoint(GLuint id) {
-    if (points_data_.size() == 64) {
-      std::cerr << "points overflow; rewriting last" << std::endl;
-      points_data_.pop_back();
-    }
-    for (const auto& i : points_data_) {
-      if (i == id) {
-        return;
-      }
-    }
-    std::cout << "Point id: " << id << std::endl;
-    points_data_.push_back(id);
-  }
+  /**
+   generate 3 types: pond (take the highest point and fill everything below),
+   river(inside the polygon generate pond, but the take bottom
+   height of pond and for outside point if height less than
+   pond bottom - reduce water height on difference), waterfall(fill only below)
+   */
+  /// currently only CPU
+  // TODO: check: point idx in ccw order, convex polygons only
+  void BakeWaterfall();
+  void BakeRiver();
+  void BakeLake();
 
-  void ClearPoints() {
-    points_data_.clear();
-  }
+  void BindCallbacks() override;
 
-  void BindCallbacks() override {}
+ protected:
+  friend void WaterModeScrollCallback(
+      GLFWwindow* window, double xoffset, double yoffset);
 
- private:
+  friend void WaterModeMouseButtonCallback(
+      GLFWwindow* window, int button, int action, int mods);
+
+  friend void WaterModeKeyCallback(
+      GLFWwindow* window, int key, int scancode, int action, int mods);
+
   void Init() {
       //TODO: idk - looks like this is picking...
     glGenVertexArrays(1, &points_vao_id_);
@@ -66,24 +73,6 @@ class WaterMode final : public IEditMode {
   Shader points_shader_;
   GLuint points_buffer_id_{0};
   GLuint points_vao_id_{0};
-
-  //  - we render water separately from terrain (we have different shaders)
-  //  - we have few FloodFill algorithms: Pond/River/Waterfall
-  //  - we have std::vector<std::vector<GLuint>> water_headers_; to draw
-  //    multiple water areas. GLFW_KEY_0-9 to switch (chosen highlighted in shader)
-  //  - we can remove/add new header, but after each such move we recalculate all water
-  /**
-   generate 3 types: pond (take the highest point and fill everything below),
-   river(inside the polygon generate pond, but the take bottom
-   height of pond and for outside point if height less than
-   pond bottom - reduce water height on difference), waterfall(fill only below)
-   */
-  // TODO: check: point idx in ccw order, convex polygons only
-  void BakeWaterfall();
-  void BakeRiver();
-  void BakeLake();
-
-  bool IsConvex();
 
   void RenderPoints() const {
     glBindVertexArray(points_vao_id_);
@@ -141,182 +130,20 @@ class WaterMode final : public IEditMode {
     }
   }
 
-//  UiSlots::PointSetType cur_point_set_;
-
   /// -1 as "not selected"
   GLuint cur_selected_point_{static_cast<GLuint>(-1)};
 
-  /// --- --- ui components --- ---
-//  UiSlots slots_; // all graph data
-//  UiSlider falloff_;
-//  UiSlider radius_;
-
-//  UiCollisionSprite add_new_btn_;
-//  UiCollisionSprite remove_btn_;
-//  UiCollisionSprite bake_waterflow_btn_;
-//  UiCollisionSprite bake_river_btn_;
-//  UiCollisionSprite bake_lake_btn_; // lake/pond/sea/ocean
-//  UiCollisionSprite edit_position_btn_;
-//  UiCollisionSprite edit_smooth_btn_;
-//  UiCollisionSprite edit_slope_bottom_btn_;
-//  UiCollisionSprite edit_slope_top_btn_;
-
   bool vertex_mode_{false}; // vertex (polygon creation) or graph mode
 
-  // from deprecated Terrain.h:
-  // --- --- --- --- --- --- --- ---
-  // --- --- --- --- --- --- --- ---
-  // --- --- --- --- --- --- --- ---
-  // --- --- --- --- --- --- --- ---
-
-
-  /* (180 degrees = surface; 90 degrees = straight down
-   * (max - we have terrain-surface no Y-overlapp))
-   * slope == 180	        | calm water
-   * slope <180 && > 120 (30)   | river
-   * slope < 120                | waterfall
-   * */
-  void Bake() {
-    auto insidePoints = GenHeightMap();
-    /// here water_height_map_ already contains either 0 or actual height
-//    FloodFill(insidePoints);
-    //TODO: from points generate height map (!)
-    // each triangle has its normal, so we assign water_type
-    // for each triangle in shader
-    // looks like we can just do this:
-    // float mix_coef = mix(0.0f, 1.0f, dot(triangle_normal, world_up))
-    // color = mix(black_color, blue_color, mix_coef);
-    // speed = mix(0.0f, 30.0f, mix_coef);
-  }
-
-  struct Point {
-    int x;
-    int y;
-  };
-
-  // Function to calculate the cross product of vectors AB and AC
-  int crossProduct(const Point& A, const Point& B, const Point& C) {
-    int ABx = B.x - A.x;
-    int ABy = B.y - A.y;
-    int ACx = C.x - A.x;
-    int ACy = C.y - A.y;
-    return ABx * ACy - ABy * ACx;
-  }
-  // Function to check if the points in the vector are in CCW order
-  bool isCCW(const std::vector<Point>& points) {
-    int n = points.size();
-    if (n < 3) {
-      // A polygon must have at least 3 points
-      return false;
-    }
-
-    for (int i = 0; i < n; ++i) {
-      int j = (i + 1) % n;
-      int k = (i + 2) % n;
-      if (crossProduct(points[i], points[j], points[k]) <= 0) {
-        return false;
-      }
-    }
-    return true;
-  }
-  bool doIntersect(const Point& p1, const Point& q1, const Point& p2, const Point& q2) {
-    // Helper function to find the orientation of the ordered triplet (p, q, r)
-    // 0 -> p, q and r are collinear
-    // 1 -> Clockwise
-    // 2 -> Counterclockwise
-    auto orientation = [](const Point& p, const Point& q, const Point& r) {
-      int val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-      if (val == 0) return 0;
-      return (val > 0) ? 1 : 2;
-    };
-
-    // Check if point q lies on segment pr
-    auto onSegment = [](const Point& p, const Point& q, const Point& r) {
-      if (q.x <= std::max(p.x, r.x) && q.x >= std::min(p.x, r.x) &&
-          q.y <= std::max(p.y, r.y) && q.y >= std::min(p.y, r.y)) {
-        return true;
-      }
-      return false;
-    };
-
-    int o1 = orientation(p1, q1, p2);
-    int o2 = orientation(p1, q1, q2);
-    int o3 = orientation(p2, q2, p1);
-    int o4 = orientation(p2, q2, q1);
-
-    // General case
-    if (o1 != o2 && o3 != o4)
-      return true;
-
-    // Special cases
-    // p1, q1 and p2 are collinear and p2 lies on segment p1q1
-    if (o1 == 0 && onSegment(p1, p2, q1)) return true;
-
-    // p1, q1 and q2 are collinear and q2 lies on segment p1q1
-    if (o2 == 0 && onSegment(p1, q2, q1)) return true;
-
-    // p2, q2 and p1 are collinear and p1 lies on segment p2q2
-    if (o3 == 0 && onSegment(p2, p1, q2)) return true;
-
-    // p2, q2 and q1 are collinear and q1 lies on segment p2q2
-    if (o4 == 0 && onSegment(p2, q1, q2)) return true;
-
-    return false; // Doesn't fall in any of the above cases
-  }
-  bool isConvexPolygon(const std::vector<Point>& points) {
-    int n = points.size();
-    if (n < 3) {
-      return false; // A polygon must have at least 3 points
-    }
-
-    // Check if the polygon is convex and in CCW order
-    if (!isCCW(points)) {
-      //      std::cout << "no ccw" << std::endl;
-      return false;
-    }
-
-    // Check for intersections
-    for (int i = 0; i < n; ++i) {
-      for (int j = i + 2; j < n; ++j) {
-        // Ignore adjacent edges and the first and last edge in a closed polygon
-        if (i == 0 && j == n - 1) continue;
-
-        if (doIntersect(points[i], points[(i + 1) % n], points[j], points[(j + 1) % n])) {
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
-  // Function to check if the point p lies on the left side of the line segment from p1 to p2
-  bool isLeft(Point p1, Point p2, Point p) {
-    return (p2.x - p1.x) * (p.y - p1.y) - (p.x - p1.x) * (p2.y - p1.y) > 0;
-  }
-  // Function to check if a point lies inside a convex polygon
-  bool isInsideConvexPolygon(const std::vector<Point>& polygon, Point p) {
-    int n = polygon.size();
-    if (n < 3) return false;
-    for (int i = 0; i < n; i++) {
-      Point p1 = polygon[i];
-      Point p2 = polygon[(i + 1) % n];
-      if (!isLeft(p1, p2, p)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /// looks like neither FloodFill nor GeightMap generation can be effective
-  /// implemented in GPU, so let's compute its on CPU
   std::vector<Point> GenHeightMap() {
+    //TODO: here need to take into account ALL points sets
     std::vector<Point> polygon(points_data_.size());
     for (int i = 0; i < polygon.size(); ++i) {
       polygon[i].x = points_data_[i] & 1023;
       polygon[i].y = points_data_[i] >> 10;
     }
     std::vector<Point> insidePoints;
-    std::cout << "is convex: " << std::boolalpha << isConvexPolygon(polygon)
+    /*std::cout << "is convex: " << std::boolalpha << IsConvexPolygon(polygon)
               << std::noboolalpha << std::endl;
     for (int x = 0; x < 1024; x++) {
       for (int y = 0; y < 1024; y++) {
@@ -325,32 +152,13 @@ class WaterMode final : public IEditMode {
           insidePoints.push_back(p);
         }
       }
-    }
+    }*/
     return insidePoints;
-    //    height_map_creation_shader_.Bind();
-    //    glBindImageTexture(3, water_height_map_.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
-    // ssbo already bind to binding=3
-    //    glDispatchCompute(1024 / 32, 1024 / 32, 1);
-    //    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
   }
 
-  // TODO: do we need it in runtime or baking at cpu in advance is enough
-  void FloodFIllGpuPass() {
-    //    flood_fill_shader_.Bind();
-    //    glBindImageTexture(0, height_map_.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
-    //    glBindImageTexture(1, water_height_map_.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
-    //    bool done = false;
-    //    while (!done) {
-    //      glDispatchCompute(1024 / 32, 1024 / 32, 1);
-    //      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-    //      done = compareHeightMaps();
-    //    }
-  }
-/*
-
-  void FloodFillCPUPass() {
+  //TODO: gpu
+  /*void FloodFillPass() {
     int total_changed = 0;
-    //TODO; can we rewrite it with compute shader?..
     std::uint8_t cur_water_height, cur_terrain_height,
         near_water_height, near_terrain_height;
     for (int y = 1; y < 1023; ++y) {
@@ -392,23 +200,15 @@ class WaterMode final : public IEditMode {
       }
     }
     std::cout << "total changed: " << total_changed << std::endl;
-  }
-*/
+  }*/
 
-  // TODO:
-  //  - we render water separately from terrain (we have different shaders)
-  //  - we have few FloodFill algorithms: Pond/River/Waterfall
-  //  - we have std::vector<std::vector<GLuint>> water_headers_; to draw
-  //    multiple water areas. GLFW_KEY_0-9 to switch (chosen highlighted in shader)
-  //  - we can remove/add new header, but after each such move we recalculate all water
   /**
    generate 3 types: pond (take the highest point and fill everything below),
    river(inside the polygon generate pond, but the take bottom
    height of pond and for outside point if height less than
    pond bottom - reduce water height on difference), waterfall(fill only below)
    */
-/*
-  void FloodFill(const std::vector<Point>& water_points) {
+  /*void FloodFill(const std::vector<Point>& water_points) {
     water_heights_.resize(terrain_heights_.size(), 0);
     for (auto p : water_points) {
       water_heights_[p.y * 1024 + p.x] = terrain_heights_[p.y * 1024 + p.x] + 10;
@@ -417,23 +217,18 @@ class WaterMode final : public IEditMode {
     int counter = 0;
 
     do {
-      //      FloodFIllGpuPass();
-      FloodFillCPUPass();
-      std::cout << "-------__--__---___-___--__--___-_flood fill iteration# "
+      FloodFillPass();
+      std::cout << "--- flood fill iteration# "
                 << ++counter << std::endl;
-      //    } while (counter <= 100);
     } while (!IsWaterHeightMapGenCompleted());
     water_height_map_.Bind();
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED,
                  GL_UNSIGNED_BYTE, water_heights_.data());
     glBindTexture(GL_TEXTURE_2D, 0);
-  }
+  }*/
 
 
-  bool IsWaterHeightMapGenCompleted() {
-    //    std::vector<int> data(1024 * 1024);
-    //    water_height_map_.Bind();
-    //    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, data.data());
+  /*bool IsWaterHeightMapGenCompleted() {
     std::uint64_t new_sum{0};
     // (currently we use uint_8, but can use even uint size)
     // 1024 * 1024 * uint_size = 2^52 < 2^64 so we can use uint64_t
@@ -443,21 +238,22 @@ class WaterMode final : public IEditMode {
     bool are_sums_equal = water_height_map_prev_total_sum_ == new_sum;
     water_height_map_prev_total_sum_ = new_sum;
     return are_sums_equal;
-  }
-  void InitFloodFill() {
-    //    flood_fill_shader_ = Shader("../shaders/FloodFill.comp");
-    GLuint water_tex_id;
-    glGenTextures(1, &water_tex_id);
-    glBindTexture(GL_TEXTURE_2D, water_tex_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED,
-                 GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    water_height_map_ = Texture(water_tex_id, 1024, 1024, GL_RED);
   }*/
 
+
   std::uint64_t water_height_map_prev_total_sum_{0};
+
+
+  UiButton btn_bake_lake_;
+  UiButton btn_bake_river_;
+  UiButton btn_bake_waterfall_;
+  UiButton btn_create_;
+  UiButton btn_remove_;
+  UiSlots slots_;
+
+  using PointDataType = std::vector<ArbitraryGraph::Point>;
+  PointDataType points_data_test_{};
+  int edit_mode_selected_sample_id_test_{0};
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_WATERMODE_H_

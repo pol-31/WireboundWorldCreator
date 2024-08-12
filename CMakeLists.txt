@@ -20,6 +20,7 @@ add_executable(WireboundWorldCreator
         src/common/Shader.cpp
         src/common/Texture.cpp
         src/core/Interface.cpp
+        src/core/Menu.cpp
         src/core/Tile.cpp
         src/core/TileRenderer.cpp
         src/core/Ui.cpp
@@ -28,7 +29,11 @@ add_executable(WireboundWorldCreator
         src/io/Cursor.cpp
         src/io/Window.cpp
         src/modes/SharedResources.cpp
+        src/modes/FencesMode.cpp
+        src/modes/PlacementMode.cpp
+        src/modes/RoadsMode.cpp
         src/modes/TerrainMode.cpp
+        src/modes/WaterMode.cpp
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

@@ -13,6 +13,6 @@ out vec2 texcoord;
 void main() {
     // TODO: simply mat multiplication
     vec2 pos = in_position/* * vec2(transform[1]) + vec2(transform[0])*/;
-    gl_Position = vec4(pos, 0.0f, 1.0);
+    gl_Position = vec4(pos, -1.0f, 1.0);
     texcoord = in_texcoord;
 }

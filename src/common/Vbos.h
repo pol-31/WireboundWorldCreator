@@ -2,8 +2,9 @@
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_VBOS_H_
 
 #include <array>
-
 #include <cinttypes>
+
+#include "Details.h"
 
 struct UiData {
   int32_t id;
@@ -20,7 +21,7 @@ inline constexpr std::size_t GetUiDataInstancedOffset(UiVboDataInstancedId id);
 
 /// related to kUiVboDataMain
 enum class UiVboDataMainId {
-  kModeTerrain,
+  kModeTerrain = details::kIdOffsetUi,
   kModeWater,
   kModeRoads,
   kModeFences,
@@ -43,14 +44,14 @@ enum class UiVboDataMainId {
   kAddNew,
   kRemove,
 
-  kUiSliderRadiusMin,
-  kUiSliderRadiusMax,
-  kUiSliderRadiusArea,
-  kUiSliderRadiusSlider,
+  kUiSliderSizeMin,
+  kUiSliderSizeMax,
+  kUiSliderSizeTrack,
+  kUiSliderSizeHandler,
   kUiSliderFalloffMin,
   kUiSliderFalloffMax,
-  kUiSliderFalloffArea,
-  kUiSliderFalloffSlider,
+  kUiSliderFalloffTrack,
+  kUiSliderFalloffHandler,
 
   kUiSlotsPrev,
   kUiSlotsNext,
@@ -73,11 +74,10 @@ enum class UiVboDataMainId {
   kFencesChainLink,
   kFencesWooden,
 
-  kPlacementWhite,
-  kPlacementLightGrey,
-  kPlacementGrey,
-  kPlacementDarkGrey,
-  kPlacementBlack,
+  kPlacementSliderColorWhite,
+  kPlacementSliderColorBlack,
+  kPlacementSliderTrack,
+  kPlacementSliderHandler,
   kPlacementTrees,
   kPlacementBushes,
   kPlacementTallGrass,
@@ -97,10 +97,11 @@ enum class UiVboDataMainId {
   kTilesPageRight,
 
   kTilesPreview,
+  kTotal,
 };
 
 enum class UiVboDataTextId {
-  kMode,
+  kMode = static_cast<int>(UiVboDataMainId::kTotal) + 1,
   kVision,
   kTerrain,
   kWater,
@@ -151,22 +152,25 @@ enum class UiVboDataTextId {
   kLoading,
   kUnableToOpenTheFile,
   kUnableToSaveTheFile,
+  kTotal,
 };
 
 enum class UiVboDataInstancedId {
-  kObjects,
+  kObjects = static_cast<int>(UiVboDataTextId::kTotal) + 1,
   kBiomes,
   kTiles,
+  kTotal,
 };
 
 inline constexpr std::size_t GetUiDataMainOffset(UiVboDataMainId id) {
   // for each Ui component 16 floats
   // (4 2d points with position and tex coords)
-  return static_cast<std::size_t>(id) * 4; // TODO: 4?
+  return (static_cast<std::size_t>(id) - (details::kIdOffsetUi)) * 4; // TODO: 4?
 }
 
 inline constexpr std::size_t GetUiDataTextOffset(UiVboDataTextId id) {
-  return static_cast<std::size_t>(id) * 2; // TODO: or 8?
+  return (static_cast<std::size_t>(id) -
+         static_cast<int>(UiVboDataMainId::kTotal) - 1) * 2; // TODO: or 8?
 }
 
 inline constexpr std::size_t GetUiDataInstancedOffset(
@@ -181,17 +185,16 @@ inline constexpr std::size_t GetUiDataInstancedOffset(
   }
 }
 
-UiData GetUiData(UiVboDataInstancedId btn_type) {
-  return {static_cast<int>(btn_type), GetUiDataInstancedOffset(btn_type)};
+inline UiData GetUiData(UiVboDataMainId btn_type) {
+  return {static_cast<int>(btn_type), GetUiDataMainOffset(btn_type)};
 }
 
-
-UiData GetUiData(UiVboDataTextId btn_type) {
+inline UiData GetUiData(UiVboDataTextId btn_type) {
   return {static_cast<int>(btn_type), GetUiDataTextOffset(btn_type)};
 }
 
-UiData GetUiData(UiVboDataMainId btn_type) {
-  return {static_cast<int>(btn_type), GetUiDataMainOffset(btn_type)};
+inline UiData GetUiData(UiVboDataInstancedId btn_type) {
+  return {static_cast<int>(btn_type), GetUiDataInstancedOffset(btn_type)};
 }
 
 namespace details {
@@ -334,10 +337,10 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
     0.9f, 0.9f, 0.5f, 0.25f,
 
     // UiSlider for "area radius" icon for min
-    1.0f, -0.1f, 0.8f, 0.875f,
-    1.0f, 0.0f, 0.8f, 1.0f,
-    0.9f, -0.1f, 0.7f, 0.875f,
-    0.9f, 0.0f, 0.7f, 1.0f,
+    1.0f, -0.2f, 0.8f, 0.875f,
+    1.0f, -0.1f, 0.8f, 1.0f,
+    0.9f, -0.2f, 0.7f, 0.875f,
+    0.9f, -0.1f, 0.7f, 1.0f,
 
     // UiSlider for "area radius" icon for max
     1.0f, -1.0f, 0.7f, 0.125f,
@@ -346,22 +349,22 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
     0.9f, -0.9f, 0.6f, 0.25f,
 
     // UiSlider for "area radius" icon "slider area" (where to slide on)
-    1.0f, -0.9f, 0.7f, 0.75f,
-    1.0f, -0.1f, 0.7f, 1.0f,
-    0.9f, -0.9f, 0.6f, 0.75f,
-    0.9f, -0.1f, 0.6f, 1.0f,
+    1.0f, -0.85f, 0.7f, 0.85f,
+    1.0f, -0.25f, 0.7f, 0.9f,
+    0.9f, -0.85f, 0.6f, 0.85f,
+    0.9f, -0.25f, 0.6f, 0.9f,
 
     // UiSlider for "area radius" icon "slider" (starting position)
-    1.0f, -0.2f, 0.4f, 0.125f,
-    1.0f, -0.1f, 0.4f, 0.25f,
-    0.9f, -0.2f, 0.3f, 0.125f,
-    0.9f, -0.1f, 0.3f, 0.25f,
+    1.0f, -0.8f, 0.4f, 0.125f,
+    1.0f, -0.9f, 0.4f, 0.25f,
+    0.9f, -0.8f, 0.3f, 0.125f,
+    0.9f, -0.9f, 0.3f, 0.25f,
 
     // UiSlider for "area falloff" icon for min
-    0.9f, -0.1, 0.7f, 0.125f,
-    0.9f, 0.0f, 0.7f, 0.25f,
-    0.8f, -0.1, 0.6f, 0.125f,
-    0.8f, 0.0f, 0.6f, 0.25f,
+    0.9f, -0.2f, 0.7f, 0.125f,
+    0.9f, -0.1f, 0.7f, 0.25f,
+    0.8f, -0.2f, 0.6f, 0.125f,
+    0.8f, -0.1f, 0.6f, 0.25f,
 
     // UiSlider for "area falloff" icon for max
     0.9f, -1.0f, 0.7f, 0.0f,
@@ -370,58 +373,58 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
     0.8f, -0.9f, 0.6f, 0.125f,
 
     // UiSlider for "area falloff" icon "slider area" (where to slide on)
-    0.9f, -0.9f, 0.7f, 0.75f,
-    0.9f, -0.1f, 0.7f, 1.0f,
-    0.8f, -0.9f, 0.6f, 0.75f,
-    0.8f, -0.1f, 0.6f, 1.0f,
+    0.9f, -0.85f, 0.7f, 0.85f,
+    0.9f, -0.25f, 0.7f, 0.9f,
+    0.8f, -0.85f, 0.6f, 0.85f,
+    0.8f, -0.25f, 0.6f, 0.9f,
 
     // UiSlider for "area falloff" icon "slider" (starting position)
-    0.9f, -0.2f, 0.4f, 0.125f,
-    0.9f, -0.1f, 0.4f, 0.25f,
-    0.8f, -0.2f, 0.3f, 0.125f,
-    0.8f, -0.1f, 0.3f, 0.25f,
+    0.9f, -0.8f, 0.4f, 0.125f,
+    0.9f, -0.9f, 0.4f, 0.25f,
+    0.8f, -0.8f, 0.3f, 0.125f,
+    0.8f, -0.9f, 0.3f, 0.25f,
 
     // UiSlots "previous slots"
-    0.9f, 0.9f, 0.4f, 0.0f,
-    0.9f, 1.0f, 0.4f, 0.125f,
-    0.8f, 0.9f, 0.3f, 0.0f,
-    0.8f, 1.0f, 0.3f, 0.125f,
+    0.9f, 0.4f, 0.4f, 0.0f,
+    0.9f, 0.5f, 0.4f, 0.125f,
+    0.8f, 0.4f, 0.3f, 0.0f,
+    0.8f, 0.5f, 0.3f, 0.125f,
 
     // UiSlots "next slots"
-    0.9f, -1.0f, 0.5f, 0.0f,
-    0.9f, -0.9f, 0.5f, 0.125f,
-    0.8f, -1.0f, 0.4f, 0.0f,
-    0.8f, -0.9f, 0.4f, 0.125f,
+    0.9f, -0.5f, 0.5f, 0.0f,
+    0.9f, -0.4f, 0.5f, 0.125f,
+    0.8f, -0.5f, 0.4f, 0.0f,
+    0.8f, -0.4f, 0.4f, 0.125f,
 
     // UiSlots "slot 1"
-    0.9f, 0.55f, 0.3f, 0.125f,
-    0.9f, 0.85f, 0.3f, 0.25f,
-    0.8f, 0.55f, 0.2f, 0.125f,
-    0.8f, 0.85f, 0.2f, 0.25f,
+    0.9f, 0.25f, 0.3f, 0.125f,
+    0.9f, 0.35f, 0.3f, 0.25f,
+    0.8f, 0.25f, 0.2f, 0.125f,
+    0.8f, 0.35f, 0.2f, 0.25f,
 
     // UiSlots "slot 2"
-    0.9f, 0.2f, 0.3f, 0.125f,
-    0.9f, 0.5f, 0.3f, 0.25f,
-    0.8f, 0.2f, 0.2f, 0.125f,
-    0.8f, 0.5f, 0.2f, 0.25f,
+    0.9f, 0.1f, 0.3f, 0.125f,
+    0.9f, 0.2f, 0.3f, 0.25f,
+    0.8f, 0.1f, 0.2f, 0.125f,
+    0.8f, 0.2f, 0.2f, 0.25f,
 
     // UiSlots "slot 3"
-    0.9f, -0.15f, 0.3f, 0.125f,
-    0.9f, 0.15f, 0.3f, 0.25f,
-    0.8f, -0.15f, 0.2f, 0.125f,
-    0.8f, 0.15f, 0.2f, 0.25f,
+    0.9f, -0.05f, 0.3f, 0.125f,
+    0.9f, 0.05f, 0.3f, 0.25f,
+    0.8f, -0.05f, 0.2f, 0.125f,
+    0.8f, 0.05f, 0.2f, 0.25f,
 
     // UiSlots "slot 4"
-    0.9f, -0.5f, 0.3f, 0.125f,
-    0.9f, -0.2f, 0.3f, 0.25f,
-    0.8f, -0.5f, 0.2f, 0.125f,
-    0.8f, -0.2f, 0.2f, 0.25f,
+    0.9f, -0.2f, 0.3f, 0.125f,
+    0.9f, -0.1f, 0.3f, 0.25f,
+    0.8f, -0.2f, 0.2f, 0.125f,
+    0.8f, -0.1f, 0.2f, 0.25f,
 
     // UiSlots "slot 5"
-    0.9f, -0.85f, 0.3f, 0.125f,
-    0.9f, -0.55f, 0.3f, 0.25f,
-    0.8f, -0.85f, 0.2f, 0.125f,
-    0.8f, -0.55f, 0.2f, 0.25f,
+    0.9f, -0.35f, 0.3f, 0.125f,
+    0.9f, -0.25f, 0.3f, 0.25f,
+    0.8f, -0.35f, 0.2f, 0.125f,
+    0.8f, -0.25f, 0.2f, 0.25f,
 
     // --- --- Mode Terrain -specific --- ---
 
@@ -499,35 +502,29 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
 
     // --- --- Mode Placement -specific --- ---
 
-    // mode Placement btn "white color"
+    // mode Placement slider color white
     1.0f, 0.9f, 0.7f, 0.625f,
     1.0f, 1.0f, 0.7f, 0.75f,
     0.9f, 0.9f, 0.6f, 0.625f,
     0.9f, 1.0f, 0.6f, 0.75f,
 
-    // mode Placement btn "light grey color"
-    1.0f, 0.8f, 0.7f, 0.5f,
-    1.0f, 0.9f, 0.7f, 0.625f,
-    0.9f, 0.8f, 0.6f, 0.5f,
-    0.9f, 0.9f, 0.6f, 0.625f,
+    // mode Placement slider color black
+    1.0f, 0.1f, 0.7f, 0.125f,
+    1.0f, 0.2f, 0.7f, 0.25f,
+    0.9f, 0.1f, 0.6f, 0.125f,
+    0.9f, 0.2f, 0.6f, 0.25f,
 
-    // mode Placement btn "grey color"
-    1.0f, 0.7f, 0.7f, 0.375f,
-    1.0f, 0.8f, 0.7f, 0.5f,
-    0.9f, 0.7f, 0.6f, 0.375f,
-    0.9f, 0.8f, 0.6f, 0.5f,
+    // mode Placement slider track
+    1.0f, 0.25f, 0.7f, 0.85f,
+    1.0f, 0.85f, 0.7f, 0.9f,
+    0.9f, 0.25f, 0.6f, 0.85f,
+    0.9f, 0.85f, 0.6f, 0.9f,
 
-    // mode Placement btn "dark grey color"
-    1.0f, 0.6f, 0.7f, 0.25f,
-    1.0f, 0.7f, 0.7f, 0.375f,
-    0.9f, 0.6f, 0.6f, 0.25f,
-    0.9f, 0.7f, 0.6f, 0.375f,
-
-    // mode Placement btn "black color"
-    1.0f, 0.5f, 0.7f, 0.125f,
-    1.0f, 0.6f, 0.7f, 0.25f,
-    0.9f, 0.5f, 0.6f, 0.125f,
-    0.9f, 0.6f, 0.6f, 0.25f,
+    // mode Placement slider handler
+    1.0f, 0.2f, 0.4f, 0.125f,
+    1.0f, 0.3f, 0.4f, 0.25f,
+    0.9f, 0.2f, 0.3f, 0.125f,
+    0.9f, 0.3f, 0.3f, 0.25f,
 
     // mode Placement btn "draw trees"
     0.9f, 0.9f, 0.9f, 0.5f,

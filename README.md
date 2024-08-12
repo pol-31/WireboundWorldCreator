@@ -20,14 +20,10 @@ Goal (borowed from [Water Rendering in Far Cry 5](https://www.youtube.com/watch?
 
 Current:
 
-![progress/June28.png](progress/June28.png)
-
-Ui menu scratch:
-
-![assets/menu_ui.png](assets/menu_ui.png)
+![progress/July12.png](progress/July12.png)
 
 Ui scratch:
 
-![ui.png](ui.png)
+![assets/ui_scratches.png](assets/ui_scratches.png)
 
 Don't worry, I'll take it :]

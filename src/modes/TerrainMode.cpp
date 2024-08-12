@@ -2,6 +2,8 @@
 
 #include "../io/Window.h"
 #include "../common/GlobalGlfwCallbackData.h"
+#include "../core/Menu.h"
+#include "../common/Vbos.h"
 
 void TerrainModeScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
@@ -9,16 +11,10 @@ void TerrainModeScrollCallback(
       glfwGetWindowUserPointer(window));
   auto terrain = dynamic_cast<TerrainMode*>(global_data->cur_mode_);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
-  //TODO; bvh
-  if (!terrain->btn_bake_.AabbContains(cursor_pos) &&
-      !terrain->btn_smooth_.AabbContains(cursor_pos) &&
-      !terrain->slider_brush_size_.TrackAreaAabbContains(cursor_pos) &&
-      !terrain->slider_brush_falloff_.TrackAreaAabbContains(cursor_pos)) {
-    if (yoffset < 0.0f) {
-      global_data->tile_renderer_.DownScale();
-    } else {
-      global_data->tile_renderer_.UpScale();
-    }
+  if (yoffset < 0.0f) {
+    global_data->tile_renderer_.DownScale();
+  } else {
+    global_data->tile_renderer_.UpScale();
   }
 }
 
@@ -32,24 +28,28 @@ void TerrainModeMouseButtonCallback(
     if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       global_data->cursor_.SwitchMode(window);
     } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      //TODO; bvh
-      if (terrain->btn_bake_.AabbContains(cursor_pos)) {
-        terrain->btn_bake_.Press(cursor_pos);
-      } else if (terrain->btn_smooth_.AabbContains(cursor_pos)) {
-        terrain->btn_smooth_.Press(cursor_pos);
-      } else if (terrain->slider_brush_size_.TrackAreaAabbContains(cursor_pos)) {
-        terrain->slider_brush_size_.UpdateSliderPos(cursor_pos);
-        terrain->slider_brush_size_pressed_ = true;
-      } else if (terrain->slider_brush_falloff_.TrackAreaAabbContains(cursor_pos)) {
-        terrain->slider_brush_falloff_pressed_ = true;
-        terrain->slider_brush_falloff_.UpdateSliderPos(cursor_pos);
+      auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
+      if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+        global_data->menu_.Press(pressed_id);
+      } else {
+        if (pressed_id == terrain->btn_smooth_.GetId()) {
+          terrain->SwitchSmooth();
+        } else if (pressed_id == terrain->btn_bake_.GetId()) {
+          terrain->Bake();
+        } else if (pressed_id == terrain->slider_size_.GetTrackId()) {
+          terrain->slider_size_pressed_ = true;
+          terrain->slider_size_.UpdateSliderPos(global_data->cursor_pos_tex_norm_);
+        } else if (pressed_id == terrain->slider_falloff_.GetTrackId()) {
+          terrain->slider_falloff_pressed_ = true;
+          terrain->slider_falloff_.UpdateSliderPos(global_data->cursor_pos_tex_norm_);
+        }
       }
     }
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
-    if (terrain->slider_brush_size_pressed_) {
-      terrain->slider_brush_size_pressed_ = false;
-    } else if (terrain->slider_brush_falloff_pressed_) {
-      terrain->slider_brush_falloff_pressed_ = false;
+    if (terrain->slider_size_pressed_) {
+      terrain->slider_size_pressed_ = false;
+    } else if (terrain->slider_falloff_pressed_) {
+      terrain->slider_falloff_pressed_ = false;
     }
   }
 }
@@ -82,6 +82,37 @@ void TerrainModeKeyCallback(
   }*/
 }
 
+TerrainMode::TerrainMode(SharedResources& shared_resources)
+    : IEditMode(shared_resources),
+      btn_bake_(
+          "bake terrain (update all other components"
+          " like water, roads, etc)",
+          GetUiData(UiVboDataMainId::kTerrainUpdate)),
+      btn_smooth_(
+          "enable smooth mode (flatten the terrain)",
+          GetUiData(UiVboDataMainId::kTerrainSmooth)),
+      slider_size_(
+          {"min size", GetUiData(UiVboDataMainId::kUiSliderSizeMin)},
+          {"max size", GetUiData(UiVboDataMainId::kUiSliderSizeMax)},
+          {"size slider track", GetUiData(UiVboDataMainId::kUiSliderSizeTrack)},
+          {"size slider handle", GetUiData(UiVboDataMainId::kUiSliderSizeHandler), size_factor_}),
+      slider_falloff_(
+          {"min falloff", GetUiData(UiVboDataMainId::kUiSliderFalloffMin)},
+          {"max falloff", GetUiData(UiVboDataMainId::kUiSliderFalloffMax)},
+          {"falloff slider track", GetUiData(UiVboDataMainId::kUiSliderFalloffTrack)},
+          {"falloff slider handle", GetUiData(UiVboDataMainId::kUiSliderFalloffHandler),
+           falloff_factor_}) {}
+
+void TerrainMode::Bake() {
+  std::cout << "baked" << std::endl;
+}
+
+void TerrainMode::SwitchSmooth() {
+  smooth_mode_ = !smooth_mode_;
+  std::cout << "smooth mode enabled: " << std::boolalpha << smooth_mode_
+            << std::noboolalpha << std::endl;
+}
+
 void TerrainMode::BindCallbacks() {
   glfwSetScrollCallback(gWindow, TerrainModeScrollCallback);
   glfwSetMouseButtonCallback(gWindow, TerrainModeMouseButtonCallback);
@@ -90,29 +121,43 @@ void TerrainMode::BindCallbacks() {
 }
 
 void TerrainMode::Render() {
-  shared_resources_.tile_renderer.RenderPickingTerrain();
   shared_resources_.tile_renderer.Render();
 
   glActiveTexture(GL_TEXTURE0);
   shared_resources_.tex_ui_.Bind();
   glBindVertexArray(shared_resources_.vao_ui_);
 
-  glDisable(GL_DEPTH_TEST);
+  shared_resources_.static_sprite_shader.Bind();
 
   btn_bake_.Render();
   btn_smooth_.Render();
-//  slider_brush_size_.Render();
-//  slider_brush_falloff_.Render();
 
-  if (slider_brush_size_pressed_) {
-    slider_brush_size_.UpdateSliderPos(
-        shared_resources_.global_glfw_callback_data.cursor_pos_);
+  if (slider_size_pressed_) {
+    slider_size_.UpdateSliderPos(
+        shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
   }
-  if (slider_brush_falloff_pressed_) {
-    slider_brush_falloff_.UpdateSliderPos(
-        shared_resources_.global_glfw_callback_data.cursor_pos_);
+  if (slider_falloff_pressed_) {
+    slider_falloff_.UpdateSliderPos(
+        shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
   }
 
-  glEnable(GL_DEPTH_TEST);
+  slider_size_.Render(shared_resources_.static_sprite_shader,
+                            shared_resources_.slider_handle_shader);
+  slider_falloff_.Render(shared_resources_.static_sprite_shader,
+                               shared_resources_.slider_handle_shader);
+}
 
+void TerrainMode::RenderPicking() {
+  shared_resources_.tile_renderer.RenderPickingTerrain();
+
+  glActiveTexture(GL_TEXTURE0);
+  shared_resources_.tex_ui_.Bind();
+  glBindVertexArray(shared_resources_.vao_ui_);
+
+  shared_resources_.static_sprite_picking_shader.Bind();
+
+  btn_bake_.RenderPicking(shared_resources_.static_sprite_picking_shader);
+  btn_smooth_.RenderPicking(shared_resources_.static_sprite_picking_shader);
+  slider_size_.RenderPicking(shared_resources_.static_sprite_picking_shader);
+  slider_falloff_.RenderPicking(shared_resources_.static_sprite_picking_shader);
 }
