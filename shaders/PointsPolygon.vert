@@ -1,10 +1,14 @@
 #version 460 core
 layout (location = 0) in uint in_vertex_id;
 
-// TODO: ubo2
 uniform sampler2D tex_displacement;
-uniform float dmap_depth;
-uniform mat4 transform;
+
+layout(std140, binding = 1) uniform Matrices {
+    mat4 transform;
+    float dmap_depth;
+// Adding padding to ensure 16-byte alignment as per std140 layout rules.
+    float padding[3];
+};
 
 //layout(std430, binding = 1) buffer OutBuffer {
 //    uvec2 id;

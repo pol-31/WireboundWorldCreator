@@ -18,9 +18,9 @@ Goal (borowed from [Water Rendering in Far Cry 5](https://www.youtube.com/watch?
 
 ![desired_result.png](progress/desired_result.png)
 
-Current:
+Current (water baked from selected points by user in Lake and River modes):
 
-![progress/July12.png](progress/July12.png)
+![progress/July14.png](progress/July14.png)
 
 Ui scratch:
 

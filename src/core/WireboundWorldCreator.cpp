@@ -14,9 +14,7 @@
 
 #include "../common/Details.h"
 #include "../io/Window.h"
-#include "../vbos/UiDataInstanced.h"
-#include "../vbos/UiDataMain.h"
-#include "../vbos/UiDataText.h"
+#include "../common/Vbos.h"
 
 WireboundWorldCreator::WireboundWorldCreator(const Paths& paths)
     : cursor_(),
@@ -34,9 +32,8 @@ void WireboundWorldCreator::RunRenderLoop() {
     gDeltaTime = current_frame - last_frame;
     last_frame = current_frame;
     camera_.Update();
-    interface_.Render();
-
     cubemap_.Render();
+    interface_.Render();
 
     glfwPollEvents();
     glfwSwapBuffers(gWindow);
@@ -47,7 +44,8 @@ void WireboundWorldCreator::Init(const Paths& paths) {
   glEnable(GL_MULTISAMPLE);
 
   glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LESS);
+//  glDepthFunc(GL_LESS);
+  glDepthFunc(GL_LEQUAL);
 
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_BLEND);

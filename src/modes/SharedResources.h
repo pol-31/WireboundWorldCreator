@@ -9,11 +9,14 @@
 #include "../common/Paths.h"
 #include "../common/GlobalGlfwCallbackData.h"
 
+#include "../core/Tile.h"
+
 class TileRenderer;
 
 class SharedResources {
  public:
   SharedResources(const Paths& paths,
+                  Tile& cur_tile,
                   TileRenderer& tile_renderer_,
                   GlobalGlfwCallbackData& global_glfw_callback_data);
 
@@ -38,10 +41,12 @@ class SharedResources {
   GLuint vbo_text_;
   GLuint vbo_instanced_;
 
-  TileRenderer& tile_renderer;
-  Shader static_sprite_shader;
-  Shader static_sprite_picking_shader;
-  Shader slider_handle_shader;
+  TileRenderer& tile_renderer_;
+  Shader static_sprite_shader_;
+  Shader static_sprite_picking_shader_;
+  Shader slider_handle_shader_;
+
+  Tile& tile_;
 
  private:
   void Init();

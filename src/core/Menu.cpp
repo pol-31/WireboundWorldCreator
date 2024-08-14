@@ -48,7 +48,7 @@ Menu::Menu(SharedResources& shared_resources,
 
 void Menu::Render() const {
   // TODO; here enough no bind shaders only once, so need to fix
-  shared_resources_.static_sprite_shader.Bind();
+  shared_resources_.static_sprite_shader_.Bind();
   glActiveTexture(GL_TEXTURE0);
   glBindVertexArray(shared_resources_.vao_text_);
   shared_resources_.tex_text_.Bind();
@@ -64,14 +64,14 @@ void Menu::Render() const {
 }
 
 void Menu::RenderPicking() const {
-  shared_resources_.static_sprite_picking_shader.Bind();
+  shared_resources_.static_sprite_picking_shader_.Bind();
   glBindVertexArray(shared_resources_.vao_text_);
   for (int i = 0; i < 3; ++i) {
-    buttons_[i].RenderPicking(shared_resources_.static_sprite_picking_shader);
+    buttons_[i].RenderPicking(shared_resources_.static_sprite_picking_shader_);
   }
   glBindVertexArray(shared_resources_.vao_ui_);
   for (int i = 3; i < 20; ++i) {
-    buttons_[i].RenderPicking(shared_resources_.static_sprite_picking_shader);
+    buttons_[i].RenderPicking(shared_resources_.static_sprite_picking_shader_);
   }
 }
 

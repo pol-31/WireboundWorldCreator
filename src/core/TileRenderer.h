@@ -3,23 +3,24 @@
 
 #include <string_view>
 
-#include "../common/PickingFramebuffer.h"
 #include "../common/Texture.h"
 #include "Tile.h"
 #include "../common/Paths.h"
+#include "../common/Shader.h"
 
 #include "../renderers/AllRenderers.h"
 
 /// Render, RenderTerrain().. etc called from modes directly
 class TileRenderer {
  public:
-  explicit TileRenderer(const Paths& paths)
-      : fences_renderer_(cur_tile_),
+  explicit TileRenderer(const Paths& paths, const std::uint8_t& visibility)
+      : visibility_(visibility),
+        fences_renderer_(cur_tile_),
         objects_renderer_(cur_tile_),
         placement_renderer_(cur_tile_),
         roads_renderer_(cur_tile_),
         terrain_renderer_(cur_tile_, paths),
-        water_renderer_(cur_tile_) {
+        water_renderer_(cur_tile_, paths) {
     InitMapScaleUbo();
     LoadMap(paths.world_map);
     cur_tile_ = Tile(tiles_info_[0]);
@@ -31,6 +32,11 @@ class TileRenderer {
 
   void SetTile(int tile_id) {
     //TODO: recompute surrounding water, etc...
+  }
+
+  //TODO: remove / refactor this pasta-macaroni
+  Tile&  GetTile() {
+    return cur_tile_;
   }
 
   void Render() const;
@@ -60,26 +66,6 @@ class TileRenderer {
   //  void RenderPickingBiomes() const; // same as terrain
   void RenderPickingObjects() const;
   //  void RenderPickingPlacement() const; // same as terrain
-
-  // there's no need in getters by now
-  void ShowWater(bool mode) {
-    water_ = mode;
-  }
-  void ShowTerrain(bool mode) {
-    terrain_ = mode;
-  }
-  void ShowRoads(bool mode) {
-    roads_ = mode;
-  }
-  void ShowObjects(bool mode) {
-    objects_ = mode;
-  }
-  void ShowFences(bool mode) {
-    fences_ = mode;
-  }
-  void ShowPlacement(bool mode) {
-    placement_ = mode;
-  }
 
   //TODO: should be called after each mode switching
   void ResetScale() {
@@ -116,14 +102,31 @@ class TileRenderer {
     std::vector<Unit> bottom;
   };
 
+  inline bool IsTerrainVisible() const {
+    return visibility_ & 0b0000'0001;
+  }
+  inline bool IsWaterVisible() const {
+    return visibility_ & 0b0000'0010;
+  }
+  inline bool IsRoadsVisible() const {
+    return visibility_ & 0b0000'0100;
+  }
+  inline bool IsFencesVisible() const {
+    return visibility_ & 0b0000'1000;
+  }
+  inline bool IsPlacementVisible() const {
+    return visibility_ & 0b0001'0000;
+  }
+  inline bool IsObjectsVisible() const {
+    return visibility_ & 0b0010'0000;
+  }
+
   void LoadMap(std::string_view world_map);
 
   void InitMapScaleUbo();
   void DeInitMapScaleUbo();
 
   void UpdateScale();
-
-  PickingFramebuffer picking_fbo_;
 
   //TODO: holds cur_tile_ which is changing only at mode_Tiles
   // water data from adjacent left/right/above/below tiles
@@ -136,13 +139,7 @@ class TileRenderer {
   //TODO 2: need to init
   std::vector<TileInfo> tiles_info_;
 
-  bool fences_{true};
-  bool objects_{true};
-  bool roads_{true};
-  //TODO: for terrain_mode be careful at the edges between two adjacent tiles
-  bool terrain_{true};
-  bool water_{true};
-  bool placement_{true};
+  const std::uint8_t& visibility_;
 
   GLuint map_scale_ubo_{0};
   float map_scale_{1.0f};
@@ -153,6 +150,8 @@ class TileRenderer {
   RoadsRenderer roads_renderer_;
   TerrainRenderer terrain_renderer_;
   WaterRenderer water_renderer_;
+
+  Shader picking_shader_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_TILERENDERER_H_

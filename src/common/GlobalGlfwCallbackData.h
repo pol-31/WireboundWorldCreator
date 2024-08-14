@@ -5,8 +5,12 @@
 #include "../io/Cursor.h"
 #include "../io/Window.h"
 #include "../core/TileRenderer.h"
-//#include "../modes/IEditMode.h"
+#include "PickingFramebuffer.h"
 
+//TODO:
+// #include "../core/Menu.h"
+
+class Menu;
 class IEditMode;
 
 /** Because of the Glfw's nature for the most effective keyboard/mouse input
@@ -28,9 +32,15 @@ struct GlobalGlfwCallbackData {
   TileRenderer& tile_renderer_;
   IEditMode*& cur_mode_;
 
-  glm::dvec2 cursor_pos_{0.0};
+  Menu& menu_;
+  PickingFramebuffer& picking_fbo_;
 
-  bool tab_pressed_{false};
+
+  glm::dvec2 cursor_pos_{0.0};
+  glm::vec2 cursor_pos_tex_norm_{0.0f};
+
+  glm::ivec2 window_size_{details::kWindowWidth, details::kWindowHeight}; // TODO: init
+
   /*
    * camera, resolution(settings), ...
    * all framebuffers
@@ -38,15 +48,25 @@ struct GlobalGlfwCallbackData {
 
   void UpdateCursorPos() {
     glfwGetCursorPos(gWindow, &cursor_pos_.x, &cursor_pos_.y);
+    cursor_pos_tex_norm_ = {
+        (cursor_pos_.x / window_size_.x) * 2.0f - 1,
+        ((window_size_.y - cursor_pos_.y) / window_size_.y) * 2.0f - 1
+    };
+  }
+
+  void UpdateWindowSize() {
+    glfwGetWindowSize(gWindow, &window_size_.x, &window_size_.y);
   }
 
   GlobalGlfwCallbackData(Camera& camera, Cursor& cursor,
-                         TileRenderer& tile_renderer, IEditMode*& cur_mode)
+                         TileRenderer& tile_renderer, IEditMode*& cur_mode,
+                         Menu& menu, PickingFramebuffer& picking_fbo)
       : camera_(camera),
         cursor_(cursor),
         tile_renderer_(tile_renderer),
-        cur_mode_(cur_mode) {
-  }
+        cur_mode_(cur_mode),
+        menu_(menu),
+        picking_fbo_(picking_fbo) {}
 };
 
 //TODO:

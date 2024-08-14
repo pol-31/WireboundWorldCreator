@@ -45,6 +45,14 @@ struct TileInfo {
   std::unordered_map<std::string, std::string*> CreateUnorderedMap();
 };
 
+/*TODO:
+ * biome:
+terrain material: name, texture(8 wang tiles), erosion wear kef, erosion flow kef,
+    erosion deposition kef, wetness kef, radius to blend (when to start blend / where not to blend)
+water material: name, ... idk...
+weather: general attennuation(sun), wind, ... idk...
+ */
+
 // for roads and fences
 struct GraphTraits {
   ArbitraryGraph graph;
@@ -103,6 +111,11 @@ struct Tile {
   /// for gpu to render; for cpu to dynamically obtain object y pos
   std::vector<uint8_t> terrain_heights_;
   std::vector<uint8_t> water_heights_;
+
+  /// we need this at the beginning of working with each tile, so we could
+  /// remove all last point sets and thus restore water height map to its initial
+  /// state (input map_water_height + water from external tiles)
+  std::vector<uint8_t> water_heights_init_;
 
   Tile() = default;
   explicit Tile(const TileInfo& tile_info);

@@ -13,6 +13,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "../common/Details.h"
+
 //#include "../io/Window.h"
 
 void TileRenderer::LoadMap(std::string_view world_map) {
@@ -64,23 +66,23 @@ void TileRenderer::LoadMap(std::string_view world_map) {
 }
 
 void TileRenderer::Render() const {
-  if (terrain_) {
+  if (IsTerrainVisible()) {
     terrain_renderer_.Render();
   }
-  if (water_) {
+  if (IsWaterVisible()) {
     water_renderer_.Render();
   }
-  if (roads_) {
+  if (IsRoadsVisible()) {
     roads_renderer_.Render();
   }
-  if (fences_) {
+  if (IsFencesVisible()) {
     fences_renderer_.Render();
   }
-  if (objects_) {
-    objects_renderer_.Render();
-  }
-  if (placement_) {
+  if (IsPlacementVisible()) {
     placement_renderer_.Render();
+  }
+  if (IsObjectsVisible()) {
+    objects_renderer_.Render();
   }
 }
 
@@ -92,25 +94,25 @@ void TileRenderer::RenderPickingAll() const {
 }
 
 void TileRenderer::RenderPickingTerrain() const {
-  if (terrain_) {
+  if (IsTerrainVisible()) {
     terrain_renderer_.RenderPicking();
   }
 }
 
 void TileRenderer::RenderPickingWater() const {
-  if (water_) {
+  if (IsWaterVisible()) {
     water_renderer_.RenderPicking();
   }
 }
 
 void TileRenderer::RenderPickingFences() const {
-  if (fences_) {
+  if (IsFencesVisible()) {
     fences_renderer_.RenderPicking();
   }
 }
 
 void TileRenderer::RenderPickingObjects() const {
-  if (objects_) {
+  if (IsObjectsVisible()) {
     objects_renderer_.RenderPicking();
   }
 }

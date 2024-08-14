@@ -28,12 +28,20 @@ add_executable(WireboundWorldCreator
         src/io/Camera.cpp
         src/io/Cursor.cpp
         src/io/Window.cpp
-        src/modes/SharedResources.cpp
+        src/modes/BiomesMode.cpp
         src/modes/FencesMode.cpp
+        src/modes/ObjectsMode.cpp
         src/modes/PlacementMode.cpp
         src/modes/RoadsMode.cpp
+        src/modes/SharedResources.cpp
         src/modes/TerrainMode.cpp
+        src/modes/TilesMode.cpp
         src/modes/WaterMode.cpp
+        src/renderers/TerrainRenderer.cpp
+        src/renderers/WaterRenderer.cpp
+
+        # temp (need to remove)
+        src/common/ArbitraryGraph.cpp
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

@@ -1,6 +1,8 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_ARBITRARYGRAPH_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_ARBITRARYGRAPH_H_
 
+#include <vector>
+
 // used for roads & fences representation, that
 // can be placed solely on terrain (not objects)
 struct ArbitraryGraph {
@@ -25,5 +27,27 @@ struct ArbitraryGraph {
 //TODO: we use the same struct for water, so edges_num is always == 0,
 //  while other data (graph type id and position for each point) are the same
 
+struct Point {
+  int x;
+  int y;
+};
+//TODO:
+//typedef glm::vec2 Point;
+
+//TODO: replace with glm (currently I'm not sure about its internal order)
+int CrossProduct(const Point& A, const Point& B, const Point& C);
+
+bool IsCcw(const std::vector<Point>& points);
+
+bool DoIntersect(const Point& p1, const Point& q1,
+                 const Point& p2, const Point& q2);
+
+bool IsConvexPolygon(const std::vector<Point>& points);
+
+// Function to check if the point p lies on the left side of the line segment from p1 to p2
+bool isLeft(Point p1, Point p2, Point p);
+
+// Function to check if a point lies inside a convex polygon
+bool isInsideConvexPolygon(const std::vector<Point>& polygon, Point p);
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_ARBITRARYGRAPH_H_
