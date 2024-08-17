@@ -6,7 +6,7 @@ out vec4 out_color;
 uniform sampler2D tex_color;
 uniform sampler2D tex_occlusion;
 
-in VS_OUT {
+in TES_OUT {
     vec2 tc;
 } fs_in;
 

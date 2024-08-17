@@ -40,12 +40,12 @@ void UiSliderHandle::Render(const Shader& slider_shader) const {
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
-UiSlots::UiSlots(PointDataType points_data, UiButton&& btn_next,
+UiSlots::UiSlots(const std::size_t& total_size, UiButton&& btn_next,
                  UiButton&& btn_prev, UiButton&& slot1,
                  UiButton&& slot2, UiButton&& slot3,
                  UiButton&& slot4, UiButton&& slot5,
                  int& edit_mode_selected_sample_id)
-    : points_data_(points_data),
+    : total_size_(total_size),
       btn_next_(btn_next),
       btn_prev_(btn_prev),
       slot1_(slot1),
@@ -92,7 +92,7 @@ bool UiSlots::Press(std::uint32_t id) {
   } else if (id == slot5_.GetId()) {
     edit_mode_selected_sample_id_ = start_idx_ + 4;
   } else if (id == btn_next_.GetId()) {
-    if (start_idx_ + 5 < points_data_.size()) {
+    if (start_idx_ + 5 < total_size_) {
       ++start_idx_;
     }
   } else if (id == btn_prev_.GetId()) {
@@ -143,7 +143,7 @@ void UiSlots::RenderSlot(
   } else {
     shader.SetUniform("brightness", 1.0f);
   }
-  if (points_data_.size() - 1 > start_idx_ + i) {
+  if (total_size_ - 1 > start_idx_ + i) {
     int pos_in_slots = static_cast<int>(i & colors_.size());
     shader.SetUniformVec4(
         "color", 1, glm::value_ptr(colors_[pos_in_slots]));
@@ -236,7 +236,7 @@ void UiSlider::UpdateSliderPos(glm::vec2 position) {
   float new_y_pos = std::clamp(position.y, track_.GetBottomBorder(),
                                track_.GetTopBorder());
   progress_ = (new_y_pos - track_.GetBottomBorder()) / height_;
-  handle_.SetPositionOffset(progress_, progress_ * height_);
+  handle_.SetPositionOffset(progress_ * height_);
 }
 
 std::uint32_t UiSlider::GetTrackId() const {

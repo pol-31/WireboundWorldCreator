@@ -8,13 +8,14 @@
 
 #include "Menu.h"
 #include "../modes/AllModes.h"
-#include "../vbos/AllVbos.h"
+#include "../common/Vbos.h"
 #include "TileRenderer.h"
 #include "../common/Paths.h"
 #include "../io/Window.h"
 #include "../io/Camera.h"
 #include "../io/Cursor.h"
 #include "../common/GlobalGlfwCallbackData.h"
+#include "../common/PickingFramebuffer.h"
 
 class Interface {
  public:
@@ -44,6 +45,10 @@ class Interface {
   ObjectsMode objects_; // 1 "point" set
   PlacementMode placement_; // 5 textures
   TilesMode tiles_;
+
+  std::uint8_t visibility_{0b1111'1111};
+
+  PickingFramebuffer picking_fbo_;
 
   GlobalGlfwCallbackData global_data_;
 };

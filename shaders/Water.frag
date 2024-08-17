@@ -2,7 +2,7 @@
 
 out vec4 out_color;
 
-in VS_OUT {
+in TES_OUT {
     vec2 tc;
 } fs_in;
 

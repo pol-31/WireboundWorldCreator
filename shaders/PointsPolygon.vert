@@ -29,7 +29,7 @@ void main() {
     vec2 offs = vec2(x, y);
     vec2 tc = (quad_centre_pos.xz + offs + vec2(0.5)) / 1024.0;
     vec4 p = quad_centre_pos + vec4(float(x - 512), 0.0,
-    float(y - 512), 0.0);
+    float(y - 512), 0.0) / 16.0f;
     p.y = texture(tex_displacement, tc).r * dmap_depth;
     gl_Position = camera.proj * camera.view * transform * p;
 }  

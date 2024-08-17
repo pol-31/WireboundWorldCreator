@@ -33,7 +33,7 @@ void main(void) {
     vec2 offs = vec2(x, y);
     vec2 tex_coords = (vertices[gl_VertexID].xz + offs + vec2(0.5)) / 1024.0;
     vec4 p = vertices[gl_VertexID] + vec4(float(x - 512), 0.0,
-    float(y - 512), 0.0);
+    float(y - 512), 0.0) / 16.0f;
     p.y = texture(tex_displacement, tex_coords).r * dmap_depth;
     gl_Position = camera.proj * camera.view * transform * p;
 

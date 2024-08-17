@@ -7,7 +7,8 @@
 
 WaterRenderer::WaterRenderer(Tile& tile, const Paths& paths)
     : tile_(tile),
-      shader_(paths.shader_water_vert, paths.shader_water_frag),
+      shader_(paths.shader_water_vert, paths.shader_water_tesc,
+              paths.shader_water_tese, paths.shader_water_frag),
       shader_picking_(paths.shader_height_map_picking_vert,
                       paths.shader_height_map_picking_frag) {
   Init();
@@ -35,7 +36,8 @@ void WaterRenderer::Render() const {
   glBindVertexArray(vao_);
   glActiveTexture(GL_TEXTURE0);
   tile_.map_water_height.Bind();
-  glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1024 * 1024);
+  glPatchParameteri(GL_PATCH_VERTICES, 4);
+  glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
 
   glBindVertexArray(0);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

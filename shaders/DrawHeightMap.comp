@@ -1,19 +1,36 @@
 #version 460 core
 
-// invoke for each pixel of 1024x1024
+layout(local_size_x = 16, local_size_y = 16) in; // Adjust the workgroup size as needed
 
-uniform vec2 draw_point;
+layout(binding = 0, r8) uniform image2D heightmap; // Binding index 0, using GL_RGBA8 format
 
-//TODO: rather GL_RED texture than buffer
-layout(binding = 0) buffer HeightMap {
-  uint height; //ubyte?
-} height_map;
-
-layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+uniform uvec2 point;    // The point to draw at (x, y) in the grid
+uniform uint radius;    // The radius of the drawing
+uniform float falloff;  // The falloff value
+uniform float color;    // The grayscale color value
 
 void main() {
-    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
-    float length = length(draw_point - coords);
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
 
-    height_map[coords.y][coords.x] = mix(0, max_height_value, Distribute(length));
+    // Calculate distance from the center point
+    float distance = length(vec2(pixelCoord) - vec2(point));
+
+    // Check if the pixel is within the radius
+    if (distance <= float(radius)) {
+        // Calculate the falloff factor based on distance
+        float factor = 1.0 - clamp(distance / float(radius), 0.0, 1.0);
+
+        // Apply the falloff effect using mix
+        float falloffFactor = mix(1.0, factor, falloff);
+
+        // Fetch the existing pixel value
+        vec4 existingValue = imageLoad(heightmap, pixelCoord);
+        float existingGray = existingValue.r;
+
+        // Calculate the new color value by mixing the existing value with the new one
+        float newValue = mix(existingGray, color, falloffFactor);
+
+        // Store the new value back in the heightmap
+        imageStore(heightmap, pixelCoord, vec4(newValue, newValue, newValue, 1.0));
+    }
 }

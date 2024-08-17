@@ -14,10 +14,20 @@ struct Paths {
   std::string texture_cursor;
   std::string shader_cubemap_frag;
   std::string shader_cubemap_vert;
-  std::string shader_terrain_frag;
   std::string shader_terrain_vert;
-  std::string shader_water_frag;
+  std::string shader_terrain_tesc;
+  std::string shader_terrain_tese;
+  std::string shader_terrain_frag;
+  std::string shader_placement_vert;
+  std::string shader_placement_frag;
   std::string shader_water_vert;
+  std::string shader_water_tesc;
+  std::string shader_water_tese;
+  std::string shader_water_frag;
+  std::string shader_grass_vert;
+  std::string shader_grass_tesc;
+  std::string shader_grass_tese;
+  std::string shader_grass_frag;
   std::string shader_height_map_picking_frag;
   std::string shader_height_map_picking_vert;
   std::string shader_static_sprite_vert;
@@ -29,6 +39,9 @@ struct Paths {
   std::string shader_points_polygon_vert;
   std::string shader_points_polygon_frag;
   std::string world_map;
+  std::string shader_placement_draw_comp;
+  std::string shader_dithering;
+  std::string shader_poisson_points;
 
   std::string texture_skybox1_left;
   std::string texture_skybox1_right;
@@ -47,10 +60,20 @@ struct Paths {
     std::unordered_map<std::string, std::string*> field_map = {
         {"shader_cubemap_frag", &shader_cubemap_frag},
         {"shader_cubemap_vert", &shader_cubemap_vert},
-        {"shader_terrain_frag", &shader_terrain_frag},
         {"shader_terrain_vert", &shader_terrain_vert},
-        {"shader_water_frag", &shader_water_frag},
+        {"shader_terrain_tesc", &shader_terrain_tesc},
+        {"shader_terrain_tese", &shader_terrain_tese},
+        {"shader_terrain_frag", &shader_terrain_frag},
+        {"shader_placement_vert", &shader_placement_vert},
+        {"shader_placement_frag", &shader_placement_frag},
         {"shader_water_vert", &shader_water_vert},
+        {"shader_water_tesc", &shader_water_tesc},
+        {"shader_water_tese", &shader_water_tese},
+        {"shader_water_frag", &shader_water_frag},
+        {"shader_grass_vert", &shader_grass_vert},
+        {"shader_grass_tesc", &shader_grass_tesc},
+        {"shader_grass_tese", &shader_grass_tese},
+        {"shader_grass_frag", &shader_grass_frag},
         {"shader_height_map_picking_frag", &shader_height_map_picking_frag},
         {"shader_height_map_picking_vert", &shader_height_map_picking_vert},
         {"shader_static_sprite_vert", &shader_static_sprite_vert},
@@ -59,8 +82,11 @@ struct Paths {
         {"shader_static_sprite_pick_frag", &shader_static_sprite_pick_frag},
         {"shader_slider_handle_vert", &shader_slider_handle_vert},
         {"shader_slider_handle_frag", &shader_slider_handle_frag},
+        {"shader_dithering", &shader_dithering},
+        {"shader_poisson_points", &shader_poisson_points},
         {"texture_ui", &texture_ui},
         {"texture_text", &texture_text},
+        {"shader_placement_draw_comp", &shader_placement_draw_comp},
         {"world_map", &world_map},
         {"texture_skybox1_left", &texture_skybox1_left},
         {"texture_skybox1_right", &texture_skybox1_right},

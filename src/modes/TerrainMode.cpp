@@ -32,6 +32,7 @@ void TerrainModeMouseButtonCallback(
       if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
         global_data->menu_.Press(pressed_id);
       } else {
+        std::cout << pressed_id << std::endl;
         if (pressed_id == terrain->btn_smooth_.GetId()) {
           terrain->SwitchSmooth();
         } else if (pressed_id == terrain->btn_bake_.GetId()) {
@@ -95,13 +96,12 @@ TerrainMode::TerrainMode(SharedResources& shared_resources)
           {"min size", GetUiData(UiVboDataMainId::kUiSliderSizeMin)},
           {"max size", GetUiData(UiVboDataMainId::kUiSliderSizeMax)},
           {"size slider track", GetUiData(UiVboDataMainId::kUiSliderSizeTrack)},
-          {"size slider handle", GetUiData(UiVboDataMainId::kUiSliderSizeHandler), size_factor_}),
+          {"size slider handle", GetUiData(UiVboDataMainId::kUiSliderSizeHandler)}),
       slider_falloff_(
           {"min falloff", GetUiData(UiVboDataMainId::kUiSliderFalloffMin)},
           {"max falloff", GetUiData(UiVboDataMainId::kUiSliderFalloffMax)},
           {"falloff slider track", GetUiData(UiVboDataMainId::kUiSliderFalloffTrack)},
-          {"falloff slider handle", GetUiData(UiVboDataMainId::kUiSliderFalloffHandler),
-           falloff_factor_}) {}
+          {"falloff slider handle", GetUiData(UiVboDataMainId::kUiSliderFalloffHandler)}) {}
 
 void TerrainMode::Bake() {
   std::cout << "baked" << std::endl;
@@ -121,13 +121,13 @@ void TerrainMode::BindCallbacks() {
 }
 
 void TerrainMode::Render() {
-  shared_resources_.tile_renderer.Render();
+  shared_resources_.tile_renderer_.Render();
 
   glActiveTexture(GL_TEXTURE0);
   shared_resources_.tex_ui_.Bind();
   glBindVertexArray(shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_shader.Bind();
+  shared_resources_.static_sprite_shader_.Bind();
 
   btn_bake_.Render();
   btn_smooth_.Render();
@@ -141,23 +141,23 @@ void TerrainMode::Render() {
         shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
   }
 
-  slider_size_.Render(shared_resources_.static_sprite_shader,
-                            shared_resources_.slider_handle_shader);
-  slider_falloff_.Render(shared_resources_.static_sprite_shader,
-                               shared_resources_.slider_handle_shader);
+  slider_size_.Render(shared_resources_.static_sprite_shader_,
+                            shared_resources_.slider_handle_shader_);
+  slider_falloff_.Render(shared_resources_.static_sprite_shader_,
+                               shared_resources_.slider_handle_shader_);
 }
 
 void TerrainMode::RenderPicking() {
-  shared_resources_.tile_renderer.RenderPickingTerrain();
+  shared_resources_.tile_renderer_.RenderPickingTerrain();
 
   glActiveTexture(GL_TEXTURE0);
   shared_resources_.tex_ui_.Bind();
   glBindVertexArray(shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_picking_shader.Bind();
+  shared_resources_.static_sprite_picking_shader_.Bind();
 
-  btn_bake_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  btn_smooth_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  slider_size_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  slider_falloff_.RenderPicking(shared_resources_.static_sprite_picking_shader);
+  btn_bake_.RenderPicking(shared_resources_.static_sprite_picking_shader_);
+  btn_smooth_.RenderPicking(shared_resources_.static_sprite_picking_shader_);
+  slider_size_.RenderPicking(shared_resources_.static_sprite_picking_shader_);
+  slider_falloff_.RenderPicking(shared_resources_.static_sprite_picking_shader_);
 }

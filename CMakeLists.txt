@@ -37,8 +37,10 @@ add_executable(WireboundWorldCreator
         src/modes/TerrainMode.cpp
         src/modes/TilesMode.cpp
         src/modes/WaterMode.cpp
+        src/renderers/PlacementRenderer.cpp
         src/renderers/TerrainRenderer.cpp
         src/renderers/WaterRenderer.cpp
+        src/renderers/placement/Grass.cpp
 
         # temp (need to remove)
         src/common/ArbitraryGraph.cpp

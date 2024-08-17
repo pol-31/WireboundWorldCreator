@@ -7,7 +7,8 @@
 
 TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
     : tile_(tile),
-      shader_(paths.shader_terrain_vert, paths.shader_terrain_frag),
+      shader_(paths.shader_terrain_vert, paths.shader_terrain_tesc,
+              paths.shader_terrain_tese, paths.shader_terrain_frag),
       shader_picking_(paths.shader_height_map_picking_vert,
                       paths.shader_height_map_picking_frag) {
   Init();
@@ -29,7 +30,10 @@ void TerrainRenderer::Render() const {
   glActiveTexture(GL_TEXTURE2);
   tile_.map_terrain_occlusion.Bind();
 
-  glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1024 * 1024);
+
+  glPatchParameteri(GL_PATCH_VERTICES, 4);
+  glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
+//  glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1024 * 1024);
 
   glBindVertexArray(0);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

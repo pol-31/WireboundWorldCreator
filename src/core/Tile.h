@@ -117,8 +117,27 @@ struct Tile {
   /// state (input map_water_height + water from external tiles)
   std::vector<uint8_t> water_heights_init_;
 
+  Texture* cur_placement_mode_tex_{&map_placement_trees};
+
   Tile() = default;
   explicit Tile(const TileInfo& tile_info);
+
+  static void InitHeightMap(std::string_view path, Texture& texture);
+  static void InitHeightMap(std::string_view path, Texture& texture,
+                            const std::vector<std::uint8_t>& data);
+
+  void SetPlacementModeTrees() {
+    cur_placement_mode_tex_ = &map_placement_trees;
+  }
+  void SetPlacementModeBushes() {
+    cur_placement_mode_tex_ = &map_placement_bushes;
+  }
+  void SetPlacementModeTallGrass() {
+    cur_placement_mode_tex_ = &map_placement_tall_grass;
+  }
+  void SetPlacementModeUndergrowth() {
+    cur_placement_mode_tex_ = &map_placement_undergrowth;
+  }
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_TILE_H_

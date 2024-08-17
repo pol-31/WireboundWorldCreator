@@ -114,16 +114,6 @@ void BiomeTraits::Serialize(std::string_view path,
                             std::vector<BiomeTraits> bimoes) {}
 
 
-//TODO: TileRenderer.h
-void InitHeights() {
-  // TODO: get height, width and only then init....
-  /*terrain_heights_.resize(1024 * 1024);
-  height_map_.Bind();
-  glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE,
-                terrain_heights_.data());
-  glBindTexture(GL_TEXTURE_2D, 0);*/
-}
-
 Tile::Tile(const TileInfo& tile_info) {
   // TODO; use placeholders (full black / full white texture)
 
@@ -139,28 +129,24 @@ Tile::Tile(const TileInfo& tile_info) {
   map_terrain_occlusion = Texture(tile_info.map_terrain_occlusion);
   map_terrain_normal = Texture(tile_info.map_terrain_normal);
   map_terrain_wetness = Texture(tile_info.map_terrain_wetness);
-  if (tile_info.map_water_height.empty()) {
-    GLuint water_tex_id;
-    glGenTextures(1, &water_tex_id);
-    glBindTexture(GL_TEXTURE_2D, water_tex_id);
-    // default-init with 0 height
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED,
-                 GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    map_water_height = Texture(water_tex_id, 1024, 1024, GL_RED);
-  } else {
-    map_water_height = Texture(tile_info.map_water_height);
-  }
+  InitHeightMap(tile_info.map_water_height, map_water_height);
   map_water_flow = Texture(tile_info.map_water_flow);
   graph_water = GraphTraits::Parse(tile_info.graph_water);
   graph_roads = GraphTraits::Parse(tile_info.graph_roads);
   graph_fences = GraphTraits::Parse(tile_info.graph_fences);
-  map_placement_trees = Texture(tile_info.map_placement_trees);
-  map_placement_bushes = Texture(tile_info.map_placement_bushes);
-  map_placement_tall_grass = Texture(tile_info.map_placement_tall_grass);
-  map_placement_undergrowth = Texture(tile_info.map_placement_undergrowth);
+
+
+  //TODO: shrink to fit?
+  std::vector<std::uint8_t> white_height_map(1024 * 1024, 255);
+  InitHeightMap(tile_info.map_placement_trees, map_placement_trees,
+                white_height_map);
+  InitHeightMap(tile_info.map_placement_bushes, map_placement_bushes,
+                white_height_map);
+  InitHeightMap(tile_info.map_placement_tall_grass, map_placement_tall_grass,
+                white_height_map);
+  InitHeightMap(tile_info.map_placement_undergrowth,
+                map_placement_undergrowth, white_height_map);
+
   points_objects = ObjectTraits::Parse(tile_info.points_objects);
   points_biomes = BiomeTraits::Parse(tile_info.points_biomes);
 
@@ -179,4 +165,41 @@ Tile::Tile(const TileInfo& tile_info) {
 
   /// see explanation at header file (Tile.h)
   water_heights_ = water_heights_init_;
+}
+
+void Tile::InitHeightMap(std::string_view path, Texture& texture) {
+  if (!path.empty()) {
+    texture = Texture(path);
+    return;
+  }
+  // we use only 1024x1024
+  GLuint tex_id;
+  glGenTextures(1, &tex_id);
+  glBindTexture(GL_TEXTURE_2D, tex_id);
+  // default-init with 0 height
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED,
+               GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  texture = Texture(tex_id, 1024, 1024, GL_RED);
+}
+
+void Tile::InitHeightMap(std::string_view path, Texture& texture,
+                         const std::vector<std::uint8_t>& data) {
+  if (!path.empty()) {
+    texture = Texture(path);
+    return;
+  }
+  // we use only 1024x1024
+  GLuint tex_id;
+  glGenTextures(1, &tex_id);
+  glBindTexture(GL_TEXTURE_2D, tex_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, 1024, 1024, 0, GL_RED,
+               GL_UNSIGNED_BYTE, data.data());
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  texture = Texture(tex_id, 1024, 1024, GL_R8);
 }

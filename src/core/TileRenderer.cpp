@@ -65,7 +65,7 @@ void TileRenderer::LoadMap(std::string_view world_map) {
   }
 }
 
-void TileRenderer::Render() const {
+void TileRenderer::Render() {
   if (IsTerrainVisible()) {
     terrain_renderer_.Render();
   }
@@ -84,6 +84,10 @@ void TileRenderer::Render() const {
   if (IsObjectsVisible()) {
     objects_renderer_.Render();
   }
+}
+
+void TileRenderer::RenderPlacementDraw() const {
+  placement_renderer_.RenderDraw();
 }
 
 void TileRenderer::RenderPickingAll() const {

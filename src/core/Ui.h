@@ -9,7 +9,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../common/ArbitraryGraph.h"
 #include "../common/Shader.h"
 #include "../common/Colors.h"
 #include "../common/Vbos.h"
@@ -74,28 +73,23 @@ class UiButton {
 
 class UiSliderHandle final : public UiButton {
  public:
-  UiSliderHandle(std::string_view description,
-                 UiData ui_data, float& edit_mode_progres_ref)
-      : UiButton(description, ui_data),
-        edit_mode_progres_ref_(edit_mode_progres_ref) {}
+  UiSliderHandle(std::string_view description, UiData ui_data)
+      : UiButton(description, ui_data) {}
 
   void Render(const Shader& slider_shader) const;
 
-  void SetPositionOffset(float progress, float pos_offset) {
-    edit_mode_progres_ref_ = progress;
+  void SetPositionOffset(float pos_offset) {
     pos_y_down_offset_ = pos_offset;
   }
 
  private:
   float pos_y_down_offset_{0.0f};
-  float& edit_mode_progres_ref_;
 };
 
 /// to check was it pressed see UiSlots::Press(id)
 class UiSlots {
  public:
-  using PointDataType = const std::vector<ArbitraryGraph::Point>&;
-  UiSlots(PointDataType points_data, UiButton&& btn_next,
+  UiSlots(const std::size_t& total_size, UiButton&& btn_next,
           UiButton&& btn_prev, UiButton&& slot1,
           UiButton&& slot2, UiButton&& slot3,
           UiButton&& slot4, UiButton&& slot5,
@@ -126,8 +120,8 @@ class UiSlots {
   UiButton slot4_;
   UiButton slot5_;
 
-  // we don't own it and all what we need it its size (dynamically)
-  PointDataType points_data_;
+  // we don't own point/graph data and all what we need is size (dynamically)
+  const std::size_t& total_size_;
   int start_idx_{0}; // from where in view to start
   int& edit_mode_selected_sample_id_;
 };
@@ -189,6 +183,10 @@ class UiSlider {
   /// We don't render UiSlider id, but
   /// for comparison (e.g. in key callback) we directly slider.GetId()
   [[nodiscard]] std::uint32_t GetTrackId() const;
+
+  [[nodiscard]] float GetProgress() const {
+    return progress_;
+  }
 
  private:
   UiButton min_handle_;

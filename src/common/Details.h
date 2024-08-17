@@ -8,6 +8,14 @@
 
 namespace details {
 
+/// roads the same as terrain;
+inline constexpr int32_t kIdOffsetTerrain = 0;
+inline constexpr int32_t kIdOffsetWater = 1024 * 1024;
+inline constexpr int32_t kIdOffsetFences = 2 * 1024 * 1024;
+inline constexpr int32_t kIdOffsetObjects = 3 * 1024 * 1024;
+// assume we can place object on object 7 times
+inline constexpr int32_t kIdOffsetUi = 10 * 1024 * 1024;
+
 inline constexpr int kTexPositionSize = sizeof(float) * 8;
 inline constexpr int kTexCoordsSize = sizeof(float) * 8;
 
@@ -67,7 +75,7 @@ inline constexpr float kMinSkylineLen = 0.005f;
 inline constexpr int kUboCameraBind = 0;
 inline constexpr int kUboMapScaleBind = 1;
 
-inline constexpr float kHeightMapScale = 256.0f;
+inline constexpr float kHeightMapScale = 16.0f;
 
 inline constexpr std::string_view kPathsPath = "../assets/Paths.txt";
 

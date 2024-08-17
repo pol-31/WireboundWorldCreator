@@ -17,7 +17,7 @@ class TileRenderer {
       : visibility_(visibility),
         fences_renderer_(cur_tile_),
         objects_renderer_(cur_tile_),
-        placement_renderer_(cur_tile_),
+        placement_renderer_(cur_tile_, paths),
         roads_renderer_(cur_tile_),
         terrain_renderer_(cur_tile_, paths),
         water_renderer_(cur_tile_, paths) {
@@ -39,7 +39,10 @@ class TileRenderer {
     return cur_tile_;
   }
 
-  void Render() const;
+  void Render();
+
+  void RenderPlacementDraw() const;
+
   void RenderPickingAll() const;
 
 
