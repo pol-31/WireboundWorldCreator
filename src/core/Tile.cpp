@@ -137,7 +137,8 @@ Tile::Tile(const TileInfo& tile_info) {
 
 
   //TODO: shrink to fit?
-  std::vector<std::uint8_t> white_height_map(1024 * 1024, 255);
+  //TODO: black?
+  std::vector<std::uint8_t> white_height_map(1024 * 1024, 0);
   InitHeightMap(tile_info.map_placement_trees, map_placement_trees,
                 white_height_map);
   InitHeightMap(tile_info.map_placement_bushes, map_placement_bushes,

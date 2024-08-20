@@ -18,9 +18,9 @@ Goal (borowed from [Water Rendering in Far Cry 5](https://www.youtube.com/watch?
 
 ![desired_result.png](progress/desired_result.png)
 
-Current (added "mini-paint" to draw placement maps):
+Current progress:
 
-![progress/July17.png](progress/July17.png)
+![progress/July20.png](progress/July20.png)
 
 Ui scratch:
 

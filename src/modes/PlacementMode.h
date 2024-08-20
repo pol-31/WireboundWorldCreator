@@ -32,6 +32,9 @@ class PlacementMode final : public IEditMode {
 
   void BindCallbacks() override;
 
+  /// draw or preview
+  void SwitchViewMode();
+
  protected:
   friend void PlacementModeScrollCallback(
       GLFWwindow* window, double xoffset, double yoffset);

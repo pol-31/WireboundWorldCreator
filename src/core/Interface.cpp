@@ -1,7 +1,8 @@
 #include "Interface.h"
 
-Interface::Interface(const Paths& paths, Camera& camera, Cursor& cursor)
-    : tile_renderer_(paths, visibility_),
+Interface::Interface(const Paths& paths, Camera& camera,
+                     Cursor& cursor, Map& map)
+    : tile_renderer_(paths, visibility_, map),
       picking_fbo_(),
       shared_resources_(paths, tile_renderer_.GetTile(), tile_renderer_, global_data_),
       terrain_(shared_resources_),

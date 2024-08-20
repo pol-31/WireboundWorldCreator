@@ -11,6 +11,8 @@
 #include "common/Paths.h"
 #include "core/WireboundWorldCreator.h"
 
+#include "core/Map.h"
+
 // TODO: we don't need visibility: "tiles_mode"
 
 // TODO: after window size changing we should recreate all fbos
@@ -32,6 +34,8 @@
 //  then we want to show currect color, so need special shader / ui_component
 
 // TODO: we can prerender all picking framebuffer (!)
+
+
 
 int main(int argc, char* args[]) {
   std::string world_map_path{};
@@ -55,7 +59,10 @@ int main(int argc, char* args[]) {
 
   SetupWindow();
 
-  WireboundWorldCreator app(paths);
+  // TODO: here? - refactor?
+  auto map = LoadMap(paths.world_map);
+
+  WireboundWorldCreator app(paths, map);
   app.RunRenderLoop();
 
   glfwTerminate();

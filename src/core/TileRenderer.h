@@ -10,21 +10,14 @@
 
 #include "../renderers/AllRenderers.h"
 
+#include "../core/Map.h"
+
 /// Render, RenderTerrain().. etc called from modes directly
 class TileRenderer {
  public:
-  explicit TileRenderer(const Paths& paths, const std::uint8_t& visibility)
-      : visibility_(visibility),
-        fences_renderer_(cur_tile_),
-        objects_renderer_(cur_tile_),
-        placement_renderer_(cur_tile_, paths),
-        roads_renderer_(cur_tile_),
-        terrain_renderer_(cur_tile_, paths),
-        water_renderer_(cur_tile_, paths) {
-    InitMapScaleUbo();
-    LoadMap(paths.world_map);
-    cur_tile_ = Tile(tiles_info_[0]);
-  }
+  explicit TileRenderer(const Paths& paths,
+                        const std::uint8_t& visibility,
+                        Map& map);
 
   ~TileRenderer() {
     DeInitMapScaleUbo();
@@ -45,6 +38,8 @@ class TileRenderer {
 
   void RenderPickingAll() const;
 
+  /// see PlacementRenderer::Update() for the explanation
+  void UpdatePlacement();
 
   //TODO: rewrite explanation (we duplicate it)
 
@@ -124,8 +119,6 @@ class TileRenderer {
     return visibility_ & 0b0010'0000;
   }
 
-  void LoadMap(std::string_view world_map);
-
   void InitMapScaleUbo();
   void DeInitMapScaleUbo();
 
@@ -137,10 +130,6 @@ class TileRenderer {
   SurroundingWater surrounding_water_;
 
   Tile cur_tile_{}; // TODO: changing only at tiles_mode
-
-  //TODO 1: should be sorted by pos_x and then by pos_y
-  //TODO 2: need to init
-  std::vector<TileInfo> tiles_info_;
 
   const std::uint8_t& visibility_;
 

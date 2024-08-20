@@ -15,11 +15,12 @@
 #include "../common/Details.h"
 #include "../io/Window.h"
 #include "../common/Vbos.h"
+#include "Map.h"
 
-WireboundWorldCreator::WireboundWorldCreator(const Paths& paths)
+WireboundWorldCreator::WireboundWorldCreator(const Paths& paths, Map& map)
     : cursor_(),
       camera_(),
-      interface_(paths, camera_, cursor_) {
+      interface_(paths, camera_, cursor_, map) {
   Init(paths);
 }
 

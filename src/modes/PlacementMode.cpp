@@ -57,7 +57,7 @@ void PlacementModeMouseButtonCallback(
       }
     } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
       // TODO: embed to movement / add button
-      placement->preview_mode_ = !placement->preview_mode_;
+      placement->SwitchViewMode();
     }
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     if (placement->draw_) {
@@ -143,6 +143,13 @@ PlacementMode::PlacementMode(SharedResources& shared_resources,
 // IN THEORY we can use texture for this and simply change everything... idk
 
 //TODO; GRASS placement !
+
+void PlacementMode::SwitchViewMode() {
+  if (!preview_mode_) {
+    shared_resources_.tile_renderer_.UpdatePlacement();
+  }
+  preview_mode_ = !preview_mode_;
+}
 
 void PlacementMode::Render() {
   if (!preview_mode_) {
@@ -235,10 +242,6 @@ void PlacementMode::UpdateFalloffSliderPos(glm::vec2 position) {
   shader_draw_.SetUniform("falloff", slider_falloff_.GetProgress());
 }
 
-//TODO: need to draw "on the same layer", because currently
-// as long as we holding as much color is, which is really harmful for falloff
-// (only falloff)
-
 void PlacementMode::PlaceTrees() {
   std::cout << "place trees" << std::endl;
   //TODO: we can merge this two calls
@@ -286,7 +289,7 @@ void PlacementMode::DrawPixels(std::uint32_t pressed_id) {
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 
-//TODO: we could turn on (e.g.) trees mode just here (so then rename to SetUp())
+//TODO: we also bind trees mode here - so then rename to SetUp()?
 void PlacementMode::BindCallbacks() {
   glfwSetScrollCallback(gWindow, PlacementModeScrollCallback);
   glfwSetMouseButtonCallback(gWindow, PlacementModeMouseButtonCallback);

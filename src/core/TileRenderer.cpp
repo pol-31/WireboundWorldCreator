@@ -17,52 +17,21 @@
 
 //#include "../io/Window.h"
 
-void TileRenderer::LoadMap(std::string_view world_map) {
-  std::ifstream file(world_map.data());
-  if (!file.is_open()) {
-    std::cerr << "Error opening file: " << world_map << std::endl;
-    return;
-  }
-  TileInfo tile_info;
-  auto tile_info_map = tile_info.CreateUnorderedMap();
+TileRenderer::TileRenderer(
+    const Paths& paths, const std::uint8_t& visibility, Map& map)
+    : visibility_(visibility),
+      cur_tile_(map[0]),
+      fences_renderer_(cur_tile_),
+      objects_renderer_(cur_tile_),
+      placement_renderer_(cur_tile_, paths),
+      roads_renderer_(cur_tile_),
+      terrain_renderer_(cur_tile_, paths),
+      water_renderer_(cur_tile_, paths) {
+  InitMapScaleUbo();
+}
 
-  std::string line;
-  while (std::getline(file, line)) {
-    size_t delimiterPos = line.find('=');
-    if (delimiterPos != std::string::npos) {
-      // "=" means end of current tile
-      if (delimiterPos == 0) {
-        tiles_info_.push_back(tile_info);
-        tile_info = TileInfo{};
-        tile_info_map = tile_info.CreateUnorderedMap();
-        continue;
-      }
-      std::string key = line.substr(0, delimiterPos);
-      std::string value = line.substr(delimiterPos + 1);
-
-      auto it = tile_info_map.find(key);
-      if (it != tile_info_map.end()) {
-        *(it->second) = value;
-      }
-    }
-  }
-  for (auto& tile : tiles_info_) {
-    if (tile.pos_x_str.empty() || tile.pos_y_str.empty()) {
-      throw std::runtime_error("wrong tile_pos data");
-    }
-    tile.pos_x = std::stoi(tile.pos_x_str);
-    tile.pos_y = std::stoi(tile.pos_y_str);
-  }
-  // sort by pos starting from top-left corner
-  std::sort(tiles_info_.begin(), tiles_info_.end(),
-            [](const auto& tile_info_1, const auto& tile_info_2) {
-    return tile_info_1.pos_x < tile_info_2.pos_x ||
-                     (tile_info_1.pos_x == tile_info_2.pos_x &&
-                      tile_info_1.pos_y < tile_info_2.pos_y);
-  });
-  if (tiles_info_.empty()) { // TODO; generate on our own
-    throw std::runtime_error("no height map");
-  }
+void TileRenderer::UpdatePlacement() {
+  placement_renderer_.UpdatePipeline();
 }
 
 void TileRenderer::Render() {

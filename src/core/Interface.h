@@ -10,6 +10,7 @@
 #include "../modes/AllModes.h"
 #include "../common/Vbos.h"
 #include "TileRenderer.h"
+#include "Map.h"
 #include "../common/Paths.h"
 #include "../io/Window.h"
 #include "../io/Camera.h"
@@ -19,7 +20,7 @@
 
 class Interface {
  public:
-  Interface(const Paths& paths, Camera& camera, Cursor& cursor);
+  Interface(const Paths& paths, Camera& camera, Cursor& cursor, Map& map);
 
   void Render();
 

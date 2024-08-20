@@ -7,11 +7,10 @@
 #include "../common/Cubemap.h"
 #include "Interface.h"
 
-
 // should be created only after OpenGL context initialization
 class WireboundWorldCreator {
  public:
-  explicit WireboundWorldCreator(const Paths& paths);
+  WireboundWorldCreator(const Paths& paths, Map& map);
 
   void RunRenderLoop();
 

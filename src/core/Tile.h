@@ -100,9 +100,13 @@ struct Tile {
   std::vector<GraphTraits> graph_roads{};
   std::vector<GraphTraits> graph_fences{};
   Texture map_placement_trees{};
+  std::vector<int> trees_{};
   Texture map_placement_bushes{};
+  std::vector<int> bushes_{};
   Texture map_placement_tall_grass{};
+  std::vector<int> tall_grass_{};
   Texture map_placement_undergrowth{};
+  std::vector<int> undergrowth_{};
   std::vector<ObjectTraits> points_objects{};
   std::vector<BiomeTraits> points_biomes{}; // material effect
 
