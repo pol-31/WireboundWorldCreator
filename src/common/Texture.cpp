@@ -54,7 +54,10 @@ void Texture::Init(std::string_view path) {
         format_ = GL_RGBA;
     }
     //TODO: always unsigned_byte?
-    if (format_ == GL_RGBA && path.starts_with("../assets/map_")) { // TODO:
+    if ((format_ == GL_RGBA &&
+        path.starts_with("../assets/map_")) ||
+        (format_ == GL_RGB &&
+         path.starts_with("../assets/poisson"))) { // TODO: refactor (wtf?)
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0,
                    format_, GL_UNSIGNED_BYTE, data);
     } else {

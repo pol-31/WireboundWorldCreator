@@ -97,6 +97,7 @@ enum class UiVboDataMainId {
   kTilesPageRight,
 
   kTilesPreview,
+  kFullScreen, // for dgb
   kTotal,
 };
 
@@ -170,7 +171,7 @@ inline constexpr std::size_t GetUiDataMainOffset(UiVboDataMainId id) {
 
 inline constexpr std::size_t GetUiDataTextOffset(UiVboDataTextId id) {
   return (static_cast<std::size_t>(id) -
-         static_cast<int>(UiVboDataMainId::kTotal) - 1) * 2; // TODO: or 8?
+         static_cast<int>(UiVboDataTextId::kMode)) * 4; // TODO: or 8?
 }
 
 inline constexpr std::size_t GetUiDataInstancedOffset(
@@ -337,16 +338,16 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
     0.9f, 0.9f, 0.5f, 0.25f,
 
     // UiSlider for "area radius" icon for min
-    1.0f, -0.2f, 0.8f, 0.875f,
-    1.0f, -0.1f, 0.8f, 1.0f,
-    0.9f, -0.2f, 0.7f, 0.875f,
-    0.9f, -0.1f, 0.7f, 1.0f,
+    1.0f, -0.2f, 0.7f, 0.125f,
+    1.0f, -0.1f, 0.7f, 0.25f,
+    0.9f, -0.2f, 0.6f, 0.125f,
+    0.9f, -0.1f, 0.6f, 0.25f,
 
     // UiSlider for "area radius" icon for max
-    1.0f, -1.0f, 0.7f, 0.125f,
-    1.0f, -0.9f, 0.7f, 0.25f,
-    0.9f, -1.0f, 0.6f, 0.125f,
-    0.9f, -0.9f, 0.6f, 0.25f,
+    1.0f, -1.0f, 0.8f, 0.875f,
+    1.0f, -0.9f, 0.8f, 1.0f,
+    0.9f, -1.0f, 0.7f, 0.875f,
+    0.9f, -0.9f, 0.7f, 1.0f,
 
     // UiSlider for "area radius" icon "slider area" (where to slide on)
     1.0f, -0.85f, 0.7f, 0.85f,
@@ -623,6 +624,12 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
     0.9f, 0.4f, 0.6f, 1.0f,
     0.1f, -0.4f, 0.0f, 0.25f,
     0.1f, 0.4f, 0.0f, 1.0f,
+
+    // for debug (render texture to full screen)
+    1.0f, -1.0f, 1.0f, 0.0f,
+    1.0f, 1.0f, 1.0f, 1.0f,
+    -1.0f, -1.0f, 0.0f, 0.0f,
+    -1.0f, 1.0f, 0.0f, 1.0f,
 };
 
 // tex coords were generated with https://github.com/pol-31/WireboundTextBaker;

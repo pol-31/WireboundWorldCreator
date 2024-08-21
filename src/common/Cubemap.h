@@ -33,25 +33,13 @@ class Cubemap {
   }
 
   void Render() {
-    glDepthFunc(GL_LEQUAL);
+    // we've set GL_LEQUAL by default for the whole app
     shader_.Bind();
     glBindVertexArray(vao_);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, tex_.GetId());
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
-    glDepthFunc(GL_LESS);
-
-    //TODO: alternative
-    /*glDepthMask(GL_FALSE);
-    shader_.Bind();
-    glBindVertexArray(vao_);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_.GetId());
-
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    glBindVertexArray(0);
-    glDepthMask(GL_TRUE);*/
   }
 
  private:
@@ -59,6 +47,10 @@ class Cubemap {
     GLuint tex_id;
     glGenTextures(1, &tex_id);
     glBindTexture(GL_TEXTURE_CUBE_MAP, tex_id);
+
+    //TODO; we want uniform-format textures for cubemap and ui, so
+    // need flip in in advance
+    stbi_set_flip_vertically_on_load(false);
 
     int width, height, channels;
     for (int i = 0; i < tex_paths.size(); ++i) {
@@ -79,6 +71,8 @@ class Cubemap {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    stbi_set_flip_vertically_on_load(true); // TODO: restore
 
     tex_ = Texture(tex_id, width, height, GL_RGB);
   }

@@ -37,7 +37,6 @@ void WasdKeyCallback(GLFWwindow* window, int key,
   void* global_data_void_ptr = glfwGetWindowUserPointer(window);
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
   if (action == GLFW_PRESS) {
-    std::cout << "moove" << std::endl;
     if (key == GLFW_KEY_W) {
       global_data->camera_.SetMoveForward();
     } else if (key == GLFW_KEY_A) {
