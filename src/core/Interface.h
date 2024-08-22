@@ -11,12 +11,14 @@
 #include "../common/Vbos.h"
 #include "TileRenderer.h"
 #include "Map.h"
+#include "Visibility.h"
 #include "../common/Paths.h"
 #include "../io/Window.h"
 #include "../io/Camera.h"
 #include "../io/Cursor.h"
 #include "../common/GlobalGlfwCallbackData.h"
 #include "../common/PickingFramebuffer.h"
+#include "../common/TextRenderer.h"
 
 class Interface {
  public:
@@ -35,6 +37,8 @@ class Interface {
   //TODO: holds cur_tile_ which is changing only at mode_Tiles
   TileRenderer tile_renderer_;
 
+  TextRenderer text_renderer_;
+
   Menu menu_;
 
   IEditMode* cur_mode_{nullptr};
@@ -47,7 +51,7 @@ class Interface {
   PlacementMode placement_; // 5 textures
   TilesMode tiles_;
 
-  std::uint8_t visibility_{0b1111'1111};
+  Visibility visibility_;
 
   PickingFramebuffer picking_fbo_;
 

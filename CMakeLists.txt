@@ -19,6 +19,7 @@ add_executable(WireboundWorldCreator
         src/main.cpp
         src/common/Shader.cpp
         src/common/Texture.cpp
+        src/common/TextRenderer.cpp
         src/core/Map.cpp
         src/core/Interface.cpp
         src/core/Menu.cpp

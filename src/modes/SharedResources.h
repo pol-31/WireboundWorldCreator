@@ -26,11 +26,9 @@ class SharedResources {
 
   /// intentionally public
 //  Shader shader_ui_;
-  Texture tex_text_;
   Texture tex_ui_;
 
   GLuint vao_ui_;
-  GLuint vao_text_; // here render description on hovering
 
   // BiomesMode, ObjectMode, TilesMode also has their own VAOs with
   // instanced position data
@@ -38,13 +36,14 @@ class SharedResources {
   GlobalGlfwCallbackData& global_glfw_callback_data_;
 
   GLuint vbo_ui_;
-  GLuint vbo_text_;
   GLuint vbo_instanced_;
 
   TileRenderer& tile_renderer_;
   Shader static_sprite_shader_;
   Shader static_sprite_picking_shader_;
-  Shader slider_handle_shader_;
+  Shader dynamic_sprite_shader_;
+
+  Shader menu_icon_shader_;
 
   Tile& tile_;
 

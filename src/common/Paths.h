@@ -35,10 +35,13 @@ struct Paths {
   std::string shader_static_sprite_frag;
   std::string shader_static_sprite_pick_vert;
   std::string shader_static_sprite_pick_frag;
-  std::string shader_slider_handle_vert;
-  std::string shader_slider_handle_frag;
+  std::string shader_dynamic_sprite_vert;
+  std::string shader_dynamic_sprite_frag;
+  std::string shader_text_vert;
+  std::string shader_text_frag;
   std::string shader_points_polygon_vert;
   std::string shader_points_polygon_frag;
+  std::string menu_icon_shader;
   std::string world_map;
   std::string shader_placement_draw_comp;
   std::string shader_dithering;
@@ -91,8 +94,11 @@ struct Paths {
         {"shader_static_sprite_frag", &shader_static_sprite_frag},
         {"shader_static_sprite_pick_vert", &shader_static_sprite_pick_vert},
         {"shader_static_sprite_pick_frag", &shader_static_sprite_pick_frag},
-        {"shader_slider_handle_vert", &shader_slider_handle_vert},
-        {"shader_slider_handle_frag", &shader_slider_handle_frag},
+        {"shader_dynamic_sprite_vert", &shader_dynamic_sprite_vert},
+        {"shader_dynamic_sprite_frag", &shader_dynamic_sprite_frag},
+        {"shader_text_vert", &shader_text_vert},
+        {"shader_text_frag", &shader_text_frag},
+        {"menu_icon_shader", &menu_icon_shader},
         {"shader_dithering", &shader_dithering},
         {"shader_poisson_points", &shader_poisson_points},
         {"texture_ui", &texture_ui},

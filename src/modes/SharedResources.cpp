@@ -6,16 +6,16 @@
 SharedResources::SharedResources(
     const Paths& paths, Tile& cur_tile, TileRenderer& tile_renderer_,
     GlobalGlfwCallbackData& global_glfw_callback_data)
-    : tex_text_(paths.texture_text),
-      tex_ui_(paths.texture_ui),
+    : tex_ui_(paths.texture_ui),
       static_sprite_shader_(paths.shader_static_sprite_vert,
                            paths.shader_static_sprite_frag),
-      //TODO: move to paths
+      menu_icon_shader_(paths.shader_static_sprite_vert,
+                        paths.menu_icon_shader),
       global_glfw_callback_data_(global_glfw_callback_data),
       static_sprite_picking_shader_(paths.shader_static_sprite_pick_vert,
                                    paths.shader_static_sprite_pick_frag),
-      slider_handle_shader_(paths.shader_slider_handle_vert,
-                           paths.shader_slider_handle_frag),
+      dynamic_sprite_shader_(paths.shader_dynamic_sprite_vert,
+                             paths.shader_dynamic_sprite_frag),
       tile_renderer_(tile_renderer_),
       tile_(cur_tile) {
   Init();
@@ -26,31 +26,24 @@ void SharedResources::Init() {
   InitVaos();
   glActiveTexture(GL_TEXTURE0);
   tex_ui_.Bind();
-  glActiveTexture(GL_TEXTURE1);
-  tex_text_.Bind();
   static_sprite_shader_.Bind();
   static_sprite_shader_.SetUniform("tex", 0);
   static_sprite_shader_.SetUniform("brightness", 1.0f);
-  slider_handle_shader_.Bind();
-  slider_handle_shader_.SetUniform("tex", 0);
+  dynamic_sprite_shader_.Bind();
+  dynamic_sprite_shader_.SetUniform("tex", 0);
   static_sprite_picking_shader_.Bind();
   static_sprite_picking_shader_.SetUniform("tex", 0);
 }
 
 void SharedResources::InitVbos() {
-  GLuint vbos[3];
-  glGenBuffers(3, vbos);
+  GLuint vbos[2];
+  glGenBuffers(2, vbos);
   vbo_ui_ = vbos[0];
-  vbo_text_ = vbos[1];
-  vbo_instanced_ = vbos[2];
+  vbo_instanced_ = vbos[1];
   glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_);
   glBufferData(GL_ARRAY_BUFFER,
                details::kUiVboDataMain.size() * sizeof(float),
                details::kUiVboDataMain.data(), GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_text_);
-  glBufferData(GL_ARRAY_BUFFER,
-               details::kUiVboDataText.size() * sizeof(float),
-               details::kUiVboDataText.data(), GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_instanced_);
   glBufferData(GL_ARRAY_BUFFER,
                details::kUiVboDataInstanced.size() * sizeof(float),
@@ -58,10 +51,7 @@ void SharedResources::InitVbos() {
 }
 
 void SharedResources::InitVaos() {
-  GLuint vaos[2];
-  glGenVertexArrays(2, vaos);
-  vao_ui_ = vaos[0]; // pos/tex_coords both interleaving
-  vao_text_ = vaos[1]; // 1 pos from vbo1 + n tex_coords from vbo2
+  glGenVertexArrays(1, &vao_ui_);
 
   glBindVertexArray(vao_ui_);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_);
@@ -71,19 +61,9 @@ void SharedResources::InitVaos() {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
                         reinterpret_cast<void*>(2 * sizeof(float)));
   glEnableVertexAttribArray(1); // tex coords
-/*
- * TODO: here we use not VertexArray, but uniform variable and start point:
- *  we want to set position according to message size (to center it)
-  glBindVertexArray(vao_text_);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_);
-  // we don't update it, use uniform position
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0,
-                        reinterpret_cast<void*>(TODO:HERE_OUR_UNIFORM_POS));
-  glEnableVertexAttribArray(0); // position
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_text_);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float),
-                        reinterpret_cast<void*>(0));
-  glEnableVertexAttribArray(1); // tex coords*/
+
+  glBindVertexArray(0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void SharedResources::DeInit() {
@@ -92,16 +72,12 @@ void SharedResources::DeInit() {
 }
 
 void SharedResources::DeInitVaos() {
-  GLuint vaos[2];
-  vaos[0] = vao_ui_;
-  vaos[1] = vao_text_;
-  glDeleteVertexArrays(2, vaos);
+  glDeleteVertexArrays(1, &vao_ui_);
 }
 
 void SharedResources::DeInitVbos() {
-  GLuint vbos[3];
+  GLuint vbos[2];
   vbos[0] = vbo_ui_;
-  vbos[1] = vbo_text_;
-  vbos[2] = vbo_instanced_;
-  glDeleteBuffers(3, vbos);
+  vbos[1] = vbo_instanced_;
+  glDeleteBuffers(2, vbos);
 }

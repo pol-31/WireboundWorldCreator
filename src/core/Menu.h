@@ -2,7 +2,8 @@
 #define WIREBOUNDWORLDCREATOR_SRC_MENU_H_
 
 #include "../modes/IEditMode.h"
-#include "../core/Ui.h"
+#include "Ui.h"
+#include "../common/TextRenderer.h"
 
 class SharedResources;
 
@@ -10,7 +11,8 @@ class SharedResources;
 class Menu {
  public:
   explicit Menu(SharedResources& shared_resources,
-                std::uint8_t& visibility,
+                const TextRenderer& text_renderer,
+                Visibility& visibility,
                 IEditMode* terrain_mode,
                 IEditMode* water_mode,
                 IEditMode* roads_mode,
@@ -26,7 +28,7 @@ class Menu {
   void Render() const;
   void RenderPicking() const;
 
-  void RenderHover(glm::dvec2 pos) const;
+  int Hover(uint32_t global_id);
 
   void Press(uint32_t global_id);
 /*
@@ -51,6 +53,15 @@ class Menu {
   }*/
 
  private:
+  struct TextParams {
+    glm::vec2 translate{0.0f, 0.0f};
+    glm::vec2 scale{1.0f, 1.0f};
+  };
+
+  void Init();
+
+  void InitText();
+
   SharedResources& shared_resources_;
 
   std::array<UiButton, 20> buttons_;
@@ -78,8 +89,19 @@ class Menu {
 //  UiStaticSprite text_shaders_;
 //  UiStaticSprite btn_shaders_wirebound_;
 
-  std::uint8_t& visibility_;
+  /// we have 3 text total: "mode", "visibility", "shaders"
+  std::array<TextParams, 3> text_params_;
+
+  const TextRenderer& text_renderer_;
+
+  float mode_hover_hover_{0.0f};
+  int last_hovered_{0};
+
+  Visibility& visibility_;
   IEditMode*& cur_mode_;
+  // used for adjust brightness before render; id related to buttons_ array
+  // can we simply use cur_mode_? idk TODO:
+  int selected_mode_idx_{3};
   std::array<IEditMode*, 8> modes_;
 };
 

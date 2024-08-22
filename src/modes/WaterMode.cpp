@@ -90,24 +90,19 @@ WaterMode::WaterMode(SharedResources& shared_resources,
     : IEditMode(shared_resources),
       points_shader_(paths.shader_points_polygon_vert,
                      paths.shader_points_polygon_frag),
-      btn_bake_lake_("bake as a lake",
-                     GetUiData(UiVboDataMainId::kWaterLake)),
-      btn_bake_river_("bake as a river",
-                      GetUiData(UiVboDataMainId::kWaterRiver)),
-      btn_bake_waterfall_("bake as a waterfall",
-                          GetUiData(UiVboDataMainId::kWaterWaterfall)),
-      btn_create_("add new point set",
-                  GetUiData(UiVboDataMainId::kAddNew)),
-      btn_remove_("remove selected point set",
-                  GetUiData(UiVboDataMainId::kRemove)),
+      btn_bake_lake_(GetUiData(UiVboDataMainId::kWaterLake, UiVboDataTextId::kBakeAsALake)),
+      btn_bake_river_(GetUiData(UiVboDataMainId::kWaterRiver, UiVboDataTextId::kBakeAsARiver)),
+      btn_bake_waterfall_(GetUiData(UiVboDataMainId::kWaterWaterfall, UiVboDataTextId::kBakeAsAWaterfall)),
+      btn_create_(GetUiData(UiVboDataMainId::kAddNew, UiVboDataTextId::kAddNew)),
+      btn_remove_(GetUiData(UiVboDataMainId::kRemove, UiVboDataTextId::kRemoveSelected)),
       slots_(water_data_.GetSizeRef(),
-             {"next slots", GetUiData(UiVboDataMainId::kUiSlotsNext)},
-             {"prev slots", GetUiData(UiVboDataMainId::kUiSlotsPrev)},
-             {"slot 1", GetUiData(UiVboDataMainId::kUiSlots1)},
-             {"slot 2", GetUiData(UiVboDataMainId::kUiSlots2)},
-             {"slot 3", GetUiData(UiVboDataMainId::kUiSlots3)},
-             {"slot 4", GetUiData(UiVboDataMainId::kUiSlots4)},
-             {"slot 5", GetUiData(UiVboDataMainId::kUiSlots5)},
+             UiButton{GetUiData(UiVboDataMainId::kUiSlotsNext, UiVboDataTextId::kNextSlot)},
+             UiButton{GetUiData(UiVboDataMainId::kUiSlotsPrev, UiVboDataTextId::kPreviousSlot)},
+             UiButton{GetUiData(UiVboDataMainId::kUiSlots1, UiVboDataTextId::kNone)},
+             UiButton{GetUiData(UiVboDataMainId::kUiSlots2, UiVboDataTextId::kNone)},
+             UiButton{GetUiData(UiVboDataMainId::kUiSlots3, UiVboDataTextId::kNone)},
+             UiButton{GetUiData(UiVboDataMainId::kUiSlots4, UiVboDataTextId::kNone)},
+             UiButton{GetUiData(UiVboDataMainId::kUiSlots5, UiVboDataTextId::kNone)},
              cur_points_data_idx_) {
   Init();
 }
@@ -506,4 +501,23 @@ void WaterMode::FloodFill() {
   glBindTexture(GL_TEXTURE_2D, 0);
 
   max_height_ = std::numeric_limits<int>::min();
+}
+
+int WaterMode::Hover(std::uint32_t global_id) {
+  int value = -1;
+  if (global_id == btn_bake_lake_.GetId()) {
+    value = btn_bake_lake_.Hover();
+  } else if (global_id == btn_bake_river_.GetId()) {
+    value = btn_bake_river_.Hover();
+  } else if (global_id == btn_bake_waterfall_.GetId()) {
+    value = btn_bake_waterfall_.Hover();
+  } else if (global_id == btn_create_.GetId()) {
+    value = btn_create_.Hover();
+  } else if (global_id == btn_remove_.GetId()) {
+    value = btn_remove_.Hover();
+  }
+  if (value < -1) {
+    std::cout << "here" << std::endl;
+  }
+  return value;
 }

@@ -9,6 +9,9 @@
 struct UiData {
   int32_t id;
   std::size_t vbo_offset;
+  /// comparing to Wirebound, here we add description for each button,
+  /// which showed in some specific area externally.
+  std::size_t text_vbo_offset_;
 };
 
 enum class UiVboDataMainId;
@@ -154,6 +157,7 @@ enum class UiVboDataTextId {
   kUnableToOpenTheFile,
   kUnableToSaveTheFile,
   kTotal,
+  kNone, // doesn't describe any data, but used to set -1 at ctors
 };
 
 enum class UiVboDataInstancedId {
@@ -170,8 +174,12 @@ inline constexpr std::size_t GetUiDataMainOffset(UiVboDataMainId id) {
 }
 
 inline constexpr std::size_t GetUiDataTextOffset(UiVboDataTextId id) {
-  return (static_cast<std::size_t>(id) -
-         static_cast<int>(UiVboDataTextId::kMode)) * 4; // TODO: or 8?
+  if (id == UiVboDataTextId::kNone) {
+    return -1;
+  } else {
+    return (static_cast<std::size_t>(id) -
+        static_cast<int>(UiVboDataTextId::kMode)) * 4; // TODO: or 8?
+  }
 }
 
 inline constexpr std::size_t GetUiDataInstancedOffset(
@@ -186,16 +194,14 @@ inline constexpr std::size_t GetUiDataInstancedOffset(
   }
 }
 
-inline UiData GetUiData(UiVboDataMainId btn_type) {
-  return {static_cast<int>(btn_type), GetUiDataMainOffset(btn_type)};
-}
-
-inline UiData GetUiData(UiVboDataTextId btn_type) {
-  return {static_cast<int>(btn_type), GetUiDataTextOffset(btn_type)};
+inline UiData GetUiData(UiVboDataMainId btn_type, UiVboDataTextId description) {
+  return {static_cast<int>(btn_type), GetUiDataMainOffset(btn_type),
+          GetUiDataTextOffset(description)};
 }
 
 inline UiData GetUiData(UiVboDataInstancedId btn_type) {
-  return {static_cast<int>(btn_type), GetUiDataInstancedOffset(btn_type)};
+  // TODO: description as 0?
+  return {static_cast<int>(btn_type), GetUiDataInstancedOffset(btn_type), 0};
 }
 
 namespace details {
@@ -633,7 +639,7 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
 };
 
 // tex coords were generated with https://github.com/pol-31/WireboundTextBaker;
-inline constexpr std::array<float, 400> kUiVboDataText = {
+inline constexpr std::array<float, 402> kUiVboDataText = {
     0.3456f, 0.1264f, 0.3456f, 0.1888f, 0.2688f, 0.1264f, 0.2688f, 0.1888f,
     0.8768f, 0.1888f, 0.8768f, 0.2512f, 0.7744f, 0.1888f, 0.7744f, 0.2512f,
     0.4288f, 0.1888f, 0.4288f, 0.2512f, 0.3008f, 0.1888f, 0.3008f, 0.2512f,

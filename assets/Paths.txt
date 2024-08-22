@@ -10,8 +10,10 @@ shader_static_sprite_vert=../shaders/Sprite.vert
 shader_static_sprite_frag=../shaders/Sprite.frag
 shader_static_sprite_pick_vert=../shaders/SpritePick.vert
 shader_static_sprite_pick_frag=../shaders/SpritePick.frag
-shader_slider_handle_vert=../shaders/SliderHandle.vert
-shader_slider_handle_frag=../shaders/SliderHandle.frag
+shader_dynamic_sprite_vert=../shaders/DynamicSprite.vert
+shader_dynamic_sprite_frag=../shaders/DynamicSprite.frag
+shader_text_vert=../shaders/Text.vert
+shader_text_frag=../shaders/Text.frag
 shader_cubemap_vert=../shaders/Skybox.vert
 shader_cubemap_frag=../shaders/Skybox.frag
 shader_terrain_vert=../shaders/Terrain.vert
@@ -37,6 +39,8 @@ shader_height_map_picking_vert=../shaders/HeightMapPicking.vert
 shader_height_map_picking_frag=../shaders/HeightMapPicking.frag
 world_map=../assets/AllTiles.txt
 shader_placement_draw_comp=../shaders/DrawHeightMap.comp
+
+menu_icon_shader=../shaders/MenuIconShader.frag
 
 placement_density_low=../assets/poisson/500.png
 placement_density_medium_low=../assets/poisson/1000.png

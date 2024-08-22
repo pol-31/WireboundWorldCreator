@@ -9,9 +9,10 @@ class IEditMode {
   explicit IEditMode(SharedResources& shared_resources)
       : shared_resources_(shared_resources) {}
 
-  //TODO: = 0
-  virtual void Render() {}
-  virtual void RenderPicking() {}
+  virtual void Render() = 0;
+  virtual void RenderPicking()= 0;
+
+  virtual int Hover(std::uint32_t global_id) = 0;
 
   // used for mouse scroll, mouse & keyboard btn interaction
   virtual void BindCallbacks() = 0;

@@ -31,6 +31,7 @@ class WaterMode final : public IEditMode {
 
   void Render() override;
   void RenderPicking() override;
+  int Hover(std::uint32_t global_id) override;
 
   void Create(GLuint id);
 
