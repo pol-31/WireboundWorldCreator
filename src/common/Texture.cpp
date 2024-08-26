@@ -8,17 +8,6 @@
 
 #include "Details.h"
 
-Texture::Texture(std::string_view path) {
-  if (!path.empty()) {
-    Init(path);
-  }
-}
-
-Texture::Texture(GLuint opengl_id, GLsizei width,
-                 GLsizei height, GLint format)
-    : opengl_id_(opengl_id), width_(width),
-      height_(height), format_(format) {}
-
 void Texture::Init(std::string_view path) {
   // don't need it in runtime, but good for fast test check
   // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -70,6 +59,71 @@ void Texture::Init(std::string_view path) {
 //    throw std::runtime_error("Failed to load texture");
     std::cerr << "failed to load texture " << path << std::endl;
   }
+}
+
+void Texture::InitIdTexture() {
+  // TODO: need dynamically adjust at size changes
+  width_ = details::kWindowWidth;
+  height_ = details::kWindowHeight;
+  format_ = GL_R32UI;
+    glGenTextures(1, &opengl_id_);
+    glBindTexture(GL_TEXTURE_2D, opengl_id_);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, format_, width_,
+                 height_, 0, GL_RED_INTEGER,
+                 GL_UNSIGNED_INT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Texture::InitHeightMap() {
+  // we use only 1024x1024 tile size in Wirebound
+  width_ = 1024;
+  height_ = 1024;
+  format_ = GL_RED;
+  glGenTextures(1, &opengl_id_);
+  glBindTexture(GL_TEXTURE_2D, opengl_id_);
+  // default-init with 0 height
+
+  glTexImage2D(GL_TEXTURE_2D, 0, format_, width_,
+               height_, 0, GL_RED,
+               GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+Texture::Texture(const std::array<std::string, 6>& cubemap_paths) {
+  glGenTextures(1, &opengl_id_);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, opengl_id_);
+
+  //TODO; we want uniform-format textures for cubemap and ui, so
+  // need flip in in advance
+  stbi_set_flip_vertically_on_load(false);
+
+  int channels;
+  for (int i = 0; i < cubemap_paths.size(); ++i) {
+    unsigned char* data = stbi_load(
+        cubemap_paths[i].data(), &width_, &height_, &channels, 0);
+    if (data) { // TODO: channels?
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
+                   width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+      format_ = GL_RGB; // TODO: only rgb?
+      stbi_image_free(data);
+    } else {
+      std::cout << "Cubemap texture failed to load at path: "
+                << cubemap_paths[i] << std::endl;
+      stbi_image_free(data);
+    }
+  }
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+  
+  stbi_set_flip_vertically_on_load(true);  
 }
 
 Texture::Texture(Texture&& other) noexcept {

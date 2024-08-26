@@ -135,18 +135,11 @@ Tile::Tile(const TileInfo& tile_info) {
   graph_roads = GraphTraits::Parse(tile_info.graph_roads);
   graph_fences = GraphTraits::Parse(tile_info.graph_fences);
 
-
-  //TODO: shrink to fit?
-  //TODO: black?
-  std::vector<std::uint8_t> white_height_map(1024 * 1024, 0);
-  InitHeightMap(tile_info.map_placement_trees, map_placement_trees,
-                white_height_map);
-  InitHeightMap(tile_info.map_placement_bushes, map_placement_bushes,
-                white_height_map);
-  InitHeightMap(tile_info.map_placement_tall_grass, map_placement_tall_grass,
-                white_height_map);
+  InitHeightMap(tile_info.map_placement_trees, map_placement_trees);
+  InitHeightMap(tile_info.map_placement_bushes, map_placement_bushes);
+  InitHeightMap(tile_info.map_placement_tall_grass, map_placement_tall_grass);
   InitHeightMap(tile_info.map_placement_undergrowth,
-                map_placement_undergrowth, white_height_map);
+                map_placement_undergrowth);
 
   points_objects = ObjectTraits::Parse(tile_info.points_objects);
   points_biomes = BiomeTraits::Parse(tile_info.points_biomes);
@@ -173,34 +166,6 @@ void Tile::InitHeightMap(std::string_view path, Texture& texture) {
     texture = Texture(path);
     return;
   }
-  // we use only 1024x1024
-  GLuint tex_id;
-  glGenTextures(1, &tex_id);
-  glBindTexture(GL_TEXTURE_2D, tex_id);
-  // default-init with 0 height
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED,
-               GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  texture = Texture(tex_id, 1024, 1024, GL_RED);
+  texture = Texture(Texture::Type::kHeightMap);
 }
 
-void Tile::InitHeightMap(std::string_view path, Texture& texture,
-                         const std::vector<std::uint8_t>& data) {
-  if (!path.empty()) {
-    texture = Texture(path);
-    return;
-  }
-  // we use only 1024x1024
-  GLuint tex_id;
-  glGenTextures(1, &tex_id);
-  glBindTexture(GL_TEXTURE_2D, tex_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, 1024, 1024, 0, GL_RED,
-               GL_UNSIGNED_BYTE, data.data());
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  texture = Texture(tex_id, 1024, 1024, GL_R8);
-}

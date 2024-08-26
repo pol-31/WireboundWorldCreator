@@ -127,8 +127,6 @@ struct Tile {
   explicit Tile(const TileInfo& tile_info);
 
   static void InitHeightMap(std::string_view path, Texture& texture);
-  static void InitHeightMap(std::string_view path, Texture& texture,
-                            const std::vector<std::uint8_t>& data);
 
   void SetPlacementModeTrees() {
     cur_placement_mode_tex_ = &map_placement_trees;

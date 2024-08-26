@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 #include "stb_image.h"
 
-#include "Shader.h"
+#include "../shaders/ShaderBase.h"
 #include "Texture.h"
 
 class Cubemap {
@@ -16,20 +16,12 @@ class Cubemap {
   Cubemap() = default;
 
   /// order: right, left, top, bottom, front, back
-  Cubemap(const std::vector<std::string_view>& tex_paths,
+  Cubemap(const std::vector<std::string_view>& cubemap_paths,
           std::string_view path_shader_vert,
           std::string_view path_shader_frag)
-      : shader_(path_shader_vert, path_shader_frag) {
-    if (tex_paths.size() != 6) {
-      std::cerr << "wrong cubemap texture data" << std::endl;
-      return;
-    }
-    shader_.Bind();
-    shader_.SetUniform("tex", 0);
-    glUseProgram(0);
-
-    InitTextures(tex_paths);
-    InitBuffers();
+      : texture_(cubemap_paths),
+        shader_(path_shader_vert, path_shader_frag) {
+    Init();
   }
 
   void Render() {
@@ -37,46 +29,18 @@ class Cubemap {
     shader_.Bind();
     glBindVertexArray(vao_);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_.GetId());
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texture_.GetId());
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
   }
 
  private:
-  void InitTextures(const std::vector<std::string_view>& tex_paths) {
-    GLuint tex_id;
-    glGenTextures(1, &tex_id);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_id);
-
-    //TODO; we want uniform-format textures for cubemap and ui, so
-    // need flip in in advance
-    stbi_set_flip_vertically_on_load(false);
-
-    int width, height, channels;
-    for (int i = 0; i < tex_paths.size(); ++i) {
-      unsigned char* data = stbi_load(
-          tex_paths[i].data(), &width, &height, &channels, 0);
-      if (data) { // TODO: channels?
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
-                     width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        stbi_image_free(data);
-      } else {
-        std::cout << "Cubemap texture failed to load at path: "
-                  << tex_paths[i] << std::endl;
-        stbi_image_free(data);
-      }
-    }
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    stbi_set_flip_vertically_on_load(true); // TODO: restore
-
-    tex_ = Texture(tex_id, width, height, GL_RGB);
+  void Init() {
+    shader_.Bind();
+    shader_.SetUniform("tex", 0);
+    InitBuffers();
   }
-
+  
   void InitBuffers() {
     float skybox_vertices[] = {
         // coords
@@ -134,8 +98,8 @@ class Cubemap {
                           reinterpret_cast<void*>(0));
   }
 
-  Texture tex_;
-  Shader shader_;
+  Texture texture_;
+  ShaderBase shader_;
   GLuint vao_{0};
   GLuint vbo_{0};
 };
