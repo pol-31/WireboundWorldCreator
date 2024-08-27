@@ -2,6 +2,7 @@
 
 #include "../common/Vbos.h"
 #include "../core/TileRenderer.h"
+#include "../common/ShadersBinding.h"
 
 SharedResources::SharedResources(
     const Paths& paths, Tile& cur_tile, TileRenderer& tile_renderer_,
@@ -27,12 +28,14 @@ void SharedResources::Init() {
   glActiveTexture(GL_TEXTURE0);
   tex_ui_.Bind();
   static_sprite_shader_.Bind();
-  static_sprite_shader_.SetUniform("tex", 0);
-  static_sprite_shader_.SetUniform("brightness", 1.0f);
+  glUniform1i(shader::kSpriteTexture, 0);
+  glUniform1f(shader::kSpriteBrightness, 1.0f);
+  menu_icon_shader_.Bind();
+  glUniform1i(shader::kSpriteTexture, 0);
   dynamic_sprite_shader_.Bind();
-  dynamic_sprite_shader_.SetUniform("tex", 0);
+  glUniform1i(shader::kDynamicSpriteTexture, 0);
   static_sprite_picking_shader_.Bind();
-  static_sprite_picking_shader_.SetUniform("tex", 0);
+  glUniform1i(shader::kSpritePickingTexture, 0);
 }
 
 void SharedResources::InitVbos() {

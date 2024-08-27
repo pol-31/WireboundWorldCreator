@@ -3,8 +3,8 @@
 out vec4 out_color;
 
 //uniform sampler2D tex_color;
-uniform sampler2D tex_color;
-uniform sampler2D tex_occlusion;
+layout(location = 1) uniform sampler2D tex_occlusion;
+layout(location = 2) uniform sampler2D tex_color;
 
 in TES_OUT {
     vec2 tc;

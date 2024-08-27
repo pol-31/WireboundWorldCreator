@@ -5,6 +5,7 @@
 
 #include "../core/Tile.h"
 #include "../common/Paths.h"
+#include "../common/Shader.h"
 
 class TerrainRenderer {
  public:

@@ -5,7 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "Details.h"
+#include "../common/Details.h"
 
 // TODO: exceptions, not std::cerr
 
@@ -18,8 +18,48 @@ std::string Shader::LoadShader(std::string_view path) {
   return shader_stream.str();
 }
 
+void Shader::Init(std::string_view comp_path) {
+  std::string comp_code;
+  try {
+    comp_code = LoadShader(comp_path);
+  }
+  catch (const std::ifstream::failure& e) {
+    std::cerr << "shader reading error: " << e.what() << std::endl;
+  }
+
+  ShaderObject comp_shader;
+  comp_shader = ShaderObject(comp_code, GL_COMPUTE_SHADER);
+  opengl_id_ = glCreateProgram();
+  glAttachShader(opengl_id_, comp_shader.GetId());
+
+  glLinkProgram(opengl_id_);
+  CheckLinking(opengl_id_);
+}
+
+void Shader::Init(std::string_view vert_path, std::string_view frag_path) {
+  std::string vert_code, frag_code;
+  try {
+    vert_code = LoadShader(vert_path);
+    frag_code = LoadShader(frag_path);
+  }
+  catch (const std::ifstream::failure& e) {
+    std::cerr << "shader reading error: " << e.what() << std::endl;
+  }
+
+  ShaderObject vert_shader, frag_shader;
+  vert_shader = ShaderObject(vert_code, GL_VERTEX_SHADER);
+  frag_shader = ShaderObject(frag_code, GL_FRAGMENT_SHADER);
+
+  opengl_id_ = glCreateProgram();
+  glAttachShader(opengl_id_, vert_shader.GetId());
+  glAttachShader(opengl_id_, frag_shader.GetId());
+
+  glLinkProgram(opengl_id_);
+  CheckLinking(opengl_id_);
+}
+
 void Shader::Init(std::string_view vert_path, std::string_view frag_path,
-                  std::string_view geom_path) {
+                      std::string_view geom_path) {
   std::string vert_code, frag_code, geom_code;
   try {
     vert_code = LoadShader(vert_path);
@@ -50,26 +90,8 @@ void Shader::Init(std::string_view vert_path, std::string_view frag_path,
   CheckLinking(opengl_id_);
 }
 
-void Shader::Init(std::string_view comp_path) {
-  std::string comp_code;
-  try {
-    comp_code = LoadShader(comp_path);
-  }
-  catch (const std::ifstream::failure& e) {
-    std::cerr << "shader reading error: " << e.what() << std::endl;
-  }
-
-  ShaderObject comp_shader;
-  comp_shader = ShaderObject(comp_code, GL_COMPUTE_SHADER);
-  opengl_id_ = glCreateProgram();
-  glAttachShader(opengl_id_, comp_shader.GetId());
-
-  glLinkProgram(opengl_id_);
-  CheckLinking(opengl_id_);
-}
-
 void Shader::Init(std::string_view vert_path, std::string_view tesc_path,
-                  std::string_view tese_path, std::string_view frag_path) {
+                      std::string_view tese_path, std::string_view frag_path) {
   std::string vert_code, tesc_code, tese_code, frag_code;
   try {
     vert_code = LoadShader(vert_path);
@@ -96,7 +118,6 @@ void Shader::Init(std::string_view vert_path, std::string_view tesc_path,
   glLinkProgram(opengl_id_);
   CheckLinking(opengl_id_);
 }
-
 
 Shader::Shader(Shader&& other) noexcept {
   opengl_id_ = other.opengl_id_;
@@ -125,7 +146,6 @@ Shader::ShaderObject::ShaderObject(const std::string& path, GLenum type) {
   glCompileShader(opengl_id_);
   CheckCompilation(opengl_id_, type);
 }
-
 
 Shader::ShaderObject::ShaderObject(ShaderObject&& other) noexcept {
   opengl_id_ = other.opengl_id_;

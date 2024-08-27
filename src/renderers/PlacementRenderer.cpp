@@ -4,13 +4,13 @@
 #include <GLFW/glfw3.h>
 
 #include "../io/Window.h"
+#include "../common/ShadersBinding.h"
 
 PlacementRenderer::PlacementRenderer(
     Tile& tile, const Paths& paths)
     : tile_(tile),
-      shader_(paths.shader_placement_vert,
-              paths.shader_terrain_tesc, paths.shader_terrain_tese,
-              paths.shader_placement_frag),
+      shader_(paths.shader_placement_vert, paths.shader_terrain_tesc,
+              paths.shader_terrain_tese, paths.shader_placement_frag),
       grass_(paths),
       poisson_shader_(paths.shader_poisson_points),
       density_low_(paths.placement_density_low),
@@ -47,10 +47,8 @@ void PlacementRenderer::Init() {
                         reinterpret_cast<void*>(0));
 
   shader_.Bind();
-  shader_.SetUniform("tex_displacement", 0);
-  //    shader_.SetUniform("tex_color", 1);
-  shader_.SetUniform("tex_occlusion", 2);
-  shader_.SetUniform("tex_draw", 3);
+  glUniform1i(shader::kPlacementHeightMap, 0);
+  glUniform1i(shader::kPlacementTexture, 1);
 
   InitPlacementPipeline();
   UpdatePipeline();
@@ -59,19 +57,8 @@ void PlacementRenderer::Init() {
 void PlacementRenderer::InitPlacementPipeline() {
   Shader poisson_shader("../shaders/PoissonPoints.comp");
   poisson_shader.Bind();
-  poisson_shader.SetUniform("threshold", 20.0f);
-  poisson_shader.SetUniform("textureSize", 1024);
-  poisson_shader.SetUniform("areaSize", 2);
-
-  GLuint placement_temp_tex_id;
-  glGenTextures(1, &placement_temp_tex_id);
-  glBindTexture(GL_TEXTURE_2D, placement_temp_tex_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1024, 1024, 0, GL_RED_INTEGER,
-               GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  placement_temp_ = Texture(placement_temp_tex_id, 1024, 1024, GL_RED_INTEGER);
+  glUniform1i(shader::kPoissonAreaSize, 2);
+  placement_temp_ = Texture(Texture::Type::kPlacementMap);
 }
 
 void PlacementRenderer::Render() {
@@ -97,10 +84,7 @@ void PlacementRenderer::RenderDraw() const {
   glActiveTexture(GL_TEXTURE0);
   tile_.map_terrain_height.Bind();
 
-  glActiveTexture(GL_TEXTURE2);
-  tile_.map_terrain_occlusion.Bind();
-
-  glActiveTexture(GL_TEXTURE3);
+  glActiveTexture(GL_TEXTURE1);
   tile_.cur_placement_mode_tex_->Bind();
 
   glPatchParameteri(GL_PATCH_VERTICES, 4);

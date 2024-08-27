@@ -4,9 +4,7 @@ layout(binding = 0, rgba8ui) readonly uniform uimage2D density;
 layout(binding = 1, r8ui) readonly uniform uimage2D inputImage;
 layout(binding = 2, r8ui) writeonly uniform uimage2D outputImage;
 
-uniform float threshold;
-uniform int textureSize;
-uniform int areaSize;
+layout(location = 0) uniform int areaSize;
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 

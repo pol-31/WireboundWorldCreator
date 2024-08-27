@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "../io/Window.h"
+#include "../common/ShadersBinding.h"
 
 TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
     : tile_(tile),
@@ -18,18 +19,13 @@ void TerrainRenderer::Render() const {
   if(glfwGetKey(gWindow, GLFW_KEY_1)) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
-  //TODO; we still need tessellation - we want to see how it should be in game
-  //TODO: render terrain here
-
   shader_.Bind();
-  glBindVertexArray(vao_);
-
   glActiveTexture(GL_TEXTURE0);
   tile_.map_terrain_height.Bind();
-
-  glActiveTexture(GL_TEXTURE2);
+  glActiveTexture(GL_TEXTURE1);
   tile_.map_terrain_occlusion.Bind();
 
+  glBindVertexArray(vao_);
 
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
@@ -42,11 +38,11 @@ void TerrainRenderer::Render() const {
 //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
 void TerrainRenderer::RenderPicking() const {
   shader_picking_.Bind();
-  // TODO: 0 as an offset from Details.h
-  shader_picking_.SetUniform("id_offset", static_cast<unsigned int>(0));
-  glBindVertexArray(vao_);
   glActiveTexture(GL_TEXTURE0);
   tile_.map_terrain_height.Bind();
+  // TODO: 0 as an offset from Details.h
+  glUniform1ui(shader::kHeightMapPickingIdOffset, static_cast<unsigned int>(0));
+  glBindVertexArray(vao_);
   glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1024 * 1024);
   glBindVertexArray(0);
 }
@@ -85,12 +81,8 @@ void TerrainRenderer::Init() {
                         reinterpret_cast<void*>(0));
 
   shader_.Bind();
-  shader_.SetUniform("tex_displacement", 0);
-  //    shader_.SetUniform("tex_color", 1);
-  shader_.SetUniform("tex_occlusion", 2);
-
+  glUniform1i(shader::kTerrainHeightMap, 0);
+  glUniform1i(shader::kTerrainOcclusion, 1);
   shader_picking_.Bind();
-  shader_picking_.SetUniform("tex_displacement", 0);
-  //    shader_picking_.SetUniform("tex_color", 1);
-  shader_picking_.SetUniform("tex_occlusion", 2);
+  glUniform1i(shader::kHeightMapPickingHeightMap, 0);
 }

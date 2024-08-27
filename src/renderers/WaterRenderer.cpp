@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "../io/Window.h"
+#include "../common/ShadersBinding.h"
 
 WaterRenderer::WaterRenderer(Tile& tile, const Paths& paths)
     : tile_(tile),
@@ -46,7 +47,8 @@ void WaterRenderer::Render() const {
 void WaterRenderer::RenderPicking() const {
   shader_picking_.Bind();
   // TODO: 1024 * 1024 as an offset from Details.h
-  shader_picking_.SetUniform("id_offset", static_cast<unsigned int>(1024 * 1024));
+  glUniform1ui(shader::kHeightMapPickingIdOffset,
+               static_cast<unsigned int>(1024 * 1024));
   glBindVertexArray(vao_);
   glActiveTexture(GL_TEXTURE0);
   tile_.map_water_height.Bind();
@@ -88,7 +90,5 @@ void WaterRenderer::Init() {
                         reinterpret_cast<void*>(0));
 
   shader_.Bind();
-  shader_.SetUniform("tex_displacement", 0);
-  //    shader_.SetUniform("tex_color", 1);
-  //    shader_.SetUniform("tex_occlusion", 2);
+  glUniform1i(shader::kWaterHeightMap, 0);
 }

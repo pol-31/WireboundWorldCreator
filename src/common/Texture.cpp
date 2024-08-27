@@ -94,7 +94,21 @@ void Texture::InitHeightMap() {
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-Texture::Texture(const std::array<std::string, 6>& cubemap_paths) {
+void Texture::InitPlacementMap() {
+  width_ = 1024;
+  height_ = 1024;
+  format_ = GL_R8UI;
+  glGenTextures(1, &opengl_id_);
+  glBindTexture(GL_TEXTURE_2D, opengl_id_);
+  glTexImage2D(GL_TEXTURE_2D, 0, format_, width_,
+               height_, 0, GL_RED_INTEGER,
+               GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Texture::Init(const std::array<std::string, 6>& cubemap_paths) {
   glGenTextures(1, &opengl_id_);
   glBindTexture(GL_TEXTURE_CUBE_MAP, opengl_id_);
 
@@ -108,7 +122,7 @@ Texture::Texture(const std::array<std::string, 6>& cubemap_paths) {
         cubemap_paths[i].data(), &width_, &height_, &channels, 0);
     if (data) { // TODO: channels?
       glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
-                   width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+                   width_, height_, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
       format_ = GL_RGB; // TODO: only rgb?
       stbi_image_free(data);
     } else {

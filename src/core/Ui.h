@@ -32,6 +32,9 @@ class UiButton {
   explicit UiButton(UiData ui_data)
       : ui_data_(ui_data) {}
 
+  UiButton(VboIdMain vbo_texture, VboIdText vbo_text)
+      : UiButton(GetUiData(vbo_texture, vbo_text)) {}
+
   void Render() const;
 
   int Hover() const {
@@ -75,8 +78,7 @@ class UiButton {
 
 class UiSliderHandle final : public UiButton {
  public:
-  explicit UiSliderHandle(UiData ui_data)
-      : UiButton(ui_data) {}
+  using UiButton::UiButton;
 
   void Render(const Shader& slider_shader) const;
 

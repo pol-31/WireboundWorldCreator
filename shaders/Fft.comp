@@ -1,0 +1,48 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(binding = 0) uniform sampler2D precomputedData;
+layout(binding = 1) uniform image2D buffer0;
+layout(binding = 2) uniform image2D buffer1;
+
+uniform int logSize;
+
+void HorizontalStepFFT(int step) {
+    float4 data = PrecomputedData[uint2(Step, id.x)];
+    uint2 inputsIndices = (uint2)data.ba;
+    Buffer1[id.xy] = Buffer0[uint2(inputsIndices.x, id.y)]
+    + ComplexMult(data.rg, Buffer0[uint2(inputsIndices.y, id.y)]);
+
+    float4 data = PrecomputedData[uint2(Step+1, id.y)];
+    uint2 inputsIndices = (uint2)data.ba;
+    Buffer0[id.xy] = Buffer1[uint2(inputsIndices.x, id.y)]
+    + ComplexMult(data.rg, Buffer1[uint2(inputsIndices.y, id.y)]);
+}
+
+void VerticalStepFFT(int step) {
+    float4 data = PrecomputedData[uint2(Step, id.y)];
+    uint2 inputsIndices = (uint2)data.ba;
+    Buffer1[id.xy] = Buffer0[uint2(id.x, inputsIndices.x)]
+    + ComplexMult(data.rg, Buffer0[uint2(id.x, inputsIndices.y)]);
+
+    float4 data = PrecomputedData[uint2(Step+1, id.y)];
+    uint2 inputsIndices = (uint2)data.ba;
+    Buffer0[id.xy] = Buffer1[uint2(id.x, inputsIndices.x)]
+    + ComplexMult(data.rg, Buffer1[uint2(id.x, inputsIndices.y)]);
+}
+
+void main() {
+    uvec3 id = gl_GlobalInvocationID;
+
+    //TODO: logSize should be div by 2, so...
+
+    // because HorizontalStepFFT and VerticalStepFFT process two
+    // stages at once: buffer1->buffer2 and buffer2->buffer1
+    for (int i = 0; i < logSize; i += 2) {
+        HorizontalStepFFT(i);
+    }
+    for (int i = 0; i < logSize; i += 2) {
+        VerticalStepFFT(i);
+    }
+}

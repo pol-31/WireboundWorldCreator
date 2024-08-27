@@ -7,6 +7,8 @@
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
 
+#include "../../common/ShadersBinding.h"
+
 /*TODO:
  * subdivide all tile into sub-tiles, where withing single tile, all grass
  * have the same properties (density, render approach (full/half), shading, etc);
@@ -49,7 +51,7 @@ std::vector<Grass::Blade> Grass::GenerateBlades(
 
       //TODO: we can put such data into 1 blade info and rng them in shader
       blades.push_back({
-          glm::vec4(x, z, y, 1.0f/*orientation_dis(gen)*/),
+          glm::vec4(x, z, y, orientation_dis(gen)),
           glm::vec4(x, z + blade_height, y, blade_height),
           glm::vec4(x, z + blade_height, y, 0.1f),
           glm::vec4(0, z, 0, dis(gen) / 2 + 0.5f)});
@@ -130,12 +132,11 @@ void Grass::DeleteBuffers() const {
 
 void Grass::UpdateAnimation(float delta_time) {
   grass_compute_shader_.Bind();
-  grass_compute_shader_.SetUniform(
-      "current_time", static_cast<float>(glfwGetTime()));
-  grass_compute_shader_.SetUniform("delta_time", static_cast<float>(delta_time / 1e3f)); // TODO: what's this
-  grass_compute_shader_.SetUniform("wind_magnitude", 1000.0f/*wind_magnitude_*/);
-  grass_compute_shader_.SetUniform("wind_wave_length", wind_wave_length_);
-  grass_compute_shader_.SetUniform("wind_wave_period", wind_wave_period_);
+  glUniform1f(shader::kGrassCurrentTime, static_cast<float>(glfwGetTime()));
+  glUniform1f(shader::kGrassDeltaTime, static_cast<float>(delta_time / 1e3f)); // TODO: what's this
+  glUniform1f(shader::kGrassWindMagnitude, 1000.0f/*wind_magnitude_*/);
+  glUniform1f(shader::kGrassWindWaveLength, wind_wave_length_);
+  glUniform1f(shader::kGrassWindWavePeriod, wind_wave_period_);
 
   /*
    * tile 1024x1024 subdivided on n tiles, where n depends on distance to camera;

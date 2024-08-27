@@ -4,6 +4,7 @@
 
 #include "../modes/SharedResources.h"
 #include "../common/Vbos.h"
+#include "../common/ShadersBinding.h"
 
 Menu::Menu(SharedResources& shared_resources,
            const TextRenderer& text_renderer,
@@ -27,26 +28,26 @@ Menu::Menu(SharedResources& shared_resources,
       /// TODO; more description
       buttons_({
 /// first three are text, so not used as simple rendering, but only for text
-          UiButton{GetUiData(UiVboDataMainId::kFullScreen, UiVboDataTextId::kMode)},
-          UiButton{GetUiData(UiVboDataMainId::kFullScreen, UiVboDataTextId::kVision)},
-          UiButton{GetUiData(UiVboDataMainId::kFullScreen, UiVboDataTextId::kShaders)},
-          UiButton{GetUiData(UiVboDataMainId::kModeTerrain, UiVboDataTextId::kTerrain)},
-          UiButton{GetUiData(UiVboDataMainId::kModeWater, UiVboDataTextId::kWater)},
-          UiButton{GetUiData(UiVboDataMainId::kModeRoads, UiVboDataTextId::kRoads)},
-          UiButton{GetUiData(UiVboDataMainId::kModeFences, UiVboDataTextId::kFences)},
-          UiButton{GetUiData(UiVboDataMainId::kModePlacement, UiVboDataTextId::kPlacement)},
-          UiButton{GetUiData(UiVboDataMainId::kModeObjects, UiVboDataTextId::kObject)},
-          UiButton{GetUiData(UiVboDataMainId::kModeBiome, UiVboDataTextId::kBiome)},
-          UiButton{GetUiData(UiVboDataMainId::kModeTiles, UiVboDataTextId::kTiles)},
-          UiButton{GetUiData(UiVboDataMainId::kVisionTerrain, UiVboDataTextId::kTerrain)},
-          UiButton{GetUiData(UiVboDataMainId::kVisionWater, UiVboDataTextId::kWater)},
-          UiButton{GetUiData(UiVboDataMainId::kVisionRoads, UiVboDataTextId::kRoads)},
-          UiButton{GetUiData(UiVboDataMainId::kVisionFences, UiVboDataTextId::kFences)},
-          UiButton{GetUiData(UiVboDataMainId::kVisionPlacement, UiVboDataTextId::kPlacement)},
-          UiButton{GetUiData(UiVboDataMainId::kVisionObjects, UiVboDataTextId::kObject)},
-          UiButton{GetUiData(UiVboDataMainId::kVisionBiome, UiVboDataTextId::kBiome)},
-          UiButton{GetUiData(UiVboDataMainId::kVisionTiles, UiVboDataTextId::kTiles)},
-          UiButton{GetUiData(UiVboDataMainId::kWireboundLogo, UiVboDataTextId::kWirebound)}}) {
+          UiButton{VboIdMain::kFullScreen, VboIdText::kMode},
+          UiButton{VboIdMain::kFullScreen, VboIdText::kVision},
+          UiButton{VboIdMain::kFullScreen, VboIdText::kShaders},
+          UiButton{VboIdMain::kModeTerrain, VboIdText::kTerrain},
+          UiButton{VboIdMain::kModeWater, VboIdText::kWater},
+          UiButton{VboIdMain::kModeRoads, VboIdText::kRoads},
+          UiButton{VboIdMain::kModeFences, VboIdText::kFences},
+          UiButton{VboIdMain::kModePlacement, VboIdText::kPlacement},
+          UiButton{VboIdMain::kModeObjects, VboIdText::kObject},
+          UiButton{VboIdMain::kModeBiome, VboIdText::kBiome},
+          UiButton{VboIdMain::kModeTiles, VboIdText::kTiles},
+          UiButton{VboIdMain::kVisionTerrain, VboIdText::kTerrain},
+          UiButton{VboIdMain::kVisionWater, VboIdText::kWater},
+          UiButton{VboIdMain::kVisionRoads, VboIdText::kRoads},
+          UiButton{VboIdMain::kVisionFences, VboIdText::kFences},
+          UiButton{VboIdMain::kVisionPlacement, VboIdText::kPlacement},
+          UiButton{VboIdMain::kVisionObjects, VboIdText::kObject},
+          UiButton{VboIdMain::kVisionBiome, VboIdText::kBiome},
+          UiButton{VboIdMain::kVisionTiles, VboIdText::kTiles},
+          UiButton{VboIdMain::kWireboundLogo, VboIdText::kWirebound}}) {
   Init();
 }
 
@@ -58,11 +59,11 @@ void Menu::Init() {
 
 void Menu::InitText() {
   for (int i = 0; i < 3; ++i) {
-    auto text_offset = buttons_[i].GetVboOffset();
+    auto text_offset = buttons_[i].GetTextVboOffset();
     float width = details::kUiVboDataText[text_offset * 2]
                   - details::kUiVboDataText[text_offset * 2 + 4];
-    float height = -details::kUiVboDataText[text_offset * 2 + 1]
-                   + details::kUiVboDataText[text_offset * 2 + 3];
+    float height = details::kUiVboDataText[text_offset * 2 + 3]
+                   - details::kUiVboDataText[text_offset * 2 + 1];
     // based on text sprite size
     text_params_[i].scale = glm::vec2{width, height};
   }
@@ -73,11 +74,10 @@ void Menu::InitText() {
 }
 
 void Menu::Render() const {
-  // TODO: can we bind it only once (internally at text_renderer_)?
   const Shader& shader = text_renderer_.Bind();
   for (int i = 0; i < 3; ++i) {
-    shader.SetUniformVec2("translate", 1, glm::value_ptr(text_params_[i].translate));
-    shader.SetUniformVec2("scale", 1, glm::value_ptr(text_params_[i].scale));
+    glUniform2fv(shader::kTextScale, 1, glm::value_ptr(text_params_[i].translate));
+    glUniform2fv(shader::kTextTranslate, 1, glm::value_ptr(text_params_[i].scale));
     glDrawArrays(GL_TRIANGLE_STRIP, buttons_[i].GetTextVboOffset(), 4);
   }
 
@@ -85,12 +85,12 @@ void Menu::Render() const {
   glBindVertexArray(shared_resources_.vao_ui_);
   shared_resources_.tex_ui_.Bind();
 
-  shared_resources_.static_sprite_shader_.SetUniform("brightness", 0.5f);
+  glUniform1f(shader::kSpriteBrightness, 0.5f);
   for (int i = 3; i < 20; ++i) {
     buttons_[i].Render();
   }
 
-  shared_resources_.static_sprite_shader_.SetUniform("brightness", 1.0f);
+  glUniform1f(shader::kSpriteBrightness, 1.0f);
   buttons_[selected_mode_idx_].Render();
 
   if (visibility_.IsTerrainVisible()) {
@@ -124,23 +124,14 @@ void Menu::RenderPicking() const {
 
 int Menu::Hover(uint32_t global_id) {
   // skip first 3 for text
-  if (global_id < static_cast<int>(UiVboDataMainId::kModeTerrain) ||
-      global_id > static_cast<int>(UiVboDataMainId::kModeTerrain) + 16) {
+  if (global_id < static_cast<int>(VboIdMain::kModeTerrain) ||
+      global_id > static_cast<int>(VboIdMain::kModeTerrain) + 16) {
     mode_hover_hover_ = 0.0f;
     return -1;
   }
   int local_id = static_cast<int>(global_id)
-                 - static_cast<int>(UiVboDataMainId::kModeTerrain) + 3;
+                 - static_cast<int>(VboIdMain::kModeTerrain) + 3;
 
-  /*
-   *
-1 -> 0b0000'0001
-2 -> 0b0000'0010
-3 -> 0b0000'0100
-4 -> 0b0000'1000
-5 -> 0b0001'0000
-6 -> 0b0010'0000
-   * */
   if (local_id < 20 &&
       selected_mode_idx_ != local_id &&
       !(local_id > 10 && visibility_.visibility & (1 << (local_id - 11)))) {
@@ -152,9 +143,7 @@ int Menu::Hover(uint32_t global_id) {
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(shared_resources_.vao_ui_);
     shared_resources_.tex_ui_.Bind();
-
-    shared_resources_.menu_icon_shader_.SetUniform("hover_factor", mode_hover_hover_);
-
+    glUniform1f(shader::kSpriteHoveFactor, mode_hover_hover_);
     buttons_[local_id].Render(); // first 3 are text
     last_hovered_ = local_id;
   }
@@ -162,11 +151,11 @@ int Menu::Hover(uint32_t global_id) {
 }
 
 void Menu::Press(uint32_t global_id) {
-  if (global_id < static_cast<int>(UiVboDataMainId::kModeTerrain)) {
+  if (global_id < static_cast<int>(VboIdMain::kModeTerrain)) {
     return;
   }
   int local_id = static_cast<int>(global_id)
-                 - static_cast<int>(UiVboDataMainId::kModeTerrain);
+                 - static_cast<int>(VboIdMain::kModeTerrain);
   if (local_id < 8) {
     cur_mode_ = modes_[local_id];
     cur_mode_->BindCallbacks();

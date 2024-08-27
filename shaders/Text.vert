@@ -1,8 +1,8 @@
 #version 460
 layout (location = 0) in vec2 in_texcoord;
 
-uniform vec2 scale;
-uniform vec2 translate;
+layout(location = 0) uniform vec2 scale;
+layout(location = 1) uniform vec2 translate;
 
 out vec2 texcoord;
 

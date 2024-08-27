@@ -5,6 +5,7 @@
 
 #include "../common/Texture.h"
 #include "Tile.h"
+#include "Visibility.h"
 #include "../common/Paths.h"
 #include "../common/Shader.h"
 
@@ -16,7 +17,7 @@
 class TileRenderer {
  public:
   explicit TileRenderer(const Paths& paths,
-                        const std::uint8_t& visibility,
+                        const Visibility& visibility,
                         Map& map);
 
   ~TileRenderer() {
@@ -100,25 +101,6 @@ class TileRenderer {
     std::vector<Unit> bottom;
   };
 
-  inline bool IsTerrainVisible() const {
-    return visibility_ & 0b0000'0001;
-  }
-  inline bool IsWaterVisible() const {
-    return visibility_ & 0b0000'0010;
-  }
-  inline bool IsRoadsVisible() const {
-    return visibility_ & 0b0000'0100;
-  }
-  inline bool IsFencesVisible() const {
-    return visibility_ & 0b0000'1000;
-  }
-  inline bool IsPlacementVisible() const {
-    return visibility_ & 0b0001'0000;
-  }
-  inline bool IsObjectsVisible() const {
-    return visibility_ & 0b0010'0000;
-  }
-
   void InitMapScaleUbo();
   void DeInitMapScaleUbo();
 
@@ -131,7 +113,7 @@ class TileRenderer {
 
   Tile cur_tile_{}; // TODO: changing only at tiles_mode
 
-  const std::uint8_t& visibility_;
+  const Visibility& visibility_;
 
   GLuint map_scale_ubo_{0};
   float map_scale_{1.0f};

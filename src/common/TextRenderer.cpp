@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Vbos.h"
+#include "ShadersBinding.h"
 
 TextRenderer::TextRenderer(const Paths& paths)
     : texture_(paths.texture_text),
@@ -30,7 +31,7 @@ void TextRenderer::Init() {
   glActiveTexture(GL_TEXTURE0); // TODO: GL_TEXTURE1
   texture_.Bind();
   shader_.Bind();
-  shader_.SetUniform("tex", 0);
+  glUniform1i(shader::kTextTexture, 0);
 }
 
 const Shader& TextRenderer::Bind() const {
@@ -54,14 +55,12 @@ void TextRenderer::RenderDescription(int vbo_offset) {
     glActiveTexture(GL_TEXTURE0);
     texture_.Bind();
     shader_.Bind();
-    shader_.SetUniform("tex", 0);
-
     float width = details::kUiVboDataText[vbo_offset * 2]
                   - details::kUiVboDataText[vbo_offset * 2 + 4];
     float height = details::kUiVboDataText[vbo_offset * 2 + 3]
                    - details::kUiVboDataText[vbo_offset * 2 + 1];
-    shader_.SetUniformVec2("scale", 1, glm::value_ptr(glm::vec2{width, height}));
-    shader_.SetUniformVec2("translate", 1, glm::value_ptr(glm::vec2{-0.0f, -0.8f}));
+    glUniform2fv(shader::kTextScale, 1, glm::value_ptr(glm::vec2{width, height}));
+    glUniform2fv(shader::kTextTranslate, 1, glm::value_ptr(glm::vec2{-0.0f, -0.8f}));
     glDrawArrays(GL_TRIANGLE_STRIP, vbo_offset, 4);
   }
 }

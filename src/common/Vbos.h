@@ -14,16 +14,16 @@ struct UiData {
   std::size_t text_vbo_offset_;
 };
 
-enum class UiVboDataMainId;
-enum class UiVboDataTextId;
-enum class UiVboDataInstancedId;
+enum class VboIdMain;
+enum class VboIdText;
+enum class VboIdInstanced;
 
-inline constexpr std::size_t GetUiDataMainOffset(UiVboDataMainId id);
-inline constexpr std::size_t GetUiDataTextOffset(UiVboDataTextId id);
-inline constexpr std::size_t GetUiDataInstancedOffset(UiVboDataInstancedId id);
+inline constexpr std::size_t GetVboMainOffset(VboIdMain id);
+inline constexpr std::size_t GetVboTextOffset(VboIdText id);
+inline constexpr std::size_t GetVboInstancedOffset(VboIdInstanced id);
 
 /// related to kUiVboDataMain
-enum class UiVboDataMainId {
+enum class VboIdMain {
   kModeTerrain = details::kIdOffsetUi,
   kModeWater,
   kModeRoads,
@@ -104,8 +104,8 @@ enum class UiVboDataMainId {
   kTotal,
 };
 
-enum class UiVboDataTextId {
-  kMode = static_cast<int>(UiVboDataMainId::kTotal) + 1,
+enum class VboIdText {
+  kMode = static_cast<int>(VboIdMain::kTotal) + 1,
   kVision,
   kTerrain,
   kWater,
@@ -160,48 +160,47 @@ enum class UiVboDataTextId {
   kNone, // doesn't describe any data, but used to set -1 at ctors
 };
 
-enum class UiVboDataInstancedId {
-  kObjects = static_cast<int>(UiVboDataTextId::kTotal) + 1,
+enum class VboIdInstanced {
+  kObjects = static_cast<int>(VboIdText::kTotal) + 1,
   kBiomes,
   kTiles,
   kTotal,
 };
 
-inline constexpr std::size_t GetUiDataMainOffset(UiVboDataMainId id) {
+inline constexpr std::size_t GetVboMainOffset(VboIdMain id) {
   // for each Ui component 16 floats
   // (4 2d points with position and tex coords)
   return (static_cast<std::size_t>(id) - (details::kIdOffsetUi)) * 4; // TODO: 4?
 }
 
-inline constexpr std::size_t GetUiDataTextOffset(UiVboDataTextId id) {
-  if (id == UiVboDataTextId::kNone) {
+inline constexpr std::size_t GetVboTextOffset(VboIdText id) {
+  if (id == VboIdText::kNone) {
     return -1;
   } else {
     return (static_cast<std::size_t>(id) -
-        static_cast<int>(UiVboDataTextId::kMode)) * 4; // TODO: or 8?
+        static_cast<int>(VboIdText::kMode)) * 4; // TODO: or 8?
   }
 }
 
-inline constexpr std::size_t GetUiDataInstancedOffset(
-    UiVboDataInstancedId id) {
+inline constexpr std::size_t GetVboInstancedOffset(VboIdInstanced id) {
   switch(id) {
-    case UiVboDataInstancedId::kObjects:
+    case VboIdInstanced::kObjects:
       return 0;
-    case UiVboDataInstancedId::kBiomes:
+    case VboIdInstanced::kBiomes:
       return 8 * 4 * 8;
-    case UiVboDataInstancedId::kTiles:
+    case VboIdInstanced::kTiles:
       return (8 * 4 + 8) * 8;
   }
 }
 
-inline UiData GetUiData(UiVboDataMainId btn_type, UiVboDataTextId description) {
-  return {static_cast<int>(btn_type), GetUiDataMainOffset(btn_type),
-          GetUiDataTextOffset(description)};
+inline UiData GetUiData(VboIdMain btn_type, VboIdText description) {
+  return {static_cast<int>(btn_type), GetVboMainOffset(btn_type),
+          GetVboTextOffset(description)};
 }
 
-inline UiData GetUiData(UiVboDataInstancedId btn_type) {
+inline UiData GetUiData(VboIdInstanced btn_type) {
   // TODO: description as 0?
-  return {static_cast<int>(btn_type), GetUiDataInstancedOffset(btn_type), 0};
+  return {static_cast<int>(btn_type), GetVboInstancedOffset(btn_type), 0};
 }
 
 namespace details {

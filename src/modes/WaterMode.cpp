@@ -4,6 +4,7 @@
 #include "../common/GlobalGlfwCallbackData.h"
 #include "../core/Menu.h"
 #include "../common/Vbos.h"
+#include "../common/ShadersBinding.h"
 
 #include "../common/ArbitraryGraph.h"
 
@@ -90,19 +91,19 @@ WaterMode::WaterMode(SharedResources& shared_resources,
     : IEditMode(shared_resources),
       points_shader_(paths.shader_points_polygon_vert,
                      paths.shader_points_polygon_frag),
-      btn_bake_lake_(GetUiData(UiVboDataMainId::kWaterLake, UiVboDataTextId::kBakeAsALake)),
-      btn_bake_river_(GetUiData(UiVboDataMainId::kWaterRiver, UiVboDataTextId::kBakeAsARiver)),
-      btn_bake_waterfall_(GetUiData(UiVboDataMainId::kWaterWaterfall, UiVboDataTextId::kBakeAsAWaterfall)),
-      btn_create_(GetUiData(UiVboDataMainId::kAddNew, UiVboDataTextId::kAddNew)),
-      btn_remove_(GetUiData(UiVboDataMainId::kRemove, UiVboDataTextId::kRemoveSelected)),
+      btn_bake_lake_(VboIdMain::kWaterLake, VboIdText::kBakeAsALake),
+      btn_bake_river_(VboIdMain::kWaterRiver, VboIdText::kBakeAsARiver),
+      btn_bake_waterfall_(VboIdMain::kWaterWaterfall, VboIdText::kBakeAsAWaterfall),
+      btn_create_(VboIdMain::kAddNew, VboIdText::kAddNew),
+      btn_remove_(VboIdMain::kRemove, VboIdText::kRemoveSelected),
       slots_(water_data_.GetSizeRef(),
-             UiButton{GetUiData(UiVboDataMainId::kUiSlotsNext, UiVboDataTextId::kNextSlot)},
-             UiButton{GetUiData(UiVboDataMainId::kUiSlotsPrev, UiVboDataTextId::kPreviousSlot)},
-             UiButton{GetUiData(UiVboDataMainId::kUiSlots1, UiVboDataTextId::kNone)},
-             UiButton{GetUiData(UiVboDataMainId::kUiSlots2, UiVboDataTextId::kNone)},
-             UiButton{GetUiData(UiVboDataMainId::kUiSlots3, UiVboDataTextId::kNone)},
-             UiButton{GetUiData(UiVboDataMainId::kUiSlots4, UiVboDataTextId::kNone)},
-             UiButton{GetUiData(UiVboDataMainId::kUiSlots5, UiVboDataTextId::kNone)},
+             UiButton{VboIdMain::kUiSlotsNext, VboIdText::kNextSlot},
+             UiButton{VboIdMain::kUiSlotsPrev, VboIdText::kPreviousSlot},
+             UiButton{VboIdMain::kUiSlots1, VboIdText::kNone},
+             UiButton{VboIdMain::kUiSlots2, VboIdText::kNone},
+             UiButton{VboIdMain::kUiSlots3, VboIdText::kNone},
+             UiButton{VboIdMain::kUiSlots4, VboIdText::kNone},
+             UiButton{VboIdMain::kUiSlots5, VboIdText::kNone},
              cur_points_data_idx_) {
   Init();
 }
@@ -125,7 +126,7 @@ void WaterMode::Init() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   points_shader_.Bind();
-  points_shader_.SetUniform("tex_displacement", 0);
+  glUniform1i(shader::kGraphHeightMap, 0);
 }
 
 void WaterMode::Render() {
@@ -166,14 +167,14 @@ void WaterMode::RenderPoints() {
   glActiveTexture(GL_TEXTURE0);
   shared_resources_.tile_.map_terrain_height.Bind();
 
-  points_shader_.SetUniformVec4("color", 1, glm::value_ptr(colors::kWhite));
+  glUniform4fv(shader::kGraphHeightMap, 1, glm::value_ptr(colors::kWhite));
   glPointSize(10.0f);
   glDrawArrays(GL_POINTS, 0, water_data_[cur_points_data_idx_].points.size());
   if (water_data_[cur_points_data_idx_].points.size() < 3) {
     return;
   }
 
-  points_shader_.SetUniformVec4("color", 1, glm::value_ptr(colors::kBlue));
+  glUniform4fv(shader::kGraphHeightMap, 1, glm::value_ptr(colors::kBlue));
   glLineWidth(3.0f);
   glDrawArrays(GL_LINE_LOOP, 0, water_data_[cur_points_data_idx_].points.size());
 }

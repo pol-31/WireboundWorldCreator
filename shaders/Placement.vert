@@ -1,6 +1,6 @@
 #version 460 core
 
-uniform sampler2D tex_displacement;
+layout (location = 0) uniform sampler2D tex_displacement;
 
 layout(std140, binding = 1) uniform Matrices {
     mat4 transform;

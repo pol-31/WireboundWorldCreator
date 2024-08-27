@@ -4,10 +4,10 @@ layout(local_size_x = 16, local_size_y = 16) in; // Adjust the workgroup size as
 
 layout(binding = 0, r8) uniform image2D heightmap; // Binding index 0, using GL_RGBA8 format
 
-uniform uvec2 point;    // The point to draw at (x, y) in the grid
-uniform uint radius;    // The radius of the drawing
-uniform float falloff;  // The falloff value
-uniform float color;    // The grayscale color value
+layout(location = 0) uniform uvec2 point;    // The point to draw at (x, y) in the grid
+layout(location = 1) uniform uint radius;    // The radius of the drawing
+layout(location = 2) uniform float falloff;  // The falloff value
+layout(location = 3) uniform float color;    // The grayscale color value
 
 void main() {
     ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);

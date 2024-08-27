@@ -1,12 +1,12 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC__TEXTURE_H_
 #define WIREBOUNDWORLDCREATOR_SRC__TEXTURE_H_
 
+#include <array>
 #include <string_view>
-#include <vector>
 
 #include "glad/glad.h"
 
-#include "../shaders/ShaderBase.h"
+#include "Shader.h"
 
 /*TODO:
  * - cubemap
@@ -19,7 +19,8 @@ class Texture {
   enum class Type {
     kId,
     kHeightMap,
-  }
+    kPlacementMap,
+  };
  
   Texture() = default;
   
@@ -29,11 +30,14 @@ class Texture {
   
   explicit Texture(Type type) {
     switch (type) {
-      cast Type::kId:
+      case Type::kId:
         InitIdTexture();
         break;
-      cast Type::kHeightMap:
+      case Type::kHeightMap:
         InitHeightMap();
+        break;
+      case Type::kPlacementMap:
+        InitPlacementMap();
         break;
     }
   }
@@ -45,7 +49,9 @@ class Texture {
       height_(height),
       format_(format) {}
   
-  Texture(const std::vector<std::string_view>& cubemap_paths);
+  Texture(const std::array<std::string, 6>& cubemap_paths) {
+    Init(cubemap_paths);
+  }
 
   Texture(const Texture& other) = delete;
   Texture& operator=(const Texture& other) = delete;
@@ -90,8 +96,10 @@ class Texture {
   void InitIdTexture();
   
   void InitHeightMap();
+
+  void InitPlacementMap();
   
-  void Init(const std::vector<std::string_view>& cubemap_paths);
+  void Init(const std::array<std::string, 6>& cubemap_paths);
   
   void DeInit();
 

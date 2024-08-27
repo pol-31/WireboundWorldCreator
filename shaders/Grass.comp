@@ -17,12 +17,12 @@ layout(binding = 0) uniform CameraBufferObject {
     mat4 proj;
 } camera;
 
-uniform float current_time;
-uniform float delta_time;
+layout(location = 0) uniform float current_time;
+layout(location = 1) uniform float delta_time;
 
-uniform float wind_magnitude;
-uniform float wind_wave_length;
-uniform float wind_wave_period;
+layout(location = 2) uniform float wind_magnitude;
+layout(location = 3) uniform float wind_wave_length;
+layout(location = 4) uniform float wind_wave_period;
 
 struct Blade {
     vec4 v0;

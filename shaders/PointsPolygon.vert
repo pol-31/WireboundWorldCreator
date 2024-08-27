@@ -1,7 +1,7 @@
 #version 460 core
 layout (location = 0) in uint in_vertex_id;
 
-uniform sampler2D tex_displacement;
+layout(location = 0) uniform sampler2D tex_displacement;
 
 layout(std140, binding = 1) uniform Matrices {
     mat4 transform;

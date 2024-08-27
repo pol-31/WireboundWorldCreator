@@ -7,13 +7,14 @@
 #include "../modes/TerrainMode.h"
 #include "../modes/WaterMode.h"
 #include "../common/Colors.h"
+#include "../common/ShadersBinding.h"
 
 void UiButton::Render() const {
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
 void UiButton::RenderPicking(const Shader& picking_shader) const {
-  picking_shader.SetUniform("id", static_cast<uint32_t>(ui_data_.id));
+  glUniform1ui(shader::kSpritePickingId, static_cast<uint32_t>(ui_data_.id));
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
@@ -36,7 +37,9 @@ float UiButton::GetBottomBorder() const {
 
 void UiSliderHandle::Render(const Shader& slider_shader) const {
   slider_shader.Bind();
-  slider_shader.SetUniform("pos_y_down_offset_", pos_y_down_offset_);
+  glUniform2fv(shader::kDynamicSpriteScale, 1,
+               glm::value_ptr(glm::vec2{1.0f, 1.0f}));
+  glUniform2fv(shader::kDynamicSpriteTranslate, 1, glm::value_ptr(translate_));
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
@@ -105,7 +108,7 @@ bool UiSlots::Press(std::uint32_t id) {
   return true;
 }
 
-std::string_view UiSlots::Hover(std::uint32_t id) const {
+int UiSlots::Hover(std::uint32_t id) const {
   //TODO: bvh
   if (id == btn_next_.GetId()) {
     return btn_next_.Hover();
@@ -139,17 +142,16 @@ void UiSlots::InitColors() {
 void UiSlots::RenderSlot(
     const Shader& shader, const UiButton& slot, int i) const {
   if (start_idx_ + i == edit_mode_selected_sample_id_) {
-    shader.SetUniform("brightness", 0.5f);
+    glUniform1f(shader::kSpriteBrightness, 0.5f);
   } else {
-    shader.SetUniform("brightness", 1.0f);
+    glUniform1f(shader::kSpriteBrightness, 1.0f);
   }
   if (total_size_ - 1 > start_idx_ + i) {
     int pos_in_slots = static_cast<int>(i & colors_.size());
-    shader.SetUniformVec4(
-        "color", 1, glm::value_ptr(colors_[pos_in_slots]));
+    glUniform4fv(shader::kSpriteColor, 1,
+                 glm::value_ptr(colors_[pos_in_slots]));
   } else {
-    shader.SetUniformVec4(
-        "color", 1, glm::value_ptr(colors::kBlack));
+    glUniform4fv(shader::kSpriteColor, 1, glm::value_ptr(colors::kBlack));
   }
   slot.Render();
 }
@@ -191,7 +193,7 @@ bool UiBiomesList::Press(std::uint32_t id) {
   //
 }
 
-std::string_view UiBiomesList::Hover(std::uint32_t id) const {
+int UiBiomesList::Hover(std::uint32_t id) const {
   //
 }
 
@@ -218,7 +220,7 @@ void UiSlider::RenderPicking(const Shader& picking_shader) const {
   // there's no point in rendering picking for the rest nested components
 }
 
-std::string_view UiSlider::Hover(std::uint32_t id) const {
+int UiSlider::Hover(std::uint32_t id) const {
   //TODO: bvh
   if (id == min_handle_.GetId()) {
     return min_handle_.Hover();

@@ -18,7 +18,7 @@
 //#include "../io/Window.h"
 
 TileRenderer::TileRenderer(
-    const Paths& paths, const std::uint8_t& visibility, Map& map)
+    const Paths& paths, const Visibility& visibility, Map& map)
     : visibility_(visibility),
       cur_tile_(map[0]),
       fences_renderer_(cur_tile_),
@@ -35,22 +35,22 @@ void TileRenderer::UpdatePlacement() {
 }
 
 void TileRenderer::Render() {
-  if (IsTerrainVisible()) {
+  if (visibility_.IsTerrainVisible()) {
     terrain_renderer_.Render();
   }
-  if (IsWaterVisible()) {
+  if (visibility_.IsWaterVisible()) {
     water_renderer_.Render();
   }
-  if (IsRoadsVisible()) {
+  if (visibility_.IsRoadsVisible()) {
     roads_renderer_.Render();
   }
-  if (IsFencesVisible()) {
+  if (visibility_.IsFencesVisible()) {
     fences_renderer_.Render();
   }
-  if (IsPlacementVisible()) {
+  if (visibility_.IsPlacementVisible()) {
     placement_renderer_.Render();
   }
-  if (IsObjectsVisible()) {
+  if (visibility_.IsObjectsVisible()) {
     objects_renderer_.Render();
   }
 }
@@ -67,25 +67,25 @@ void TileRenderer::RenderPickingAll() const {
 }
 
 void TileRenderer::RenderPickingTerrain() const {
-  if (IsTerrainVisible()) {
+  if (visibility_.IsTerrainVisible()) {
     terrain_renderer_.RenderPicking();
   }
 }
 
 void TileRenderer::RenderPickingWater() const {
-  if (IsWaterVisible()) {
+  if (visibility_.IsWaterVisible()) {
     water_renderer_.RenderPicking();
   }
 }
 
 void TileRenderer::RenderPickingFences() const {
-  if (IsFencesVisible()) {
+  if (visibility_.IsFencesVisible()) {
     fences_renderer_.RenderPicking();
   }
 }
 
 void TileRenderer::RenderPickingObjects() const {
-  if (IsObjectsVisible()) {
+  if (visibility_.IsObjectsVisible()) {
     objects_renderer_.RenderPicking();
   }
 }

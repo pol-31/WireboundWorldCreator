@@ -1,14 +1,15 @@
 #ifndef WIREBOUNDDEV_SRC_CUBEMAP_H_
 #define WIREBOUNDDEV_SRC_CUBEMAP_H_
 
+#include <array>
 #include <iostream>
 #include <string_view>
-#include <vector>
 
 #include <glm/glm.hpp>
-#include "stb_image.h"
+#include <stb_image.h>
 
-#include "../shaders/ShaderBase.h"
+#include "Shader.h"
+#include "ShadersBinding.h"
 #include "Texture.h"
 
 class Cubemap {
@@ -16,7 +17,7 @@ class Cubemap {
   Cubemap() = default;
 
   /// order: right, left, top, bottom, front, back
-  Cubemap(const std::vector<std::string_view>& cubemap_paths,
+  Cubemap(const std::array<std::string, 6>& cubemap_paths,
           std::string_view path_shader_vert,
           std::string_view path_shader_frag)
       : texture_(cubemap_paths),
@@ -37,7 +38,7 @@ class Cubemap {
  private:
   void Init() {
     shader_.Bind();
-    shader_.SetUniform("tex", 0);
+    glUniform1i(shader::kCubemapTexture, 0);
     InitBuffers();
   }
   
@@ -99,7 +100,7 @@ class Cubemap {
   }
 
   Texture texture_;
-  ShaderBase shader_;
+  Shader shader_;
   GLuint vao_{0};
   GLuint vbo_{0};
 };
