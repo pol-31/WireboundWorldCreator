@@ -101,6 +101,7 @@ void GraphTraits::Serialize(std::string_view path,
 
 // uint32 pos_x, uint32 pos_y, uint32 id
 std::vector<ObjectTraits> ObjectTraits::Parse(std::string_view path) {
+  return {};
   //TODO:
 }
 void ObjectTraits::Serialize(std::string_view path,
@@ -108,29 +109,31 @@ void ObjectTraits::Serialize(std::string_view path,
 
 // uint32 pos_x, uint32 pos_y, uint32 id
 std::vector<BiomeTraits> BiomeTraits::Parse(std::string_view path) {
+  return {};
   //TODO:
 }
-void BiomeTraits::Serialize(std::string_view path,
-                            std::vector<BiomeTraits> bimoes) {}
+void BiomeTraits::Serialize(
+    std::string_view path, std::vector<BiomeTraits> biomes) {}
 
 
 Tile::Tile(const TileInfo& tile_info) {
   // TODO; use placeholders (full black / full white texture)
 
-  // pos data already valid
+  // position data already valid
   // (we've thrown at TileRenderer::Init()) in case of missing
   pos_x = tile_info.pos_x;
   pos_y = tile_info.pos_y;
-  map_terrain_height = Texture(tile_info.map_terrain_height);
-  map_erosion_wear = Texture(tile_info.map_erosion_wear);
-  map_erosion_flow = Texture(tile_info.map_erosion_flow);
-  map_erosion_deposition = Texture(tile_info.map_erosion_deposition);
-  map_terrain_cavity = Texture(tile_info.map_terrain_cavity);
-  map_terrain_occlusion = Texture(tile_info.map_terrain_occlusion);
-  map_terrain_normal = Texture(tile_info.map_terrain_normal);
-  map_terrain_wetness = Texture(tile_info.map_terrain_wetness);
+  // map_terrain_height is necessary (if float GL_RED is ignored)
+  map_terrain_height = Texture(tile_info.map_terrain_height, GL_RED);
+  map_erosion_wear = Texture(tile_info.map_erosion_wear, GL_RED);
+  map_erosion_flow = Texture(tile_info.map_erosion_flow, GL_RED);
+  map_erosion_deposition = Texture(tile_info.map_erosion_deposition, GL_RED);
+  map_terrain_cavity = Texture(tile_info.map_terrain_cavity, GL_RED);
+  map_terrain_occlusion = Texture(tile_info.map_terrain_occlusion, GL_RED);
+//  map_terrain_normal = Texture(tile_info.map_terrain_normal, GL_RED);
+  map_terrain_wetness = Texture(tile_info.map_terrain_wetness, GL_RED);
   InitHeightMap(tile_info.map_water_height, map_water_height);
-  map_water_flow = Texture(tile_info.map_water_flow);
+  map_water_flow = Texture(tile_info.map_water_flow, GL_RED);
   graph_water = GraphTraits::Parse(tile_info.graph_water);
   graph_roads = GraphTraits::Parse(tile_info.graph_roads);
   graph_fences = GraphTraits::Parse(tile_info.graph_fences);
@@ -163,9 +166,9 @@ Tile::Tile(const TileInfo& tile_info) {
 
 void Tile::InitHeightMap(std::string_view path, Texture& texture) {
   if (!path.empty()) {
-    texture = Texture(path);
+    // if float it will ignore GL_RED internally
+    texture = Texture(path, GL_RED);
     return;
   }
-  texture = Texture(Texture::Type::kHeightMap);
+  texture = Texture(1024, GL_R8UI, GL_NEAREST, GL_CLAMP_TO_EDGE, true);
 }
-

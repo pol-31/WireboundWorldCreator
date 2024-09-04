@@ -13,14 +13,14 @@ PlacementRenderer::PlacementRenderer(
               paths.shader_terrain_tese, paths.shader_placement_frag),
       grass_(paths),
       poisson_shader_(paths.shader_poisson_points),
-      density_low_(paths.placement_density_low),
-      density_medium_low_(paths.placement_density_medium_low),
-      density_medium_(paths.placement_density_medium),
-      density_medium_high_(paths.placement_density_medium_high),
-      density_high_(paths.placement_density_high),
-      density_very_high_(paths.placement_density_very_high),
-      density_ultra_high_(paths.placement_density_ultra_high),
-      density_extreme_(paths.placement_density_extreme) {
+      density_low_(paths.placement_density_low, GL_RGBA8),
+      density_medium_low_(paths.placement_density_medium_low, GL_RGBA8),
+      density_medium_(paths.placement_density_medium, GL_RGBA8),
+      density_medium_high_(paths.placement_density_medium_high, GL_RGBA8),
+      density_high_(paths.placement_density_high, GL_RGBA8),
+      density_very_high_(paths.placement_density_very_high, GL_RGBA8),
+      density_ultra_high_(paths.placement_density_ultra_high, GL_RGBA8),
+      density_extreme_(paths.placement_density_extreme, GL_RGBA8) {
   Init();
 }
 
@@ -58,7 +58,8 @@ void PlacementRenderer::InitPlacementPipeline() {
   Shader poisson_shader("../shaders/PoissonPoints.comp");
   poisson_shader.Bind();
   glUniform1i(shader::kPoissonAreaSize, 2);
-  placement_temp_ = Texture(Texture::Type::kPlacementMap);
+  placement_temp_ = Texture(
+      1024, GL_R8UI, GL_NEAREST, GL_CLAMP_TO_EDGE, true);
 }
 
 void PlacementRenderer::Render() {

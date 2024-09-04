@@ -7,7 +7,7 @@
 SharedResources::SharedResources(
     const Paths& paths, Tile& cur_tile, TileRenderer& tile_renderer_,
     GlobalGlfwCallbackData& global_glfw_callback_data)
-    : tex_ui_(paths.texture_ui),
+    : tex_ui_(paths.texture_ui, GL_RGBA),
       static_sprite_shader_(paths.shader_static_sprite_vert,
                            paths.shader_static_sprite_frag),
       menu_icon_shader_(paths.shader_static_sprite_vert,
@@ -78,7 +78,7 @@ void SharedResources::DeInitVaos() {
   glDeleteVertexArrays(1, &vao_ui_);
 }
 
-void SharedResources::DeInitVbos() {
+void SharedResources::DeInitVbos() const {
   GLuint vbos[2];
   vbos[0] = vbo_ui_;
   vbos[1] = vbo_instanced_;

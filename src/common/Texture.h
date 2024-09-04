@@ -3,45 +3,25 @@
 
 #include <array>
 #include <string_view>
+#include <stdexcept>
 
 #include "glad/glad.h"
 
 #include "Shader.h"
 
-/*TODO:
- * - cubemap
- * - heightmap (A)
- * - rgba32ui for framebuffer
- * */
+//TODO: astc format
 
 class Texture {
  public:
-  enum class Type {
-    kId,
-    kHeightMap,
-    kPlacementMap,
-  };
- 
   Texture() = default;
   
-  explicit Texture(std::string_view path) {
-    Init(path);
-  }
-  
-  explicit Texture(Type type) {
-    switch (type) {
-      case Type::kId:
-        InitIdTexture();
-        break;
-      case Type::kHeightMap:
-        InitHeightMap();
-        break;
-      case Type::kPlacementMap:
-        InitPlacementMap();
-        break;
-    }
-  }
-  
+  Texture(std::string_view path, int format,
+          int filter = GL_LINEAR, int wrap = GL_REPEAT,
+          bool gen_mipmap = true);
+
+  Texture(int size, int format, int filter = GL_LINEAR,
+          int wrap = GL_REPEAT, bool integer = false);
+
   Texture(GLuint opengl_id, GLsizei width,
           GLsizei height, GLint format)
     : opengl_id_(opengl_id),
@@ -49,8 +29,8 @@ class Texture {
       height_(height),
       format_(format) {}
   
-  Texture(const std::array<std::string, 6>& cubemap_paths) {
-    Init(cubemap_paths);
+  explicit Texture(const std::array<std::string, 6>& cubemap_paths) {
+    LoadCubemap(cubemap_paths);
   }
 
   Texture(const Texture& other) = delete;
@@ -63,12 +43,8 @@ class Texture {
     DeInit();
   }
 
-  // technically it's not const, because internal data
-  // can be affected by other OpenGL functions
   void Bind() const;
 
-  // technically it's not const, because opengl_id_ is internal OpenGL id
-  // which can be affected by OpenGL functions
   [[nodiscard]] GLuint GetId() const {
     return opengl_id_;
   }
@@ -90,19 +66,40 @@ class Texture {
     return opengl_id_ != 0;
   }
 
- private:
-  void Init(std::string_view path);
-  
-  void InitIdTexture();
-  
-  void InitHeightMap();
+  // for dbg (don't need for the majority of texture)
+  /// component id starts from 1;
+  /// component = 0 means we store all channels
+  /// we don't store channels_ and type_, because we would
+  /// need to store extra 8 bytes and at each texture loading
+  /// compare all OpenGL texture formats (literally all) to obtain
+  /// actual channels num and type, what I don't want to implement \-_-/
+  void Store(std::string_view path, int channels,
+             GLenum type, int component = 0) const;
 
-  void InitPlacementMap();
-  
-  void Init(const std::array<std::string, 6>& cubemap_paths);
+ private:
+  /// doesn't matter; as a placeholder for OpenGL calls with nullptr data
+  static std::size_t kNoFormat;
+  static std::size_t kNoFormatI;
+  static std::size_t kNoType;
+
+  void LoadStbImage(std::string_view path, bool gen_mipmap);
+
+  /// for .r16 and .32 extensions; we assume (width == height)
+  void LoadRawFloat(std::string_view path, int float_size);
+
+  static GLint FormatStbImageToOpenGL(int channels);
+
+  void LoadCubemap(const std::array<std::string, 6>& cubemap_paths);
   
   void DeInit();
 
+  /*TODO:
+   * very often we need only opengl_id to render, but size and format useful
+   * for debugging (or framebuffer?), so we can remove it... by declaring
+   *   using Texture = DbgTexture or RelTexture;
+   * so this way our thousands of textures for models could store only id,
+   * BUT we still need format for framebuffer or compute shaders
+   * */
   GLuint opengl_id_{0};
   GLsizei width_{0};
   GLsizei height_{0};

@@ -22,7 +22,7 @@ class TextRenderer {
 
   /// at one frame there can be rendered only one description (for mouse pos),
   /// and we animate it is some way
-  void RenderDescription(int vbo_offset);
+  void RenderDescription(int vbo_offset) const;
 
  private:
   void Init();

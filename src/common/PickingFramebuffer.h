@@ -10,7 +10,9 @@
 
 class PickingFramebuffer {
  public:
-  PickingFramebuffer() {
+  PickingFramebuffer()
+      : texture_(details::kWindowWidth, GL_R32UI,
+                 GL_LINEAR, GL_CLAMP_TO_EDGE, true) {
     Init();
   }
   ~PickingFramebuffer() {
@@ -38,9 +40,6 @@ class PickingFramebuffer {
   void Init() {
     glGenFramebuffers(1, &fbo_);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
-    
-    texture_ = Texture(Texture::Type::kId);
-
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                            GL_TEXTURE_2D, texture_.GetId(), 0);
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -53,7 +52,7 @@ class PickingFramebuffer {
     glDeleteFramebuffers(1, &fbo_);
   }
 
-  GLuint fbo_;
+  GLuint fbo_{0};
   Texture texture_;
 };
 

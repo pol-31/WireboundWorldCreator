@@ -28,15 +28,15 @@ class SharedResources {
 //  Shader shader_ui_;
   Texture tex_ui_;
 
-  GLuint vao_ui_;
+  GLuint vao_ui_{0};
 
   // BiomesMode, ObjectMode, TilesMode also has their own VAOs with
   // instanced position data
 
   GlobalGlfwCallbackData& global_glfw_callback_data_;
 
-  GLuint vbo_ui_;
-  GLuint vbo_instanced_;
+  GLuint vbo_ui_{0};
+  GLuint vbo_instanced_{0};
 
   TileRenderer& tile_renderer_;
   Shader static_sprite_shader_;
@@ -58,7 +58,7 @@ class SharedResources {
 
   void DeInitVaos();
 
-  void DeInitVbos();
+  void DeInitVbos() const;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_SHAREDRESOURCES_H_

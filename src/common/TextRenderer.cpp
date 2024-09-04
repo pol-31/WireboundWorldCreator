@@ -6,7 +6,7 @@
 #include "ShadersBinding.h"
 
 TextRenderer::TextRenderer(const Paths& paths)
-    : texture_(paths.texture_text),
+    : texture_(paths.texture_text, GL_RGBA),
       shader_(paths.shader_text_vert, paths.shader_text_frag) {
   Init();
 }
@@ -48,7 +48,7 @@ void TextRenderer::UnBind() {
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderDescription(int vbo_offset) {
+void TextRenderer::RenderDescription(int vbo_offset) const {
   if (vbo_offset != -1) {
     //TODO: add animation
     glBindVertexArray(vao_);
