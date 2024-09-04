@@ -38,7 +38,7 @@ void main(void) {
         float Len11 = length(ViewSpacePos11.xyz);
 
         const float MIN_DISTANCE = 1.0f;
-        const float MAX_DISTANCE = 32.0f;
+        const float MAX_DISTANCE = 16.0f;
 
         // Step 3: map the distance to [0,1]
         float Distance00 = clamp((Len00 - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE), 0.0, 1.0);

@@ -1,0 +1,29 @@
+#version 450 core
+
+layout (local_size_x = 1, local_size_y = 8, local_size_z = 1) in;
+
+//ubo?
+layout (binding = 0, rgba32f) writeonly uniform image2D PrecomputeBuffer;
+
+layout (location = 0) uniform uint Size;
+
+const float PI = 3.1415926;
+
+vec2 ComplexExp(vec2 a) {
+    return vec2(cos(a.y), sin(a.y)) * exp(a.x);
+}
+
+void main() {
+    uint b = Size >> (gl_GlobalInvocationID.x + 1);
+    vec2 mult = 2.0 * PI * vec2(0.0, 1.0) / float(Size);
+    uint i = (2 * b * (gl_GlobalInvocationID.y / b) + gl_GlobalInvocationID.y % b) % Size;
+    vec2 twiddle = ComplexExp(-mult * float(gl_GlobalInvocationID.y / b));
+    imageStore(
+      PrecomputeBuffer,
+      ivec2(gl_GlobalInvocationID.xy),
+      vec4(twiddle.x, twiddle.y, float(i), float(i + b)));
+    imageStore(
+      PrecomputeBuffer,
+      ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y + Size / 2),
+      vec4(-twiddle.x, -twiddle.y, float(i), float(i + b)));
+}

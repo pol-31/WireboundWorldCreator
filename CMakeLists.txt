@@ -43,6 +43,9 @@ add_executable(WireboundWorldCreator
         src/renderers/TerrainRenderer.cpp
         src/renderers/WaterRenderer.cpp
         src/renderers/placement/Grass.cpp
+        src/renderers/water/FastFourierTransform.cpp
+        src/renderers/water/WavesCascade.cpp
+        src/renderers/water/WavesGenerator.cpp
 
         # temp (need to remove)
         src/common/ArbitraryGraph.cpp

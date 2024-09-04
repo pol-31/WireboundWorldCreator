@@ -1,0 +1,155 @@
+#version 450 core
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+const float PI = 3.1415926;
+
+// Output images
+layout(binding = 11, rgba32f) writeonly uniform image2D H0;
+layout(binding = 12, rgba32f) writeonly uniform image2D WavesData;
+layout(binding = 14, rg32f) uniform image2D H0K;
+
+// Input textures
+layout(binding = 13, rg32f) readonly uniform image2D Noise;
+
+// Uniforms
+layout (location = 0) uniform uint Size;
+layout (location = 6) uniform float LengthScale;
+layout (location = 7) uniform float CutoffHigh;
+layout (location = 8) uniform float CutoffLow;
+
+const float GravityAcceleration = 9.81f;
+const float Depth = 1.0f;
+
+struct SpectrumParameters {
+    float scale;
+    float angle;
+    float spreadBlend;
+    float swell;
+    float alpha;
+    float peakOmega;
+    float gamma;
+    float shortWavesFade;
+};
+
+// Uniform buffer for SpectrumParameters
+layout(std140, binding = 15) uniform Spectrums {
+    SpectrumParameters Spectrum[2];
+};
+
+// Function to calculate wave frequency
+float Frequency(float k, float g, float depth) {
+    return sqrt(g * k * tanh(min(k * depth, 20)));
+}
+
+// Function to calculate frequency derivative
+float FrequencyDerivative(float k, float g, float depth) {
+    float th = tanh(min(k * depth, 20));
+    float ch = cosh(k * depth);
+    return g * (depth * k / ch / ch + th) / Frequency(k, g, depth) / 2;
+}
+
+// Normalization factor for directional spectrum
+float NormalisationFactor(float s) {
+    float s2 = s * s;
+    float s3 = s2 * s;
+    float s4 = s3 * s;
+    if (s < 5)
+    return -0.000564 * s4 + 0.00776 * s3 - 0.044 * s2 + 0.192 * s + 0.163;
+    else
+    return -4.80e-08 * s4 + 1.07e-05 * s3 - 9.53e-04 * s2 + 5.90e-02 * s + 3.93e-01;
+}
+
+// Cosine2s function for directional spreading
+float Cosine2s(float theta, float s) {
+    return NormalisationFactor(s) * pow(abs(cos(0.5 * theta)), 2 * s);
+}
+
+// Calculate the power of spreading for directional spectrum
+float SpreadPower(float omega, float peakOmega) {
+    if (omega > peakOmega) {
+        return 9.77 * pow(abs(omega / peakOmega), -2.5);
+    } else {
+        return 6.97 * pow(abs(omega / peakOmega), 5);
+    }
+}
+
+// Directional spectrum function
+float DirectionSpectrum(float theta, float omega, SpectrumParameters pars) {
+    float s = SpreadPower(omega, pars.peakOmega)
+    + 16 * tanh(min(omega / pars.peakOmega, 20)) * pars.swell * pars.swell;
+    return mix(2.0 / 3.1415 * cos(theta) * cos(theta), Cosine2s(theta - pars.angle, s), pars.spreadBlend);
+}
+
+// TMA correction factor
+float TMACorrection(float omega, float g, float depth) {
+    float omegaH = omega * sqrt(depth / g);
+    if (omegaH <= 1.0)
+    return 0.5 * omegaH * omegaH;
+    if (omegaH < 2.0)
+    return 1.0 - 0.5 * (2.0 - omegaH) * (2.0 - omegaH);
+    return 1.0;
+}
+
+// JONSWAP spectrum calculation
+float JONSWAP(float omega, float g, float depth, SpectrumParameters pars) {
+    float sigma = (omega <= pars.peakOmega) ? 0.07 : 0.09;
+    float r = exp(-(omega - pars.peakOmega) * (omega - pars.peakOmega)
+    / 2.0 / sigma / sigma / pars.peakOmega / pars.peakOmega);
+
+    float oneOverOmega = 1.0 / omega;
+    float peakOmegaOverOmega = pars.peakOmega / omega;
+    return pars.scale * TMACorrection(omega, g, depth) * pars.alpha * g * g
+    * oneOverOmega * oneOverOmega * oneOverOmega * oneOverOmega * oneOverOmega
+    * exp(-1.25 * peakOmegaOverOmega * peakOmegaOverOmega * peakOmegaOverOmega * peakOmegaOverOmega)
+    * pow(abs(pars.gamma), r);
+}
+
+// Short waves fade function
+float ShortWavesFade(float kLength, SpectrumParameters pars) {
+    return exp(-pars.shortWavesFade * pars.shortWavesFade * kLength * kLength);
+}
+
+// Initial spectrum calculation
+void CalculateInitialSpectrum(uvec3 id) {
+    float deltaK = 2.0 * PI / LengthScale;
+    int nx = int(id.x) - int(Size) / 2;
+    int nz = int(id.y) - int(Size) / 2;
+    vec2 k = vec2(nx, nz) * deltaK;
+    float kLength = length(k);
+
+    if (kLength <= CutoffHigh && kLength >= CutoffLow) {
+        float kAngle = atan(k.y, k.x);
+        float omega = Frequency(kLength, GravityAcceleration, Depth);
+        imageStore(WavesData, ivec2(id.xy), vec4(k.x, 1.0 / kLength, k.y, omega));
+        float dOmegadk = FrequencyDerivative(kLength, GravityAcceleration, Depth);
+
+        float spectrum = JONSWAP(omega, GravityAcceleration, Depth, Spectrum[0])
+        * DirectionSpectrum(kAngle, omega, Spectrum[0]) * ShortWavesFade(kLength, Spectrum[0]);
+        if (Spectrum[1].scale > 0.0) {
+            vec4 noise_value = imageLoad(Noise, ivec2(id.xy));
+            spectrum += JONSWAP(omega, GravityAcceleration, Depth, Spectrum[1])
+            * DirectionSpectrum(kAngle, omega, Spectrum[1]) * ShortWavesFade(kLength, Spectrum[1]);
+            imageStore(H0K, ivec2(id.xy), vec4(noise_value.rg * sqrt(2.0 * spectrum * abs(dOmegadk) / kLength * deltaK * deltaK), 0.0, 0.0));
+        }
+    } else {
+        imageStore(H0K, ivec2(id.xy), vec4(0.0));
+        imageStore(WavesData, ivec2(id.xy), vec4(k.x, 1.0, k.y, 0.0));
+    }
+}
+
+// Conjugated spectrum calculation
+void CalculateConjugatedSpectrum(uvec3 id) {
+    vec2 h0K = imageLoad(H0K, ivec2(id.xy)).xy;
+    ivec2 minusK = ivec2((Size - id.x) % Size, (Size - id.y) % Size);
+    vec2 h0MinusK = imageLoad(H0K, minusK).xy;
+    imageStore(H0, ivec2(id.xy), vec4(h0K.x, h0K.y, h0MinusK.x, -h0MinusK.y));
+}
+
+// Main function
+void main() {
+    uvec3 id = gl_GlobalInvocationID;
+    CalculateInitialSpectrum(id);
+    CalculateConjugatedSpectrum(id);
+
+}

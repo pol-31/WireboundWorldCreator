@@ -1,0 +1,15 @@
+#version 450 core
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout (location = 0) uniform uint Size;
+
+layout (binding = 1, rg32f) uniform image2D Buffer0;
+
+void main() {
+    ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+    vec2 value = imageLoad(Buffer0, id).xy;
+    value *= (1.0 - 2.0 * float((id.x + id.y) % 2));
+    value /= float(Size) * float(Size);
+    imageStore(Buffer0, id, vec4(value, 0.0, 1.0));
+}

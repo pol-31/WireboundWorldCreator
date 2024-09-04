@@ -4,11 +4,13 @@
 #include "../core/Tile.h"
 #include "../common/Paths.h"
 
+#include "water/WavesGenerator.h"
+
 class WaterRenderer {
  public:
   WaterRenderer(Tile& tile, const Paths& paths);
 
-  void Render() const;
+  void Render();
 
   void RenderPicking() const;
 
@@ -22,6 +24,8 @@ class WaterRenderer {
   GLuint vbo_{0};
   Shader shader_;
   Shader shader_picking_;
+
+  WavesGenerator waves_generator_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_WATERRENDERER_H_

@@ -47,6 +47,13 @@ struct Paths {
   std::string shader_dithering;
   std::string shader_poisson_points;
 
+  std::string shader_ocean_ifft;
+  std::string shader_ocean_init_spectrum;
+  std::string shader_ocean_permute;
+  std::string shader_ocean_ifft_precomp;
+  std::string shader_ocean_time_spectrum;
+  std::string shader_ocean_tex_merger;
+
   std::string placement_density_low;
   std::string placement_density_medium_low;
   std::string placement_density_medium;
@@ -88,6 +95,14 @@ struct Paths {
         {"shader_grass_tese", &shader_grass_tese},
         {"shader_grass_frag", &shader_grass_frag},
         {"shader_grass_comp", &shader_grass_comp},
+
+        {"shader_ocean_ifft", &shader_ocean_ifft},
+        {"shader_ocean_init_spectrum", &shader_ocean_init_spectrum},
+        {"shader_ocean_permute", &shader_ocean_permute},
+        {"shader_ocean_ifft_precomp", &shader_ocean_ifft_precomp},
+        {"shader_ocean_time_spectrum", &shader_ocean_time_spectrum},
+        {"shader_ocean_tex_merger", &shader_ocean_tex_merger},
+
         {"shader_height_map_picking_frag", &shader_height_map_picking_frag},
         {"shader_height_map_picking_vert", &shader_height_map_picking_vert},
         {"shader_static_sprite_vert", &shader_static_sprite_vert},

@@ -1,0 +1,62 @@
+#version 450 core
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout (location = 0) uniform uint Size;
+layout (location = 3) uniform uint Step;
+layout (location = 4) uniform bool PingPong;
+layout (location = 9) uniform bool horizontal;
+
+const float PI = 3.1415926;
+
+layout (binding = 0, rgba32f) readonly uniform image2D PrecomputedData;
+layout (binding = 1, rg32f) uniform image2D Buffer0;
+layout (binding = 2, rg32f) uniform image2D Buffer1;
+
+vec2 ComplexMult(vec2 a, vec2 b) {
+    return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+}
+
+vec2 ComplexExp(vec2 a) {
+    return vec2(cos(a.y), sin(a.y)) * exp(a.x);
+}
+
+void HorizontalStepInverseFFT() {
+    ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+    vec4 data = imageLoad(PrecomputedData, ivec2(Step, id.x));
+    uvec2 inputsIndices = uvec2(data.b, data.a);
+
+    if (PingPong) {
+        vec2 result = imageLoad(Buffer0, ivec2(inputsIndices.x, id.y)).xy
+        + ComplexMult(vec2(data.r, -data.g), imageLoad(Buffer0, ivec2(inputsIndices.y, id.y)).xy);
+        imageStore(Buffer1, id.xy, vec4(result, 0.0, 1.0));
+    } else {
+        vec2 result = imageLoad(Buffer1, ivec2(inputsIndices.x, id.y)).xy
+        + ComplexMult(vec2(data.r, -data.g), imageLoad(Buffer1, ivec2(inputsIndices.y, id.y)).xy);
+        imageStore(Buffer0, id.xy, vec4(result, 0.0, 1.0));
+    }
+}
+
+void VerticalStepInverseFFT() {
+    ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+    vec4 data = imageLoad(PrecomputedData, ivec2(Step, id.y));
+    uvec2 inputsIndices = uvec2(data.b, data.a);
+
+    if (PingPong) {
+        vec2 result = imageLoad(Buffer0, ivec2(id.x, inputsIndices.x)).xy
+        + ComplexMult(vec2(data.r, -data.g), imageLoad(Buffer0, ivec2(id.x, inputsIndices.y)).xy);
+        imageStore(Buffer1, id.xy, vec4(result, 0.0, 1.0));
+    } else {
+        vec2 result = imageLoad(Buffer1, ivec2(id.x, inputsIndices.x)).xy
+        + ComplexMult(vec2(data.r, -data.g), imageLoad(Buffer1, ivec2(id.x, inputsIndices.y)).xy);
+        imageStore(Buffer0, id.xy, vec4(result, 0.0, 1.0));
+    }
+}
+
+void main() {
+    if (horizontal) {
+        HorizontalStepInverseFFT();
+    } else {
+        VerticalStepInverseFFT();
+    }
+}

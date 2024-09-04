@@ -40,6 +40,13 @@ shader_height_map_picking_frag=../shaders/HeightMapPicking.frag
 world_map=../assets/AllTiles.txt
 shader_placement_draw_comp=../shaders/DrawHeightMap.comp
 
+shader_ocean_ifft=../shaders/ocean/Ifft.comp
+shader_ocean_init_spectrum=../shaders/ocean/InitialSpectrum.comp
+shader_ocean_permute=../shaders/ocean/Permute.comp
+shader_ocean_ifft_precomp=../shaders/ocean/PrecompIfftData.comp
+shader_ocean_time_spectrum=../shaders/ocean/TimeDependentSpectrum.comp
+shader_ocean_tex_merger=../shaders/ocean/WavesTexturesMerger.comp
+
 menu_icon_shader=../shaders/MenuIconShader.frag
 
 placement_density_low=../assets/poisson/500.png

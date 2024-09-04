@@ -8,6 +8,7 @@
 
 WaterRenderer::WaterRenderer(Tile& tile, const Paths& paths)
     : tile_(tile),
+      waves_generator_(paths),
       shader_(paths.shader_water_vert, paths.shader_water_tesc,
               paths.shader_water_tese, paths.shader_water_frag),
       shader_picking_(paths.shader_height_map_picking_vert,
@@ -15,7 +16,9 @@ WaterRenderer::WaterRenderer(Tile& tile, const Paths& paths)
   Init();
 }
 
-void WaterRenderer::Render() const {
+void WaterRenderer::Render() {
+  waves_generator_.Update();
+
   if(glfwGetKey(gWindow, GLFW_KEY_2)) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
@@ -35,8 +38,7 @@ void WaterRenderer::Render() const {
 
   shader_.Bind();
   glBindVertexArray(vao_);
-  glActiveTexture(GL_TEXTURE0);
-  tile_.map_water_height.Bind();
+  waves_generator_.BindTextures();
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
 
@@ -91,4 +93,23 @@ void WaterRenderer::Init() {
 
   shader_.Bind();
   glUniform1i(shader::kWaterHeightMap, 0);
+
+  /*TODO:
+   * we don't have any cascades, but lod is defined using render-tiles.
+   * Alongside with standard tiles (defined by world map), we also have
+   * render tiles, which are smaller.
+   * Each render-tile has 1 draw call with different attributes based on LOD
+   * */
+
+//  oceanMaterial.SetTexture("_Displacement_c0", wavesGenerator.cascade0.Displacement);
+//  oceanMaterial.SetTexture("_Derivatives_c0", wavesGenerator.cascade0.Derivatives);
+//  oceanMaterial.SetTexture("_Turbulence_c0", wavesGenerator.cascade0.Turbulence);
+
+/*  oceanMaterial.SetTexture("_Displacement_c1", wavesGenerator.cascade1.Displacement);
+  oceanMaterial.SetTexture("_Derivatives_c1", wavesGenerator.cascade1.Derivatives);
+  oceanMaterial.SetTexture("_Turbulence_c1", wavesGenerator.cascade1.Turbulence);
+
+  oceanMaterial.SetTexture("_Displacement_c2", wavesGenerator.cascade2.Displacement);
+  oceanMaterial.SetTexture("_Derivatives_c2", wavesGenerator.cascade2.Derivatives);
+  oceanMaterial.SetTexture("_Turbulence_c2", wavesGenerator.cascade2.Turbulence);*/
 }
