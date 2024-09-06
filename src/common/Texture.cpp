@@ -50,36 +50,23 @@ Texture::Texture(int size, int format, int filter, int wrap, bool integer)
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-// * * * * TIPS * * * *
-// --- --- --- --- load
-// ../assets/map_ and GL_RGBA - internal = GL_RGBA8
-// ../assets/poisson and GL_RGB - internal = GL_RGBA8
-// --- --- --- --- generate
-// float::
-// height map - 1024, GL_RED, GL_REAREST
-// rgbaf size, GL_RGBA32F, GL_NEAREST
-// rgf size, GL_RG32F, GL_NEAREST
-// int::
-// placement map - 1024, GL_R8UI, GL_REAREST
-// id texture - kWindowWidth, GL_R32UI, GL_LINEAR --- DONE
-
 GLint Texture::FormatStbImageToOpenGL(int channels) {
   GLint format;
   switch (channels) {
     case 1:
       format = GL_RED;
-      std::cout << "red" << std::endl;
+//      std::cout << "red" << std::endl;
       break;
     case 2:
       format = GL_RG;
-      std::cout << "rg" << std::endl;
+//      std::cout << "rg" << std::endl;
       break;
     case 3:
       format = GL_RGB;
-      std::cout << "rgb" << std::endl;
+//      std::cout << "rgb" << std::endl;
       break;
     default:
-      std::cout << "rgba" << std::endl;
+//      std::cout << "rgba" << std::endl;
       format = GL_RGBA;
   }
   return format;
@@ -89,12 +76,12 @@ void Texture::LoadStbImage(std::string_view path, bool gen_mipmap) {
   int channels;
   unsigned char* data = stbi_load(path.data(), &width_,
                                   &height_, &channels, 0);
-  if (!(width_ & 3) && !(height_ & 3)) {
+  if ((width_ & 3) || (height_ & 3)) {
     std::cerr << "need GL_UNPACK_ALIGNMENT for size "
               << width_ << ' ' << height_ << std::endl;
   }
   if (data) {
-    std::cout << path << ' ';
+//    std::cout << path << ' ';
     GLint pixel_format = FormatStbImageToOpenGL(channels);
     glTexImage2D(GL_TEXTURE_2D, 0, format_, width_, height_, 0,
                  pixel_format, GL_UNSIGNED_BYTE, data);
@@ -143,6 +130,7 @@ void Texture::LoadCubemap(const std::array<std::string, 6>& cubemap_paths) {
   int channels;
   format_ = GL_RGBA;
   //TODO: don't need width, height, channels... so maybe return only id?
+  stbi_set_flip_vertically_on_load(false);
   for (int i = 0; i < cubemap_paths.size(); ++i) {
     unsigned char* data = stbi_load(
         cubemap_paths[i].data(), &width_, &height_, &channels, 0);
@@ -157,6 +145,7 @@ void Texture::LoadCubemap(const std::array<std::string, 6>& cubemap_paths) {
       stbi_image_free(data);
     }
   }
+  stbi_set_flip_vertically_on_load(true);
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -202,7 +191,7 @@ void Texture::Store(std::string_view path, int channels,
   }
   glBindTexture(GL_TEXTURE_2D, opengl_id_);
   std::vector<float> pixels(width_ * height_ * channels);
-  glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
+  glGetTexImage(GL_TEXTURE_2D, 0, format_, type, pixels.data());
   std::vector<uint8_t> converted_data(width_ * height_ * channels_num);
   if (type == GL_UNSIGNED_BYTE) {
     if (component != 0) {

@@ -27,6 +27,8 @@ WireboundWorldCreator::WireboundWorldCreator(const Paths& paths, Map& map)
 void WireboundWorldCreator::RunRenderLoop() {
   camera_.UpdateProjectionMatrix();
   while (!glfwWindowShouldClose(gWindow)) {
+    // here, because framebuffers change it to black, so need to restore
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     auto current_frame = static_cast<float>(glfwGetTime());
@@ -53,14 +55,13 @@ void WireboundWorldCreator::Init(const Paths& paths) {
 
   glClearColor(0.2f, 0.7f, 0.1f, 1.0f);
 
-  std::vector<std::string_view> cubemap_textures;
-  cubemap_textures.reserve(6);
-  cubemap_textures.push_back(paths.texture_skybox1_right);
-  cubemap_textures.push_back(paths.texture_skybox1_left);
-  cubemap_textures.push_back(paths.texture_skybox1_top);
-  cubemap_textures.push_back(paths.texture_skybox1_bottom);
-  cubemap_textures.push_back(paths.texture_skybox1_front);
-  cubemap_textures.push_back(paths.texture_skybox1_back);
+  std::array<std::string, 6> cubemap_textures;
+  cubemap_textures[0] = (paths.texture_skybox1_right);
+  cubemap_textures[1] = (paths.texture_skybox1_left);
+  cubemap_textures[2] = (paths.texture_skybox1_top);
+  cubemap_textures[3] = (paths.texture_skybox1_bottom);
+  cubemap_textures[4] = (paths.texture_skybox1_front);
+  cubemap_textures[5] = (paths.texture_skybox1_back);
   cubemap_ = Cubemap(cubemap_textures, paths.shader_cubemap_vert,
                      paths.shader_cubemap_frag);
 }

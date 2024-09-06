@@ -1,8 +1,8 @@
 #version 460 core
 
 layout(binding = 0, rgba8ui) readonly uniform uimage2D density;
-layout(binding = 1, r8ui) readonly uniform uimage2D inputImage;
-layout(binding = 2, r8ui) writeonly uniform uimage2D outputImage;
+layout(binding = 1, r8) readonly uniform image2D inputImage;
+layout(binding = 2, r8) writeonly uniform image2D outputImage;
 
 layout(location = 0) uniform int areaSize;
 
@@ -36,11 +36,11 @@ void main() {
 //    uint out_value = uint(itsOwnPixelValue2);
     // TODO: something wrong with density texture
     // TODO: let's modify class_Texture
-    uint out_value = uint(sum * itsOwnPixelValue2 / 255.0f);
+    float out_value = sum * itsOwnPixelValue2;
 
 //    float weight = 0.75; // TODO: uniform
 //    uint out_value = uint(mix(itsOwnPixelValue2, avg, weight) * avg / 256.0f);
 
-    imageStore(outputImage, texCoord, uvec4(out_value, 0, 0, 0));
+    imageStore(outputImage, texCoord, vec4(out_value, 0, 0, 0));
 }
 

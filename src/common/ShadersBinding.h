@@ -37,12 +37,16 @@ inline constexpr int kWaterHeightMap = 0;
 inline constexpr int kGraphHeightMap = 0;
 inline constexpr int kGraphColor = 1;
 
-inline constexpr int kPlacementPoint = 0;
-inline constexpr int kPlacementRadius = 1;
-inline constexpr int kPlacementFalloff = 2;
-inline constexpr int kPlacementColor = 3;
+inline constexpr int kPlacementPointA = 0;
+inline constexpr int kPlacementPointB = 1;
+inline constexpr int kPlacementRadius = 2;
+inline constexpr int kPlacementFalloff = 3;
+inline constexpr int kPlacementColor = 4;
 
 inline constexpr int kCubemapTexture = 0;
+
+inline constexpr int kDrawPlacementHeightMap = 0;
+inline constexpr int kDrawPlacementDrawLayer = 1;
 
 inline constexpr int kGrassCurrentTime = 0;
 inline constexpr int kGrassDeltaTime = 1;

@@ -238,7 +238,7 @@ void UiSlider::UpdateSliderPos(glm::vec2 position) {
   float new_y_pos = std::clamp(position.y, track_.GetBottomBorder(),
                                track_.GetTopBorder());
   progress_ = (new_y_pos - track_.GetBottomBorder()) / height_;
-  handle_.SetPositionOffset(progress_ * height_);
+  handle_.SetPositionOffset((progress_ - 1) * height_);
 }
 
 std::uint32_t UiSlider::GetTrackId() const {

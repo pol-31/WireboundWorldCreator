@@ -132,7 +132,10 @@ Tile::Tile(const TileInfo& tile_info) {
   map_terrain_occlusion = Texture(tile_info.map_terrain_occlusion, GL_RED);
 //  map_terrain_normal = Texture(tile_info.map_terrain_normal, GL_RED);
   map_terrain_wetness = Texture(tile_info.map_terrain_wetness, GL_RED);
-  InitHeightMap(tile_info.map_water_height, map_water_height);
+
+  map_water_height = Texture(tile_info.map_water_height, GL_RED);
+//  InitHeightMap(tile_info.map_water_height, map_water_height);
+
   map_water_flow = Texture(tile_info.map_water_flow, GL_RED);
   graph_water = GraphTraits::Parse(tile_info.graph_water);
   graph_roads = GraphTraits::Parse(tile_info.graph_roads);
@@ -167,8 +170,8 @@ Tile::Tile(const TileInfo& tile_info) {
 void Tile::InitHeightMap(std::string_view path, Texture& texture) {
   if (!path.empty()) {
     // if float it will ignore GL_RED internally
-    texture = Texture(path, GL_RED);
-    return;
+    texture = Texture(path, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
+  } else {
+    texture = Texture(1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
   }
-  texture = Texture(1024, GL_R8UI, GL_NEAREST, GL_CLAMP_TO_EDGE, true);
 }

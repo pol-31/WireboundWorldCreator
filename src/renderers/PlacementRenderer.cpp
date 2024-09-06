@@ -58,8 +58,7 @@ void PlacementRenderer::InitPlacementPipeline() {
   Shader poisson_shader("../shaders/PoissonPoints.comp");
   poisson_shader.Bind();
   glUniform1i(shader::kPoissonAreaSize, 2);
-  placement_temp_ = Texture(
-      1024, GL_R8UI, GL_NEAREST, GL_CLAMP_TO_EDGE, true);
+  placement_temp_ = Texture(1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
 }
 
 void PlacementRenderer::Render() {
@@ -107,19 +106,17 @@ void PlacementRenderer::UpdatePipeline() {
    * */
   poisson_shader_.Bind();
   glBindImageTexture(0, density_extreme_.GetId(),
-                     0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8UI);
+                     0, GL_FALSE, 0, GL_READ_ONLY, density_extreme_.GetFormat());
   glBindImageTexture(1, tile_.map_placement_undergrowth.GetId(),
-                     0, GL_FALSE, 0, GL_READ_ONLY, GL_R8UI);
+                     0, GL_FALSE, 0, GL_READ_ONLY, tile_.map_placement_undergrowth.GetFormat());
   glBindImageTexture(2, placement_temp_.GetId(),
-                     0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8UI);
+                     0, GL_FALSE, 0, GL_WRITE_ONLY, placement_temp_.GetFormat());
   glDispatchCompute(1024 / 16, 1024 / 16, 1); // TODO:
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
   std::vector<unsigned char> data(1024 * 1024);
   placement_temp_.Bind();
-  glGetTexImage(GL_TEXTURE_2D, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data.data());
-//  density_extreme_.Bind();
-//  glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, data.data());
+  glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, data.data());
 
   tile_.undergrowth_.clear();
   for (int i = 0; i < 1024 * 1024; ++i) {

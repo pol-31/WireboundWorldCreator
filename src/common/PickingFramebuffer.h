@@ -32,8 +32,8 @@ class PickingFramebuffer {
 
   void Bind() const {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    GLuint clearValue = std::numeric_limits<GLuint>::max();
+    glClearBufferuiv(GL_COLOR, 0, &clearValue);
   }
 
  private:

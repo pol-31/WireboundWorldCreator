@@ -2,35 +2,53 @@
 
 layout(local_size_x = 16, local_size_y = 16) in; // Adjust the workgroup size as needed
 
-layout(binding = 0, r8) uniform image2D heightmap; // Binding index 0, using GL_RGBA8 format
+layout(binding = 0, r8) uniform image2D heightmap; // heightmap
+layout(binding = 1, r8) uniform image2D draw_layer; //  black initially, but takes all drawings alongside with heightmap
 
-layout(location = 0) uniform uvec2 point;    // The point to draw at (x, y) in the grid
-layout(location = 1) uniform uint radius;    // The radius of the drawing
-layout(location = 2) uniform float falloff;  // The falloff value
-layout(location = 3) uniform float color;    // The grayscale color value
+layout(location = 0) uniform uvec2 pointA;    // The point to draw at (x, y) in the grid
+layout(location = 1) uniform uvec2 pointB;    // The point to draw at (x, y) in the grid
+layout(location = 2) uniform uint radius;    // The radius of the drawing
+layout(location = 3) uniform float falloff;  // The falloff value
+layout(location = 4) uniform float color;    // The grayscale color value
+
+float PointLineSegmentDistance(vec2 p, vec2 a, vec2 b) {
+    vec2 ab = b - a;
+    vec2 ap = p - a;
+    float ab2 = dot(ab, ab);
+    float t = dot(ap, ab) / ab2;
+    t = clamp(t, 0.0, 1.0);
+    vec2 nearestPoint = a + t * ab;
+    return length(p - nearestPoint);
+}
+
+/*
+we take existingValue not from current texture, but from those,
+where we stopped draw_ last time, so
+if it were black on prev, but on current it was grey -
+we set constant value of our new grey, BUT we also should compare it with
+current texture, so new grey is set only if prev was less white.
+for last we can mix(0, 1, cur-prev)
+
+ping-pong
+*/
 
 void main() {
     ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
-
-    // Calculate distance from the center point
-    float distance = length(vec2(pixelCoord) - vec2(point));
-
-    // Check if the pixel is within the radius
+    float distance = PointLineSegmentDistance(pixelCoord, pointA, pointB);
     if (distance <= float(radius)) {
-        // Calculate the falloff factor based on distance
         float factor = 1.0 - clamp(distance / float(radius), 0.0, 1.0);
-
-        // Apply the falloff effect using mix
         float falloffFactor = mix(1.0, factor, falloff);
-
-        // Fetch the existing pixel value
         vec4 existingValue = imageLoad(heightmap, pixelCoord);
+
+        vec4 existingtt = imageLoad(draw_layer, pixelCoord);
+        float existingt = existingtt.r;
+
         float existingGray = existingValue.r;
 
-        // Calculate the new color value by mixing the existing value with the new one
-        float newValue = mix(existingGray, color, falloffFactor);
+        float set_value = max(existingt, color * falloffFactor);
+        float newValue = existingGray + mix(0, set_value, falloffFactor);
 
-        // Store the new value back in the heightmap
         imageStore(heightmap, pixelCoord, vec4(newValue, newValue, newValue, 1.0));
+        imageStore(draw_layer, pixelCoord, vec4(set_value, set_value, set_value, 1.0));
     }
 }

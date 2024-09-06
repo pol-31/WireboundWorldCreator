@@ -44,7 +44,6 @@ class Cubemap {
   
   void InitBuffers() {
     float skybox_vertices[] = {
-        // coords
         -1.0f,  1.0f, -1.0f,
         -1.0f, -1.0f, -1.0f,
         1.0f, -1.0f, -1.0f,

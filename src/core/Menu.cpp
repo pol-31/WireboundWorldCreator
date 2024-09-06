@@ -74,11 +74,14 @@ void Menu::InitText() {
 }
 
 void Menu::Render() const {
-  const Shader& shader = text_renderer_.Bind();
+  text_renderer_.Bind();
   for (int i = 0; i < 3; ++i) {
-    glUniform2fv(shader::kTextScale, 1, glm::value_ptr(text_params_[i].translate));
-    glUniform2fv(shader::kTextTranslate, 1, glm::value_ptr(text_params_[i].scale));
-    glDrawArrays(GL_TRIANGLE_STRIP, buttons_[i].GetTextVboOffset(), 4);
+    glUniform2fv(shader::kTextTranslate, 1,
+                 glm::value_ptr(text_params_[i].translate));
+    glUniform2fv(shader::kTextScale, 1,
+                 glm::value_ptr(text_params_[i].scale));
+    glDrawArrays(GL_TRIANGLE_STRIP,
+                 static_cast<GLint>(buttons_[i].GetTextVboOffset()), 4);
   }
 
   shared_resources_.static_sprite_shader_.Bind();

@@ -59,11 +59,11 @@ int main(int argc, char* args[]) {
 
   SetupWindow();
 
-  // TODO: here? - refactor?
-  auto map = LoadMap(paths.world_map);
-
-  WireboundWorldCreator app(paths, map);
-  app.RunRenderLoop();
+  {  // TODO: here? - refactor?
+    auto map = LoadMap(paths.world_map);
+    WireboundWorldCreator app(paths, map);
+    app.RunRenderLoop();
+  }
 
   glfwTerminate();
   return 0;

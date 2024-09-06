@@ -354,17 +354,17 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
     0.9f, -1.0f, 0.7f, 0.875f,
     0.9f, -0.9f, 0.7f, 1.0f,
 
-    // UiSlider for "area radius" icon "slider area" (where to slide on)
+    // UiSlider for "area radius" track
     1.0f, -0.85f, 0.7f, 0.85f,
     1.0f, -0.25f, 0.7f, 0.9f,
     0.9f, -0.85f, 0.6f, 0.85f,
     0.9f, -0.25f, 0.6f, 0.9f,
 
-    // UiSlider for "area radius" icon "slider" (starting position)
-    1.0f, -0.8f, 0.4f, 0.125f,
-    1.0f, -0.9f, 0.4f, 0.25f,
-    0.9f, -0.8f, 0.3f, 0.125f,
-    0.9f, -0.9f, 0.3f, 0.25f,
+    // UiSlider for "area radius" handler (starting position)
+    1.0f, -0.2f, 0.4f, 0.125f,
+    1.0f, -0.3f, 0.4f, 0.25f,
+    0.9f, -0.2f, 0.3f, 0.125f,
+    0.9f, -0.3f, 0.3f, 0.25f,
 
     // UiSlider for "area falloff" icon for min
     0.9f, -0.2f, 0.7f, 0.125f,
@@ -378,17 +378,17 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
     0.8f, -1.0f, 0.6f, 0.0f,
     0.8f, -0.9f, 0.6f, 0.125f,
 
-    // UiSlider for "area falloff" icon "slider area" (where to slide on)
+    // UiSlider for "area falloff" track
     0.9f, -0.85f, 0.7f, 0.85f,
     0.9f, -0.25f, 0.7f, 0.9f,
     0.8f, -0.85f, 0.6f, 0.85f,
     0.8f, -0.25f, 0.6f, 0.9f,
 
-    // UiSlider for "area falloff" icon "slider" (starting position)
-    0.9f, -0.8f, 0.4f, 0.125f,
-    0.9f, -0.9f, 0.4f, 0.25f,
-    0.8f, -0.8f, 0.3f, 0.125f,
-    0.8f, -0.9f, 0.3f, 0.25f,
+    // UiSlider for "area falloff" handler (starting position)
+    0.9f, -0.2f, 0.4f, 0.125f,
+    0.9f, -0.3f, 0.4f, 0.25f,
+    0.8f, -0.2f, 0.3f, 0.125f,
+    0.8f, -0.3f, 0.3f, 0.25f,
 
     // UiSlots "previous slots"
     0.9f, 0.4f, 0.4f, 0.0f,
@@ -526,11 +526,11 @@ inline constexpr std::array<float, 65 * 16> kUiVboDataMain = {
     0.9f, 0.25f, 0.6f, 0.85f,
     0.9f, 0.85f, 0.6f, 0.9f,
 
-    // mode Placement slider handler
-    1.0f, 0.2f, 0.4f, 0.125f,
-    1.0f, 0.3f, 0.4f, 0.25f,
-    0.9f, 0.2f, 0.3f, 0.125f,
-    0.9f, 0.3f, 0.3f, 0.25f,
+    // mode Placement slider handler (starting position)
+    1.0f, 0.8f, 0.4f, 0.125f,
+    1.0f, 0.9f, 0.4f, 0.25f,
+    0.9f, 0.8f, 0.3f, 0.125f,
+    0.9f, 0.9f, 0.3f, 0.25f,
 
     // mode Placement btn "draw trees"
     0.9f, 0.9f, 0.9f, 0.5f,
