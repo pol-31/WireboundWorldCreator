@@ -1,8 +1,10 @@
 #include "Texture.h"
 
+#include <algorithm> // clamp
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 #include <stb_image.h>
 #include <stb_image_write.h>
@@ -178,7 +180,7 @@ void Texture::Bind() const {
   glBindTexture(GL_TEXTURE_2D, opengl_id_);
 }
 
-void Texture::Store(std::string_view path, int channels,
+void Texture::Store(std::string_view path, int channels, GLint format,
                     GLenum type, int component) const {
   if (channels < component || component < 0) {
     throw std::runtime_error("specified wrong channel component");
@@ -190,10 +192,10 @@ void Texture::Store(std::string_view path, int channels,
     channels_num = 1;
   }
   glBindTexture(GL_TEXTURE_2D, opengl_id_);
-  std::vector<float> pixels(width_ * height_ * channels);
-  glGetTexImage(GL_TEXTURE_2D, 0, format_, type, pixels.data());
-  std::vector<uint8_t> converted_data(width_ * height_ * channels_num);
   if (type == GL_UNSIGNED_BYTE) {
+    std::vector<uint8_t> pixels(width_ * height_ * channels);
+    glGetTexImage(GL_TEXTURE_2D, 0, format, type, pixels.data());
+    std::vector<uint8_t> converted_data(width_ * height_ * channels_num);
     if (component != 0) {
       for (int i = 0; i < width_ * width_ * channels; i+=channels) {
         auto set_value = static_cast<uint8_t>(pixels[i + component - 1]);
@@ -205,7 +207,13 @@ void Texture::Store(std::string_view path, int channels,
         converted_data[i] = set_value;
       }
     }
+    stbi_write_png(path.data(), width_, height_,
+                   channels_num, converted_data.data(), 0);
   } else if (type == GL_FLOAT) {
+    std::vector<float> pixels(width_ * height_ * channels);
+    glGetTexImage(GL_TEXTURE_2D, 0, format, type, pixels.data());
+    std::vector<uint8_t> converted_data(width_ * height_ * channels_num);
+
     // we could map all float type range into [0;255], but
     // clamping was more useful for me
     if (component != 0) {
@@ -215,9 +223,8 @@ void Texture::Store(std::string_view path, int channels,
         converted_data[i / channels] = set_value;
       }
     } else {
-      float min_value = -0.05f;  // Adjust according to your dataset
-      float max_value = 0.05f;   // Adjust according to your dataset
-
+      float min_value = -0.05f;
+      float max_value = 0.05f;
       for (int i = 0; i < width_ * width_ * channels; ++i) {
         float scaled_value = (pixels[i + component - 1] - min_value) / (max_value - min_value);
         int byte_value = std::clamp(static_cast<int>(scaled_value * 255.0f), 0, 255);
@@ -226,11 +233,11 @@ void Texture::Store(std::string_view path, int channels,
         converted_data[i] = byte_value;
       }
     }
+    stbi_write_png(path.data(), width_, height_,
+                   channels_num, converted_data.data(), 0);
   } else {
     std::cerr << "texture serializing for type " << static_cast<int>(type)
               << " hasn't been implemented yet" << std::endl;
   }
-  stbi_write_png(path.data(), width_, height_,
-                 channels_num, converted_data.data(), 0);
   glBindTexture(GL_TEXTURE_2D, 0);
 }

@@ -56,6 +56,7 @@ set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)
 target_include_directories(WireboundWorldCreator
         PUBLIC ${EXTERNAL_DIR}/glad/include
         PUBLIC ${EXTERNAL_DIR}/glfw/include
+        PUBLIC ${EXTERNAL_DIR}/glm/glm
         PUBLIC ${EXTERNAL_DIR}/utfcpp
         PUBLIC ${EXTERNAL_DIR}/stb
         PRIVATE ${CMAKE_SOURCE_DIR}/external/rapidjson
@@ -65,6 +66,7 @@ target_include_directories(WireboundWorldCreator
 target_link_libraries(WireboundWorldCreator
         PUBLIC glad
         PUBLIC glfw
+        PUBLIC glm
         PUBLIC stb
         PRIVATE tinygltf
 )

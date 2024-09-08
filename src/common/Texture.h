@@ -73,7 +73,7 @@ class Texture {
   /// need to store extra 8 bytes and at each texture loading
   /// compare all OpenGL texture formats (literally all) to obtain
   /// actual channels num and type, what I don't want to implement \-_-/
-  void Store(std::string_view path, int channels,
+  void Store(std::string_view path, int channels, GLint format,
              GLenum type, int component = 0) const;
 
  private:

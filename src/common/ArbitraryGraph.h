@@ -3,13 +3,13 @@
 
 #include <vector>
 
+#include <glm/glm.hpp>
+
+using Point = glm::ivec2;
+
 // used for roads & fences representation, that
 // can be placed solely on terrain (not objects)
 struct ArbitraryGraph {
-  struct Point {
-    int x;
-    int y;
-  };
   std::vector<Point> vertices; // x, y
   // vertex1 id, vertex2 id from vertices
   std::vector<std::pair<int, int>> edges;
@@ -26,13 +26,6 @@ struct ArbitraryGraph {
 };
 //TODO: we use the same struct for water, so edges_num is always == 0,
 //  while other data (graph type id and position for each point) are the same
-
-struct Point {
-  int x;
-  int y;
-};
-//TODO:
-//typedef glm::vec2 Point;
 
 //TODO: replace with glm (currently I'm not sure about its internal order)
 int CrossProduct(const Point& A, const Point& B, const Point& C);

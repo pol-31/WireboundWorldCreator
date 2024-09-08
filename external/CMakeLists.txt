@@ -6,6 +6,10 @@ add_subdirectory(glad EXCLUDE_FROM_ALL)
 message(STATUS "---> glfw building")
 add_subdirectory(glfw EXCLUDE_FROM_ALL)
 
+message(STATUS "---> glm building")
+set(GLM_ENABLE_CXX_20 ON CACHE BOOL "Enable C++ 20 for GLM" FORCE)
+add_subdirectory(glm EXCLUDE_FROM_ALL)
+
 message(STATUS "---> stb_image building")
 add_subdirectory(stb EXCLUDE_FROM_ALL)
 
