@@ -206,3 +206,46 @@ std::string Shader::ShaderNameFromType(GLenum type) {
       throw std::runtime_error("incorrect shader type");
   }
 }
+
+#ifndef NDEBUG
+bool Shader::Update() {
+  namespace fs = std::filesystem;
+  if (paths_.Size() == 1) {
+    fs::file_time_type new_time = fs::last_write_time(paths_[0]);
+    if (new_time > last_modification_time_) {
+      *this = Shader(paths_[0]);
+      last_modification_time_ = new_time;
+      return true;
+    }
+  } else if (paths_.Size() == 2) {
+    fs::file_time_type new_time = std::max(fs::last_write_time(paths_[0]),
+                                           fs::last_write_time(paths_[1]));
+    if (new_time > last_modification_time_) {
+      *this = Shader(paths_[0], paths_[1]);
+      last_modification_time_ = new_time;
+      return true;
+    }
+  } else if (paths_.Size() == 3) {
+    fs::file_time_type new_time = std::max(fs::last_write_time(paths_[0]),
+                                           fs::last_write_time(paths_[1]));
+    new_time = std::max(new_time, fs::last_write_time(paths_[2]));
+    if (new_time > last_modification_time_) {
+      *this = Shader(paths_[0], paths_[1], paths_[2]);
+      last_modification_time_ = new_time;
+      return true;
+    }
+  } else if (paths_.Size() == 4) {
+    auto time_1 = std::max(fs::last_write_time(paths_[0]),
+                           fs::last_write_time(paths_[1]));
+    auto time_2 = std::max(fs::last_write_time(paths_[2]),
+                           fs::last_write_time(paths_[3]));
+    fs::file_time_type new_time = std::max(time_1, time_2);
+    if (new_time > last_modification_time_) {
+      *this = Shader(paths_[0], paths_[1], paths_[2], paths_[3]);
+      last_modification_time_ = new_time;
+      return true;
+    }
+  }
+  return false;
+}
+#endif
