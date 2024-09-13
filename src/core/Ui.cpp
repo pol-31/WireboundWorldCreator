@@ -9,31 +9,33 @@
 #include "../common/Colors.h"
 #include "../common/ShadersBinding.h"
 
-void UiButton::Render() const {
+void UiStaticSprite::Render() const {
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
-void UiButton::RenderPicking(const Shader& picking_shader) const {
+void UiStaticSprite::RenderPicking(const Shader& picking_shader) const {
   glUniform1ui(shader::kSpritePickingId, static_cast<uint32_t>(ui_data_.id));
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
 // see src/vbos/UiDataMain.h for explanation
-float UiButton::GetLeftBorder() const {
+float UiStaticSprite::GetLeftBorder() const {
   return details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 8];
 }
 
-float UiButton::GetRightBorder() const {
+float UiStaticSprite::GetRightBorder() const {
   return details::kUiVboDataMain[ui_data_.vbo_offset * 4];
 }
 
-float UiButton::GetTopBorder() const {
+float UiStaticSprite::GetTopBorder() const {
   return details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 5];
 }
 
-float UiButton::GetBottomBorder() const {
+float UiStaticSprite::GetBottomBorder() const {
   return details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 1];
 }
+
+
 
 void UiSliderHandle::Render(const Shader& slider_shader) const {
   slider_shader.Bind();
@@ -43,10 +45,10 @@ void UiSliderHandle::Render(const Shader& slider_shader) const {
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
-UiSlots::UiSlots(const std::size_t& total_size, UiButton&& btn_next,
-                 UiButton&& btn_prev, UiButton&& slot1,
-                 UiButton&& slot2, UiButton&& slot3,
-                 UiButton&& slot4, UiButton&& slot5,
+UiSlots::UiSlots(const std::size_t& total_size, UiStaticSprite&& btn_next,
+                 UiStaticSprite&& btn_prev, UiStaticSprite&& slot1,
+                 UiStaticSprite&& slot2, UiStaticSprite&& slot3,
+                 UiStaticSprite&& slot4, UiStaticSprite&& slot5,
                  int& edit_mode_selected_sample_id)
     : total_size_(total_size),
       btn_next_(btn_next),
@@ -140,7 +142,7 @@ void UiSlots::InitColors() {
 }
 
 void UiSlots::RenderSlot(
-    const Shader& shader, const UiButton& slot, int i) const {
+    const Shader& shader, const UiStaticSprite& slot, int i) const {
   if (start_idx_ + i == edit_mode_selected_sample_id_) {
     glUniform1f(shader::kSpriteBrightness, 0.5f);
   } else {
@@ -197,9 +199,8 @@ int UiBiomesList::Hover(std::uint32_t id) const {
   //
 }
 
-UiSlider::UiSlider(
-    UiButton&& min_handle, UiButton&& max_handle,
-    UiButton&& track, UiSliderHandle&& handle)
+UiSlider::UiSlider(UiStaticSprite&& min_handle, UiStaticSprite&& max_handle,
+                   UiStaticSprite&& track, UiSliderHandle&& handle)
     : min_handle_(min_handle),
       max_handle_(max_handle),
       track_(track),
