@@ -7,11 +7,13 @@
 #include <limits>
 
 #include <glm/glm.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../common/Shader.h"
 #include "../common/Colors.h"
 #include "../common/Vbos.h"
+#include "../io/Window.h"
 
 //TODO: we can accelerate our search by binary search, but
 //  looks like the best way to do this is "in-place" binary search and
@@ -30,74 +32,52 @@
 // details::kUiVboDataMain store data both for Dynamic and Static sprites
 // in the same format, the only difference is how class initialize its data
 
+// Let's draw the entire ui component with the same shader,
+// so if there's dynamic component - we draw with dynamic shader only
+// to reduce switching)
+
 class UiDynamicSprite {
  public:
   explicit UiDynamicSprite(UiData ui_data)
-      : ui_data_(ui_data),
-        scale_(1.0f, 1.0f),
-        centre_pos_(
-            (details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 8],
-             + details::kUiVboDataMain[ui_data_.vbo_offset * 4]) / 2,
-            (details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 5]
-             + details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 1]) / 2) {}
+      : ui_data_(ui_data) {}
 
   UiDynamicSprite(VboIdMain vbo_texture, VboIdText vbo_text)
       : UiDynamicSprite(GetUiData(vbo_texture, vbo_text)) {}
 
-  void Render() const {
-    glUniform2fv(0, 1, glm::value_ptr(centre_pos_));
-    glUniform2fv(1, 1, glm::value_ptr(scale_));
-    glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
-  }
+  void Render() const;
 
-  int Hover() const {
+  [[nodiscard]] size_t Hover() const {
     return GetTextVboOffset();
   }
 
-  void SetScale(glm::vec2 scale) {
-    scale_ = scale;
+  void Rotate(float radians) {
+    transform_ = glm::rotate(transform_, radians);
   }
 
-  void SetPosition(glm::vec2 position) {
-    centre_pos_ = position;
+  void Scale(glm::vec2 scale) {
+    transform_ = glm::scale(transform_, scale);
+  }
+
+  void Translate(glm::vec2 position) {
+    transform_ = glm::translate(transform_, position);
+  }
+
+  void SetTransform(glm::mat3 transform) {
+    transform_ = transform;
   }
 
   /// when we operate on arrays of buttons we don't want
   /// bind the same shader 20 times, so this function don't bind shader
   //TODO: inilne
-  void RenderPicking(const Shader& picking_shader) const {
-    glUniform1ui(shader::kSpritePickingId, static_cast<uint32_t>(ui_data_.id));
-    glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
-  }
+  void RenderPicking() const;
 
-  //TODO: looks like we don't need it
-  /// we still need position for UiSlider (set progress) or composite
-  /// ui components to check id and only then Press();
-  /// position is needed for ui components like slider
-  /// void Press(glm::vec2 position, std::uint32_t id) = 0;
-  [[nodiscard]] float GetLeftBorder() const {
-    float width = details::kUiVboDataMain[ui_data_.vbo_offset * 4]
-                  - details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 8];
-    return centre_pos_.x + width / 2;
-  }
+  [[nodiscard]] float GetLeftBorder() const;
 
-  [[nodiscard]] float GetRightBorder() const {
-    float width = details::kUiVboDataMain[ui_data_.vbo_offset * 4]
-                  - details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 8];
-    return centre_pos_.x - width / 2;
-  }
+  [[nodiscard]] float GetRightBorder() const;
 
-  [[nodiscard]] float GetTopBorder() const {
-    float height = details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 5]
-                  - details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 1];
-    return centre_pos_.y + height / 2;
-  }
+  [[nodiscard]] float GetTopBorder() const;
 
-  [[nodiscard]] float GetBottomBorder() const {
-    float height = details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 5]
-                   - details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 1];
-    return centre_pos_.y - height / 2;
-  }
+  [[nodiscard]] float GetBottomBorder() const;
 
   [[nodiscard]] std::uint32_t GetId() const {
     return ui_data_.id;
@@ -112,10 +92,9 @@ class UiDynamicSprite {
   }
 
  protected:
-  //TODO: we need only tex coords
+  //TODO: we need only tex coords (?)
   UiData ui_data_;
-  glm::vec2 centre_pos_;
-  glm::vec2 scale_;
+  glm::mat3 transform_{1.0f};
 };
 
 class UiStaticSprite {
@@ -128,20 +107,14 @@ class UiStaticSprite {
 
   void Render() const;
 
-  int Hover() const {
+  [[nodiscard]] size_t Hover() const {
     return GetTextVboOffset();
   }
 
   /// when we operate on arrays of buttons we don't want
   /// bind the same shader 20 times, so this function don't bind shader
   //TODO: inilne
-  void RenderPicking(const Shader& picking_shader) const;
-
-  //TODO: looks like we don't need it
-  /// we still need position for UiSlider (set progress) or composite
-  /// ui components to check id and only then Press();
-  /// position is needed for ui components like slider
-  /// void Press(glm::vec2 position, std::uint32_t id) = 0;
+  void RenderPicking() const;
 
   [[nodiscard]] float GetLeftBorder() const;
 
@@ -167,73 +140,268 @@ class UiStaticSprite {
   UiData ui_data_;
 };
 
-
-
-
-
-
-
-
-class UiSlider {
+class UiSliderBase {
  public:
-  //TODO: interpolation type enum
-  UiSlider(UiDynamicSprite&& handler, UiDynamicSprite&& track,
-           glm::vec2 pos_min, glm::vec2 pos_max)
-      : handler_(handler),
-        track_(track),
-        pos_min_(pos_min),
-        size_(pos_max - pos_min),
-        length_(glm::length(size_)) {}
+  UiSliderBase(UiDynamicSprite&& handle, UiDynamicSprite&& track)
+      : handle_(handle), track_(track) {}
 
-  void Set(glm::vec2 mouse_pos) {
-    glm::vec2 offset = glm::clamp(mouse_pos - pos_min_, {}, size_);
-    progress_ = glm::length(offset) / length_;
-  }
   [[nodiscard]] float GetProgress() const {
     return progress_;
-  }
-
-  // shader has already been bind (as well as vao and texture...
-  // Let's draw the entire ui component with the same shader,
-  // so if there's dynamic component - we draw with dynamic shader only
-  // to reduce switching)
-  void Render() {
-    track_.Render();
-    handler_.SetPosition(pos_min_ + progress_ * size_);
-    handler_.Render();
   }
 
   void RenderPicking() {
     track_.RenderPicking();
   }
 
- private:
-  UiDynamicSprite handler_;
+  [[nodiscard]] size_t Hover(std::uint32_t id) const {
+    if (id == track_.GetId()) {
+      return track_.Hover();
+    } else {
+      return {};
+    }
+  }
+
+  void Press() {
+    pressed_ = true;
+  }
+
+  void Release() {
+    pressed_ = false;
+  }
+
+  /// UiSlider has the same id as a track_, so it's like its wrapper.
+  /// We don't render UiSlider id, but
+  /// for comparison (e.g. in key callback) we directly slider.GetId()
+  [[nodiscard]] std::uint32_t GetTrackId() const {
+    return track_.GetId();
+  }
+
+ protected:
+  UiDynamicSprite handle_;
   UiDynamicSprite track_;
-  const glm::vec2 pos_min_;
-  const glm::vec2 size_; // width & height of the path
-  const float length_;
   float progress_{0.0f};
+  bool pressed_{false};
 };
 
-
-
-
-
-
-class UiSliderHandle final : public UiStaticSprite {
+/// Horizontal slider
+/// 1. we don't use scale - its uniform through the app (same as artist draw)
+/// 2. we always rotate on 90 degrees, because in our sprites it's the same
+///   as UiHSlider, but rotated horizontally
+class UiHSlider final : public UiSliderBase {
  public:
-  using UiStaticSprite::UiStaticSprite;
+  UiHSlider(UiDynamicSprite&& handle, UiDynamicSprite&& track,
+            glm::vec2 track_position, glm::vec2 handle_position,
+            float track_width);
 
-  void Render(const Shader& slider_shader) const;
+  void Render(glm::vec2 mouse_pos);
 
-  void SetPositionOffset(float pos_offset) {
-    translate_.y = pos_offset;
+  void Set(glm::vec2 mouse_pos);
+
+ private:
+  glm::vec2 handle_position_;
+  glm::vec2 track_position_;
+  float width_;
+};
+
+/// Vertical slider
+/// 1. we don't use scale - its uniform through the app (same as artist draw)
+class UiVSlider final : public UiSliderBase {
+ public:
+  UiVSlider(UiDynamicSprite&& handle, UiDynamicSprite&& track,
+            glm::vec2 track_position, glm::vec2 handle_position,
+            float track_height);
+
+  void Render(glm::vec2 mouse_pos);
+
+  void Set(glm::vec2 mouse_pos);
+
+ private:
+  glm::vec2 handle_position_;
+  glm::vec2 track_position_;
+  float height_;
+};
+
+/// Circle slider
+/// 1. we don't use scale - its uniform through the app (same as artist draw)
+class UiCircleSlider final : public UiSliderBase {
+ public:
+  UiCircleSlider(UiDynamicSprite&& handle, UiDynamicSprite&& track,
+                 glm::vec2 track_position, glm::vec2 handle_offset)
+      : UiSliderBase(std::move(handle), std::move(track)),
+        handle_offset_(handle_offset),
+        track_position_(track_position) {
+    track_.SetTransform(glm::translate(glm::mat3{1.0f}, track_position));
+    Set(glm::vec2(0.0f, -2.0f));
+  }
+
+  void Render(glm::vec2 mouse_pos) {
+    if (pressed_) {
+      Set(mouse_pos);
+    }
+    track_.Render();
+    handle_.Render();
+  }
+
+  void Set(glm::vec2 mouse_pos) {
+    float angle = glm::atan(mouse_pos.y - track_position_.y,
+                            mouse_pos.x - track_position_.x);
+    auto transform = glm::translate({1.0f}, handle_offset_);
+    transform = glm::rotate(transform, angle);
+    handle_.SetTransform(transform);
+    progress_ = (angle + std::numbers::pi_v<float>)
+                / (2.0f * std::numbers::pi_v<float>);
   }
 
  private:
-  glm::vec2 translate_{0.0f};
+  glm::vec2 handle_offset_;
+  glm::vec2 track_position_;
 };
+
+/// Circle slider
+/// 1. we don't use scale - its uniform through the app (same as artist draw)
+/// 2. technically the same as UiVSlider
+/// 3. on each iteration if we hover, we change sprite of a hand, but
+///    then at Render() we "unhover it" after drawing a hover version
+class UiWheelSlider {
+ public:
+  UiWheelSlider(UiStaticSprite&& wheel, UiStaticSprite&& rope,
+                UiStaticSprite&& hand, glm::vec2 track_position,
+                float track_height)
+      : wheel_(wheel), rope_(rope), hand_(hand),
+        track_position_(track_position),
+        height_(track_height) {
+    Set(glm::vec2(0.0f, -2.0f));
+  }
+
+  [[nodiscard]] float GetProgress() const {
+    return progress_;
+  }
+
+  void RenderPicking() {
+    rope_.RenderPicking();
+  }
+
+  void Render(glm::vec2 mouse_pos) {
+    if (pressed_) {
+      float prev_progress = progress_;
+      Set(mouse_pos);
+      float diff = glm::abs(prev_progress - progress_);
+      if (diff == 0.0f) {
+        wheel_.SetVboOffset(details::kWheelCalm);
+      } else if (diff < 0.3f) {
+        wheel_.SetVboOffset(details::kWheelSlow);
+      } else {
+        wheel_.SetVboOffset(details::kWheelFast);
+      }
+    }
+    wheel_.Render();
+    rope_.Render();
+    hand_.Render();
+    UnHover();
+  }
+
+  [[nodiscard]] size_t Hover(std::uint32_t id) const {
+    hand_.SetVboOffset(details::kHandRelease);
+    return rope_.Hover();
+  }
+
+  void Set(glm::vec2 mouse_pos) {
+    float half_heigth_ = height_ / 2.0f;
+    float offset = glm::clamp(mouse_pos.y - track_position_.y,
+                              -half_heigth_, +half_heigth_);
+    progress_ = (offset + half_heigth_) / height_;
+  }
+
+  void Press() {
+    pressed_ = true;
+  }
+
+  void Release() {
+    pressed_ = false;
+  }
+
+  /// UiSlider has the same id as a track_, so it's like its wrapper.
+  /// We don't render UiSlider id, but
+  /// for comparison (e.g. in key callback) we directly slider.GetId()
+  [[nodiscard]] std::uint32_t GetTrackId() const {
+    return rope_.GetId();
+  }
+
+ private:
+  void UnHover() {
+    hand_.SetVboOffset(details::kHandHold);
+  }
+
+  UiStaticSprite wheel_;
+  UiStaticSprite rope_;
+  UiStaticSprite hand_;
+
+  glm::vec2 track_position_;
+  float height_;
+
+  float progress_{0.0f};
+  bool pressed_{false};
+};
+
+/// position lerp based on time
+class UiTabAnimation {
+ public:
+  UiTabAnimation(UiDynamicSprite&& sprite, glm::vec2 start_pos,
+                 glm::vec2 end_pos, float speed = 1.0f)
+      : sprite_(sprite),
+        start_pos_(start_pos),
+        end_pos_(end_pos),
+        speed_(speed) {
+    End();
+  }
+
+  void Render() {
+    if (progress_ < 1.0f) {
+      /// if active
+      progress_ += gDeltaTime * speed_;
+      glm::vec2 position = glm::mix(start_pos_, end_pos_, progress_);
+      sprite_.SetTransform(glm::translate(glm::mat3{}, position));
+      if (progress_ > 1.0f) {
+        progress_ = 1.0f;
+      }
+    }
+    sprite_.Render();
+  }
+
+  void RenderPicking() {
+    sprite_.RenderPicking();
+  }
+
+  [[nodiscard]] size_t Hover() {
+    return sprite_.Hover();
+  }
+
+  [[nodiscard]] std::uint32_t GetId() const {
+    return sprite_.GetId();
+  }
+
+  void Start() {
+    progress_ = 0.0f;
+  }
+
+  void End() {
+    sprite_.SetTransform(glm::translate(glm::mat3{}, start_pos_));
+    progress_ = 1.0f;
+  }
+
+ private:
+  UiDynamicSprite sprite_;
+  glm::vec2 start_pos_;
+  glm::vec2 end_pos_;
+
+  // 0-1 for progress; 1 means either "not active" or end_pos_
+  float progress_{1.0f};
+  float speed_;
+};
+
+
+
+
 
 /// to check was it pressed see UiSlots::Press(id)
 class UiSlots {
@@ -244,8 +412,8 @@ class UiSlots {
           UiStaticSprite&& slot4, UiStaticSprite&& slot5,
           int& edit_mode_selected_sample_id);
 
-  void Render(const Shader& shader) const;
-  void RenderPicking(const Shader& shader) const;
+  void Render() const;
+  void RenderPicking() const;
 
   /// return true if there was a button with such id
   bool Press(std::uint32_t id);
@@ -255,19 +423,12 @@ class UiSlots {
  private:
   void InitColors();
 
-  void RenderSlot(const Shader& shader, const UiStaticSprite& slot, int i) const;
+  void RenderSlot(int i) const;
 
   std::array<glm::vec4, 8> colors_{};
 
-  //TODO: array of pointers IUi* + sort by Y and then binary search
-  UiStaticSprite btn_next_;
-  UiStaticSprite btn_prev_;
-
-  UiStaticSprite slot1_;
-  UiStaticSprite slot2_;
-  UiStaticSprite slot3_;
-  UiStaticSprite slot4_;
-  UiStaticSprite slot5_;
+  // 5 x slots, btn_next, btn_prev
+  std::array<UiStaticSprite, 7> slots_;
 
   // we don't own point/graph data and all what we need is size (dynamically)
   const std::size_t& total_size_;
@@ -312,40 +473,5 @@ class UiTilesMap {
   int cur_page_offset_{-1}; // when scrolling pages
   int selected_id_{-1}; // from 0 to 6x6 (if we have n=6x6 tiles at once)
 };
-
-/*/// used to set amount of points captured by
-/// single vertex transform (falloff, radius).
-/// To deduce was it pressed you should use GetTrackId() and compare
-class UiSlider {
- public:
-  UiSlider(UiStaticSprite&& min_handle, UiStaticSprite&& max_handle,
-           UiStaticSprite&& track, UiSliderHandle&& handle);
-
-  void Render(const Shader& sprite_shader, const Shader& slider_shader) const;
-  void RenderPicking(const Shader& picking_shader) const;
-
-  [[nodiscard]] int Hover(std::uint32_t id) const;
-
-  void UpdateSliderPos(glm::vec2 position);
-
-  /// UiSlider has the same id as a track_, so it's like its wrapper.
-  /// We don't render UiSlider id, but
-  /// for comparison (e.g. in key callback) we directly slider.GetId()
-  [[nodiscard]] std::uint32_t GetTrackId() const;
-
-  [[nodiscard]] float GetProgress() const {
-    return progress_;
-  }
-
- private:
-  UiStaticSprite min_handle_;
-  UiStaticSprite max_handle_;
-  UiStaticSprite track_;
-  UiSliderHandle handle_;
-
-  /// to not to calculate it each time at Press()
-  float height_{0.0f};
-  float progress_{0.0f}; // [0;1]
-};*/
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_UI_H_

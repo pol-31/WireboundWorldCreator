@@ -9,11 +9,45 @@
 #include "../common/Colors.h"
 #include "../common/ShadersBinding.h"
 
+void UiDynamicSprite::Render() const {
+  glUniformMatrix3fv(3, 1, false, glm::value_ptr(transform_));
+  glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
+}
+
+void UiDynamicSprite::RenderPicking() const {
+  glUniform1ui(shader::kSpritePickingId, static_cast<uint32_t>(ui_data_.id));
+  glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
+}
+
+float UiDynamicSprite::GetLeftBorder() const {
+  float width = details::kUiVboDataMain[ui_data_.vbo_offset * 4]
+                - details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 8];
+  return transform_[3].x + width / 2;
+}
+
+float UiDynamicSprite::GetRightBorder() const {
+  float width = details::kUiVboDataMain[ui_data_.vbo_offset * 4]
+                - details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 8];
+  return transform_[3].x - width / 2;
+}
+
+float UiDynamicSprite::GetTopBorder() const {
+  float height = details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 5]
+                 - details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 1];
+  return transform_[3].y + height / 2;
+}
+
+float UiDynamicSprite::GetBottomBorder() const {
+  float height = details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 5]
+                 - details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 1];
+  return transform_[3].y - height / 2;
+}
+
 void UiStaticSprite::Render() const {
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
-void UiStaticSprite::RenderPicking(const Shader& picking_shader) const {
+void UiStaticSprite::RenderPicking() const {
   glUniform1ui(shader::kSpritePickingId, static_cast<uint32_t>(ui_data_.id));
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
@@ -35,14 +69,64 @@ float UiStaticSprite::GetBottomBorder() const {
   return details::kUiVboDataMain[ui_data_.vbo_offset * 4 + 1];
 }
 
+UiHSlider::UiHSlider(UiDynamicSprite&& handle, UiDynamicSprite&& track,
+                     glm::vec2 track_position, glm::vec2 handle_position,
+                     float track_width)
+    : UiSliderBase(std::move(handle), std::move(track)),
+      handle_position_(handle_position),
+      track_position_(track_position),
+      width_(track_width) {
+  glm::mat3 transform{1.0f};
+  transform = glm::rotate(transform, glm::radians(90.0f));
+  track_.SetTransform(glm::translate(transform, track_position));
+  Set(glm::vec2(-2.0f, 0.0f));
+}
 
+void UiHSlider::Render(glm::vec2 mouse_pos) {
+  if (pressed_) {
+    Set(mouse_pos);
+  }
+  track_.Render();
+  handle_.Render();
+}
 
-void UiSliderHandle::Render(const Shader& slider_shader) const {
-  slider_shader.Bind();
-  glUniform2fv(shader::kDynamicSpriteScale, 1,
-               glm::value_ptr(glm::vec2{1.0f, 1.0f}));
-  glUniform2fv(shader::kDynamicSpriteTranslate, 1, glm::value_ptr(translate_));
-  glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
+void UiHSlider::Set(glm::vec2 mouse_pos) {
+  float half_width_ = width_ / 2.0f;
+  float offset = glm::clamp(mouse_pos.x - handle_position_.x,
+                            -half_width_, +half_width_);
+  glm::mat3 transform{1.0f};
+  transform = glm::rotate(transform, glm::radians(90.0f));
+  transform = glm::translate(transform, glm::vec2(offset, 0.0f));
+  handle_.SetTransform(transform);
+  progress_ = (offset + half_width_) / width_;
+}
+
+UiVSlider::UiVSlider(UiDynamicSprite&& handle, UiDynamicSprite&& track,
+                     glm::vec2 track_position, glm::vec2 handle_position,
+                     float track_height)
+    : UiSliderBase(std::move(handle), std::move(track)),
+      handle_position_(handle_position),
+      track_position_(track_position),
+      height_(track_height) {
+  track_.SetTransform(glm::translate(glm::mat3{1.0f}, track_position));
+  Set(glm::vec2(0.0f, -2.0f));
+}
+
+void UiVSlider::Render(glm::vec2 mouse_pos) {
+  if (pressed_) {
+    Set(mouse_pos);
+  }
+  track_.Render();
+  handle_.Render();
+}
+
+void UiVSlider::Set(glm::vec2 mouse_pos) {
+  float half_heigth_ = height_ / 2.0f;
+  float offset = glm::clamp(mouse_pos.y - handle_position_.y,
+                            -half_heigth_, +half_heigth_);
+  auto transform = glm::translate({1.0f}, glm::vec2(offset, 0.0f));
+  handle_.SetTransform(transform);
+  progress_ = (offset + half_heigth_) / height_;
 }
 
 UiSlots::UiSlots(const std::size_t& total_size, UiStaticSprite&& btn_next,
@@ -62,45 +146,34 @@ UiSlots::UiSlots(const std::size_t& total_size, UiStaticSprite&& btn_next,
   InitColors();
 }
 
-void UiSlots::Render(const Shader& shader) const {
-//  shader_.SetUniform("brightness", 1.0f);
-  btn_next_.Render();
-  btn_prev_.Render();
-  //TODO: maybe we should pass shader to ctor?
-  RenderSlot(shader, slot1_, 0);
-  RenderSlot(shader, slot2_, 1);
-  RenderSlot(shader, slot3_, 2);
-  RenderSlot(shader, slot4_, 3);
-  RenderSlot(shader, slot5_, 4);
+void UiSlots::Render() const {
+  glUniform1f(shader::kSpriteBrightness, 0.5f);
+  for (int i = 0; i < 5; ++i) {
+    RenderSlot(i);
+  }
+  glUniform1f(shader::kSpriteBrightness, 1.0f);
+  if (edit_mode_selected_sample_id_ != -1) {
+    RenderSlot(edit_mode_selected_sample_id_);
+  }
+  RenderSlot(5);
+  RenderSlot(6);
 }
 
-void UiSlots::RenderPicking(const Shader& shader) const {
-  btn_next_.RenderPicking(shader);
-  btn_prev_.RenderPicking(shader);
-  slot1_.RenderPicking(shader);
-  slot2_.RenderPicking(shader);
-  slot3_.RenderPicking(shader);
-  slot4_.RenderPicking(shader);
-  slot5_.RenderPicking(shader);
+void UiSlots::RenderPicking() const {
+  for (const auto& slot : slots_) {
+    slot.Render();
+  }
 }
 
 bool UiSlots::Press(std::uint32_t id) {
-  //TODO: bvh
-  if (id == slot1_.GetId()) {
-    edit_mode_selected_sample_id_ = start_idx_ + 0;
-  } else if (id == slot2_.GetId()) {
-    edit_mode_selected_sample_id_ = start_idx_ + 1;
-  } else if (id == slot3_.GetId()) {
-    edit_mode_selected_sample_id_ = start_idx_ + 2;
-  } else if (id == slot4_.GetId()) {
-    edit_mode_selected_sample_id_ = start_idx_ + 3;
-  } else if (id == slot5_.GetId()) {
-    edit_mode_selected_sample_id_ = start_idx_ + 4;
-  } else if (id == btn_next_.GetId()) {
+  // two last are btn_next, btn_prev
+  if (id >= slots_[0].GetId() && id <= slots_[slots_.size() - 3].GetId()) {
+    edit_mode_selected_sample_id_ = static_cast<int>(id);
+  } else if (id == slots_[slots_.size() - 2].GetId()) {
     if (start_idx_ + 5 < total_size_) {
       ++start_idx_;
     }
-  } else if (id == btn_prev_.GetId()) {
+  } else if (id == slots_[slots_.size() - 1].GetId()) {
     if (start_idx_ > 0) {
       --start_idx_;
     }
@@ -111,21 +184,8 @@ bool UiSlots::Press(std::uint32_t id) {
 }
 
 int UiSlots::Hover(std::uint32_t id) const {
-  //TODO: bvh
-  if (id == btn_next_.GetId()) {
-    return btn_next_.Hover();
-  } else if (id == btn_prev_.GetId()) {
-    return btn_prev_.Hover();
-  } else if (id == slot1_.GetId()) {
-    return slot1_.Hover();
-  } else if (id == slot2_.GetId()) {
-    return slot2_.Hover();
-  } else if (id == slot3_.GetId()) {
-    return slot3_.Hover();
-  } else if (id == slot4_.GetId()) {
-    return slot4_.Hover();
-  } else if (id == slot5_.GetId()) {
-    return slot5_.Hover();
+  if (id >= slots_[0].GetId() && id <= slots_[slots_.size() - 1].GetId()) {
+    return btn_next_.Hover(); // TODO: we need only one description
   }
   return {};
 }
@@ -141,13 +201,7 @@ void UiSlots::InitColors() {
   colors_[7] = colors::kLightGrey;
 }
 
-void UiSlots::RenderSlot(
-    const Shader& shader, const UiStaticSprite& slot, int i) const {
-  if (start_idx_ + i == edit_mode_selected_sample_id_) {
-    glUniform1f(shader::kSpriteBrightness, 0.5f);
-  } else {
-    glUniform1f(shader::kSpriteBrightness, 1.0f);
-  }
+void UiSlots::RenderSlot(int i) const {
   if (total_size_ - 1 > start_idx_ + i) {
     int pos_in_slots = static_cast<int>(i & colors_.size());
     glUniform4fv(shader::kSpriteColor, 1,
@@ -155,7 +209,7 @@ void UiSlots::RenderSlot(
   } else {
     glUniform4fv(shader::kSpriteColor, 1, glm::value_ptr(colors::kBlack));
   }
-  slot.Render();
+  slots_[i].Render();
 }
 
 /*
@@ -197,51 +251,4 @@ bool UiBiomesList::Press(std::uint32_t id) {
 
 int UiBiomesList::Hover(std::uint32_t id) const {
   //
-}
-
-UiSlider::UiSlider(UiStaticSprite&& min_handle, UiStaticSprite&& max_handle,
-                   UiStaticSprite&& track, UiSliderHandle&& handle)
-    : min_handle_(min_handle),
-      max_handle_(max_handle),
-      track_(track),
-      handle_(handle) {
-  height_ = track_.GetTopBorder() - track_.GetBottomBorder();
-}
-
-void UiSlider::Render(const Shader& sprite_shader, const Shader& slider_shader) const {
-  sprite_shader.Bind();
-  min_handle_.Render();
-  max_handle_.Render();
-  track_.Render();
-  slider_shader.Bind();
-  handle_.Render(slider_shader);
-}
-void UiSlider::RenderPicking(const Shader& picking_shader) const {
-  track_.RenderPicking(picking_shader);
-  // there's no point in rendering picking for the rest nested components
-}
-
-int UiSlider::Hover(std::uint32_t id) const {
-  //TODO: bvh
-  if (id == min_handle_.GetId()) {
-    return min_handle_.Hover();
-  } else if (id == max_handle_.GetId()) {
-    return max_handle_.Hover();
-  } else if (id == track_.GetId()) {
-    return track_.Hover();
-  } else if (id == handle_.GetId()) {
-    return handle_.Hover();
-  }
-  return {};
-}
-
-void UiSlider::UpdateSliderPos(glm::vec2 position) {
-  float new_y_pos = std::clamp(position.y, track_.GetBottomBorder(),
-                               track_.GetTopBorder());
-  progress_ = (new_y_pos - track_.GetBottomBorder()) / height_;
-  handle_.SetPositionOffset((progress_ - 1) * height_);
-}
-
-std::uint32_t UiSlider::GetTrackId() const {
-  return track_.GetId();
 }
