@@ -8,8 +8,6 @@ void Cursor::SetModeDisabled(GLFWwindow* window) {
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
   glfwSetCursorPos(window, details::kWindowWidth / 2.0f,
                    details::kWindowHeight / 2.0f);
-  // TODO: looks like need to update camera default yaw/pitch or
-  //  front vector for smooth transition and what I wanted
   enabled_ = false;
 }
 

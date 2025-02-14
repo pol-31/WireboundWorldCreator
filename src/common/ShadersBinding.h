@@ -14,18 +14,15 @@ inline constexpr int kTextScale = 0;
 inline constexpr int kTextTranslate = 1;
 inline constexpr int kTextTexture = 2;
 
+
 inline constexpr int kSpriteTexture = 0;
 inline constexpr int kSpriteTransparency = 1;
+// technically can't be in parallel with Transparency
+inline constexpr int kSpriteId = 1;
 inline constexpr int kSpriteBrightness = 2;
-inline constexpr int kSpriteColor = 3;
-inline constexpr int kSpriteHoveFactor = 4;
+inline constexpr int kSpriteTransform = 3;
+inline constexpr int kSpriteProgress = 4;
 
-inline constexpr int kSpritePickingTexture = 0;
-inline constexpr int kSpritePickingId = 1;
-
-inline constexpr int kDynamicSpriteScale = 0;
-inline constexpr int kDynamicSpriteTranslate = 1;
-inline constexpr int kDynamicSpriteTexture = 2;
 
 inline constexpr int kPlacementHeightMap = 0;
 inline constexpr int kPlacementTexture = 1;
@@ -70,7 +67,12 @@ inline constexpr int kOceanSpectrumBuffer = 11;
 inline constexpr int kOceanSpectrumPrecomputedData = 12;
 inline constexpr int kOceanSpectrumNoise = 13;
 inline constexpr int kOceanSpectrumData = 14;
-inline constexpr int kOceanSpectrums = 15;
+
+/// UBOs
+inline constexpr int kUboCameraBind = 0;
+inline constexpr int kUboMapScaleBind = 1;
+inline constexpr int kUboEnvironmentBind = 2;
+inline constexpr int kUboOceanSpectrumsBind = 3;
 
 /// ordinary uniforms (location)
 inline constexpr int kOceanSize = 0;
@@ -82,6 +84,9 @@ inline constexpr int kOceanLambda = 5;
 inline constexpr int kOceanSpectrumLengthScale = 6;
 inline constexpr int kOceanSpectrumCuttoffHigh = 7;
 inline constexpr int kOceanSpectrumCuttoffLow = 8;
+
+// TODO: can't be collision (?)
+inline constexpr int kOceanSpectrumCascadeId = 9;
 inline constexpr int kOceanIfftHorizontal = 9;
 
 } // namespace shader

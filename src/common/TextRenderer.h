@@ -8,6 +8,8 @@
 #include "Shader.h"
 #include "Paths.h"
 
+//TODO: move here lookup functions from common/Vbo.h
+
 class TextRenderer {
  public:
   explicit TextRenderer(const Paths& paths);
@@ -15,14 +17,17 @@ class TextRenderer {
   /// to render simple text. We could require vbo offset, translate and scle,
   /// but then if we need to draw few texts, we bind the same things few times.
   /// By providing this functino we can bind then only once
-  const Shader& Bind() const;
+  void Bind() const;
 
   /// used in dbg only
-  static void UnBind() ;
+  static void UnBind();
 
   /// at one frame there can be rendered only one description (for mouse pos),
   /// and we animate it is some way
   void RenderDescription(int vbo_offset) const;
+
+  // you should call Bind() before
+  static void RenderNumber(int number, glm::vec2 position);
 
  private:
   void Init();

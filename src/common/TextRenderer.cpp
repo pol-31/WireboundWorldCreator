@@ -15,8 +15,8 @@ void TextRenderer::Init() {
   glGenBuffers(1, &vbo_);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
   glBufferData(GL_ARRAY_BUFFER,
-               details::kUiVboDataText.size() * sizeof(float),
-               details::kUiVboDataText.data(), GL_STATIC_DRAW);
+               vbos::kUiVboDataText.size() * sizeof(float),
+               vbos::kUiVboDataText.data(), GL_STATIC_DRAW);
 
   glGenVertexArrays(1, &vao_);
   glBindVertexArray(vao_);
@@ -34,12 +34,11 @@ void TextRenderer::Init() {
   glUniform1i(shader::kTextTexture, 0);
 }
 
-const Shader& TextRenderer::Bind() const {
+void TextRenderer::Bind() const {
   glBindVertexArray(vao_);
   glActiveTexture(GL_TEXTURE0);
   texture_.Bind();
   shader_.Bind();
-  return shader_;
 }
 
 void TextRenderer::UnBind() {
@@ -55,12 +54,31 @@ void TextRenderer::RenderDescription(int vbo_offset) const {
     glActiveTexture(GL_TEXTURE0);
     texture_.Bind();
     shader_.Bind();
-    float width = details::kUiVboDataText[vbo_offset * 2]
-                  - details::kUiVboDataText[vbo_offset * 2 + 4];
-    float height = details::kUiVboDataText[vbo_offset * 2 + 3]
-                   - details::kUiVboDataText[vbo_offset * 2 + 1];
+    float width = vbos::kUiVboDataText[vbo_offset * 2]
+                  - vbos::kUiVboDataText[vbo_offset * 2 + 4];
+    float height = vbos::kUiVboDataText[vbo_offset * 2 + 3]
+                   - vbos::kUiVboDataText[vbo_offset * 2 + 1];
     glUniform2fv(shader::kTextScale, 1, glm::value_ptr(glm::vec2{width, height}));
     glUniform2fv(shader::kTextTranslate, 1, glm::value_ptr(glm::vec2{-0.0f, -0.8f}));
     glDrawArrays(GL_TRIANGLE_STRIP, vbo_offset, 4);
+  }
+}
+
+void TextRenderer::RenderNumber(int number, glm::vec2 position) {
+  std::string str = std::to_string(number);
+  int total_length = 0;
+  for (auto c : str) {
+    total_length += vbos::GetTextWidth(vbos::GetTextVbo(c));
+  }
+  int render_offset = static_cast<int>(position.x) + (total_length + 1) / 2;
+  for (auto c : str) {
+    int vbo_offset = vbos::GetTextWidth(c);
+    int c_half_length = vbos::GetTextWidth(vbo_offset);
+    render_offset += c_half_length;
+    glUniform2fv(shader::kTextScale, 1, glm::value_ptr(glm::vec2{1.0f, 1.0f}));
+    glUniform2fv(shader::kTextTranslate, 1,
+                 glm::value_ptr(glm::vec2{render_offset, position.y}));
+    glDrawArrays(GL_TRIANGLE_STRIP, vbo_offset, 4);
+    render_offset += c_half_length;
   }
 }

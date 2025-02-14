@@ -20,6 +20,8 @@
 #include "../common/PickingFramebuffer.h"
 #include "../common/TextRenderer.h"
 
+#include "../common/UiDebugger.h"
+
 class Interface {
  public:
   Interface(const Paths& paths, Camera& camera, Cursor& cursor, Map& map);
@@ -31,6 +33,10 @@ class Interface {
 
   /// shared across all edit modes and menu
   SharedResources shared_resources_;
+
+  GlobalGlfwCallbackData global_data_;
+
+  debug::UiDebugger ui_debugger_;
 
   // never use directly!
   // used for initializing and render-MODEs (and switching tiles at mode_Tiles)
@@ -55,7 +61,8 @@ class Interface {
 
   PickingFramebuffer picking_fbo_;
 
-  GlobalGlfwCallbackData global_data_;
+
+  bool debug_ui_prev_{false};
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_INTERFACE_H_

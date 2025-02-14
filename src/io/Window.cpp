@@ -11,6 +11,8 @@ float lastY = static_cast<float>(details::kWindowHeight) / 2.0;
 float gDeltaTime = 0.0f;
 float last_frame = 0.0f;
 
+//TODO: bear out to another class/struct
+
 GLFWwindow* gWindow = nullptr;
 
 void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
@@ -50,13 +52,13 @@ void WasdKeyCallback(GLFWwindow* window, int key,
     }
   } else if (action == GLFW_RELEASE) {
     if (key == GLFW_KEY_W) {
-      global_data->camera_.UnSetMoveForward();
+      global_data->camera_.SetMoveForward(0.0f);
     } else if (key == GLFW_KEY_A) {
-      global_data->camera_.UnSetMoveLeft();
+      global_data->camera_.SetMoveLeft(0.0f);
     } else if (key == GLFW_KEY_S) {
-      global_data->camera_.UnSetMoveBackward();
+      global_data->camera_.SetMoveBackward(0.0f);
     } else if (key == GLFW_KEY_D) {
-      global_data->camera_.UnSetMoveRight();
+      global_data->camera_.SetMoveRight(0.0f);
     }
   }
 }

@@ -17,7 +17,7 @@ class GaussianNoise {
 
   static Texture Generate(int size) {
     //TODO: serialize and load if exist by paths_ (filesystem::exists())
-    Texture texture(size, GL_RG32F, GL_NEAREST);
+    Texture texture(size, size, GL_RG32F, GL_NEAREST);
     assert(sizeof(float) == 4); // just in case)
     std::vector<GLfloat> data(size * size * 2);
     for (int i = 0; i < size; i++) {
@@ -26,6 +26,7 @@ class GaussianNoise {
         data[(i * size + j) * 2 + 1] = NormalRandom();
       }
     }
+    texture.Bind();
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, size,
                  size, 0, GL_RG, GL_FLOAT, data.data());
     return texture;
@@ -40,6 +41,7 @@ class GaussianNoise {
     float u = dis(gen);
     float v = dis(gen);
     // Box-Muller-Method
+    return 0.5f;
     return std::cos(2 * std::numbers::pi_v<float> * u) * std::sqrt(-2 * std::log(v));
   }
 

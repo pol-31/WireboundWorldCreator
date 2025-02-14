@@ -7,6 +7,8 @@
 #include "IEditMode.h"
 #include "../core/Ui.h"
 #include "../common/Paths.h"
+#include "../common/Shader.h"
+#include "../common/Texture.h"
 
 void PlacementModeScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset);
@@ -24,11 +26,7 @@ class PlacementMode final : public IEditMode {
 
   void Render() override;
   void RenderPicking() override;
-
-  void PlaceTrees();
-  void PlaceBushes();
-  void PlaceTallGrass();
-  void PlaceUndergrowth();
+  int Hover(std::uint32_t global_id) override;
 
   void BindCallbacks() override;
 
@@ -45,16 +43,19 @@ class PlacementMode final : public IEditMode {
   friend void PlacementModeKeyCallback(
       GLFWwindow* window, int key, int scancode, int action, int mods);
 
-  void DrawPixels(std::uint32_t pressed_id);
+  void DrawPixels(std::uint32_t prev_id, std::uint32_t last_id);
 
-  void UpdateColorSliderPos(glm::vec2 position);
-  void UpdateSizeSliderPos(glm::vec2 position);
-  void UpdateFalloffSliderPos(glm::vec2 position);
+  void PlaceTrees();
+  void PlaceBushes();
+  void PlaceTallGrass();
+  void PlaceUndergrowth();
 
-  UiButton btn_place_trees_;
-  UiButton btn_place_bushes_;
-  UiButton btn_place_tall_grass_;
-  UiButton btn_place_undergrowth_;
+  void PlaceLastModified() const;
+
+  UiStaticSprite btn_place_trees_;
+  UiStaticSprite btn_place_bushes_;
+  UiStaticSprite btn_place_tall_grass_;
+  UiStaticSprite btn_place_undergrowth_;
 
   /// slider progress stored both on shader uniform and on UiSlider,
   /// but here there's no sense to keep it
@@ -62,11 +63,12 @@ class PlacementMode final : public IEditMode {
   UiSlider slider_size_;
   UiSlider slider_falloff_;
 
-  Shader shader_draw_;
+  // set "true" to initialize at first Render() call
+  bool need_to_update_uniforms_{true};
 
-  bool slider_color_pressed_{false};
-  bool slider_size_pressed_{false};
-  bool slider_falloff_pressed_{false};
+  Texture new_draw_layer_; // TODO: copy explanation from shader to here
+
+  Shader shader_draw_;
 
   /// rendered with shaders - not black/white height map
   bool preview_mode_{false};
@@ -78,7 +80,7 @@ class PlacementMode final : public IEditMode {
   /// position won't affect it
   std::uint32_t last_modified_point_{static_cast<std::uint32_t>(-1.0f)};
 
-  GLuint shader_image_unit_{0}; //TODO: Details.h
+  GLuint last_modified_placement_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_PLACEMENTMODE_H_

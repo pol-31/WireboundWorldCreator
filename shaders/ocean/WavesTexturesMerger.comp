@@ -15,9 +15,20 @@ layout (binding = 6, rg32f) readonly uniform image2D Dyx_Dyz;
 layout (binding = 7, rg32f) readonly uniform image2D Dxx_Dzz;
 
 layout (location = 5) uniform float Lambda;
-layout (location = 2) uniform float DeltaTime;
+
+layout(std140, binding = 2) uniform Environment {
+    float time;
+    float delta_time;
+    vec2 wind_velocity;
+} environment;
+
+//const float Lambda = 1.0f;
 
 void main() {
+//    float actual_lambda = 1.0f + Lambda * 0.0001f;
+    float actual_lambda = Lambda;
+    actual_lambda = 0.1f;
+
     uvec2 id = gl_GlobalInvocationID.xy;
 
     // Load values from the input textures
@@ -27,8 +38,8 @@ void main() {
     vec2 DxxDzz = imageLoad(Dxx_Dzz, ivec2(id)).xy;
 
     // Calculate displacement and derivatives
-    vec3 displacement = vec3(Lambda * DxDz.x, DyDxz.x, Lambda * DxDz.y);
-    vec4 derivatives = vec4(DyxDyz, DxxDzz * Lambda);
+    vec3 displacement = vec3(actual_lambda * DxDz.x, DyDxz.x, actual_lambda * DxDz.y);
+    vec4 derivatives = vec4(DyxDyz, DxxDzz * actual_lambda);
 
     // Store displacement and derivatives
 //    imageStore(Displacement, ivec2(id), vec4(100.0, 100.0f, 100.0f, 1.0f));
@@ -36,13 +47,13 @@ void main() {
     imageStore(Derivatives, ivec2(id), derivatives);
 
     // Calculate the Jacobian determinant for turbulence
-    float jacobian = (1.0 + Lambda * DxxDzz.x) * (1.0 + Lambda * DxxDzz.y) - Lambda * Lambda * DyDxz.y * DyDxz.y;
+    float jacobian = (1.0 + actual_lambda * DxxDzz.x) * (1.0 + actual_lambda * DxxDzz.y) - actual_lambda * actual_lambda * DyDxz.y * DyDxz.y;
 
     // Load the existing turbulence value
     vec4 turbulence = imageLoad(Turbulence, ivec2(id));
 
     // Update turbulence value
-    turbulence.r += DeltaTime * 0.5 / max(jacobian, 0.5);
+    turbulence.r += environment.delta_time * 0.5 / max(jacobian, 0.5);
     turbulence.r = min(jacobian, turbulence.r);
 
     // Store the updated turbulence

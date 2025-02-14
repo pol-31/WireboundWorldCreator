@@ -3,10 +3,6 @@
 in vec2 texcoord;
 layout(location = 0) uniform sampler2D tex;
 
-layout(location = 1) uniform float transparency;
-layout(location = 2) uniform float brightness;
-layout(location = 3) uniform vec4 color;
-
 // Value between 0.0 (normal) and 1.0 (hovered)
 layout(location = 4) uniform float hover_factor;
 

@@ -72,9 +72,6 @@ inline constexpr int kAsciiLastChar = 0x007E; // '~'
 // TODO: adjust
 inline constexpr float kMinSkylineLen = 0.005f;
 
-inline constexpr int kUboCameraBind = 0;
-inline constexpr int kUboMapScaleBind = 1;
-
 inline constexpr float kHeightMapScale = 16.0f;
 
 inline constexpr std::string_view kPathsPath = "../assets/Paths.txt";

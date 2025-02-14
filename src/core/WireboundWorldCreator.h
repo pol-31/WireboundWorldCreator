@@ -4,7 +4,7 @@
 #include "../common/Paths.h"
 #include "../io/Camera.h"
 #include "../io/Cursor.h"
-#include "../common/Cubemap.h"
+#include "../environment/Cubemap.h"
 #include "Interface.h"
 
 // should be created only after OpenGL context initialization

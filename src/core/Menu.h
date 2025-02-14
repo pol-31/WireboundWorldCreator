@@ -25,12 +25,13 @@ class Menu {
 
   // TODO: on switching reset all unsaved in previous, update
 
-  void Render() const;
+  void Render();
+
   void RenderPicking() const;
 
   int Hover(uint32_t global_id);
 
-  void Press(uint32_t global_id);
+  bool Press(uint32_t global_id);
 /*
   // per tile
   void How__TerrainWaterRoadsFencesBiomesObjectsPlacement__Do() {
@@ -64,7 +65,7 @@ class Menu {
 
   SharedResources& shared_resources_;
 
-  std::array<UiButton, 20> buttons_;
+  std::array<UiStaticSprite, 20> buttons_;
 //
 //  UiStaticSprite text_mode_;
 //  UiStaticSprite btn_mode_terrain_;

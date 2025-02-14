@@ -35,7 +35,11 @@
 
 // TODO: we can prerender all picking framebuffer (!)
 
-
+// TODO: check all classes declaration order:
+/* damn...
+ * In C++, member variables are initialized in the order they are declared
+ * in the class, not in the order they appear in the initializer list.
+ * */
 
 int main(int argc, char* args[]) {
   std::string world_map_path{};

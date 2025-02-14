@@ -38,17 +38,32 @@ void main() {
     if (distance <= float(radius)) {
         float factor = 1.0 - clamp(distance / float(radius), 0.0, 1.0);
         float falloffFactor = mix(1.0, factor, falloff);
+
         vec4 existingValue = imageLoad(heightmap, pixelCoord);
+        float existingGray = existingValue.r;
 
         vec4 existingtt = imageLoad(draw_layer, pixelCoord);
         float existingt = existingtt.r;
 
-        float existingGray = existingValue.r;
+        //
+//        float newValue = mix(existingGray, color, falloffFactor);
 
         float set_value = max(existingt, color * falloffFactor);
-        float newValue = existingGray + mix(0, set_value, falloffFactor);
+        float newValue = existingGray - existingt + set_value;
+          + mix(0.0f, - existingt + set_value, falloffFactor);
+//        newValue = max(existingt, set_value);
+//        float newValue = existingGray + mix(0, set_value, falloffFactor);
+        //
 
         imageStore(heightmap, pixelCoord, vec4(newValue, newValue, newValue, 1.0));
         imageStore(draw_layer, pixelCoord, vec4(set_value, set_value, set_value, 1.0));
     }
 }
+
+
+/*
+vec4 existingtt = imageLoad(draw_layer, pixelCoord);
+float existingt = existingtt.r;
+
+
+imageStore(heightmap, pixelCoord, vec4(newValue, newValue, newValue, 1.0));*/

@@ -18,10 +18,12 @@ void FencesModeKeyCallback(
 
 class FencesMode final : public IEditMode {
  public:
-  FencesMode(SharedResources& shared_resources);
+  FencesMode(SharedResources& shared_resources,
+             const TextRenderer& text_renderer);
 
   void Render() override;
   void RenderPicking() override;
+  int Hover(std::uint32_t global_id) override;
 
   void Create(GLuint id);
 
@@ -43,14 +45,16 @@ class FencesMode final : public IEditMode {
   friend void FencesModeKeyCallback(
       GLFWwindow* window, int key, int scancode, int action, int mods);
 
-  UiButton btn_bake_picket_;
-  UiButton btn_bake_chain_linked_;
-  UiButton btn_bake_wooden_;
-  UiButton btn_create_;
-  UiButton btn_remove_;
+  UiStaticSprite btn_bake_picket_;
+  UiStaticSprite btn_bake_chain_linked_;
+  UiStaticSprite btn_bake_wooden_;
+  UiStaticSprite btn_create_;
+  UiStaticSprite btn_remove_;
   UiSlots slots_;
 
-  using PointDataType = std::vector<ArbitraryGraph::Point>;
+  std::size_t temp_size_{0}; // TODO: remove
+
+  using PointDataType = std::vector<Point>;
   PointDataType points_data_test_{};
   int edit_mode_selected_sample_id_test_{0};
 };

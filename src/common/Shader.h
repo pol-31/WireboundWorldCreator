@@ -67,6 +67,10 @@ class Shader {
 
   void Bind() const;
 
+  [[nodiscard]] GLuint GetId() const {
+    return opengl_id_;
+  }
+
 #ifndef NDEBUG
   bool Update();
 #endif

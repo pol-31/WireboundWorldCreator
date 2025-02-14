@@ -11,7 +11,7 @@
 class PickingFramebuffer {
  public:
   PickingFramebuffer()
-      : texture_(details::kWindowWidth, GL_R32UI,
+      : texture_(details::kWindowWidth, details::kWindowHeight, GL_R32UI,
                  GL_LINEAR, GL_CLAMP_TO_EDGE, true) {
     Init();
   }

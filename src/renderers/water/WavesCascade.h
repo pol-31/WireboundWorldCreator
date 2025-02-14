@@ -3,33 +3,43 @@
 
 #include "../../common/Shader.h"
 #include "../../common/Texture.h"
-#include "FastFourierTransform.h"
-#include "WavesSettings.h"
+#include "Ifft.h"
+#include "WaterBiome.h"
 
 class WavesCascade {
  public:
-  WavesCascade(int size, const Shader& init_spectrum,
-               const Shader& time_dependent_spectrum,
-               const Shader& textures_merger, FastFourierTransform& fft,
-               const Texture& gaussian_noise);
+  explicit WavesCascade(int size);
 
-  void BindTextures();
-
-  void CalculateInitials(WavesSettings waves_settings, float length_scale,
+  void CalculateInitials(float length_scale,
                          float cutoff_low, float cutoff_high);
 
-  void CalculateWavesAtTime(float time, float delta_time);
+  /// we've separated them to:
+  /// - bind the same shader only once;
+  /// - set memory barriers only 2+1 times - between each stage,
+  ///   so we PackIfftData() for each layer, then barrier,
+  ///   then ProcessIfft() for each layer, then barrier,
+  ///   then UnPackIfftData() for each layer, then (maybe) barrier (+1);
+  ///   otherwise we would need to set it 6+1 times
+
+  void PackIfftData();
+  void ProcessIfft(const Ifft& ifft);
+  void UnPackIfftData();
+
+  void SetLambda(float lambda);
+
+  inline void BindDerivativesTex() const {
+    derivatives_tex_.Bind();
+  }
+  inline void BindDisplacementTex() const {
+    displacement_tex_.Bind();
+  }
+  inline void BindTurbulenceTex() const {
+    turbulence_tex_.Bind();
+  }
 
  private:
-  void Init();
-
   int size_;
-  const Shader& init_spectrum_shader_;
-  const Shader& time_dependent_spectrum_shader_;
-  const Shader& textures_merger_shader_;
-  FastFourierTransform& fft_;
-
-  const Texture& gaussian_noise_tex_;
+  float lambda_{1.0f};
 
   Texture init_spectrum_tex_;
   Texture precomputed_data_tex_;
@@ -40,13 +50,9 @@ class WavesCascade {
   Texture dyxdyz_tex_;
   Texture dxxdzz_tex_;
 
-  Texture displacement_tex_;
   Texture derivatives_tex_;
+  Texture displacement_tex_;
   Texture turbulence_tex_;
-
-  GLuint ubo_id_{0};
-
-  float lambda_{0.5f}; // 0-1
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_WATER_WAVESCASCADE_H_

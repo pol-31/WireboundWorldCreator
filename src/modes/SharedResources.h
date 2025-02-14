@@ -37,11 +37,16 @@ class SharedResources {
 
   GLuint vbo_ui_{0};
   GLuint vbo_instanced_{0};
+#ifndef NDEBUG
+  GLuint vbo_ui_transform_{0};
+#endif // NDEBUG
 
   TileRenderer& tile_renderer_;
   Shader static_sprite_shader_;
   Shader static_sprite_picking_shader_;
   Shader dynamic_sprite_shader_;
+  Shader dynamic_sprite_picking_shader_;
+  Shader static_sprite_alpha_shader_;
 
   Shader menu_icon_shader_;
 

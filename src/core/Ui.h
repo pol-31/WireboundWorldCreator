@@ -7,15 +7,19 @@
 #include <limits>
 
 #include <glm/glm.hpp>
+
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_transform_2d.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../common/Shader.h"
+#include "../common/TextRenderer.h"
 #include "../common/Colors.h"
 #include "../common/Vbos.h"
 #include "../io/Window.h"
+#include "../renderers/water/WaterBiome.h"
 
-//TODO: we can accelerate our search by binary search, but
+// TODO: we can accelerate our search by binary search, but
 //  looks like the best way to do this is "in-place" binary search and
 //  direct if-else branching
 
@@ -36,13 +40,19 @@
 // so if there's dynamic component - we draw with dynamic shader only
 // to reduce switching)
 
+class UiTransformDbg {
+ public:
+  virtual void UpdateTransform(
+      float x_translate, float y_translate, float scale) = 0;
+};
+
+extern std::array<vbos::UiData, vbos::gVboIdSize> gUiComponents;
+
+// <--------- NOT IN USE BY NOW
 class UiDynamicSprite {
  public:
-  explicit UiDynamicSprite(UiData ui_data)
-      : ui_data_(ui_data) {}
-
-  UiDynamicSprite(VboIdMain vbo_texture, VboIdText vbo_text)
-      : UiDynamicSprite(GetUiData(vbo_texture, vbo_text)) {}
+  UiDynamicSprite(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text)
+      : UiDynamicSprite(vbos::GetUiData(vbo_texture, vbo_text)) {}
 
   void Render() const;
 
@@ -91,19 +101,22 @@ class UiDynamicSprite {
     return ui_data_.text_vbo_offset_;
   }
 
- protected:
+  vbos::UiData ui_data_;
+
+ private:
+  explicit UiDynamicSprite(vbos::UiData ui_data)
+      : ui_data_(ui_data) {
+    gUiComponents[ui_data_.id - details::kIdOffsetUi] = ui_data_;
+  }
+
   //TODO: we need only tex coords (?)
-  UiData ui_data_;
   glm::mat3 transform_{1.0f};
 };
 
 class UiStaticSprite {
  public:
-  explicit UiStaticSprite(UiData ui_data)
-      : ui_data_(ui_data) {}
-
-  UiStaticSprite(VboIdMain vbo_texture, VboIdText vbo_text)
-      : UiStaticSprite(GetUiData(vbo_texture, vbo_text)) {}
+  UiStaticSprite(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text)
+      : UiStaticSprite(vbos::GetUiData(vbo_texture, vbo_text)) {}
 
   void Render() const;
 
@@ -136,30 +149,23 @@ class UiStaticSprite {
     return ui_data_.text_vbo_offset_;
   }
 
- protected:
-  UiData ui_data_;
+  vbos::UiData ui_data_;
+
+ private:
+  explicit UiStaticSprite(vbos::UiData ui_data)
+      : ui_data_(ui_data) {
+    gUiComponents[ui_data_.id - details::kIdOffsetUi] = ui_data_;
+  }
 };
 
-class UiSliderBase {
+// if hor slider - use direct text coords, otherwise "rotate"
+class UiSliderBase : public UiTransformDbg {
  public:
-  UiSliderBase(UiDynamicSprite&& handle, UiDynamicSprite&& track)
-      : handle_(handle), track_(track) {}
+  UiSliderBase(UiStaticSprite&& fill_sprite, float scale = 1.0f);
 
-  [[nodiscard]] float GetProgress() const {
-    return progress_;
-  }
+  void RenderPicking();
 
-  void RenderPicking() {
-    track_.RenderPicking();
-  }
-
-  [[nodiscard]] size_t Hover(std::uint32_t id) const {
-    if (id == track_.GetId()) {
-      return track_.Hover();
-    } else {
-      return {};
-    }
-  }
+  [[nodiscard]] size_t Hover(std::uint32_t id) const;
 
   void Press() {
     pressed_ = true;
@@ -173,200 +179,104 @@ class UiSliderBase {
   /// We don't render UiSlider id, but
   /// for comparison (e.g. in key callback) we directly slider.GetId()
   [[nodiscard]] std::uint32_t GetTrackId() const {
-    return track_.GetId();
+    return fill_sprite_.GetId();
   }
 
+  [[nodiscard]] float GetProgress() const;
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+//  virtual void Render(float related_pos) = 0;
+
  protected:
-  UiDynamicSprite handle_;
-  UiDynamicSprite track_;
+  // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
+  void Set(float related_pos);
+
+  void UnHover();
+
+  UiStaticSprite fill_sprite_; // alpha-based animation
   float progress_{0.0f};
   bool pressed_{false};
+  float centre_;
+  float length_;
+  float scale_{1.0f};
 };
 
-/// Horizontal slider
-/// 1. we don't use scale - its uniform through the app (same as artist draw)
-/// 2. we always rotate on 90 degrees, because in our sprites it's the same
-///   as UiHSlider, but rotated horizontally
-class UiHSlider final : public UiSliderBase {
+class UiSlider final : public UiSliderBase {
  public:
-  UiHSlider(UiDynamicSprite&& handle, UiDynamicSprite&& track,
-            glm::vec2 track_position, glm::vec2 handle_position,
-            float track_width);
+  UiSlider(UiStaticSprite&& fill_sprite, UiStaticSprite&& wheel_slow,
+           UiStaticSprite&& wheel_moderate, UiStaticSprite&& wheel_fast,
+           float scale = 1.0f);
 
-  void Render(glm::vec2 mouse_pos);
-
-  void Set(glm::vec2 mouse_pos);
+  void Render(float related_pos);
 
  private:
-  glm::vec2 handle_position_;
-  glm::vec2 track_position_;
-  float width_;
+  UiStaticSprite wheel_slow_;
+  UiStaticSprite wheel_moderate_;
+  UiStaticSprite wheel_fast_;
 };
 
-/// Vertical slider
-/// 1. we don't use scale - its uniform through the app (same as artist draw)
-class UiVSlider final : public UiSliderBase {
+class UiSliderInternal final : public UiSliderBase {
  public:
-  UiVSlider(UiDynamicSprite&& handle, UiDynamicSprite&& track,
-            glm::vec2 track_position, glm::vec2 handle_position,
-            float track_height);
+  UiSliderInternal(UiStaticSprite&& fill_sprite,
+                   UiStaticSprite&& wheel_sprite,
+                   float scale = 1.0f);
 
-  void Render(glm::vec2 mouse_pos);
-
-  void Set(glm::vec2 mouse_pos);
+  void Render(float related_pos);
 
  private:
-  glm::vec2 handle_position_;
-  glm::vec2 track_position_;
-  float height_;
-};
-
-/// Circle slider
-/// 1. we don't use scale - its uniform through the app (same as artist draw)
-class UiCircleSlider final : public UiSliderBase {
- public:
-  UiCircleSlider(UiDynamicSprite&& handle, UiDynamicSprite&& track,
-                 glm::vec2 track_position, glm::vec2 handle_offset)
-      : UiSliderBase(std::move(handle), std::move(track)),
-        handle_offset_(handle_offset),
-        track_position_(track_position) {
-    track_.SetTransform(glm::translate(glm::mat3{1.0f}, track_position));
-    Set(glm::vec2(0.0f, -2.0f));
-  }
-
-  void Render(glm::vec2 mouse_pos) {
-    if (pressed_) {
-      Set(mouse_pos);
-    }
-    track_.Render();
-    handle_.Render();
-  }
-
-  void Set(glm::vec2 mouse_pos) {
-    float angle = glm::atan(mouse_pos.y - track_position_.y,
-                            mouse_pos.x - track_position_.x);
-    auto transform = glm::translate({1.0f}, handle_offset_);
-    transform = glm::rotate(transform, angle);
-    handle_.SetTransform(transform);
-    progress_ = (angle + std::numbers::pi_v<float>)
-                / (2.0f * std::numbers::pi_v<float>);
-  }
-
- private:
-  glm::vec2 handle_offset_;
-  glm::vec2 track_position_;
-};
-
-/// Circle slider
-/// 1. we don't use scale - its uniform through the app (same as artist draw)
-/// 2. technically the same as UiVSlider
-/// 3. on each iteration if we hover, we change sprite of a hand, but
-///    then at Render() we "unhover it" after drawing a hover version
-class UiWheelSlider {
- public:
-  UiWheelSlider(UiStaticSprite&& wheel, UiStaticSprite&& rope,
-                UiStaticSprite&& hand, glm::vec2 track_position,
-                float track_height)
-      : wheel_(wheel), rope_(rope), hand_(hand),
-        track_position_(track_position),
-        height_(track_height) {
-    Set(glm::vec2(0.0f, -2.0f));
-  }
-
-  [[nodiscard]] float GetProgress() const {
-    return progress_;
-  }
-
-  void RenderPicking() {
-    rope_.RenderPicking();
-  }
-
-  void Render(glm::vec2 mouse_pos) {
-    if (pressed_) {
-      float prev_progress = progress_;
-      Set(mouse_pos);
-      float diff = glm::abs(prev_progress - progress_);
-      if (diff == 0.0f) {
-        wheel_.SetVboOffset(details::kWheelCalm);
-      } else if (diff < 0.3f) {
-        wheel_.SetVboOffset(details::kWheelSlow);
-      } else {
-        wheel_.SetVboOffset(details::kWheelFast);
-      }
-    }
-    wheel_.Render();
-    rope_.Render();
-    hand_.Render();
-    UnHover();
-  }
-
-  [[nodiscard]] size_t Hover(std::uint32_t id) const {
-    hand_.SetVboOffset(details::kHandRelease);
-    return rope_.Hover();
-  }
-
-  void Set(glm::vec2 mouse_pos) {
-    float half_heigth_ = height_ / 2.0f;
-    float offset = glm::clamp(mouse_pos.y - track_position_.y,
-                              -half_heigth_, +half_heigth_);
-    progress_ = (offset + half_heigth_) / height_;
-  }
-
-  void Press() {
-    pressed_ = true;
-  }
-
-  void Release() {
-    pressed_ = false;
-  }
-
-  /// UiSlider has the same id as a track_, so it's like its wrapper.
-  /// We don't render UiSlider id, but
-  /// for comparison (e.g. in key callback) we directly slider.GetId()
-  [[nodiscard]] std::uint32_t GetTrackId() const {
-    return rope_.GetId();
-  }
-
- private:
-  void UnHover() {
-    hand_.SetVboOffset(details::kHandHold);
-  }
-
   UiStaticSprite wheel_;
-  UiStaticSprite rope_;
-  UiStaticSprite hand_;
+};
 
-  glm::vec2 track_position_;
-  float height_;
+class UiOceanCascadeConfig {
+ public:
+  UiOceanCascadeConfig(
+      UiStaticSprite&& scale_fill, UiStaticSprite&& scale_wheel, float scale_scale,
+      UiStaticSprite&& fetch_fill, UiStaticSprite&& fetch_wheel, float fetch_scale,
+      UiStaticSprite&& spread_blend_fill, UiStaticSprite&& spread_blend_wheel, float spread_blend_scale,
+      UiStaticSprite&& swell_fill, UiStaticSprite&& swell_wheel, float swell_scale,
+      UiStaticSprite&& peaks_fill, UiStaticSprite&& peaks_wheel, float peaks_scale,
+      UiStaticSprite&& fade_fill, UiStaticSprite&& fade_wheel, float fade_scale,
+      UiStaticSprite&& lambda_fill, UiStaticSprite&& lambda_wheel, float lambda_scale);
 
-  float progress_{0.0f};
-  bool pressed_{false};
+  //  void Update(); // update ubo not here
+
+  OceanLayerTraits GetOceanLayerTraits() const;
+
+  bool Modified();
+
+  bool Press(int id);
+
+  bool CheckId(int id);
+
+  size_t Hover(int id);
+
+  void Release();
+
+  void Render(float related_pos);
+
+  void RenderPicking();
+
+ private:
+  bool modified_{false};
+
+  UiSliderInternal scale_;
+  UiSliderInternal fetch_;
+  UiSliderInternal spread_blend_;
+  UiSliderInternal swell_;
+  UiSliderInternal peak_enhancement_;
+  UiSliderInternal short_waves_fade_;
+  UiSliderInternal lambda_;
 };
 
 /// position lerp based on time
 class UiTabAnimation {
  public:
   UiTabAnimation(UiDynamicSprite&& sprite, glm::vec2 start_pos,
-                 glm::vec2 end_pos, float speed = 1.0f)
-      : sprite_(sprite),
-        start_pos_(start_pos),
-        end_pos_(end_pos),
-        speed_(speed) {
-    End();
-  }
+                 glm::vec2 end_pos, float speed = 1.0f);
 
-  void Render() {
-    if (progress_ < 1.0f) {
-      /// if active
-      progress_ += gDeltaTime * speed_;
-      glm::vec2 position = glm::mix(start_pos_, end_pos_, progress_);
-      sprite_.SetTransform(glm::translate(glm::mat3{}, position));
-      if (progress_ > 1.0f) {
-        progress_ = 1.0f;
-      }
-    }
-    sprite_.Render();
-  }
+  void Render();
 
   void RenderPicking() {
     sprite_.RenderPicking();
@@ -380,14 +290,9 @@ class UiTabAnimation {
     return sprite_.GetId();
   }
 
-  void Start() {
-    progress_ = 0.0f;
-  }
+  void Start();
 
-  void End() {
-    sprite_.SetTransform(glm::translate(glm::mat3{}, start_pos_));
-    progress_ = 1.0f;
-  }
+  void End();
 
  private:
   UiDynamicSprite sprite_;
@@ -399,9 +304,18 @@ class UiTabAnimation {
   float speed_;
 };
 
+//TODO: UiSlots, UiBiomes, UiTiles, UiObjects - all drawn as:
+// - static background texture;
+// - N x M equally alligned clickable sprites
+// so we have std::array<InstanceData, n * m>,
+// - single vbo_offset
 
 
-
+//TODO: let's not draw sprites of objects, but only text name
+// (we can also add search bar).
+// So then we have uniform type for these four:
+// 1 sprite for background; n sprites depends on mode (config, remove, rename),
+// what about Render() and collision detection?
 
 /// to check was it pressed see UiSlots::Press(id)
 class UiSlots {
@@ -410,31 +324,79 @@ class UiSlots {
           UiStaticSprite&& btn_prev, UiStaticSprite&& slot1,
           UiStaticSprite&& slot2, UiStaticSprite&& slot3,
           UiStaticSprite&& slot4, UiStaticSprite&& slot5,
-          int& edit_mode_selected_sample_id);
+          int& edit_mode_selected_sample_id,
+          const TextRenderer& text_renderer);
 
   void Render() const;
+
   void RenderPicking() const;
+
+  void RenderIds() const;
 
   /// return true if there was a button with such id
   bool Press(std::uint32_t id);
 
-  [[nodiscard]] int Hover(std::uint32_t id) const;
+  [[nodiscard]] size_t Hover(std::uint32_t id) const;
 
  private:
-  void InitColors();
-
-  void RenderSlot(int i) const;
-
-  std::array<glm::vec4, 8> colors_{};
+  void InitTextIdsPositions();
 
   // 5 x slots, btn_next, btn_prev
   std::array<UiStaticSprite, 7> slots_;
+  std::array<glm::vec2, 5> text_ids_positions_; // TODO: init
 
   // we don't own point/graph data and all what we need is size (dynamically)
   const std::size_t& total_size_;
   int start_idx_{0}; // from where in view to start
   int& edit_mode_selected_sample_id_;
+
+  const TextRenderer& text_renderer_;
 };
+
+//TODO; we need different type of UiSprite: with vbo offset only for texture,
+//  but we still can use the same UiStaticSprite, but we don't need description
+
+/*class UiBiomesList {
+ public:
+  UiTable(UiDynamicSprite&& background, glm::vec2 position)
+      : background_(background),
+        position_(position) {
+    float width = vbos::GetElementWidth(background_.GetVboOffset());
+    float height = vbos::GetElementHeight(background_.GetVboOffset());
+    offset_ = {width / (columns + 1), height / (rows + 1)};
+  }
+
+  // we can't use instanced draw call, because anyway we need set ids to
+  // picking framebuffer, what will make drawing confusing and non-uniform
+
+  //TODO; so let's just draw single texture with those boxes instead of 36 boxes,
+  // while __clickable__ objects draw here also separately;
+  // THEN we just set differet sprites if btn_next or btn_prev were pressed
+  std::array<UiStaticSprite, 36> biomes_;
+  UiStaticSprite background_;
+
+  //TODO: we need vbo with tex coords only like Text.glsl
+
+  void Render() {
+    glUniform2fv(0, 1, glm::value_ptr(position_));
+    background_;
+    //bind
+  }
+
+ private:
+  std::array<UiDynamicSprite, rows * columns> elements_;
+  UiDynamicSprite background_;
+  const glm::vec2 position_;
+  // offset before first; padding between elements is the same
+  glm::vec2 offset_;
+};
+
+// !!!
+//TODO: you should remember that id is related to Vbos.h,
+// not order of creation
+
+//TODO: their difference in paging and num
+
 
 /// UiBiomesList, UiObjectTable, UiTilesMap all use instanced vbo
 /// from stc/vbos/UiDataInstanced.h
@@ -444,10 +406,19 @@ class UiBiomesList {
  public:
   // vbo_offset for instanced
   UiBiomesList(int vbo_offset, int instances_num, UiStaticSprite&& btn_next,
-               UiStaticSprite&& btn_prev);
+               UiStaticSprite&& btn_prev) {
+    Init();
+  }
 
-  void Render() const;
-  void RenderPicking() const;
+  void Render() const {
+    glBindVertexArray(vao_);
+    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, number);
+  }
+
+  void RenderPicking() const {
+    glBindVertexArray(vao_);
+    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, number);
+  }
 
   /// return true if there was a button with such id
   bool Press(std::uint32_t id);
@@ -455,6 +426,23 @@ class UiBiomesList {
   int Hover(std::uint32_t id) const;
 
  private:
+
+
+  void Init() {
+    glGenVertexArrays(1, &vao_);
+    glBindVertexArray(vao_);
+    // position
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, ,);
+    glVertexAttribDivisor(0, 0);
+    glEnableVertexArrayAttrib(0);
+    // tex coords
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, ,);
+    glVertexAttribDivisor(1, 1);
+    glEnableVertexArrayAttrib(1);
+  }
+
+  GLuint vao_;
+
   int vbo_offset_;
   int instances_num_;
 
@@ -472,6 +460,6 @@ class UiObjectTable {
 class UiTilesMap {
   int cur_page_offset_{-1}; // when scrolling pages
   int selected_id_{-1}; // from 0 to 6x6 (if we have n=6x6 tiles at once)
-};
+};*/
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_UI_H_

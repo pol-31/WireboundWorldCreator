@@ -9,7 +9,6 @@ void RoadsModeScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
-  auto fences = dynamic_cast<RoadsMode*>(global_data->cur_mode_);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (yoffset < 0.0f) {
     global_data->tile_renderer_.DownScale();
@@ -78,60 +77,56 @@ void RoadsModeKeyCallback(
     }*/
 }
 
-RoadsMode::RoadsMode(SharedResources& shared_resources)
+RoadsMode::RoadsMode(
+    SharedResources& shared_resources, const TextRenderer& text_renderer)
     : IEditMode(shared_resources),
-      btn_bake_asphalt_("baked as an asphalt road",
-                        GetUiData(UiVboDataMainId::kRoadsAsphalt)),
-      btn_bake_gravel_("baked as a gravel road",
-                       GetUiData(UiVboDataMainId::kRoadsGravel)),
-      btn_bake_soil_("baked as a soil road",
-                     GetUiData(UiVboDataMainId::kRoadsSoil)),
-      btn_create_("add new point set",
-                  GetUiData(UiVboDataMainId::kAddNew)),
-      btn_remove_("remove selected point set",
-                  GetUiData(UiVboDataMainId::kRemove)),
-      slots_(points_data_test_,
-             {"next slots", GetUiData(UiVboDataMainId::kUiSlotsNext)},
-             {"prev slots", GetUiData(UiVboDataMainId::kUiSlotsPrev)},
-             {"slot 1", GetUiData(UiVboDataMainId::kUiSlots1)},
-             {"slot 2", GetUiData(UiVboDataMainId::kUiSlots2)},
-             {"slot 3", GetUiData(UiVboDataMainId::kUiSlots3)},
-             {"slot 4", GetUiData(UiVboDataMainId::kUiSlots4)},
-             {"slot 5", GetUiData(UiVboDataMainId::kUiSlots5)},
-             edit_mode_selected_sample_id_test_) {}
+      btn_bake_asphalt_(vbos::VboIdMain::kRoadsAsphalt, vbos::VboIdText::kBakeAsAnAsphaltRoad),
+      btn_bake_gravel_(vbos::VboIdMain::kRoadsGravel, vbos::VboIdText::kBakeAsAGravelRoad),
+      btn_bake_soil_(vbos::VboIdMain::kRoadsSoil, vbos::VboIdText::kBakeAsASoilRoad),
+      btn_create_(vbos::VboIdMain::kAddNew, vbos::VboIdText::kAddNew),
+      btn_remove_(vbos::VboIdMain::kRemove, vbos::VboIdText::kRemoveSelected),
+      slots_(temp_size_,
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNextSlot},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kPreviousSlot},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             edit_mode_selected_sample_id_test_, text_renderer) {}
 
 void RoadsMode::Render() {
-  shared_resources_.tile_renderer.Render();
+  shared_resources_.tile_renderer_.Render();
 
   glActiveTexture(GL_TEXTURE0);
   shared_resources_.tex_ui_.Bind();
   glBindVertexArray(shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_shader.Bind();
+  shared_resources_.static_sprite_shader_.Bind();
 
   btn_bake_asphalt_.Render();
   btn_bake_gravel_.Render();
   btn_bake_soil_.Render();
   btn_create_.Render();
   btn_remove_.Render();
-  slots_.Render(shared_resources_.static_sprite_shader);
+  slots_.Render();
 }
 
 void RoadsMode::RenderPicking() {
-  shared_resources_.tile_renderer.RenderPickingTerrain();
+  shared_resources_.tile_renderer_.RenderPickingTerrain();
 
   glActiveTexture(GL_TEXTURE0);
   shared_resources_.tex_ui_.Bind();
   glBindVertexArray(shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_picking_shader.Bind();
+  shared_resources_.static_sprite_picking_shader_.Bind();
 
-  btn_bake_asphalt_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  btn_bake_gravel_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  btn_bake_soil_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  btn_create_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  btn_remove_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  slots_.RenderPicking(shared_resources_.static_sprite_picking_shader);
+  btn_bake_asphalt_.RenderPicking();
+  btn_bake_gravel_.RenderPicking();
+  btn_bake_soil_.RenderPicking();
+  btn_create_.RenderPicking();
+  btn_remove_.RenderPicking();
+  slots_.RenderPicking();
 }
 
 void RoadsMode::Create(GLuint id) {
@@ -175,4 +170,8 @@ void RoadsMode::BindCallbacks() {
   glfwSetMouseButtonCallback(gWindow, RoadsModeMouseButtonCallback);
   //  glfwSetKeyCallback(gWindow, TerrainModeKeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
+}
+
+int RoadsMode::Hover(std::uint32_t global_id) {
+  return -1;
 }

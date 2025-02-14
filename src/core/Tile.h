@@ -92,7 +92,7 @@ struct Tile {
   Texture map_erosion_deposition{}; // material effect
   Texture map_terrain_cavity{}; // ssao
   Texture map_terrain_occlusion{};
-  Texture map_terrain_normal{};
+//  Texture map_terrain_normal{}; // TODO: do we need it?
   Texture map_terrain_wetness{};
   Texture map_water_height{};
   Texture map_water_flow{};
@@ -109,6 +109,8 @@ struct Tile {
   std::vector<int> undergrowth_{};
   std::vector<ObjectTraits> points_objects{};
   std::vector<BiomeTraits> points_biomes{}; // material effect
+
+
 
   //TODO; indeed, wisdom here is
   /// need to duplicate both on GPU and CPU:
@@ -140,6 +142,39 @@ struct Tile {
   void SetPlacementModeUndergrowth() {
     cur_placement_mode_tex_ = &map_placement_undergrowth;
   }
+
+  enum class Lod {
+    kLowest,
+    kLow,
+    kMedium,
+    kHight
+  };
+  /* Can we compute only 9... why not - at least for grass and water yes:
+   * 1 2 3 4 4 4 ...
+   * 2 2 3 4 4 4 ...
+   * 3 3 3 4 4 4 ...
+   * 4 4 4 4 4 4 ...
+   * 4 4 4 4 4 4 ...
+   * ...
+   * So we cull 3/4 and leave 90degrees view
+   * But can we use discs, not static squares... hm...
+   * */
+
+  // At one time we can draw (assume
+  std::array<Lod, >;
+
+  // grass blades have pos related to player, not global, so to draw,
+  // we can use another transform matrix, that is related to player
+};
+
+class SubTile {
+ public:
+  void GetPosition() {
+    return nothing;
+  }
+ private:
+  // we don;t need idx, cuz they are equal to Tile::sub_tiles_ indices
+  // as well as their positions
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_TILE_H_

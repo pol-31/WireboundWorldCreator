@@ -1,35 +1,40 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_OBJECTMODE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_OBJECTMODE_H_
 
-#include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "IEditMode.h"
+#include "../core/Ui.h"
+
+void ObjectsModeScrollCallback(
+    GLFWwindow* window, double xoffset, double yoffset);
+
+void ObjectsModeMouseButtonCallback(
+    GLFWwindow* window, int button, int action, int mods);
+
+void ObjectsModeKeyCallback(
+    GLFWwindow* window, int key, int scancode, int action, int mods);
 
 class ObjectsMode final : public IEditMode {
  public:
-  using IEditMode::IEditMode;
-  /*
-   *
-glBindVertexArray(vao_objects_);
-glBindBuffer(GL_ARRAY_BUFFER, vbo_instanced_); // TODO: is it correct buffer (instances)
-glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float),
-                      reinterpret_cast<void*>(0));
-glEnableVertexAttribArray(0); // position
-glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_);
-// we don't update it, use uniform texture coords
-glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0,
-                      reinterpret_cast<void*>(TODO:HERE_OUR_UNIFORM_TEX_COORDS));
-glEnableVertexAttribArray(1); // tex coords
-   * */
-  //TODO: glDeleteVertexArrays(1, vao);
+  explicit ObjectsMode(SharedResources& shared_resources);
 
-  void Render() override {
-    shared_resources_.tile_renderer.Render();
-  }
-  void BindCallbacks() override {}
+  void Render() override;
+  void RenderPicking() override;
+  int Hover(std::uint32_t global_id) override;
 
- private:
-  GLuint vao_objects_;
+  void BindCallbacks() override;
+
+ protected:
+  friend void ObjectsModeScrollCallback(
+      GLFWwindow* window, double xoffset, double yoffset);
+
+  friend void ObjectsModeMouseButtonCallback(
+      GLFWwindow* window, int button, int action, int mods);
+
+  friend void ObjectsModeKeyCallback(
+      GLFWwindow* window, int key, int scancode, int action, int mods);
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_OBJECTMODE_H_

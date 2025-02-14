@@ -18,10 +18,12 @@ void RoadsModeKeyCallback(
 
 class RoadsMode final : public IEditMode {
  public:
-  RoadsMode(SharedResources& shared_resources);
+  RoadsMode(SharedResources& shared_resources,
+            const TextRenderer& text_renderer);
 
   void Render() override;
   void RenderPicking() override;
+  int Hover(std::uint32_t global_id) override;
 
   void Create(GLuint id);
 
@@ -43,14 +45,16 @@ class RoadsMode final : public IEditMode {
   friend void RoadsModeKeyCallback(
       GLFWwindow* window, int key, int scancode, int action, int mods);
 
-  UiButton btn_bake_asphalt_;
-  UiButton btn_bake_gravel_;
-  UiButton btn_bake_soil_;
-  UiButton btn_create_;
-  UiButton btn_remove_;
+  UiStaticSprite btn_bake_asphalt_;
+  UiStaticSprite btn_bake_gravel_;
+  UiStaticSprite btn_bake_soil_;
+  UiStaticSprite btn_create_;
+  UiStaticSprite btn_remove_;
   UiSlots slots_;
 
-  using PointDataType = std::vector<ArbitraryGraph::Point>;
+  std::size_t temp_size_{0}; // TODO: remove
+
+  using PointDataType = std::vector<Point>;
   PointDataType points_data_test_{};
   int edit_mode_selected_sample_id_test_{0};
 };

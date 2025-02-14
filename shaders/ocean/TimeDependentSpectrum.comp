@@ -2,17 +2,19 @@
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-// Output textures
 layout (binding = 4, rg32f) writeonly uniform image2D Dx_Dz;
 layout (binding = 5, rg32f) writeonly uniform image2D Dy_Dxz;
 layout (binding = 6, rg32f) writeonly uniform image2D Dyx_Dyz;
 layout (binding = 7, rg32f) writeonly uniform image2D Dxx_Dzz;
 
-// Input textures
-layout (binding = 11, rgba32f) readonly uniform image2D H0;
 layout (binding = 12, rgba32f) readonly uniform image2D WavesData;
+layout (binding = 14, rgba32f) readonly uniform image2D H0;
 
-layout (location = 1) uniform float Time;
+layout(std140, binding = 2) uniform Environment {
+    float time;
+    float delta_time;
+    vec2 wind_velocity;
+} environment;
 
 vec2 ComplexMult(vec2 a, vec2 b) {
     return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
@@ -21,7 +23,7 @@ vec2 ComplexMult(vec2 a, vec2 b) {
 void main() {
     uvec2 id = gl_GlobalInvocationID.xy;
     vec4 wave = imageLoad(WavesData, ivec2(id));
-    float phase = wave.w * Time;
+    float phase = wave.w * environment.time;
     vec2 exponent = vec2(cos(phase), sin(phase));
 
     vec4 h0 = imageLoad(H0, ivec2(id));

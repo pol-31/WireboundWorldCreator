@@ -1,5 +1,5 @@
-#ifndef WIREBOUNDDEV_SRC_CUBEMAP_H_
-#define WIREBOUNDDEV_SRC_CUBEMAP_H_
+#ifndef WIREBOUNDWORLDCREATOR_SRC_ENVIRONMENT_CUBEMAP_H_
+#define WIREBOUNDWORLDCREATOR_SRC_ENVIRONMENT_CUBEMAP_H_
 
 #include <array>
 #include <iostream>
@@ -8,9 +8,9 @@
 #include <glm/glm.hpp>
 #include <stb_image.h>
 
-#include "Shader.h"
-#include "ShadersBinding.h"
-#include "Texture.h"
+#include "../common/Shader.h"
+#include "../common/ShadersBinding.h"
+#include "../common/Texture.h"
 
 class Cubemap {
  public:
@@ -104,4 +104,4 @@ class Cubemap {
   GLuint vbo_{0};
 };
 
-#endif  // WIREBOUNDDEV_SRC_CUBEMAP_H_
+#endif  // WIREBOUNDWORLDCREATOR_SRC_ENVIRONMENT_CUBEMAP_H_

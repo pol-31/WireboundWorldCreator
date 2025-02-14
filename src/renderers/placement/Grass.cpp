@@ -153,8 +153,34 @@ void Grass::UpdateAnimation(float delta_time) {
    * - out args: ssbo / buffer for indirect draw call;
    *   we don't have it's data on CPU
    * */
-  glDispatchCompute(static_cast<GLuint>(std::clamp(blades_num_, 1, 1000)), 1, 1);
+  for (int i = 0; i < Tile::kSubTilesNum; ++i) {
+    //TODO: we can reduce iterations
+    auto distance = tile_.Distance(player, i);
+    GLuint blades_num = Grass::BladesNumByDistance(distance);
+    glDispatchCompute(blades_num, 1, 1); // do we need diff buffers or ...TODO: POSITIONS?
+  }
 }
+
+int Tile::Distance(const Player& player, sub_tile_id) {
+  glm::vec3 sub_tile_pos =
+      Tile::GetPosition() +
+      (sub_tile_id / Tile::gSubTileWidth) * Tile::gSubTileHeight +
+      sub_tile_id >> Tile::gSubTilePowerOfTwoWidth;
+  return glm::distance(player.GetPosition(), sub_tile_pos);
+}
+
+GLuint Grass::BladesNumByDistance(int distance) {
+  if (distance > SubTile::min_distance_to_draw) {
+    return 0;
+  } else if (distance < subTile::far_distance_limit) {
+    return 10;
+  } else if (distance < subTile::mid_distance_limit) {
+    return 100;
+  } else {
+    return 1000;
+  }
+}
+
 
 void Grass::Render() {
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

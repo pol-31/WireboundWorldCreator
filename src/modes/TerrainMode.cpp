@@ -4,12 +4,12 @@
 #include "../common/GlobalGlfwCallbackData.h"
 #include "../core/Menu.h"
 #include "../common/Vbos.h"
+#include "../common/ShadersBinding.h"
 
 void TerrainModeScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
-  auto terrain = dynamic_cast<TerrainMode*>(global_data->cur_mode_);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (yoffset < 0.0f) {
     global_data->tile_renderer_.DownScale();
@@ -38,23 +38,21 @@ void TerrainModeMouseButtonCallback(
         } else if (pressed_id == terrain->btn_bake_.GetId()) {
           terrain->Bake();
         } else if (pressed_id == terrain->slider_size_.GetTrackId()) {
-          terrain->slider_size_pressed_ = true;
-          terrain->slider_size_.UpdateSliderPos(global_data->cursor_pos_tex_norm_);
+          terrain->need_to_update_uniforms_ = true;
+          terrain->slider_size_.Press();
         } else if (pressed_id == terrain->slider_falloff_.GetTrackId()) {
-          terrain->slider_falloff_pressed_ = true;
-          terrain->slider_falloff_.UpdateSliderPos(global_data->cursor_pos_tex_norm_);
+          terrain->need_to_update_uniforms_ = true;
+          terrain->slider_falloff_.Press();
         }
       }
     }
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
-    if (terrain->slider_size_pressed_) {
-      terrain->slider_size_pressed_ = false;
-    } else if (terrain->slider_falloff_pressed_) {
-      terrain->slider_falloff_pressed_ = false;
-    }
+    terrain->need_to_update_uniforms_ = false;
+    terrain->slider_size_.Release();
+    terrain->slider_falloff_.Release();
   }
-}
 
+}
 
 // TODO: possible more keys to press (now se use src/io/Window.h WasdKeyCallback
 void TerrainModeKeyCallback(
@@ -85,23 +83,18 @@ void TerrainModeKeyCallback(
 
 TerrainMode::TerrainMode(SharedResources& shared_resources)
     : IEditMode(shared_resources),
-      btn_bake_(
-          "bake terrain (update all other components"
-          " like water, roads, etc)",
-          GetUiData(UiVboDataMainId::kTerrainUpdate)),
-      btn_smooth_(
-          "enable smooth mode (flatten the terrain)",
-          GetUiData(UiVboDataMainId::kTerrainSmooth)),
+      btn_bake_(vbos::VboIdMain::kTerrainUpdate, vbos::VboIdText::kNone),
+      btn_smooth_(vbos::VboIdMain::kTerrainSmooth, vbos::VboIdText::kNone),
       slider_size_(
-          {"min size", GetUiData(UiVboDataMainId::kUiSliderSizeMin)},
-          {"max size", GetUiData(UiVboDataMainId::kUiSliderSizeMax)},
-          {"size slider track", GetUiData(UiVboDataMainId::kUiSliderSizeTrack)},
-          {"size slider handle", GetUiData(UiVboDataMainId::kUiSliderSizeHandler)}),
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeFill, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeSlow, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeModerate, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeFast, vbos::VboIdText::kNone}),
       slider_falloff_(
-          {"min falloff", GetUiData(UiVboDataMainId::kUiSliderFalloffMin)},
-          {"max falloff", GetUiData(UiVboDataMainId::kUiSliderFalloffMax)},
-          {"falloff slider track", GetUiData(UiVboDataMainId::kUiSliderFalloffTrack)},
-          {"falloff slider handle", GetUiData(UiVboDataMainId::kUiSliderFalloffHandler)}) {}
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffFill, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffSlow, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffModerate, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffFast, vbos::VboIdText::kNone}) {}
 
 void TerrainMode::Bake() {
   std::cout << "baked" << std::endl;
@@ -132,19 +125,21 @@ void TerrainMode::Render() {
   btn_bake_.Render();
   btn_smooth_.Render();
 
-  if (slider_size_pressed_) {
-    slider_size_.UpdateSliderPos(
-        shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-  }
-  if (slider_falloff_pressed_) {
-    slider_falloff_.UpdateSliderPos(
-        shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-  }
+  shared_resources_.static_sprite_alpha_shader_.Bind();
 
-  slider_size_.Render(shared_resources_.static_sprite_shader_,
-                            shared_resources_.slider_handle_shader_);
-  slider_falloff_.Render(shared_resources_.static_sprite_shader_,
-                               shared_resources_.slider_handle_shader_);
+  slider_size_.Render(
+      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);
+  slider_falloff_.Render(
+      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);
+
+  if (need_to_update_uniforms_) {
+    //TODO: here we need separate POINT-LINES shader and its mechanic
+//    shader_draw_.Bind();
+//    glUniform1f(shader::kPlacementRadius, slider_size_.GetProgress());
+//    glUniform1f(shader::kPlacementFalloff, slider_falloff_.GetProgress());
+//    glUseProgram(0);
+//    need_to_update_uniforms_ = false;
+  }
 }
 
 void TerrainMode::RenderPicking() {
@@ -156,8 +151,24 @@ void TerrainMode::RenderPicking() {
 
   shared_resources_.static_sprite_picking_shader_.Bind();
 
-  btn_bake_.RenderPicking(shared_resources_.static_sprite_picking_shader_);
-  btn_smooth_.RenderPicking(shared_resources_.static_sprite_picking_shader_);
-  slider_size_.RenderPicking(shared_resources_.static_sprite_picking_shader_);
-  slider_falloff_.RenderPicking(shared_resources_.static_sprite_picking_shader_);
+  btn_bake_.RenderPicking();
+  btn_smooth_.RenderPicking();
+
+  slider_size_.RenderPicking();
+  slider_falloff_.RenderPicking();
+}
+
+int TerrainMode::Hover(std::uint32_t global_id) {
+  if (global_id == btn_smooth_.GetId()) {
+    return btn_smooth_.Hover();
+  } else if (global_id == btn_bake_.GetId()) {
+    return btn_bake_.Hover();
+  } /*else if (global_id == terrain->slider_size_.GetTrackId()) {
+    terrain->slider_size_pressed_ = true;
+    terrain->slider_size_.UpdateSliderPos(global_data->cursor_pos_tex_norm_);
+  } else if (global_id == terrain->slider_falloff_.GetTrackId()) {
+    terrain->slider_falloff_pressed_ = true;
+    terrain->slider_falloff_.UpdateSliderPos(global_data->cursor_pos_tex_norm_);
+  }*/
+  return -1;
 }

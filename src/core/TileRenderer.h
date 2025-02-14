@@ -82,6 +82,9 @@ class TileRenderer {
 
   glm::vec3 GetPosition(int vertex_id);
 
+
+  void UpdateOcean(OceanTraits traits);
+
  private:
   struct SurroundingWater {
     struct Unit {
@@ -105,6 +108,8 @@ class TileRenderer {
   void DeInitMapScaleUbo();
 
   void UpdateScale();
+
+  Shader gen_hmap_shader_;
 
   //TODO: holds cur_tile_ which is changing only at mode_Tiles
   // water data from adjacent left/right/above/below tiles

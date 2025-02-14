@@ -27,7 +27,7 @@ class WaterMode final : public IEditMode {
   };
 
   explicit WaterMode(SharedResources& shared_resources,
-                     const Paths& paths);
+                     const Paths& paths, const TextRenderer& text_renderer);
 
   void Render() override;
   void RenderPicking() override;
@@ -87,6 +87,8 @@ class WaterMode final : public IEditMode {
 
   void ReBake();
 
+  void UpdateOcean();
+
   /// currently only CPU
   /// checks are points indices in ccw order, and
   /// is points polygon convex (only convex allowed)
@@ -127,11 +129,12 @@ class WaterMode final : public IEditMode {
   /// -1 as "not selected"
   GLuint cur_selected_point_{static_cast<GLuint>(-1)}; //TODO: editing (not for now)
 
-  UiButton btn_bake_lake_;
-  UiButton btn_bake_river_;
-  UiButton btn_bake_waterfall_;
-  UiButton btn_create_;
-  UiButton btn_remove_;
+  UiStaticSprite btn_bake_lake_;
+  UiStaticSprite btn_bake_river_;
+  UiStaticSprite btn_bake_waterfall_;
+  UiStaticSprite btn_create_;
+  UiStaticSprite btn_remove_;
+  UiStaticSprite btn_update_;
   UiSlots slots_;
 
   //TODO: user should set it
@@ -146,6 +149,22 @@ class WaterMode final : public IEditMode {
   /// if we pressed Create() we go there and each pressed terrain id
   /// is considered as a new point for point set
   bool do_add_points_{false}; //TODO rename to creation_mode_
+
+  UiOceanCascadeConfig ocean_layer_config_1_;
+  UiOceanCascadeConfig ocean_layer_config_2_;
+  UiOceanCascadeConfig ocean_layer_config_3_;
+
+  OceanTraits CollectOceanTraits() {
+    return {ocean_layer_config_1_.GetOceanLayerTraits(),
+            ocean_layer_config_2_.GetOceanLayerTraits(),
+            ocean_layer_config_3_.GetOceanLayerTraits()
+    };
+    //TODO: outside is
+//    if (!first.Modified() && !second.Modified() && !third.Modified()) {
+//      return;
+//    }
+//    UpdateBufrer();
+  }
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_WATERMODE_H_

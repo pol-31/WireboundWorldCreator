@@ -208,6 +208,7 @@ std::string Shader::ShaderNameFromType(GLenum type) {
 }
 
 #ifndef NDEBUG
+// TODO: can we rewrite this?
 bool Shader::Update() {
   namespace fs = std::filesystem;
   if (paths_.Size() == 1) {

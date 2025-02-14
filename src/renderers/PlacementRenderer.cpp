@@ -57,8 +57,8 @@ void PlacementRenderer::Init() {
 void PlacementRenderer::InitPlacementPipeline() {
   Shader poisson_shader("../shaders/PoissonPoints.comp");
   poisson_shader.Bind();
-  glUniform1i(shader::kPoissonAreaSize, 2);
-  placement_temp_ = Texture(1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
+//  glUniform1i(shader::kPoissonAreaSize, 2);
+  placement_temp_ = Texture(1024, 1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
 }
 
 void PlacementRenderer::Render() {
@@ -115,6 +115,7 @@ void PlacementRenderer::UpdatePipeline() {
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
   std::vector<unsigned char> data(1024 * 1024);
+//  tile_.map_placement_undergrowth.Store("t.png", 1, GL_UNSIGNED_BYTE);
   placement_temp_.Bind();
   glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, data.data());
 

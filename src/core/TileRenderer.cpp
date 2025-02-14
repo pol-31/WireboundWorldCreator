@@ -14,6 +14,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../common/Details.h"
+#include "../common/ShadersBinding.h"
+#include "../common/OpenGlUtility.h"
 
 //#include "../io/Window.h"
 
@@ -26,8 +28,10 @@ TileRenderer::TileRenderer(
       placement_renderer_(cur_tile_, paths),
       roads_renderer_(cur_tile_),
       terrain_renderer_(cur_tile_, paths),
-      water_renderer_(cur_tile_, paths) {
+      water_renderer_(cur_tile_, paths),
+      gen_hmap_shader_("../shaders/GenTerrainHMap.comp") {
   InitMapScaleUbo();
+  terrain_renderer_.UpdateNormalMap(gen_hmap_shader_);
 }
 
 void TileRenderer::UpdatePlacement() {
@@ -91,16 +95,14 @@ void TileRenderer::RenderPickingObjects() const {
 }
 
 void TileRenderer::DeInitMapScaleUbo() {
-  glDeleteBuffers(GL_UNIFORM_BUFFER, &map_scale_ubo_);
+  glDeleteBuffers(1, &map_scale_ubo_);
 }
 
 void TileRenderer::UpdateScale() {
   glm::mat4 transform(1.0f);
   transform = glm::scale(transform, glm::vec3(map_scale_, map_scale_, map_scale_));
-  glBindBuffer(GL_UNIFORM_BUFFER, map_scale_ubo_);
-  glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4),
-                  glm::value_ptr(transform));
-  glBindBuffer(GL_UNIFORM_BUFFER, 0);
+  utility::UpdateUbo(map_scale_ubo_, 0, sizeof(glm::mat4),
+                     glm::value_ptr(transform));
 }
 
 void TileRenderer::UpScale() {
@@ -114,17 +116,15 @@ void TileRenderer::DownScale() {
 }
 
 void TileRenderer::InitMapScaleUbo() {
-  glGenBuffers(1, &map_scale_ubo_);
-  glBindBuffer(GL_UNIFORM_BUFFER, map_scale_ubo_);
   // 64 for transform matrix (we modify only scale), float height map scale
   // and 3 other float for padding
   // (to ensure 16-byte alignment as per std140 layout rules)
-  glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4) + 4 * sizeof(float),
-               nullptr, GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_UNIFORM_BUFFER, details::kUboMapScaleBind, map_scale_ubo_);
+  utility::InitUbo(map_scale_ubo_, sizeof(glm::mat4) + 4 * sizeof(float),
+                   GL_DYNAMIC_DRAW, shader::kUboMapScaleBind);
 
   glm::mat4 transform(1.0f);
   transform = glm::scale(transform, glm::vec3(map_scale_, map_scale_, map_scale_));
+  glBindBuffer(GL_UNIFORM_BUFFER, map_scale_ubo_);
   void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
   if (ptr) {
     std::memcpy(ptr, glm::value_ptr(transform), sizeof(glm::mat4));
@@ -147,4 +147,8 @@ glm::vec3 TileRenderer::GetPosition(int vertex_id) {
   } else {
     return objects_renderer_.GetYPosition(vertex_id);
   }
+}
+
+void TileRenderer::UpdateOcean(OceanTraits traits) {
+  water_renderer_.UpdateOcean(traits);
 }

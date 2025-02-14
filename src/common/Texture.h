@@ -15,11 +15,10 @@ class Texture {
  public:
   Texture() = default;
   
-  Texture(std::string_view path, int format,
-          int filter = GL_LINEAR, int wrap = GL_REPEAT,
-          bool gen_mipmap = true);
+  Texture(std::string_view path, int format, int filter = GL_LINEAR,
+          int wrap = GL_REPEAT, bool gen_mipmap = true);
 
-  Texture(int size, int format, int filter = GL_LINEAR,
+  Texture(int width, int height, GLint format, int filter = GL_LINEAR,
           int wrap = GL_REPEAT, bool integer = false);
 
   Texture(GLuint opengl_id, GLsizei width,
@@ -58,8 +57,19 @@ class Texture {
   [[nodiscard]] GLsizei GetFormat() const {
     return format_;
   }
+//  [[nodiscard]] GLsizei GetChannels() const {
+//    return channels_;
+//  }
   [[nodiscard]] std::pair<GLsizei, GLsizei> GetSize() const {
     return {width_, height_};
+  }
+
+//  [[nodiscard]] GLsizei GetSizeByte() const {
+//    return width_ * height_ * channels_;
+//  }
+
+  [[nodiscard]] GLsizei GetSizePixels() const {
+    return width_ * height_;
   }
 
   explicit operator bool() const {
@@ -68,12 +78,10 @@ class Texture {
 
   // for dbg (don't need for the majority of texture)
   /// component id starts from 1;
-  /// component = 0 means we store all channels
-  /// we don't store channels_ and type_, because we would
-  /// need to store extra 8 bytes and at each texture loading
-  /// compare all OpenGL texture formats (literally all) to obtain
-  /// actual channels num and type, what I don't want to implement \-_-/
-  void Store(std::string_view path, int channels, GLint format,
+  /// component = 0 means we store all channels;
+  /// We can't use format_, because here OpenGL requires,
+  /// for instance, GL_RGBA instead of GL_RGBA32F
+  void Store(std::string_view path, GLint channels, GLint format,
              GLenum type, int component = 0) const;
 
  private:
@@ -82,12 +90,15 @@ class Texture {
   static std::size_t kNoFormatI;
   static std::size_t kNoType;
 
+  static std::vector<uint8_t> FloatsToUint(
+      const std::vector<float>& data, int component, GLint channels);
+
   void LoadStbImage(std::string_view path, bool gen_mipmap);
 
   /// for .r16 and .32 extensions; we assume (width == height)
   void LoadRawFloat(std::string_view path, int float_size);
 
-  static GLint FormatStbImageToOpenGL(int channels);
+  static GLint FormatStbImageToOpenGL(GLint channels) noexcept;
 
   void LoadCubemap(const std::array<std::string, 6>& cubemap_paths);
   
@@ -104,6 +115,7 @@ class Texture {
   GLsizei width_{0};
   GLsizei height_{0};
   GLint format_{0};
+//  GLint channels_{0};
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC__TEXTURE_H_

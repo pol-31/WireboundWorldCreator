@@ -78,60 +78,57 @@ void FencesModeKeyCallback(
     }*/
 }
 
-FencesMode::FencesMode(SharedResources& shared_resources)
+FencesMode::FencesMode(
+    SharedResources& shared_resources, const TextRenderer& text_renderer)
     : IEditMode(shared_resources),
-      btn_bake_picket_("bake as a picket fence",
-                       GetUiData(UiVboDataMainId::kFencesPicket)),
-      btn_bake_chain_linked_("bake as a chain linked fence",
-                             GetUiData(UiVboDataMainId::kFencesChainLink)),
-      btn_bake_wooden_("bake as a wooden fence",
-                       GetUiData(UiVboDataMainId::kFencesWooden)),
-      btn_create_("add new point set",
-                  GetUiData(UiVboDataMainId::kAddNew)),
-      btn_remove_("remove selected point set",
-                  GetUiData(UiVboDataMainId::kRemove)),
-      slots_(points_data_test_,
-             {"next slots", GetUiData(UiVboDataMainId::kUiSlotsNext)},
-             {"prev slots", GetUiData(UiVboDataMainId::kUiSlotsPrev)},
-             {"slot 1", GetUiData(UiVboDataMainId::kUiSlots1)},
-             {"slot 2", GetUiData(UiVboDataMainId::kUiSlots2)},
-             {"slot 3", GetUiData(UiVboDataMainId::kUiSlots3)},
-             {"slot 4", GetUiData(UiVboDataMainId::kUiSlots4)},
-             {"slot 5", GetUiData(UiVboDataMainId::kUiSlots5)},
-             edit_mode_selected_sample_id_test_) {}
+      btn_bake_picket_(vbos::VboIdMain::kFencesPicket, vbos::VboIdText::kBakeAsAPicketFence),
+      btn_bake_chain_linked_(vbos::VboIdMain::kFencesChainLink,
+                             vbos::VboIdText::kBakeAsAChainLinkedFence),
+      btn_bake_wooden_(vbos::VboIdMain::kFencesWooden, vbos::VboIdText::kBakeAsAWoodenFence),
+      btn_create_(vbos::VboIdMain::kAddNew, vbos::VboIdText::kAddNew),
+      btn_remove_(vbos::VboIdMain::kRemove, vbos::VboIdText::kRemoveSelected),
+      slots_(temp_size_,
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNextSlot},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kPreviousSlot},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kNone},
+             edit_mode_selected_sample_id_test_, text_renderer) {}
 
 void FencesMode::Render() {
-  shared_resources_.tile_renderer.Render();
+  shared_resources_.tile_renderer_.Render();
 
   glActiveTexture(GL_TEXTURE0);
   shared_resources_.tex_ui_.Bind();
   glBindVertexArray(shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_shader.Bind();
+  shared_resources_.static_sprite_shader_.Bind();
 
   btn_bake_picket_.Render();
   btn_bake_chain_linked_.Render();
   btn_bake_wooden_.Render();
   btn_create_.Render();
   btn_remove_.Render();
-  slots_.Render(shared_resources_.static_sprite_shader);
+  slots_.Render();
 }
 
 void FencesMode::RenderPicking() {
-  shared_resources_.tile_renderer.RenderPickingTerrain();
+  shared_resources_.tile_renderer_.RenderPickingTerrain();
 
   glActiveTexture(GL_TEXTURE0);
   shared_resources_.tex_ui_.Bind();
   glBindVertexArray(shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_picking_shader.Bind();
+  shared_resources_.static_sprite_picking_shader_.Bind();
 
-  btn_bake_picket_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  btn_bake_chain_linked_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  btn_bake_wooden_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  btn_create_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  btn_remove_.RenderPicking(shared_resources_.static_sprite_picking_shader);
-  slots_.RenderPicking(shared_resources_.static_sprite_picking_shader);
+  btn_bake_picket_.RenderPicking();
+  btn_bake_chain_linked_.RenderPicking();
+  btn_bake_wooden_.RenderPicking();
+  btn_create_.RenderPicking();
+  btn_remove_.RenderPicking();
+  slots_.RenderPicking();
 }
 
 void FencesMode::Create(GLuint id) {
@@ -175,4 +172,8 @@ void FencesMode::BindCallbacks() {
   glfwSetMouseButtonCallback(gWindow, FencesModeMouseButtonCallback);
   //  glfwSetKeyCallback(gWindow, TerrainModeKeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
+}
+
+int FencesMode::Hover(std::uint32_t global_id) {
+  return -1;
 }

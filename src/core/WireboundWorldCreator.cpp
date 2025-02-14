@@ -17,10 +17,20 @@
 #include "../common/Vbos.h"
 #include "Map.h"
 
+
+
+#include "../common/ShadersBinding.h"
+#include "../common/OpenGlUtility.h"
+//TODO:
+// 1. cursor now related to camera mode
+// 2. camera_ubo_initializer_
 WireboundWorldCreator::WireboundWorldCreator(const Paths& paths, Map& map)
     : cursor_(),
       camera_(),
       interface_(paths, camera_, cursor_, map) {
+  utility::InitUbo(ubo_, 128, GL_DYNAMIC_DRAW, shader::kUboCameraBind); // TODO: not here
+  glDeleteBuffers(1, &ubo_);
+  std::terminate();
   Init(paths);
 }
 
@@ -55,13 +65,14 @@ void WireboundWorldCreator::Init(const Paths& paths) {
 
   glClearColor(0.2f, 0.7f, 0.1f, 1.0f);
 
-  std::array<std::string, 6> cubemap_textures;
-  cubemap_textures[0] = (paths.texture_skybox1_right);
-  cubemap_textures[1] = (paths.texture_skybox1_left);
-  cubemap_textures[2] = (paths.texture_skybox1_top);
-  cubemap_textures[3] = (paths.texture_skybox1_bottom);
-  cubemap_textures[4] = (paths.texture_skybox1_front);
-  cubemap_textures[5] = (paths.texture_skybox1_back);
+  std::array<std::string, 6> cubemap_textures{
+    paths.texture_skybox1_right,
+    paths.texture_skybox1_left,
+    paths.texture_skybox1_top,
+    paths.texture_skybox1_bottom,
+    paths.texture_skybox1_front,
+    paths.texture_skybox1_back
+  };
   cubemap_ = Cubemap(cubemap_textures, paths.shader_cubemap_vert,
                      paths.shader_cubemap_frag);
 }

@@ -31,12 +31,11 @@ struct Paths {
   std::string shader_grass_comp;
   std::string shader_height_map_picking_frag;
   std::string shader_height_map_picking_vert;
-  std::string shader_static_sprite_vert;
-  std::string shader_static_sprite_frag;
-  std::string shader_static_sprite_pick_vert;
-  std::string shader_static_sprite_pick_frag;
-  std::string shader_dynamic_sprite_vert;
-  std::string shader_dynamic_sprite_frag;
+  std::string shader_sprite_static_vert;
+  std::string shader_sprite_dynamic_vert;
+  std::string shader_sprite_frag;
+  std::string shader_sprite_picking_frag;
+  std::string shader_sprite_alpha_frag;
   std::string shader_text_vert;
   std::string shader_text_frag;
   std::string shader_points_polygon_vert;
@@ -69,6 +68,9 @@ struct Paths {
   std::string texture_skybox1_bottom;
   std::string texture_skybox1_front;
   std::string texture_skybox1_back;
+
+  std::string config_vbo_sprites;
+  std::string config_vbo_transform;
 
   Paths(std::string_view path) {
     std::ifstream file(path.data());
@@ -105,14 +107,22 @@ struct Paths {
 
         {"shader_height_map_picking_frag", &shader_height_map_picking_frag},
         {"shader_height_map_picking_vert", &shader_height_map_picking_vert},
-        {"shader_static_sprite_vert", &shader_static_sprite_vert},
-        {"shader_static_sprite_frag", &shader_static_sprite_frag},
-        {"shader_static_sprite_pick_vert", &shader_static_sprite_pick_vert},
-        {"shader_static_sprite_pick_frag", &shader_static_sprite_pick_frag},
-        {"shader_dynamic_sprite_vert", &shader_dynamic_sprite_vert},
-        {"shader_dynamic_sprite_frag", &shader_dynamic_sprite_frag},
+#ifndef NDEBUG
+        {"shader_sprite_static_vert_debug", &shader_sprite_static_vert},
+#else
+        {"shader_sprite_static_vert", &shader_sprite_static_vert},
+#endif // NDEBUG
+        {"config_vbo_sprites", &config_vbo_sprites},
+        {"config_vbo_transform", &config_vbo_transform},
+
+        {"shader_sprite_dynamic_vert", &shader_sprite_dynamic_vert},
+        {"shader_sprite_frag", &shader_sprite_frag},
+        {"shader_sprite_picking_frag", &shader_sprite_picking_frag},
+        {"shader_sprite_alpha_frag", &shader_sprite_alpha_frag},
+
         {"shader_text_vert", &shader_text_vert},
         {"shader_text_frag", &shader_text_frag},
+
         {"menu_icon_shader", &menu_icon_shader},
         {"shader_dithering", &shader_dithering},
         {"shader_poisson_points", &shader_poisson_points},

@@ -11,12 +11,15 @@ class TerrainRenderer {
  public:
   TerrainRenderer(Tile& tile, const Paths& paths);
 
-  void Render() const;
+  void Render();
 
   //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
   void RenderPicking() const;
 
   [[nodiscard]] glm::vec3 GetYPosition(int vertex_id) const;
+
+  // after height map modifying
+  void UpdateNormalMap(const Shader& shader);
 
  private:
   void Init();
@@ -26,6 +29,7 @@ class TerrainRenderer {
   GLuint vbo_{0};
   Shader shader_;
   Shader shader_picking_;
+  Texture nmap_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_TERRAINRENDERER_H_

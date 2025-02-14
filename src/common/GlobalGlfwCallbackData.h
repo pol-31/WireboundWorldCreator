@@ -6,6 +6,7 @@
 #include "../io/Window.h"
 #include "../core/TileRenderer.h"
 #include "PickingFramebuffer.h"
+#include "UiDebugger.h"
 
 //TODO:
 // #include "../core/Menu.h"
@@ -35,6 +36,7 @@ struct GlobalGlfwCallbackData {
   Menu& menu_;
   PickingFramebuffer& picking_fbo_;
 
+  debug::UiDebugger& ui_debugger_;
 
   glm::dvec2 cursor_pos_{0.0};
   glm::vec2 cursor_pos_tex_norm_{0.0f};
@@ -60,13 +62,19 @@ struct GlobalGlfwCallbackData {
 
   GlobalGlfwCallbackData(Camera& camera, Cursor& cursor,
                          TileRenderer& tile_renderer, IEditMode*& cur_mode,
-                         Menu& menu, PickingFramebuffer& picking_fbo)
+                         Menu& menu, PickingFramebuffer& picking_fbo,
+                         debug::UiDebugger& ui_debugger)
       : camera_(camera),
         cursor_(cursor),
         tile_renderer_(tile_renderer),
         cur_mode_(cur_mode),
         menu_(menu),
-        picking_fbo_(picking_fbo) {}
+        picking_fbo_(picking_fbo),
+        ui_debugger_(ui_debugger) {}
+
+  [[nodiscard]] GLuint GetIdByMousePos() const {
+    return picking_fbo_.GetIdByMousePos(cursor_pos_);
+  }
 };
 
 //TODO:

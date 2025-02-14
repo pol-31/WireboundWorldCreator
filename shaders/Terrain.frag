@@ -2,18 +2,25 @@
 
 out vec4 out_color;
 
-//uniform sampler2D tex_color;
-layout(location = 1) uniform sampler2D tex_occlusion;
-layout(location = 2) uniform sampler2D tex_color;
+layout(location = 1) uniform sampler2D tex_color;  // Diffuse color texture
+layout(location = 2) uniform sampler2D tex_nmap;   // Normal map (GL_RG)
+layout(location = 3) uniform sampler2D tex_occlusion;   // Normal map (GL_RG)
+
+layout(location = 4) uniform vec3 sun_direction = vec3(0.0, -0.6, -0.7);
+layout(location = 5) uniform vec3 sun_color = vec3(1.0, 0.95, 0.8);
+layout(location = 6) uniform vec3 ambient_color = vec3(0.1, 0.1, 0.15);
 
 in TES_OUT {
-    vec2 tc;
+    vec2 tc;  // Texture coordinates
 } fs_in;
 
 void main(void) {
-    out_color = vec4(1.0f);//texture(tex_color, fs_in.tc);
-    out_color *= texture(tex_occlusion, fs_in.tc).r;
-//    out_color *= blend_color;
-//    out_color = mix(blend_color, out_color, 0.4f);
-    out_color.a = 1.0f;
+    vec3 color = texture(tex_color, fs_in.tc).rgb;
+    vec2 nmap_rg = texture(tex_nmap, fs_in.tc).rg;
+    vec3 normal = vec3(nmap_rg * 2.0 - 1.0, sqrt(1.0 - dot(nmap_rg * 2.0 - 1.0, nmap_rg * 2.0 - 1.0)));
+    normal = normalize(normal);
+    float diffuse_factor = max(dot(normal, normalize(-sun_direction)), 0.0);
+    vec3 lighting = ambient_color + sun_color * diffuse_factor;
+    float occlusion = texture(tex_occlusion, fs_in.tc).r;
+    out_color = vec4(color * lighting * occlusion, 1.0f);
 }

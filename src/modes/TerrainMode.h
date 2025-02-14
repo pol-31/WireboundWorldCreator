@@ -25,6 +25,8 @@ class TerrainMode final : public IEditMode {
 
   void Render() override;
   void RenderPicking() override;
+  int Hover(std::uint32_t global_id) override;
+
   void BindCallbacks() override;
 
   void Bake();
@@ -41,16 +43,13 @@ class TerrainMode final : public IEditMode {
   friend void TerrainModeKeyCallback(
       GLFWwindow* window, int key, int scancode, int action, int mods);
 
-  UiButton btn_bake_;
-  UiButton btn_smooth_;
+  UiStaticSprite btn_bake_;
+  UiStaticSprite btn_smooth_;
   UiSlider slider_size_;
   UiSlider slider_falloff_;
 
-  float size_factor_{1.0f};
-  float falloff_factor_{1.0f};
-
-  bool slider_size_pressed_{false};
-  bool slider_falloff_pressed_{false};
+  // set "true" to initialize at first Render() call
+  bool need_to_update_uniforms_{true};
 
   bool smooth_mode_{false};
 };

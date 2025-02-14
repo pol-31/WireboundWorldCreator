@@ -124,16 +124,20 @@ Tile::Tile(const TileInfo& tile_info) {
   pos_x = tile_info.pos_x;
   pos_y = tile_info.pos_y;
   // map_terrain_height is necessary (if float GL_RED is ignored)
-  map_terrain_height = Texture(tile_info.map_terrain_height, GL_RED);
+  map_terrain_height = Texture(tile_info.map_terrain_height, GL_R8);
   map_erosion_wear = Texture(tile_info.map_erosion_wear, GL_RED);
   map_erosion_flow = Texture(tile_info.map_erosion_flow, GL_RED);
-  map_erosion_deposition = Texture(tile_info.map_erosion_deposition, GL_RED);
+  map_erosion_deposition = Texture(tile_info.map_erosion_deposition, GL_RGBA);
   map_terrain_cavity = Texture(tile_info.map_terrain_cavity, GL_RED);
   map_terrain_occlusion = Texture(tile_info.map_terrain_occlusion, GL_RED);
 //  map_terrain_normal = Texture(tile_info.map_terrain_normal, GL_RED);
   map_terrain_wetness = Texture(tile_info.map_terrain_wetness, GL_RED);
 
-  map_water_height = Texture(tile_info.map_water_height, GL_RED);
+  if (tile_info.map_water_height.empty()) {
+    map_water_height = Texture(1024, 1024, GL_RED, GL_LINEAR, GL_CLAMP_TO_EDGE);
+  } else {
+    map_water_height = Texture(tile_info.map_water_height, GL_RED);
+  }
 //  InitHeightMap(tile_info.map_water_height, map_water_height);
 
   map_water_flow = Texture(tile_info.map_water_flow, GL_RED);
@@ -172,6 +176,6 @@ void Tile::InitHeightMap(std::string_view path, Texture& texture) {
     // if float it will ignore GL_RED internally
     texture = Texture(path, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
   } else {
-    texture = Texture(1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
+    texture = Texture(1024, 1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
   }
 }

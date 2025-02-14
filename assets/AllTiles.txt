@@ -40,8 +40,21 @@ pos_y=0
 map_terrain_height=../assets/terrain/map_terrain_height.png
 map_erosion_wear=../assets/terrain/map_erosion_wear.png
 map_erosion_flow=../assets/terrain/map_erosion_flow.png
-map_erosion_deposition=../assets/terrain/map_erosion_deposition.png
+map_erosion_deposition=../assets/terrain/map_terrain_material.png
 map_terrain_occlusion=../assets/terrain/map_terrain_occlusion.png
+ocean_scale
+ocean_wind_speed <------------------ this
+ocean_wind_direction <------------------ this
+ocean_fetch
+ocean_spread_blend
+ocean_swell
+ocean_peak_enhancement
+ocean_short_waves_fade
+ocean_depth <------------------ this
+ocean_lambda
+//TODO: we always use size=64 layers=3
+//TODO: not all params based not on water but other things (like depth, wind)
+
 =
 pos_x=1
 pos_y=0

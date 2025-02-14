@@ -11,11 +11,21 @@ TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
       shader_(paths.shader_terrain_vert, paths.shader_terrain_tesc,
               paths.shader_terrain_tese, paths.shader_terrain_frag),
       shader_picking_(paths.shader_height_map_picking_vert,
-                      paths.shader_height_map_picking_frag) {
+                      paths.shader_height_map_picking_frag),
+      nmap_(1024, 1024, GL_RG8) {
   Init();
 }
 
-void TerrainRenderer::Render() const {
+void TerrainRenderer::Render() {
+#ifndef NDEBUG
+  if (shader_.Update()) {
+    shader_.Bind();
+    glUniform1i(shader::kTerrainHeightMap, 0);
+    glUniform1i(1, 1); // material (temp)
+    glUniform1i(2, 2); // normal
+    glUniform1i(3, 3); // ao
+  }
+#endif
   if(glfwGetKey(gWindow, GLFW_KEY_1)) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
@@ -23,13 +33,17 @@ void TerrainRenderer::Render() const {
   glActiveTexture(GL_TEXTURE0);
   tile_.map_terrain_height.Bind();
   glActiveTexture(GL_TEXTURE1);
+  tile_.map_erosion_deposition.Bind();
+
+  glActiveTexture(GL_TEXTURE2);
+  nmap_.Bind();
+  glActiveTexture(GL_TEXTURE3);
   tile_.map_terrain_occlusion.Bind();
 
   glBindVertexArray(vao_);
 
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
-//  glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1024 * 1024);
 
   glBindVertexArray(0);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -58,22 +72,29 @@ glm::vec3 TerrainRenderer::GetYPosition(int vertex_id) const {
   return {};
 }
 
-void TerrainRenderer::Init() {
-  //    return; //TODO: we use not "empty" but fill with tex_coords and pos !!!
-  // Define the vertices (not actually used, but required for the draw call)
-  GLfloat vertices[] = {
-      -0.5f, 0.0f, -0.5f, 1.0f,
-      0.5f, 0.0f, -0.5f, 1.0f,
-      -0.5f, 0.0f,  0.5f, 1.0f,
-      0.5f, 0.0f,  0.5f, 1.0f
-  }; // TODO: its useless
+void TerrainRenderer::UpdateNormalMap(const Shader& shader) {
+  shader.Bind();
+  glBindImageTexture(
+      0, tile_.map_terrain_height.GetId(), 0,
+      GL_FALSE, 0, GL_READ_ONLY, tile_.map_terrain_height.GetFormat());
+  glBindImageTexture(
+      1, nmap_.GetId(), 0,
+      GL_FALSE, 0, GL_WRITE_ONLY, nmap_.GetFormat());
+  glDispatchCompute(1024 / 8, 1024 / 8, 1);
+  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+  nmap_.Store("d.png", 2, GL_RG, GL_UNSIGNED_BYTE);
+}
 
+void TerrainRenderer::Init() {
   glGenVertexArrays(1, &vao_);
   glBindVertexArray(vao_);
 
   glGenBuffers(1, &vbo_);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+  // vertex data defined in shader and accessed via gl_VertexID
+  GLfloat vertices[16];
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
 
   // Enable the vertex attribute array
   glEnableVertexAttribArray(0);
@@ -82,7 +103,9 @@ void TerrainRenderer::Init() {
 
   shader_.Bind();
   glUniform1i(shader::kTerrainHeightMap, 0);
-  glUniform1i(shader::kTerrainOcclusion, 1);
+  glUniform1i(1, 1); // material (temp)
+  glUniform1i(2, 2); // normal
+  glUniform1i(3, 3); // ao
   shader_picking_.Bind();
   glUniform1i(shader::kHeightMapPickingHeightMap, 0);
 }

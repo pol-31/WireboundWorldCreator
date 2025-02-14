@@ -20,14 +20,13 @@ add_executable(WireboundWorldCreator
         src/common/Shader.cpp
         src/common/Texture.cpp
         src/common/TextRenderer.cpp
+        src/common/Vbos.cpp
         src/core/Map.cpp
         src/core/Interface.cpp
         src/core/Menu.cpp
         src/core/Tile.cpp
         src/core/TileRenderer.cpp
-        src/core/Ui.cpp
         src/core/WireboundWorldCreator.cpp
-        src/io/Camera.cpp
         src/io/Cursor.cpp
         src/io/Window.cpp
         src/modes/BiomesMode.cpp
@@ -43,12 +42,30 @@ add_executable(WireboundWorldCreator
         src/renderers/TerrainRenderer.cpp
         src/renderers/WaterRenderer.cpp
         src/renderers/placement/Grass.cpp
-        src/renderers/water/FastFourierTransform.cpp
+        src/renderers/water/Ifft.cpp
         src/renderers/water/WavesCascade.cpp
-        src/renderers/water/WavesGenerator.cpp
+        src/renderers/water/Ocean.cpp
 
         # temp (need to remove)
         src/common/ArbitraryGraph.cpp
+        src/environment/Wind.cpp
+        src/environment/Wind.h
+        src/environment/Time.cpp
+        src/environment/Time.h
+        src/environment/Environment.cpp
+        src/environment/Environment.h
+        src/common/OpenGlUtility.h
+        src/core/Ui.cpp
+        src/core/Ui.h
+        src/core/Ui.cpp
+        src/common/UiDebugger.cpp
+        src/common/UiDebugger.h
+        src/renderers/water/MacLabSwe.cpp
+        src/renderers/water/MacLabSwe.h
+        src/io/Cameras.cpp
+        src/io/Cameras.h
+        src/common/PlayerCharacter.h
+        src/common/SkylineBottomLeft.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

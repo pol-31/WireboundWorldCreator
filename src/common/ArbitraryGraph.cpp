@@ -76,14 +76,9 @@ bool IsConvexPolygon(const std::vector<Point>& points) {
   if (n < 3) {
     return false; // A polygon must have at least 3 points
   }
-
-  // Check if the polygon is convex and in CCW order
   if (!IsCcw(points)) {
-    //      std::cout << "no ccw" << std::endl;
     return false;
   }
-
-  // Check for intersections
   for (int i = 0; i < n; ++i) {
     for (int j = i + 2; j < n; ++j) {
       // Ignore adjacent edges and the first and last edge in a closed polygon
@@ -98,12 +93,10 @@ bool IsConvexPolygon(const std::vector<Point>& points) {
   return true;
 }
 
-// Function to check if the point p lies on the left side of the line segment from p1 to p2
 bool isLeft(Point p1, Point p2, Point p) {
   return (p2.x - p1.x) * (p.y - p1.y) - (p.x - p1.x) * (p2.y - p1.y) > 0;
 }
 
-// Function to check if a point lies inside a convex polygon
 bool isInsideConvexPolygon(const std::vector<Point>& polygon, Point p) {
   int n = polygon.size();
   if (n < 3) return false;
