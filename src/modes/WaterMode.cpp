@@ -28,6 +28,7 @@ void WaterModeMouseButtonCallback(
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   //TODO: refactor to "if(!cond) return"
   //TODO: change order (based on usage frequency)
+  global_data->camera_.ProcessMouseKey(button, action, mods);
   if (action == GLFW_PRESS) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
       auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
@@ -59,8 +60,6 @@ void WaterModeMouseButtonCallback(
         water->ocean_layer_config_2_.Press(pressed_id);
         water->ocean_layer_config_3_.Press(pressed_id);
       }
-    } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-      global_data->cursor_.SwitchMode(window);
     }
   } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
     //Release

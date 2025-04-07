@@ -1,7 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_GLOBALGLFWCALLBACKDATA_H_
 #define WIREBOUNDWORLDCREATOR_SRC_GLOBALGLFWCALLBACKDATA_H_
 
-#include "../io/Camera.h"
+#include "../io/Cameras.h"
 #include "../io/Cursor.h"
 #include "../io/Window.h"
 #include "../core/TileRenderer.h"
@@ -26,8 +26,8 @@ class IEditMode;
  * All members are public for convenience; and are references.
  * */
 struct GlobalGlfwCallbackData {
-  Camera& camera_; // camera movement
-  Cursor& cursor_; // enable/disable cursor
+  CameraHandler& camera_; // camera movement
+//  Cursor& cursor_; // enable/disable cursor
 
   // handle input (e.g. call Press() of ui components), update maps scale
   TileRenderer& tile_renderer_;
@@ -60,12 +60,12 @@ struct GlobalGlfwCallbackData {
     glfwGetWindowSize(gWindow, &window_size_.x, &window_size_.y);
   }
 
-  GlobalGlfwCallbackData(Camera& camera, Cursor& cursor,
+  GlobalGlfwCallbackData(CameraHandler& camera/*, Cursor& cursor*/,
                          TileRenderer& tile_renderer, IEditMode*& cur_mode,
                          Menu& menu, PickingFramebuffer& picking_fbo,
                          debug::UiDebugger& ui_debugger)
       : camera_(camera),
-        cursor_(cursor),
+//        cursor_(cursor),
         tile_renderer_(tile_renderer),
         cur_mode_(cur_mode),
         menu_(menu),

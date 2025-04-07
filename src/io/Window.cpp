@@ -27,7 +27,7 @@ void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {
   lastY = ypos;
 
   void* global_data = glfwGetWindowUserPointer(window);
-  Camera& camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera_;
+  CameraHandler& camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera_;
   camera.ProcessMouseMovement(xoffset, yoffset);
 }
 

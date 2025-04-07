@@ -2,7 +2,7 @@
 #define WIREBOUNDWORLDCREATOR_SRC_WIREBOUNDWORLDCREATOR_H_
 
 #include "../common/Paths.h"
-#include "../io/Camera.h"
+#include "../io/Cameras.h"
 #include "../io/Cursor.h"
 #include "../environment/Cubemap.h"
 #include "Interface.h"
@@ -17,8 +17,7 @@ class WireboundWorldCreator {
  private:
   void Init(const Paths& paths);
 
-  Cursor cursor_;
-  Camera camera_;
+  CameraHandler camera_;
   Cubemap cubemap_;
 
   Interface interface_;

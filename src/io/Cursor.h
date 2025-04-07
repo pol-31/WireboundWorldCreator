@@ -14,14 +14,10 @@ class Cursor {
  public:
   Cursor() = default;
 
-  void SetModeDisabled(GLFWwindow* window);
-  void SetModeEnabled(GLFWwindow* window);
-
-  void SwitchMode(GLFWwindow* window);
+  void SetModeDisabled();
+  void SetModeEnabled();
 
  private:
-  bool enabled_{true};
-
   double disable_mode_last_x_ = 0.0f;
   double disable_mode_last_y_ = 0.0f;
 };

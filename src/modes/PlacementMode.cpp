@@ -26,10 +26,9 @@ void PlacementModeMouseButtonCallback(
       glfwGetWindowUserPointer(window));
   auto placement = dynamic_cast<PlacementMode*>(global_data->cur_mode_);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  global_data->camera_.ProcessMouseKey(button, action, mods);
   if (action == GLFW_PRESS) {
-    if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-      global_data->cursor_.SwitchMode(window);
-    } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
       auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
       if (global_data->menu_.Press(pressed_id)) {
         return;

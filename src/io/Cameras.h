@@ -1,61 +1,67 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_IO_CAMERAS_H_
 #define WIREBOUNDWORLDCREATOR_SRC_IO_CAMERAS_H_
 
+#include <array>
+#include <memory>
+
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-// edit / game mode (menu not included)
+#include "Cursor.h"
+
+/// camera move:
+/// left x-
+/// right x+
+/// forward y+
+/// back y-
+
 class ICamera {
  public:
-  //TODO: ubo shared between two cameras, so should be created externaly
-  ICamera(GLuint camera_ubo_id_,
-             const float& player_speed /*for editor player-stub*/)
-      : speed_(player_speed) {
-    UpdateCameraVectors();
-    UpdateViewMatrix();
-    UpdateProjectionMatrix();
-  }
-
-
-  /// camera move:
-  /// left x-
-  /// right x+
-  /// forward y+
-  /// back y-
+  /*player/map speed*/
+  ICamera(GLuint ubo);
 
   //position
-  void SetMoveForward(float magnitude = 1.0f) {
-    move_vector_.y = magnitude;
-  }
-  void SetMoveBackward(float magnitude = 1.0f) {
-    move_vector_.y = -magnitude;
-  }
-  void SetMoveLeft(float magnitude = 1.0f) {
-    move_vector_.x = -magnitude;
-  }
-  void SetMoveRight(float magnitude = 1.0f) {
-    move_vector_.x = magnitude;
-  }
+  void SetMoveForward(float magnitude);
+  void SetMoveBackward(float magnitude);
+  void SetMoveLeft(float magnitude);
+  void SetMoveRight(float magnitude);
 
   //direction TODO: time-based?
-  void SetRotateOnYaw(float angle, float seconds) {
-    //
-  }
-  void SetRotateOnPitch(float angle, float seconds) {
-    //
-  }
+  void SetRotateOnYaw(float angle, float delay);
+
+/*  void Update(float deltaTime) {
+    // Compute the movement force
+    glm::vec3 displacement = target_position_ - position_;
+
+    // Apply damping (spring-like effect)
+    velocity_ += displacement * damping_factor_ * deltaTime;
+    velocity_ *= 1.0f - (damping_factor_ * deltaTime);  // Damping
+
+    // Integrate velocity to update position
+    position_ += velocity_ * deltaTime;
+  }*/
+
+  void SetRotateOnPitch(float angle, float delay);
   //TODO; but... is it bind to player character... I mean camera always
   // should lag behind the player and then recover after player stop...
   // Need to think more about it....
 
   //combinated
   void SmoothRotation(glm::vec3 target_pos, float yaw, float pitch,
-                      float seconds) {
-    //
-  }
+                      float seconds);
 
-  /// camera lookup
+  // We can implement them, but it doesn't mean we have to use it:
+  // mouse key      | never
+  // key            | + sometimes
+  // scroll         | + sometimes
+  // mouse movement | +
+
+  /// camera interaction (not as glfw callbacks, because camera is only
+  /// a part of the user interaction)
   virtual void ProcessMouseMovement(float xoffset, float yoffset) = 0;
+  virtual void ProcessMouseKey(int button, int action, int mods) = 0;
+  virtual void ProcessMouseScroll(float yoffset) = 0;
+  virtual void ProcessKey(int key, int scancode, int action, int mods) = 0;
 
 
   //To smoothly rotate related to object we need set yaw and set the position,
@@ -72,46 +78,20 @@ class ICamera {
     position_ = position;
   }
 
-  void Update() {
-    MoveOnX();
-    MoveOnZ();
-    UpdateViewMatrix();
-  }
+  void UpdateFrame();
 
-  void UpdateViewMatrix() const {
-    glm::mat4 view_mat = glm::lookAt(position_, position_ + direction_front_,
-                                     direction_up_);
-    utility::UpdateUbo(ubo_, 0, 64, glm::value_ptr(view_mat));
-  }
+  void UpdateConfig();
+
+  void UpdateViewMatrix() const;
 
   //TODO: should be called from WindowSizeCallback
-  void UpdateProjectionMatrix() const {
-    glm::mat4 proj_mat = glm::perspective(
-        glm::radians(45.0f), static_cast<float>(details::kWindowWidth)
-                                 / static_cast<float>(details::kWindowHeight),
-        0.01f, 1000.0f);
-    utility::UpdateUbo(ubo_, 64, 64, glm::value_ptr(proj_mat));
-  }
+  void UpdateProjectionMatrix() const;
+
+  void UpdateCameraVectors();
 
  protected:
-  void UpdateCameraVectors() {
-    glm::vec3 front;
-    front.x = glm::cos(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
-    front.y = glm::sin(glm::radians(pitch_));
-    front.z = glm::sin(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
-    direction_front_ = glm::normalize(front);
-    direction_right_ = glm::normalize(
-        glm::cross(direction_front_, direction_world_up_));
-    direction_up_ = glm::normalize(
-        glm::cross(direction_right_, direction_front_));
-  }
-
-  void MoveOnX() {
-    position_ += direction_right_ * speed_ * gDeltaTime * move_vector_.x;
-  }
-  void MoveOnZ() {
-    position_ += direction_front_ * speed_ * gDeltaTime * move_vector_.y;
-  }
+  void MoveOnX();
+  void MoveOnZ();
 
   glm::vec3 position_;
   glm::vec3 direction_front_;
@@ -124,84 +104,140 @@ class ICamera {
   //we don't need roll
 
   glm::vec2 move_vector_;
-  GLuint ubo_{0};
 
-  const float& speed_;
+  float speed_;
+  GLuint ubo_{0};
+//  const float& speed_;
+};
+
+class InspectCamera final : public ICamera {
+ public:
+  using ICamera::ICamera;
+  void ProcessMouseMovement(float xoffset, float yoffset) override;
+
+  void ProcessMouseKey(int button, int action, int mods) override {}
+  void ProcessMouseScroll(float yoffset) override {}
+  void ProcessKey(int key, int scancode, int action, int mods) override {}
+
+ private:
+  float sensitivity_{0.2f};
 };
 
 class GameCamera final : public ICamera {
  public:
-  void ProcessMouseMovement(float xoffset, float yoffset) override {
-    /* highlight the area under the cursor - done with some unknown magic */
+  using ICamera::ICamera;
+  void ProcessMouseMovement(float xoffset, float yoffset) override;
 
-    yaw_ += xoffset * sensitivity_;
-    pitch_ += yoffset * sensitivity_;
-
-    /// constrained pitch
-    pitch_ = std::clamp(pitch_, -89.0f, 89.0f);
-    UpdateCameraVectors();
-  }
+  void ProcessMouseKey(int button, int action, int mods) override {}
+  void ProcessMouseScroll(float yoffset) override {}
+  void ProcessKey(int key, int scancode, int action, int mods) override {}
 
  private:
   float rotation_speed_;
+  float sensitivity_{0.2f};
 };
 
-class EditorCamera final : public ICamera {
+class MapCamera final : public ICamera {
  public:
-/*  EditorCamera(
-      GLuint camera_ubo_id_,
-      const float& player_speed)
-      : CameraBase(camera_ubo_id_, player_speed) {}*/
-  void ProcessMouseMovement(float xoffset, float yoffset) override {
-    yaw_ += xoffset * sensitivity_;
-    pitch_ += yoffset * sensitivity_;
+  MapCamera(GLuint ubo);
+  //TODO: instead of mode "tile" we have a map (press 'm')
+  void ProcessMouseMovement(float xoffset, float yoffset) override;
 
-    /// constrained pitch
-    pitch_ = std::clamp(pitch_, -89.0f, 89.0f);
-    UpdateCameraVectors();
-  }
-
- private:
-  float sensitivity_;
+  void ProcessMouseKey(int button, int action, int mods) override {}
+  void ProcessMouseScroll(float yoffset) override {}
+  void ProcessKey(int key, int scancode, int action, int mods) override {}
 };
 
-class MenuCamera {};
-
+//TODO: add all other ICameraBase interface methods
+// is it aggregate?
 class CameraHandler {
  public:
   // just create in-place
-  void CameraHandler(); // idk, but we should create all cameras here
+  CameraHandler();
 
-  //by pressing 'v' (like view...)
-  void NextCamera() {
-    if (++cur_id_ == gCamerasNum) {
-      cur_id_ = 0;
-    }
-  }
+  ~CameraHandler();
 
-  void ProcessMovement(float xoffset, float yoffset) {
-    cameras_[cur_id_]->ProcessMovement(xoffset, yoffset);
-  }
-  void ProcessKeyInput() {
-    cameras_[cur_id_]->ProcessKeyInput();
-  }
+  void ToggleCursor();
+
+  void Update();
+
+  void ProcessMouseMovement(float xoffset, float yoffset);
+
+  void ProcessMouseKey(int button, int action, int mods);
+
+  void ProcessMouseScroll(float yoffset);
+
+  void ProcessKey(int key, int scancode, int action, int mods);
 
   //TODO: need also to handle other camera effects... like rotation for GameCamera
   // maybe this..:
-  ICamera* GetCurCamera() {
-    return cameras_[cur_id_];
+  ICamera* GetCurCamera();
+
+  void SetInspectCamera();
+
+  void SetGameCamera();
+
+  void SetMapCamera();
+
+  // ICamera wrap
+
+  void SetMoveForward(float magnitude = 1.0f) {
+    cameras_[cur_id_]->SetMoveForward(magnitude);
   }
 
-  static constexpr int gCamerasNum{2};
-  // ProcessCamera()
- // but how to switch needed camera: CameraHandler creates all needed cameras
- // and switch between them.
+  void SetMoveBackward(float magnitude = 1.0f) {
+    cameras_[cur_id_]->SetMoveBackward(magnitude);
+  }
 
-  //input: mouse
+  void SetMoveLeft(float magnitude = 1.0f) {
+    cameras_[cur_id_]->SetMoveLeft(magnitude);
+  }
+
+  void SetMoveRight(float magnitude = 1.0f) {
+    cameras_[cur_id_]->SetMoveRight(magnitude);
+  }
+
+  void SetRotateOnYaw(float angle, float delay) {
+    cameras_[cur_id_]->SetRotateOnYaw(angle, delay);
+  }
+
+  void SetRotateOnPitch(float angle, float delay) {
+    cameras_[cur_id_]->SetRotateOnPitch(angle, delay);
+  }
+
+  void SmoothRotation(glm::vec3 target_pos, float yaw, float pitch,
+                      float seconds) {
+    cameras_[cur_id_]->SmoothRotation(target_pos, yaw, pitch, seconds);
+  }
+
+  void SetYaw(float yaw) {
+    cameras_[cur_id_]->SetYaw(yaw);
+  }
+
+  void SetPitch(float pitch) {
+    cameras_[cur_id_]->SetPitch(pitch);
+  }
+
+  void SetPosition(glm::vec3 position) {
+    cameras_[cur_id_]->SetPosition(position);
+  }
+
+  static constexpr int gCamerasNum{3};
 
  private:
+  void InitUbo();
+
+  void DeInitUbo();
+
+  void SetCamera(int id);
+
   int cur_id_{0};
-  std::array<ICamera*, gCamerasNum> cameras_;
+  GLuint ubo_{0};
+
+  std::array<std::unique_ptr<ICamera>, gCamerasNum> cameras_;
+  Cursor cursor_;
+
+  bool do_show_cursor_{true};
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_IO_CAMERAS_H_

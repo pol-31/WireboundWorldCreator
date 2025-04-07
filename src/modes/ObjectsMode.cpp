@@ -22,10 +22,9 @@ void ObjectsModeMouseButtonCallback(
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  global_data->camera_.ProcessMouseKey(button, action, mods);
   if (action == GLFW_PRESS) {
-    if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-      global_data->cursor_.SwitchMode(window);
-    } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
       auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
       if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
         global_data->menu_.Press(pressed_id);

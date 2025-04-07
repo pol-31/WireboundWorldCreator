@@ -5,8 +5,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "Camera.h"
-
 /// we made this variable global, because to GLFW internally uses functions
 /// related to some global state/object, therefore callback functions or those,
 /// based on obtaining window cursor position or switching mode among

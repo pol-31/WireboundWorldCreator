@@ -14,7 +14,7 @@
 #include "Visibility.h"
 #include "../common/Paths.h"
 #include "../io/Window.h"
-#include "../io/Camera.h"
+#include "../io/Cameras.h"
 #include "../io/Cursor.h"
 #include "../common/GlobalGlfwCallbackData.h"
 #include "../common/PickingFramebuffer.h"
@@ -24,7 +24,7 @@
 
 class Interface {
  public:
-  Interface(const Paths& paths, Camera& camera, Cursor& cursor, Map& map);
+  Interface(const Paths& paths, CameraHandler& camera, Map& map);
 
   void Render();
 

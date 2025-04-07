@@ -161,13 +161,13 @@ struct Tile {
    * */
 
   // At one time we can draw (assume
-  std::array<Lod, >;
+/*  std::array<Lod, >;*/
 
   // grass blades have pos related to player, not global, so to draw,
   // we can use another transform matrix, that is related to player
 };
 
-class SubTile {
+/*class SubTile {
  public:
   void GetPosition() {
     return nothing;
@@ -175,6 +175,6 @@ class SubTile {
  private:
   // we don;t need idx, cuz they are equal to Tile::sub_tiles_ indices
   // as well as their positions
-};
+};*/
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_TILE_H_

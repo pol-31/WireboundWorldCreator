@@ -25,17 +25,14 @@
 // 1. cursor now related to camera mode
 // 2. camera_ubo_initializer_
 WireboundWorldCreator::WireboundWorldCreator(const Paths& paths, Map& map)
-    : cursor_(),
+    : //player_(),
       camera_(),
-      interface_(paths, camera_, cursor_, map) {
-  utility::InitUbo(ubo_, 128, GL_DYNAMIC_DRAW, shader::kUboCameraBind); // TODO: not here
-  glDeleteBuffers(1, &ubo_);
-  std::terminate();
+      interface_(paths, camera_, map) {
   Init(paths);
 }
 
 void WireboundWorldCreator::RunRenderLoop() {
-  camera_.UpdateProjectionMatrix();
+//  camera_.UpdateProjectionMatrix();
   while (!glfwWindowShouldClose(gWindow)) {
     // here, because framebuffers change it to black, so need to restore
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);

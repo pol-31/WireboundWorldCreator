@@ -4,14 +4,13 @@
 #include "../common/UiDebugger.h"
 #endif // NDEBUG
 
-Interface::Interface(const Paths& paths, Camera& camera,
-                     Cursor& cursor, Map& map)
+Interface::Interface(const Paths& paths, CameraHandler& camera, Map& map)
     : tile_renderer_(paths, visibility_, map),
       text_renderer_(paths),
       picking_fbo_(),
       shared_resources_(paths, tile_renderer_.GetTile(), tile_renderer_, global_data_),
-      global_data_(camera, cursor, tile_renderer_,
-                       cur_mode_, menu_, picking_fbo_, ui_debugger_),
+      global_data_(camera, tile_renderer_,
+                   cur_mode_, menu_, picking_fbo_, ui_debugger_),
       ui_debugger_(paths, shared_resources_.vbo_ui_,
                    shared_resources_.vbo_ui_transform_,
                    global_data_.cursor_pos_tex_norm_),
