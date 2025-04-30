@@ -35,7 +35,7 @@ struct Paths {
   std::string shader_sprite_dynamic_vert;
   std::string shader_sprite_frag;
   std::string shader_sprite_picking_frag;
-  std::string shader_sprite_alpha_frag;
+  std::string shader_sprite_progress_vert;
   std::string shader_text_vert;
   std::string shader_text_frag;
   std::string shader_points_polygon_vert;
@@ -118,7 +118,8 @@ struct Paths {
         {"shader_sprite_dynamic_vert", &shader_sprite_dynamic_vert},
         {"shader_sprite_frag", &shader_sprite_frag},
         {"shader_sprite_picking_frag", &shader_sprite_picking_frag},
-        {"shader_sprite_alpha_frag", &shader_sprite_alpha_frag},
+
+        {"shader_sprite_progress_vert", &shader_sprite_progress_vert},
 
         {"shader_text_vert", &shader_text_vert},
         {"shader_text_frag", &shader_text_frag},

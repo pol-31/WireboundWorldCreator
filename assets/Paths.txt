@@ -4,7 +4,7 @@
 * what field names are allowed, see at src/PathsParses.h
 * lines without "equal" sign are ignored
 
-texture_ui=../assets/ui.png
+texture_ui=../assets/ui2.png
 texture_text=../assets/Text.png
 
 shader_sprite_static_vert=../shaders/Sprite.vert
@@ -12,7 +12,7 @@ shader_sprite_static_vert_debug=../shaders/SpriteDebug.vert
 shader_sprite_dynamic_vert=../shaders/SpriteTransform.vert
 shader_sprite_frag=../shaders/Sprite.frag
 shader_sprite_picking_frag=../shaders/SpritePicking.frag
-shader_sprite_alpha_frag=../shaders/SpriteAlpha.frag
+shader_sprite_progress_vert=../shaders/SpriteProgress.vert
 
 shader_text_vert=../shaders/Text.vert
 shader_text_frag=../shaders/Text.frag
@@ -66,12 +66,19 @@ placement_density_very_high=../assets/poisson/20000.png
 placement_density_ultra_high=../assets/poisson/40000.png
 placement_density_extreme=../assets/poisson/80000.png
 
-texture_skybox1_left=../assets/skybox/sky_left.jpg
-texture_skybox1_right=../assets/skybox/sky_right.jpg
-texture_skybox1_top=../assets/skybox/sky_top.jpg
-texture_skybox1_bottom=../assets/skybox/sky_bottom.jpg
-texture_skybox1_front=../assets/skybox/sky_front.jpg
-texture_skybox1_back=../assets/skybox/sky_back.jpg
+texture_skybox0_left=../assets/skybox/sky_left.jpg
+texture_skybox0_right=../assets/skybox/sky_right.jpg
+texture_skybox0_top=../assets/skybox/sky_top.jpg
+texture_skybox0_bottom=../assets/skybox/sky_bottom.jpg
+texture_skybox0_front=../assets/skybox/sky_front.jpg
+texture_skybox0_back=../assets/skybox/sky_back.jpg
+
+texture_skybox1_left=../assets/skybox/field_negx.jpg
+texture_skybox1_right=../assets/skybox/field_posx.jpg
+texture_skybox1_top=../assets/skybox/field_posy.jpg
+texture_skybox1_bottom=../assets/skybox/field_negy.jpg
+texture_skybox1_front=../assets/skybox/field_posz.jpg
+texture_skybox1_back=../assets/skybox/field_negz.jpg
 
 texture_skybox2_left=../assets/skybox/hills_left_.tga
 texture_skybox2_right=../assets/skybox/hills_right.tga

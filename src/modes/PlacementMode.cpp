@@ -112,19 +112,13 @@ PlacementMode::PlacementMode(SharedResources& shared_resources,
                              vbos::VboIdText::kPlaceUndergrowth),
       slider_color_(
           UiStaticSprite{vbos::VboIdMain::kPlacementSliderColorFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderColorSlow, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderColorModerate, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderColorFast, vbos::VboIdText::kNone}),
+          UiStaticSprite{vbos::VboIdMain::kPlacementSliderColorSlow, vbos::VboIdText::kNone}),
       slider_size_(
           UiStaticSprite{vbos::VboIdMain::kPlacementSliderSizeFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderSizeSlow, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderSizeModerate, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderSizeFast, vbos::VboIdText::kNone}),
+          UiStaticSprite{vbos::VboIdMain::kPlacementSliderSizeSlow, vbos::VboIdText::kNone}),
       slider_falloff_(
           UiStaticSprite{vbos::VboIdMain::kPlacementSliderFalloffFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderFalloffSlow, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderFalloffModerate, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderFalloffFast, vbos::VboIdText::kNone}),
+          UiStaticSprite{vbos::VboIdMain::kPlacementSliderFalloffSlow, vbos::VboIdText::kNone}),
       shader_draw_(paths.shader_placement_draw_comp),
       last_modified_placement_(
           shared_resources_.tile_.map_placement_trees.GetId()),
@@ -198,8 +192,6 @@ void PlacementMode::Render() {
   btn_place_bushes_.Render();
   btn_place_tall_grass_.Render();
   btn_place_undergrowth_.Render();
-
-  shared_resources_.static_sprite_alpha_shader_.Bind();
 
   slider_color_.Render(
       shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);

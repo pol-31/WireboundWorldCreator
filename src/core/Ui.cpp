@@ -133,113 +133,84 @@ void UiStaticSprite::RenderPicking() const {
   glDrawArrays(GL_TRIANGLE_STRIP, ui_data_.vbo_offset, 4);
 }
 
-UiSliderBase::UiSliderBase(UiStaticSprite&& fill_sprite, float scale)
-    : fill_sprite_(fill_sprite),
-      length_(fill_sprite_.GetTopBorder() - fill_sprite_.GetBottomBorder()),
-      centre_((fill_sprite_.GetTopBorder()
-               + fill_sprite_.GetBottomBorder()) / 2.0f),
+UiSlider::UiSlider(
+    UiStaticSprite&& fill_icon_sprite,
+    UiStaticSprite&& background_sprite,
+    float scale)
+    : background_sprite_(background_sprite),
+      fill_icon_sprite_(fill_icon_sprite),
+      length_(fill_icon_sprite_.GetTopBorder()
+              - fill_icon_sprite_.GetBottomBorder()),
+      centre_((fill_icon_sprite_.GetTopBorder()
+               + fill_icon_sprite_.GetBottomBorder()) / 2.0f),
       scale_(scale) {
   auto transform =
-      debug::gUiTransforms[4 * (fill_sprite_.ui_data_.id - static_cast<int>(vbos::VboIdMain::kModeTerrain))];
+      debug::gUiTransforms[
+          4 * (fill_icon_sprite_.ui_data_.id
+               - static_cast<int>(vbos::VboIdMain::kModeTerrain))
+  ];
   UpdateTransform(transform.x_translate, transform.y_translate,
                   transform.scale);
+  fill_icon_sprite_.ui_data_.children_num = 1;
+  fill_icon_sprite_.ui_data_.ui = static_cast<UiTransformDbg*>(this);
+  vbos::UiData ui_data = fill_icon_sprite_.ui_data_;
+  gUiComponents[ui_data.id - details::kIdOffsetUi] = ui_data;
 }
 
-void UiSliderBase::RenderPicking() {
-  fill_sprite_.RenderPicking();
+void UiSlider::RenderPicking() {
+  fill_icon_sprite_.RenderPicking();
 }
 
-size_t UiSliderBase::Hover(std::uint32_t id) const {
+size_t UiSlider::Hover(std::uint32_t id) const {
   //TODO: set higher brightness?
-  return fill_sprite_.Hover();
+  return fill_icon_sprite_.Hover();
 }
 
-void UiSliderBase::Set(float related_pos) {
+void UiSlider::Set(float related_pos) {
   float half_length_ = length_ / 2.0f;
   float offset = glm::clamp(related_pos - centre_,
                             -half_length_, +half_length_);
   progress_ = (offset + half_length_) / length_;
-//  std::cout << progress_ << ' ' << length_ << ' ' << centre_ << std::endl;
-  std::cout << (1.0f - progress_) << " and scaled "
-            << ((1.0f - progress_) * scale_) << std::endl;
+  //  std::cout << progress_ << ' ' << length_ << ' ' << centre_ << std::endl;
+//  std::cout << (1.0f - progress_) << " and scaled "
+//            << ((1.0f - progress_) * scale_) << std::endl;
 }
 
-void UiSliderBase::UnHover() {
+void UiSlider::UnHover() {
   //TODO: set lower brightness?
 }
 
-float UiSliderBase::GetProgress() const {
+float UiSlider::GetProgress() const {
   //TODO: make some *magic* with sprite and "return progress_;"
   return (1.0f - progress_) * scale_;
 }
 
-void UiSliderBase::UpdateTransform(
+void UiSlider::UpdateTransform(
     float x_translate, float y_translate, float scale) {
   length_ = scale *
-            (fill_sprite_.GetTopBorder() - fill_sprite_.GetBottomBorder());
+            (fill_icon_sprite_.GetTopBorder()
+             - fill_icon_sprite_.GetBottomBorder());
   centre_ = y_translate;
 }
 
-UiSlider::UiSlider(
-    UiStaticSprite&& fill_sprite, UiStaticSprite&& wheel_slow,
-    UiStaticSprite&& wheel_moderate, UiStaticSprite&& wheel_fast,
-    float scale)
-    : UiSliderBase(std::move(fill_sprite), scale),
-      wheel_slow_(wheel_slow),
-      wheel_moderate_(wheel_moderate),
-      wheel_fast_(wheel_fast) {
-  fill_sprite_.ui_data_.children_num = 3;
-  fill_sprite_.ui_data_.ui = static_cast<UiTransformDbg*>(this);
-  vbos::UiData ui_data = fill_sprite_.ui_data_;
-  gUiComponents[ui_data.id - details::kIdOffsetUi] = ui_data;
-}
-
 void UiSlider::Render(float related_pos) {
-  // in case of 1.0f we have "black" instead of transparent
-  glUniform1f(4, 0.99f);
-  if (pressed_) {
-    float prev_progress = progress_;
-    Set(related_pos);
-    float diff = glm::abs(prev_progress - progress_);
-    //        wheel_sprite_.SetVboOffset(details::kWheelCalm);
-    if (diff == 0.0f) {
-      wheel_slow_.Render();
-    } else if (diff < 0.01f) {
-      wheel_moderate_.Render();
-    } else {
-      wheel_fast_.Render();
-    }
-    //    std::cout << progress_ << "with prev" << prev_progress << std::endl;
-  } else {
-    wheel_slow_.Render();
-  }
-  // layout (location = 4) uniform float progress;
-  glUniform1f(4, progress_);
-  fill_sprite_.Render();
-  UnHover();
-}
-
-UiSliderInternal::UiSliderInternal(
-    UiStaticSprite&& fill_sprite, UiStaticSprite&& wheel_sprite,
-    float scale)
-    : UiSliderBase(std::move(fill_sprite), scale),
-      wheel_(wheel_sprite) {
-  fill_sprite_.ui_data_.children_num = 1;
-  fill_sprite_.ui_data_.ui = static_cast<UiTransformDbg*>(this);
-  vbos::UiData ui_data = fill_sprite_.ui_data_;
-  gUiComponents[ui_data.id - details::kIdOffsetUi] = ui_data;
-}
-
-void UiSliderInternal::Render(float related_pos) {
-  // in case of 1.0f we have "black" instead of transparent
-  glUniform1f(4, 0.99f);
   if (pressed_) {
     Set(related_pos);
   }
-  wheel_.Render();
-  // layout (location = 4) uniform float progress;
-  glUniform1f(4, progress_);
-  fill_sprite_.Render();
+  background_sprite_.Render();
+
+  //TODO: move up to *Mode (1 state change?)
+  glEnable(GL_SCISSOR_TEST);
+  // ---- ---- ----
+  // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
+  float y_ndc = centre_ - length_ / 2;
+  int y_px = int((y_ndc + 1.0f) * 0.5f * details::kWindowHeight);
+  int height_px = int(progress_ * length_ * 0.5f * details::kWindowHeight);
+  glScissor(0, y_px, 4000, height_px);
+  // ---- ---- ----
+  fill_icon_sprite_.Render();
+  glDisable(GL_SCISSOR_TEST);
+
   UnHover();
 }
 

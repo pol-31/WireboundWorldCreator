@@ -46,7 +46,7 @@ class SharedResources {
   Shader static_sprite_picking_shader_;
   Shader dynamic_sprite_shader_;
   Shader dynamic_sprite_picking_shader_;
-  Shader static_sprite_alpha_shader_;
+  Shader static_sprite_progress_shader_;
 
   Shader menu_icon_shader_;
 

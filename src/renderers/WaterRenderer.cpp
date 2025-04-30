@@ -21,15 +21,20 @@ WaterRenderer::WaterRenderer(Tile& tile, const Paths& paths)
 void WaterRenderer::UpdateOcean(OceanTraits traits) {
 //  ocean_ = std::make_unique<Ocean>(paths_, environment_, traits);
 //
+  std::cout << "Update Ocean" << std::endl;
   ocean_ = std::make_unique<Ocean>(
       paths_,
       environment_,
+      traits);
+  /*ocean_ = std::make_unique<Ocean>(
+      paths_,
+      environment_,
       OceanTraits{
-          OceanLayerTraits{10000.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f},
-          OceanLayerTraits{1000.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f},
-          OceanLayerTraits{100.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f}});
+          OceanLayerTraits{100.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f},
+          OceanLayerTraits{20.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f},
+          OceanLayerTraits{10.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f}
+      });*/
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  
 }
 
 void WaterRenderer::Render() {
@@ -91,13 +96,7 @@ glm::vec3 WaterRenderer::GetYPosition(int vertex_id) const {
 }
 
 void WaterRenderer::Init() {
-  ocean_ = std::make_unique<Ocean>(
-      paths_,
-      environment_,
-      OceanTraits{
-          OceanLayerTraits{10000.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f},
-          OceanLayerTraits{1000.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f},
-          OceanLayerTraits{100.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f}});
+  UpdateOcean({}); // TODO: no data by default (anyway we don't use it)
   glGenVertexArrays(1, &vao_);
   glBindVertexArray(vao_);
 

@@ -31,7 +31,7 @@ out TES_OUT {
     vec2 tc;
 } tes_out;
 
-float scale_factor = 100.0f;
+float scale_factor = 70.0f;
 
 void main(void) {
     vec2 tc1 = mix(tes_in[0].tc, tes_in[1].tc, gl_TessCoord.x);
@@ -42,7 +42,7 @@ void main(void) {
     vec4 p = mix(p2, p1, gl_TessCoord.y);
     p.rgb += (texture(tex_displacement_near, scale_factor * tc / scale_near).rgb
     + texture(tex_displacement_mid, scale_factor * tc / scale_mid).rgb
-    + texture(tex_displacement_far, scale_factor * tc / scale_far).rgb) * dmap_depth;
+    + texture(tex_displacement_far, scale_factor * tc / scale_far).rgb) * dmap_depth * scale_factor;
     p.g += 4.0f;
 
     gl_Position = camera.proj * camera.view * transform * p; //TODO: what about tesc?

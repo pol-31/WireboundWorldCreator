@@ -230,8 +230,6 @@ void WaterMode::Render() {
     RenderPoints();
   }
 
-  shared_resources_.static_sprite_alpha_shader_.Bind();
-
   ocean_layer_config_1_.Render(
       shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);
   ocean_layer_config_2_.Render(
@@ -435,6 +433,10 @@ void WaterMode::BindCallbacks() {
   glfwSetMouseButtonCallback(gWindow, WaterModeMouseButtonCallback);
   //  glfwSetKeyCallback(gWindow, TerrainModeKeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
+
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
+      glfwGetWindowUserPointer(gWindow));
+  global_data->camera_.SetInspectCamera();
 }
 
 std::vector<Point> WaterMode::GenControlPoints() {

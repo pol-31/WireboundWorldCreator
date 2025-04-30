@@ -158,10 +158,13 @@ class UiStaticSprite {
   }
 };
 
-// if hor slider - use direct text coords, otherwise "rotate"
-class UiSliderBase : public UiTransformDbg {
+class UiSlider final : public UiTransformDbg {
  public:
-  UiSliderBase(UiStaticSprite&& fill_sprite, float scale = 1.0f);
+  UiSlider(UiStaticSprite&& fill_icon_sprite,
+           UiStaticSprite&& background_sprite,
+           float scale = 1.0f);
+
+  void Render(float related_pos);
 
   void RenderPicking();
 
@@ -179,54 +182,27 @@ class UiSliderBase : public UiTransformDbg {
   /// We don't render UiSlider id, but
   /// for comparison (e.g. in key callback) we directly slider.GetId()
   [[nodiscard]] std::uint32_t GetTrackId() const {
-    return fill_sprite_.GetId();
+    return fill_icon_sprite_.GetId();
   }
 
   [[nodiscard]] float GetProgress() const;
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
+  void UpdateTransform(float x_translate, float y_translate, float scale);
 
-//  virtual void Render(float related_pos) = 0;
-
- protected:
+ private:
   // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
   void Set(float related_pos);
 
   void UnHover();
 
-  UiStaticSprite fill_sprite_; // alpha-based animation
+  UiStaticSprite background_sprite_;
+  UiStaticSprite fill_icon_sprite_;
+
   float progress_{0.0f};
   bool pressed_{false};
   float centre_;
   float length_;
   float scale_{1.0f};
-};
-
-class UiSlider final : public UiSliderBase {
- public:
-  UiSlider(UiStaticSprite&& fill_sprite, UiStaticSprite&& wheel_slow,
-           UiStaticSprite&& wheel_moderate, UiStaticSprite&& wheel_fast,
-           float scale = 1.0f);
-
-  void Render(float related_pos);
-
- private:
-  UiStaticSprite wheel_slow_;
-  UiStaticSprite wheel_moderate_;
-  UiStaticSprite wheel_fast_;
-};
-
-class UiSliderInternal final : public UiSliderBase {
- public:
-  UiSliderInternal(UiStaticSprite&& fill_sprite,
-                   UiStaticSprite&& wheel_sprite,
-                   float scale = 1.0f);
-
-  void Render(float related_pos);
-
- private:
-  UiStaticSprite wheel_;
 };
 
 class UiOceanCascadeConfig {
@@ -261,13 +237,13 @@ class UiOceanCascadeConfig {
  private:
   bool modified_{false};
 
-  UiSliderInternal scale_;
-  UiSliderInternal fetch_;
-  UiSliderInternal spread_blend_;
-  UiSliderInternal swell_;
-  UiSliderInternal peak_enhancement_;
-  UiSliderInternal short_waves_fade_;
-  UiSliderInternal lambda_;
+  UiSlider scale_;
+  UiSlider fetch_;
+  UiSlider spread_blend_;
+  UiSlider swell_;
+  UiSlider peak_enhancement_;
+  UiSlider short_waves_fade_;
+  UiSlider lambda_;
 };
 
 /// position lerp based on time

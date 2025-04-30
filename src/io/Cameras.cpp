@@ -131,11 +131,13 @@ MapCamera::MapCamera(GLuint ubo)
 #include <iostream>
 
 void MapCamera::ProcessMouseMovement(float xoffset, float yoffset) {
-  position_.x += xoffset * speed_ / 10.0f;
-  position_.z += yoffset * speed_ / 10.0f;
+  std::cout << xoffset << " and " << yoffset << std::endl;
+  position_.x += yoffset * speed_ / 10.0f;
+  position_.z += xoffset * speed_ / 10.0f;
   position_.x = std::clamp(position_.x, -4.0f, 4.0f);
   position_.z = std::clamp(position_.z, -4.0f, 4.0f);
-  std::cout << position_.x << ' ' << position_.y << ' ' << position_.z << std::endl;
+  std::cout << "position: " << position_.x << ' '
+            << position_.y << ' ' << position_.z << std::endl;
   UpdateCameraVectors();
 }
 
@@ -156,9 +158,9 @@ CameraHandler::~CameraHandler() {
 
 void CameraHandler::ToggleCursor() {
   if (do_show_cursor_) {
-    cursor_.SetModeDisabled();
-  } else {
     cursor_.SetModeEnabled();
+  } else {
+    cursor_.SetModeDisabled();
   }
   do_show_cursor_ = !do_show_cursor_;
 }

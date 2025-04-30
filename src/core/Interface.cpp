@@ -76,8 +76,8 @@ void Interface::Render() {
 }
 
 void Interface::Init() {
+  glfwSetWindowUserPointer(gWindow, reinterpret_cast<void*>(&global_data_));
   cur_mode_ = &terrain_;
   cur_mode_->BindCallbacks();
-  glfwSetWindowUserPointer(gWindow, reinterpret_cast<void*>(&global_data_));
   ui_debugger_.UpdateForce();
 }

@@ -87,3 +87,21 @@ we don't need just modify the height, but see its possible water result
 
 
 
+---- upd 4/30/2025
+all ui interface depends on CUR_subCULTURE - different embroidery, dishes color different types at diff
+location, can be chosen if completed certain locations).
+NOT drone, but eagle with similar control? + different loading sprites (def spritesheets) мужик точить косу
+чи жінка вишиває рушник
+
+config, question mark, znak oklyku, size, smooth
+around circle is the same, but each config slider has its own icon, so we draw 3 times
+- circle, icon, bright icon
+
+desk for _Tab menu
+
+
+TODO (now): save & load ocean presets (uiSlots - ico + number AND scroll)
+TODO: 
+  glClearTexImage(init_spectrum_tex_.GetId(), 0, GL_RGBA, GL_FLOAT, black4);
+
+

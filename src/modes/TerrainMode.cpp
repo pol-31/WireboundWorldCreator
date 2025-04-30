@@ -87,14 +87,10 @@ TerrainMode::TerrainMode(SharedResources& shared_resources)
       btn_smooth_(vbos::VboIdMain::kTerrainSmooth, vbos::VboIdText::kNone),
       slider_size_(
           UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeSlow, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeModerate, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeFast, vbos::VboIdText::kNone}),
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeSlow, vbos::VboIdText::kNone}),
       slider_falloff_(
           UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffSlow, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffModerate, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffFast, vbos::VboIdText::kNone}) {}
+          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffSlow, vbos::VboIdText::kNone}) {}
 
 void TerrainMode::Bake() {
   std::cout << "baked" << std::endl;
@@ -111,9 +107,9 @@ void TerrainMode::BindCallbacks() {
   glfwSetMouseButtonCallback(gWindow, TerrainModeMouseButtonCallback);
 //  glfwSetKeyCallback(gWindow, TerrainModeKeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
-//  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-//      glfwGetWindowUserPointer(gWindow));
-//  global_data->camera_.SetInspectCamera();
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
+      glfwGetWindowUserPointer(gWindow));
+  global_data->camera_.SetInspectCamera();
 }
 
 void TerrainMode::Render() {
@@ -128,8 +124,6 @@ void TerrainMode::Render() {
   btn_bake_.Render();
   btn_smooth_.Render();
 
-  shared_resources_.static_sprite_alpha_shader_.Bind();
-
   slider_size_.Render(
       shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);
   slider_falloff_.Render(
@@ -143,6 +137,10 @@ void TerrainMode::Render() {
 //    glUseProgram(0);
 //    need_to_update_uniforms_ = false;
   }
+
+  double last_x_, last_y_;
+  glfwGetCursorPos(gWindow, &last_x_, &last_y_);
+//  std::cout << "LAST: " << last_x_ << ' ' << last_y_ << std::endl;
 }
 
 void TerrainMode::RenderPicking() {

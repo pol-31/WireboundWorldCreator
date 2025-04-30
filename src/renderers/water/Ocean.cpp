@@ -18,9 +18,9 @@ Ocean::Ocean(const Paths& paths, const Environment& environment,
       cascade_near_(size_),
       cascade_mid_(size_),
       cascade_far_(size_),
-      length_scale_near_(1),
-      length_scale_mid_(20),
-      length_scale_far_(100),
+//      length_scale_near_(1),
+//      length_scale_mid_(20),
+//      length_scale_far_(100),
       environment_(environment) {
   Init(traits);
 }
@@ -91,9 +91,9 @@ void Ocean::Init(const OceanTraits& traits) {
                    GL_DYNAMIC_DRAW, shader::kUboOceanSpectrumsBind);
   UpdateSpectrum(traits);
 
-  length_scale_near_ = 1;traits_.near.scale;
-  length_scale_mid_ = 20;traits_.mid.scale;
-  length_scale_far_ = 100;traits_.far.scale;
+  length_scale_near_ = traits_.near.scale;
+  length_scale_mid_ = traits_.mid.scale;
+  length_scale_far_ = traits_.far.scale;
 
 
   float boundary_min = 0.0001f;

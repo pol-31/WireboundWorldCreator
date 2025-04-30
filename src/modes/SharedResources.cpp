@@ -18,8 +18,8 @@ SharedResources::SharedResources(
                              paths.shader_sprite_frag),
       dynamic_sprite_picking_shader_(paths.shader_sprite_dynamic_vert,
                                      paths.shader_sprite_picking_frag),
-      static_sprite_alpha_shader_(paths.shader_sprite_static_vert,
-                                  paths.shader_sprite_alpha_frag),
+      static_sprite_progress_shader_(paths.shader_sprite_progress_vert,
+                                     paths.shader_sprite_frag),
       global_glfw_callback_data_(global_glfw_callback_data),
       tile_renderer_(tile_renderer_),
       tile_(cur_tile) {
@@ -33,7 +33,7 @@ void SharedResources::Init() {
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
-  static_sprite_alpha_shader_.Bind();
+  static_sprite_progress_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
