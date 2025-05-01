@@ -40,9 +40,6 @@ inline constexpr std::array<float, 8> kTexPositionCursor = {
     -1.0f / 64.0f, 1.0f / 64.0f
 };
 
-inline constexpr int kWindowWidth = 1024;
-inline constexpr int kWindowHeight = 1024;
-
 inline constexpr int kPrerenderedFramebufferSize = 1024;
 
 inline constexpr int kBitmapTotalChar = 96; // TODO: static_cast

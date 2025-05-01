@@ -134,36 +134,38 @@ void UiStaticSprite::RenderPicking() const {
 }
 
 UiSlider::UiSlider(
-    UiStaticSprite&& fill_icon_sprite,
-    UiStaticSprite&& background_sprite,
+    UiStaticSprite&& fill_sprite,
+    UiStaticSprite&& back_sprite,
+    UiStaticSprite&& icon_sprite,
     float scale)
-    : background_sprite_(background_sprite),
-      fill_icon_sprite_(fill_icon_sprite),
-      length_(fill_icon_sprite_.GetTopBorder()
-              - fill_icon_sprite_.GetBottomBorder()),
-      centre_((fill_icon_sprite_.GetTopBorder()
-               + fill_icon_sprite_.GetBottomBorder()) / 2.0f),
+    : fill_sprite_(fill_sprite),
+      back_sprite_(back_sprite),
+      icon_sprite_(icon_sprite),
+      length_(fill_sprite_.GetTopBorder()
+              - fill_sprite_.GetBottomBorder()),
+      centre_((fill_sprite_.GetTopBorder()
+               + fill_sprite_.GetBottomBorder()) / 2.0f),
       scale_(scale) {
   auto transform =
       debug::gUiTransforms[
-          4 * (fill_icon_sprite_.ui_data_.id
-               - static_cast<int>(vbos::VboIdMain::kModeTerrain))
+          4 * (fill_sprite_.ui_data_.id
+               - static_cast<int>(vbos::VboIdMain::kMenuTerrain))
   ];
   UpdateTransform(transform.x_translate, transform.y_translate,
                   transform.scale);
-  fill_icon_sprite_.ui_data_.children_num = 1;
-  fill_icon_sprite_.ui_data_.ui = static_cast<UiTransformDbg*>(this);
-  vbos::UiData ui_data = fill_icon_sprite_.ui_data_;
+  fill_sprite_.ui_data_.children_num = 2;
+  fill_sprite_.ui_data_.ui = static_cast<UiTransformDbg*>(this);
+  vbos::UiData ui_data = fill_sprite_.ui_data_;
   gUiComponents[ui_data.id - details::kIdOffsetUi] = ui_data;
 }
 
 void UiSlider::RenderPicking() {
-  fill_icon_sprite_.RenderPicking();
+  fill_sprite_.RenderPicking();
 }
 
 size_t UiSlider::Hover(std::uint32_t id) const {
   //TODO: set higher brightness?
-  return fill_icon_sprite_.Hover();
+  return fill_sprite_.Hover();
 }
 
 void UiSlider::Set(float related_pos) {
@@ -172,8 +174,8 @@ void UiSlider::Set(float related_pos) {
                             -half_length_, +half_length_);
   progress_ = (offset + half_length_) / length_;
   //  std::cout << progress_ << ' ' << length_ << ' ' << centre_ << std::endl;
-//  std::cout << (1.0f - progress_) << " and scaled "
-//            << ((1.0f - progress_) * scale_) << std::endl;
+  std::cout << (1.0f - progress_) << " and scaled "
+            << ((1.0f - progress_) * scale_) << std::endl;
 }
 
 void UiSlider::UnHover() {
@@ -188,8 +190,8 @@ float UiSlider::GetProgress() const {
 void UiSlider::UpdateTransform(
     float x_translate, float y_translate, float scale) {
   length_ = scale *
-            (fill_icon_sprite_.GetTopBorder()
-             - fill_icon_sprite_.GetBottomBorder());
+            (fill_sprite_.GetTopBorder()
+             - fill_sprite_.GetBottomBorder());
   centre_ = y_translate;
 }
 
@@ -197,38 +199,55 @@ void UiSlider::Render(float related_pos) {
   if (pressed_) {
     Set(related_pos);
   }
-  background_sprite_.Render();
+  back_sprite_.Render();
 
   //TODO: move up to *Mode (1 state change?)
   glEnable(GL_SCISSOR_TEST);
   // ---- ---- ----
   // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
   float y_ndc = centre_ - length_ / 2;
-  int y_px = int((y_ndc + 1.0f) * 0.5f * details::kWindowHeight);
-  int height_px = int(progress_ * length_ * 0.5f * details::kWindowHeight);
+  int y_px = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
+  int height_px = int(progress_ * length_ * 0.5f * gWindowHeight);
   glScissor(0, y_px, 4000, height_px);
   // ---- ---- ----
-  fill_icon_sprite_.Render();
+  fill_sprite_.Render();
   glDisable(GL_SCISSOR_TEST);
+
+  //TODO: progress-based
+//  icon_sprite_.Render();
 
   UnHover();
 }
 
 UiOceanCascadeConfig::UiOceanCascadeConfig(
-    UiStaticSprite&& scale_fill, UiStaticSprite&& scale_wheel, float scale_scale,
-    UiStaticSprite&& fetch_fill, UiStaticSprite&& fetch_wheel, float fetch_scale,
-    UiStaticSprite&& spread_blend_fill, UiStaticSprite&& spread_blend_wheel, float spread_blend_scale,
-    UiStaticSprite&& swell_fill, UiStaticSprite&& swell_wheel, float swell_scale,
-    UiStaticSprite&& peaks_fill, UiStaticSprite&& peaks_wheel, float peaks_scale,
-    UiStaticSprite&& fade_fill, UiStaticSprite&& fade_wheel, float fade_scale,
-    UiStaticSprite&& lambda_fill, UiStaticSprite&& lambda_wheel, float lambda_scale)
-    : scale_(std::move(scale_fill), std::move(scale_wheel), scale_scale),
-      fetch_(std::move(fetch_fill), std::move(fetch_wheel), fetch_scale),
-      spread_blend_(std::move(spread_blend_fill), std::move(spread_blend_wheel), spread_blend_scale),
-      swell_(std::move(swell_fill), std::move(swell_wheel), swell_scale),
-      peak_enhancement_(std::move(peaks_fill), std::move(peaks_wheel), peaks_scale),
-      short_waves_fade_(std::move(fade_fill), std::move(fade_wheel), fade_scale),
-      lambda_(std::move(lambda_fill), std::move(lambda_wheel), lambda_scale) {}
+    UiStaticSprite&& scale_fill, UiStaticSprite&& scale_back,
+    UiStaticSprite&& scale_icon, float scale_scale,
+    UiStaticSprite&& fetch_fill, UiStaticSprite&& fetch_back,
+    UiStaticSprite&& fetch_icon, float fetch_scale,
+    UiStaticSprite&& spread_blend_fill, UiStaticSprite&& spread_blend_back,
+    UiStaticSprite&& spread_blend_icon, float spread_blend_scale,
+    UiStaticSprite&& swell_fill, UiStaticSprite&& swell_back,
+    UiStaticSprite&& swell_icon, float swell_scale,
+    UiStaticSprite&& peaks_fill, UiStaticSprite&& peaks_back,
+    UiStaticSprite&& peaks_icon, float peaks_scale,
+    UiStaticSprite&& fade_fill, UiStaticSprite&& fade_back,
+    UiStaticSprite&& fade_icon, float fade_scale,
+    UiStaticSprite&& lambda_fill, UiStaticSprite&& lambda_back,
+    UiStaticSprite&& lambda_icon, float lambda_scale)
+    : scale_(std::move(scale_fill), std::move(scale_back),
+             std::move(scale_icon), scale_scale),
+      fetch_(std::move(fetch_fill), std::move(fetch_back),
+             std::move(fetch_icon), fetch_scale),
+      spread_blend_(std::move(spread_blend_fill), std::move(spread_blend_back),
+                    std::move(spread_blend_icon), spread_blend_scale),
+      swell_(std::move(swell_fill), std::move(swell_back),
+             std::move(swell_icon), swell_scale),
+      peak_enhancement_(std::move(peaks_fill), std::move(peaks_back),
+                        std::move(peaks_icon), peaks_scale),
+      short_waves_fade_(std::move(fade_fill), std::move(fade_back),
+                        std::move(fade_icon), fade_scale),
+      lambda_(std::move(lambda_fill), std::move(lambda_back),
+              std::move(lambda_icon), lambda_scale) {}
 
 //  void Update(); // update ubo not here
 

@@ -84,13 +84,15 @@ void TerrainModeKeyCallback(
 TerrainMode::TerrainMode(SharedResources& shared_resources)
     : IEditMode(shared_resources),
       btn_bake_(vbos::VboIdMain::kTerrainUpdate, vbos::VboIdText::kNone),
-      btn_smooth_(vbos::VboIdMain::kTerrainSmooth, vbos::VboIdText::kNone),
+      btn_smooth_(vbos::VboIdMain::kTerrainFlatten, vbos::VboIdText::kNone),
       slider_size_(
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderSizeSlow, vbos::VboIdText::kNone}),
+          UiStaticSprite{vbos::VboIdMain::kTerrainSizeFill, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainSizeBack, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainSizeIcon, vbos::VboIdText::kNone}),
       slider_falloff_(
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainSliderFalloffSlow, vbos::VboIdText::kNone}) {}
+          UiStaticSprite{vbos::VboIdMain::kTerrainFalloffFill, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainFalloffBack, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainFalloffIcon, vbos::VboIdText::kNone}) {}
 
 void TerrainMode::Bake() {
   std::cout << "baked" << std::endl;

@@ -160,8 +160,9 @@ class UiStaticSprite {
 
 class UiSlider final : public UiTransformDbg {
  public:
-  UiSlider(UiStaticSprite&& fill_icon_sprite,
-           UiStaticSprite&& background_sprite,
+  UiSlider(UiStaticSprite&& fill_sprite,
+           UiStaticSprite&& back_sprite,
+           UiStaticSprite&& icon_sprite,
            float scale = 1.0f);
 
   void Render(float related_pos);
@@ -182,7 +183,7 @@ class UiSlider final : public UiTransformDbg {
   /// We don't render UiSlider id, but
   /// for comparison (e.g. in key callback) we directly slider.GetId()
   [[nodiscard]] std::uint32_t GetTrackId() const {
-    return fill_icon_sprite_.GetId();
+    return fill_sprite_.GetId();
   }
 
   [[nodiscard]] float GetProgress() const;
@@ -195,8 +196,9 @@ class UiSlider final : public UiTransformDbg {
 
   void UnHover();
 
-  UiStaticSprite background_sprite_;
-  UiStaticSprite fill_icon_sprite_;
+  UiStaticSprite fill_sprite_;
+  UiStaticSprite back_sprite_;
+  UiStaticSprite icon_sprite_;
 
   float progress_{0.0f};
   bool pressed_{false};
@@ -208,13 +210,20 @@ class UiSlider final : public UiTransformDbg {
 class UiOceanCascadeConfig {
  public:
   UiOceanCascadeConfig(
-      UiStaticSprite&& scale_fill, UiStaticSprite&& scale_wheel, float scale_scale,
-      UiStaticSprite&& fetch_fill, UiStaticSprite&& fetch_wheel, float fetch_scale,
-      UiStaticSprite&& spread_blend_fill, UiStaticSprite&& spread_blend_wheel, float spread_blend_scale,
-      UiStaticSprite&& swell_fill, UiStaticSprite&& swell_wheel, float swell_scale,
-      UiStaticSprite&& peaks_fill, UiStaticSprite&& peaks_wheel, float peaks_scale,
-      UiStaticSprite&& fade_fill, UiStaticSprite&& fade_wheel, float fade_scale,
-      UiStaticSprite&& lambda_fill, UiStaticSprite&& lambda_wheel, float lambda_scale);
+      UiStaticSprite&& scale_fill, UiStaticSprite&& scale_back,
+      UiStaticSprite&& scale_icon, float scale_scale,
+      UiStaticSprite&& fetch_fill, UiStaticSprite&& fetch_back,
+      UiStaticSprite&& fetch_icon, float fetch_scale,
+      UiStaticSprite&& spread_blend_fill, UiStaticSprite&& spread_blend_back,
+      UiStaticSprite&& spread_blend_icon, float spread_blend_scale,
+      UiStaticSprite&& swell_fill, UiStaticSprite&& swell_back,
+      UiStaticSprite&& swell_icon, float swell_scale,
+      UiStaticSprite&& peaks_fill, UiStaticSprite&& peaks_back,
+      UiStaticSprite&& peaks_icon, float peaks_scale,
+      UiStaticSprite&& fade_fill, UiStaticSprite&& fade_back,
+      UiStaticSprite&& fade_icon, float fade_scale,
+      UiStaticSprite&& lambda_fill, UiStaticSprite&& lambda_back,
+      UiStaticSprite&& lambda_icon, float lambda_scale);
 
   //  void Update(); // update ubo not here
 

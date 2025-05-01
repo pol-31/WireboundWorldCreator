@@ -5,8 +5,11 @@
 #include "../common/Details.h"
 #include "../common/GlobalGlfwCallbackData.h"
 
-float lastX = static_cast<float>(details::kWindowWidth) / 2.0;
-float lastY = static_cast<float>(details::kWindowHeight) / 2.0;
+extern int gWindowWidth = 800;
+extern int gWindowHeight = 600;
+
+float lastX = static_cast<float>(gWindowWidth) / 2.0;
+float lastY = static_cast<float>(gWindowHeight) / 2.0;
 
 float gDeltaTime = 0.0f;
 float last_frame = 0.0f;
@@ -16,7 +19,9 @@ float last_frame = 0.0f;
 GLFWwindow* gWindow = nullptr;
 
 void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
-  glViewport(0, 0, width, height);
+  auto resolution = SetWindowSize({width, height});
+  glfwSetWindowSize(gWindow, resolution.x, resolution.y);
+  glViewport(0, 0, resolution.x, resolution.y);
 }
 
 void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {
@@ -162,9 +167,8 @@ void SetupWindow() {
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-  gWindow = glfwCreateWindow(
-      details::kWindowWidth, details::kWindowHeight,
-      "WireboundDev", nullptr, nullptr);
+  gWindow = glfwCreateWindow(gWindowWidth, gWindowHeight,
+                             "WireboundDev", nullptr, nullptr);
   if (!gWindow) {
     glfwTerminate();
     throw std::runtime_error("Failed to create GLFW window");
@@ -193,4 +197,35 @@ void SetupWindow() {
                         0, nullptr, GL_TRUE);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
+}
+
+glm::ivec2 ChooseNearestSize(glm::ivec2 size) {
+  // 6 most common resolutions up to 1920x1080
+  std::array<glm::ivec2, 6> resolutions = {
+      glm::ivec2(640, 480),   // VGA
+      glm::ivec2(800, 600),   // SVGA
+      glm::ivec2(1024, 768),  // XGA
+      glm::ivec2(1280, 720),  // HD
+      glm::ivec2(1600, 900),  // HD+
+      glm::ivec2(1920, 1080)  // Full HD
+  };
+
+  auto closest_it = std::min_element(
+      resolutions.begin(), resolutions.end(),
+      [size](const glm::ivec2& a, const glm::ivec2& b) {
+        glm::ivec2 da = a - size;
+        glm::ivec2 db = b - size;
+        return (da.x * da.x + da.y * da.y) < (db.x * db.x + db.y * db.y);
+      });
+
+  // can't be nullptr
+  glm::ivec2 result_size = *closest_it;
+  std::cout << "Closest resolution is " << result_size.x << " × " << result_size.y << std::endl;
+  return result_size;
+}
+
+glm::ivec2 SetWindowSize(glm::ivec2 size) {
+  auto resolution = ChooseNearestSize(size);
+  //TODO: window, viewport, notify all framebuffers, buttons
+  return resolution;
 }

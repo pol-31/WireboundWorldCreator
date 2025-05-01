@@ -41,7 +41,7 @@ struct GlobalGlfwCallbackData {
   glm::dvec2 cursor_pos_{0.0};
   glm::vec2 cursor_pos_tex_norm_{0.0f};
 
-  glm::ivec2 window_size_{details::kWindowWidth, details::kWindowHeight}; // TODO: init
+  glm::ivec2 window_size_{gWindowWidth, gWindowHeight}; // TODO: init
 
   /*
    * camera, resolution(settings), ...

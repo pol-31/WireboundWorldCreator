@@ -66,6 +66,8 @@ class Menu {
   SharedResources& shared_resources_;
 
   std::array<UiStaticSprite, 20> buttons_;
+
+  UiStaticSprite background_;
 //
 //  UiStaticSprite text_mode_;
 //  UiStaticSprite btn_mode_terrain_;

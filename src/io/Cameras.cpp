@@ -76,8 +76,8 @@ void ICamera::UpdateViewMatrix() const {
 //TODO: should be called from WindowSizeCallback
 void ICamera::UpdateProjectionMatrix() const {
   glm::mat4 proj_mat = glm::perspective(
-      glm::radians(45.0f), static_cast<float>(details::kWindowWidth)
-                               / static_cast<float>(details::kWindowHeight),
+      glm::radians(45.0f), static_cast<float>(gWindowWidth)
+                               / static_cast<float>(gWindowHeight),
       0.01f, 1000.0f);
   utility::UpdateUbo(ubo_, 64, 64, glm::value_ptr(proj_mat));
 }

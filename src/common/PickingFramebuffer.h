@@ -11,7 +11,7 @@
 class PickingFramebuffer {
  public:
   PickingFramebuffer()
-      : texture_(details::kWindowWidth, details::kWindowHeight, GL_R32UI,
+      : texture_(gWindowWidth, gWindowHeight, GL_R32UI,
                  GL_LINEAR, GL_CLAMP_TO_EDGE, true) {
     Init();
   }
@@ -24,7 +24,7 @@ class PickingFramebuffer {
     glReadBuffer(GL_COLOR_ATTACHMENT0);
     GLuint id;
     glReadPixels(static_cast<int>(pos.x),
-                 details::kWindowHeight - static_cast<int>(pos.y), 1, 1,
+                 gWindowHeight - static_cast<int>(pos.y), 1, 1,
                  GL_RED_INTEGER, GL_UNSIGNED_INT, &id);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     return id;

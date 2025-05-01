@@ -111,14 +111,17 @@ PlacementMode::PlacementMode(SharedResources& shared_resources,
       btn_place_undergrowth_(vbos::VboIdMain::kPlacementUndergrowth,
                              vbos::VboIdText::kPlaceUndergrowth),
       slider_color_(
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderColorFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderColorSlow, vbos::VboIdText::kNone}),
+          UiStaticSprite{vbos::VboIdMain::kPlacementColorFill, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kPlacementColorBack, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kPlacementColorIcon, vbos::VboIdText::kNone}),
       slider_size_(
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderSizeFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderSizeSlow, vbos::VboIdText::kNone}),
+          UiStaticSprite{vbos::VboIdMain::kPlacementSizeFill, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kPlacementSizeBack, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kPlacementSizeIcon, vbos::VboIdText::kNone}),
       slider_falloff_(
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderFalloffFill, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSliderFalloffSlow, vbos::VboIdText::kNone}),
+          UiStaticSprite{vbos::VboIdMain::kPlacementFalloffFill, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kPlacementFalloffBack, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kPlacementFalloffIcon, vbos::VboIdText::kNone}),
       shader_draw_(paths.shader_placement_draw_comp),
       last_modified_placement_(
           shared_resources_.tile_.map_placement_trees.GetId()),

@@ -66,8 +66,8 @@ class UiDebugger {
   // generate config file for vbo_id_transform_ based on config_path_
 //  void GetTransforms(std::string_view dest);
 
-  const float gTranslateStepV = 1.0f / details::kWindowHeight;
-  const float gTranslateStepH = 1.0f / details::kWindowWidth;
+  const float gTranslateStepV = 1.0f / gWindowHeight;
+  const float gTranslateStepH = 1.0f / gWindowWidth;
   const float gScaleStep = 0.01f;
 
  private:

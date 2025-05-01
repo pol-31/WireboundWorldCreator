@@ -229,9 +229,9 @@ void UiDebugger::SetScale(float value) {
 
 void UiDebugger::Press(unsigned int id) {
   mouse_pressed_ = true;
-  if (id >= static_cast<int>(vbos::VboIdMain::kModeTerrain) &&
+  if (id >= static_cast<int>(vbos::VboIdMain::kMenuTerrain) &&
       id < static_cast<int>(vbos::VboIdMain::kTotal)) {
-    cur_ui_vbo_id_ = id - static_cast<int>(vbos::VboIdMain::kModeTerrain);
+    cur_ui_vbo_id_ = id - static_cast<int>(vbos::VboIdMain::kMenuTerrain);
   } else {
     ApplyAndReset();
   }

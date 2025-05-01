@@ -26,28 +26,29 @@ Menu::Menu(SharedResources& shared_resources,
       visibility_(visibility),
       /// text is first, then modes, then vision, then shaders (Menu::Press)
       /// TODO; more description
+      /// first three are text, so not used as simple rendering, but only for text
       buttons_({
-/// first three are text, so not used as simple rendering, but only for text
-           UiStaticSprite{vbos::VboIdMain::kFullScreen, vbos::VboIdText::kMode},
-           UiStaticSprite{vbos::VboIdMain::kFullScreen, vbos::VboIdText::kVision},
-           UiStaticSprite{vbos::VboIdMain::kFullScreen, vbos::VboIdText::kShaders},
-           UiStaticSprite{vbos::VboIdMain::kModeTerrain, vbos::VboIdText::kTerrain},
-           UiStaticSprite{vbos::VboIdMain::kModeWater, vbos::VboIdText::kWater},
-           UiStaticSprite{vbos::VboIdMain::kModeRoads, vbos::VboIdText::kRoads},
-           UiStaticSprite{vbos::VboIdMain::kModeFences, vbos::VboIdText::kFences},
-           UiStaticSprite{vbos::VboIdMain::kModePlacement, vbos::VboIdText::kPlacement},
-           UiStaticSprite{vbos::VboIdMain::kModeObjects, vbos::VboIdText::kObject},
-           UiStaticSprite{vbos::VboIdMain::kModeBiome, vbos::VboIdText::kBiome},
-           UiStaticSprite{vbos::VboIdMain::kModeTiles, vbos::VboIdText::kTiles},
-           UiStaticSprite{vbos::VboIdMain::kVisionTerrain, vbos::VboIdText::kTerrain},
-           UiStaticSprite{vbos::VboIdMain::kVisionWater, vbos::VboIdText::kWater},
-           UiStaticSprite{vbos::VboIdMain::kVisionRoads, vbos::VboIdText::kRoads},
-           UiStaticSprite{vbos::VboIdMain::kVisionFences, vbos::VboIdText::kFences},
-           UiStaticSprite{vbos::VboIdMain::kVisionPlacement, vbos::VboIdText::kPlacement},
-           UiStaticSprite{vbos::VboIdMain::kVisionObjects, vbos::VboIdText::kObject},
-           UiStaticSprite{vbos::VboIdMain::kVisionBiome, vbos::VboIdText::kBiome},
-           UiStaticSprite{vbos::VboIdMain::kVisionTiles, vbos::VboIdText::kTiles},
-           UiStaticSprite{vbos::VboIdMain::kWireboundLogo, vbos::VboIdText::kWirebound}}) {
+          UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kMode},
+          UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kVision},
+          UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kShaders},
+          UiStaticSprite{vbos::VboIdMain::kMenuTerrain, vbos::VboIdText::kTerrain},
+          UiStaticSprite{vbos::VboIdMain::kMenuWater, vbos::VboIdText::kWater},
+          UiStaticSprite{vbos::VboIdMain::kMenuRoads, vbos::VboIdText::kRoads},
+          UiStaticSprite{vbos::VboIdMain::kMenuFences, vbos::VboIdText::kFences},
+          UiStaticSprite{vbos::VboIdMain::kMenuPlacement, vbos::VboIdText::kPlacement},
+          UiStaticSprite{vbos::VboIdMain::kMenuObjects, vbos::VboIdText::kObject},
+          UiStaticSprite{vbos::VboIdMain::kMenuBiomes, vbos::VboIdText::kBiome},
+          UiStaticSprite{vbos::VboIdMain::kMenuTiles, vbos::VboIdText::kTiles},
+          UiStaticSprite{vbos::VboIdMain::kMenuTerrainOn, vbos::VboIdText::kTerrain},
+          UiStaticSprite{vbos::VboIdMain::kMenuWaterOn, vbos::VboIdText::kWater},
+          UiStaticSprite{vbos::VboIdMain::kMenuRoadsOn, vbos::VboIdText::kRoads},
+          UiStaticSprite{vbos::VboIdMain::kMenuFencesOn, vbos::VboIdText::kFences},
+          UiStaticSprite{vbos::VboIdMain::kMenuPlacementOn, vbos::VboIdText::kPlacement},
+          UiStaticSprite{vbos::VboIdMain::kMenuObjectsOn, vbos::VboIdText::kObject},
+          UiStaticSprite{vbos::VboIdMain::kMenuBiomesOn, vbos::VboIdText::kBiome},
+          UiStaticSprite{vbos::VboIdMain::kMenuTilesOn, vbos::VboIdText::kTiles},
+          UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kWirebound}}),
+      background_(UiStaticSprite{vbos::VboIdMain::kTabDesk, vbos::VboIdText::kNone}) {
   Init();
 }
 
@@ -90,6 +91,8 @@ void Menu::Render() {
 
   shared_resources_.tex_ui_.Bind();
 
+  background_.Render();
+
   glUniform1f(shader::kSpriteBrightness, 0.5f);
   for (int i = 3; i < 20; ++i) {
     buttons_[i].Render();
@@ -122,6 +125,7 @@ void Menu::RenderPicking() const {
   shared_resources_.static_sprite_picking_shader_.Bind();
   glBindVertexArray(shared_resources_.vao_ui_);
   /// first three for text (we don;t need picking for it)
+  background_.RenderPicking();
   for (int i = 3; i < 20; ++i) {
     buttons_[i].RenderPicking();
   }
@@ -129,13 +133,13 @@ void Menu::RenderPicking() const {
 
 int Menu::Hover(uint32_t global_id) {
   // skip first 3 for text
-  if (global_id < static_cast<int>(vbos::VboIdMain::kModeTerrain) ||
-      global_id > static_cast<int>(vbos::VboIdMain::kModeTerrain) + 16) {
+  if (global_id < static_cast<int>(vbos::VboIdMain::kMenuTerrain) ||
+      global_id > static_cast<int>(vbos::VboIdMain::kMenuTerrain) + 16) {
     mode_hover_hover_ = 0.0f;
     return -1;
   }
   int local_id = static_cast<int>(global_id)
-                 - static_cast<int>(vbos::VboIdMain::kModeTerrain) + 3;
+                 - static_cast<int>(vbos::VboIdMain::kMenuTerrain) + 3;
 
   if (local_id < 20 &&
       selected_mode_idx_ != local_id &&
@@ -156,12 +160,12 @@ int Menu::Hover(uint32_t global_id) {
 }
 
 bool Menu::Press(uint32_t global_id) {
-  if (global_id < static_cast<int>(vbos::VboIdMain::kModeTerrain) ||
-      global_id > static_cast<int>(vbos::VboIdMain::kWireboundLogo)) {
+  if (global_id < static_cast<int>(vbos::VboIdMain::kMenuTerrain) ||
+      global_id > static_cast<int>(vbos::VboIdMain::kMenuShaderWirebound)) {
     return false;
   }
   int local_id = static_cast<int>(global_id)
-                 - static_cast<int>(vbos::VboIdMain::kModeTerrain);
+                 - static_cast<int>(vbos::VboIdMain::kMenuTerrain);
   if (local_id < 8) {
     cur_mode_ = modes_[local_id];
     cur_mode_->BindCallbacks();

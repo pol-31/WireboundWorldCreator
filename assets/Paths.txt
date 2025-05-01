@@ -1,10 +1,10 @@
-* this file contains all paths used in WireboundWorldCreator;
-* the main purpose is to achieve dynamic textures/shaders/etc updating
-* without rebuilding and recompiling the application;
-* what field names are allowed, see at src/PathsParses.h
-* lines without "equal" sign are ignored
+* this file contains all paths used in WireboundWorldCreator;,
+* the main purpose is to achieve dynamic textures/shaders/etc updating,
+* without rebuilding and recompiling the application;,
+* what field names are allowed, see at src/PathsParses.h,
+* lines without "equal" sign are ignored,
 
-texture_ui=../assets/ui2.png
+texture_ui=../assets/TexAtlas.png
 texture_text=../assets/Text.png
 
 shader_sprite_static_vert=../shaders/Sprite.vert
@@ -87,5 +87,5 @@ texture_skybox2_bottom=../assets/skybox/hills_bottom.tga
 texture_skybox2_front=../assets/skybox/hills_front.tga
 texture_skybox2_back=../assets/skybox/hills_back.tga
 
-config_vbo_sprites=../assets/UiVbo.txt
+config_vbo_sprites=../assets/TexCoordsInfo.txt
 config_vbo_transform=test.txt
