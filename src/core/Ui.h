@@ -162,10 +162,11 @@ class UiSlider final : public UiTransformDbg {
  public:
   UiSlider(UiStaticSprite&& fill_sprite,
            UiStaticSprite&& back_sprite,
-           UiStaticSprite&& icon_sprite,
+           UiDynamicSprite&& icon_sprite,
            float scale = 1.0f);
 
   void Render(float related_pos);
+  void RenderIcon();
 
   void RenderPicking();
 
@@ -198,7 +199,7 @@ class UiSlider final : public UiTransformDbg {
 
   UiStaticSprite fill_sprite_;
   UiStaticSprite back_sprite_;
-  UiStaticSprite icon_sprite_;
+  UiDynamicSprite icon_sprite_;
 
   float progress_{0.0f};
   bool pressed_{false};
@@ -211,19 +212,19 @@ class UiOceanCascadeConfig {
  public:
   UiOceanCascadeConfig(
       UiStaticSprite&& scale_fill, UiStaticSprite&& scale_back,
-      UiStaticSprite&& scale_icon, float scale_scale,
+      UiDynamicSprite&& scale_icon, float scale_scale,
       UiStaticSprite&& fetch_fill, UiStaticSprite&& fetch_back,
-      UiStaticSprite&& fetch_icon, float fetch_scale,
+      UiDynamicSprite&& fetch_icon, float fetch_scale,
       UiStaticSprite&& spread_blend_fill, UiStaticSprite&& spread_blend_back,
-      UiStaticSprite&& spread_blend_icon, float spread_blend_scale,
+      UiDynamicSprite&& spread_blend_icon, float spread_blend_scale,
       UiStaticSprite&& swell_fill, UiStaticSprite&& swell_back,
-      UiStaticSprite&& swell_icon, float swell_scale,
+      UiDynamicSprite&& swell_icon, float swell_scale,
       UiStaticSprite&& peaks_fill, UiStaticSprite&& peaks_back,
-      UiStaticSprite&& peaks_icon, float peaks_scale,
+      UiDynamicSprite&& peaks_icon, float peaks_scale,
       UiStaticSprite&& fade_fill, UiStaticSprite&& fade_back,
-      UiStaticSprite&& fade_icon, float fade_scale,
+      UiDynamicSprite&& fade_icon, float fade_scale,
       UiStaticSprite&& lambda_fill, UiStaticSprite&& lambda_back,
-      UiStaticSprite&& lambda_icon, float lambda_scale);
+      UiDynamicSprite&& lambda_icon, float lambda_scale);
 
   //  void Update(); // update ubo not here
 
@@ -240,6 +241,7 @@ class UiOceanCascadeConfig {
   void Release();
 
   void Render(float related_pos);
+  void RenderIcons();
 
   void RenderPicking();
 

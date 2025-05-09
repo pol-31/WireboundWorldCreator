@@ -223,3 +223,9 @@ void CameraHandler::SetCamera(int id) {
   auto camera = cameras_[cur_id_].get();
   camera->UpdateConfig();
 }
+
+void CameraHandler::UpdateProjectionMatrices() {
+  for (auto& camera : cameras_) {
+    camera->UpdateProjectionMatrix();
+  }
+}

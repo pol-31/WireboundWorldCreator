@@ -129,8 +129,13 @@ void UiDebugger::UpdatePosition() {
 
 void UiDebugger::UpdateBuffer(Transform pos) {
   for (int k = 0; k < gUiComponents[cur_ui_vbo_id_].children_num + 1; ++k) {
+    // if it's parent - offset is 0 by default
     for (int i = 0; i < 4; ++i) {
-      gUiTransforms[GetVboOffset() + i + k * 4] = pos;
+      gUiTransforms[GetVboOffset() + i + k * 4] = Transform(
+          pos.x_translate + gUiComponents[cur_ui_vbo_id_ + k].parent_offset_x,
+          pos.y_translate + gUiComponents[cur_ui_vbo_id_ + k].parent_offset_y,
+          pos.scale * gUiComponents[cur_ui_vbo_id_ + k].parent_scale
+          );
     }
   }
 }

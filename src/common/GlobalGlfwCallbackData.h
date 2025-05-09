@@ -13,6 +13,7 @@
 
 class Menu;
 class IEditMode;
+class SharedResources;
 
 /** Because of the Glfw's nature for the most effective keyboard/mouse input
  * handling we should use callbacks that are C-function (global scope).
@@ -41,7 +42,7 @@ struct GlobalGlfwCallbackData {
   glm::dvec2 cursor_pos_{0.0};
   glm::vec2 cursor_pos_tex_norm_{0.0f};
 
-  glm::ivec2 window_size_{gWindowWidth, gWindowHeight}; // TODO: init
+  SharedResources* shared_resources_{nullptr};
 
   /*
    * camera, resolution(settings), ...
@@ -51,26 +52,24 @@ struct GlobalGlfwCallbackData {
   void UpdateCursorPos() {
     glfwGetCursorPos(gWindow, &cursor_pos_.x, &cursor_pos_.y);
     cursor_pos_tex_norm_ = {
-        (cursor_pos_.x / window_size_.x) * 2.0f - 1,
-        ((window_size_.y - cursor_pos_.y) / window_size_.y) * 2.0f - 1
+        (cursor_pos_.x / gWindowWidth) * 2.0f - 1.0f,
+        ((gWindowHeight - cursor_pos_.y) / gWindowHeight) * 2.0f - 1.0f
     };
-  }
-
-  void UpdateWindowSize() {
-    glfwGetWindowSize(gWindow, &window_size_.x, &window_size_.y);
   }
 
   GlobalGlfwCallbackData(CameraHandler& camera/*, Cursor& cursor*/,
                          TileRenderer& tile_renderer, IEditMode*& cur_mode,
                          Menu& menu, PickingFramebuffer& picking_fbo,
-                         debug::UiDebugger& ui_debugger)
+                         debug::UiDebugger& ui_debugger,
+                         SharedResources* shared_resources)
       : camera_(camera),
 //        cursor_(cursor),
         tile_renderer_(tile_renderer),
         cur_mode_(cur_mode),
         menu_(menu),
         picking_fbo_(picking_fbo),
-        ui_debugger_(ui_debugger) {}
+        ui_debugger_(ui_debugger),
+        shared_resources_(shared_resources) {}
 
   [[nodiscard]] GLuint GetIdByMousePos() const {
     return picking_fbo_.GetIdByMousePos(cursor_pos_);

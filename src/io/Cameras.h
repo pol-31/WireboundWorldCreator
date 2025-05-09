@@ -157,6 +157,9 @@ class CameraHandler {
 
   ~CameraHandler();
 
+  /// in case of window resize
+  void UpdateProjectionMatrices();
+
   void ToggleCursor();
 
   void Update();

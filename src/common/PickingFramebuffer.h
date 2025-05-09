@@ -19,6 +19,14 @@ class PickingFramebuffer {
     DeInit();
   }
 
+  //in case of gWindow resize
+  void UpdateResolution() {
+    DeInit();
+    texture_ = Texture(gWindowWidth, gWindowHeight, GL_R32UI,
+                       GL_LINEAR, GL_CLAMP_TO_EDGE, true);
+    Init();
+  }
+
   [[nodiscard]] GLuint GetIdByMousePos(glm::dvec2 pos) const {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo_);
     glReadBuffer(GL_COLOR_ATTACHMENT0);

@@ -5,6 +5,7 @@ layout (location = 1) in vec2 in_texcoord;
 
 // vec2 for position and a scale
 layout (location = 2) in vec3 in_transform;
+layout(location = 5) uniform float res_factor;
 
 out vec2 texcoord;
 
@@ -44,7 +45,8 @@ void main() {
 //    vec2 position = vertices[gl_VertexID].xy;
     vec2 translate = vec2(in_transform[0], in_transform[1]);
     float scale = in_transform[2];
-    position = position * scale + translate;
-    gl_Position = vec4(position, -1.0f, 1.0);
+    // vec2(res_factor, 1.0f) is cur RESOLUTION factor
+    position = position * scale * vec2(res_factor, 1.0f) + translate;
+    gl_Position = vec4(position, -1.0f, 1.0f);
     texcoord = in_texcoord;
 }

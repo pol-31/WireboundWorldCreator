@@ -4,9 +4,10 @@
 
 #include "../common/Details.h"
 #include "../common/GlobalGlfwCallbackData.h"
+#include "../modes/SharedResources.h"
 
-extern int gWindowWidth = 800;
-extern int gWindowHeight = 600;
+extern int gWindowWidth = 1600;
+extern int gWindowHeight = 900;
 
 float lastX = static_cast<float>(gWindowWidth) / 2.0;
 float lastY = static_cast<float>(gWindowHeight) / 2.0;
@@ -20,8 +21,15 @@ GLFWwindow* gWindow = nullptr;
 
 void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
   auto resolution = SetWindowSize({width, height});
-  glfwSetWindowSize(gWindow, resolution.x, resolution.y);
   glViewport(0, 0, resolution.x, resolution.y);
+  glfwSetWindowSize(gWindow, resolution.x, resolution.y);
+
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
+      glfwGetWindowUserPointer(gWindow));
+  global_data->camera_.UpdateProjectionMatrices();
+  global_data->ui_debugger_.UpdateMoveSteps();
+  global_data->picking_fbo_.UpdateResolution();
+  global_data->shared_resources_->UpdateResolution();
 }
 
 void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {
@@ -220,7 +228,7 @@ glm::ivec2 ChooseNearestSize(glm::ivec2 size) {
 
   // can't be nullptr
   glm::ivec2 result_size = *closest_it;
-  std::cout << "Closest resolution is " << result_size.x << " × " << result_size.y << std::endl;
+  std::cout << "Closest resolution is " << result_size.x << " x " << result_size.y << std::endl;
   return result_size;
 }
 

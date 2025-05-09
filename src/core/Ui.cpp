@@ -136,7 +136,7 @@ void UiStaticSprite::RenderPicking() const {
 UiSlider::UiSlider(
     UiStaticSprite&& fill_sprite,
     UiStaticSprite&& back_sprite,
-    UiStaticSprite&& icon_sprite,
+    UiDynamicSprite&& icon_sprite,
     float scale)
     : fill_sprite_(fill_sprite),
       back_sprite_(back_sprite),
@@ -155,6 +155,11 @@ UiSlider::UiSlider(
                   transform.scale);
   fill_sprite_.ui_data_.children_num = 2;
   fill_sprite_.ui_data_.ui = static_cast<UiTransformDbg*>(this);
+
+//  icon_sprite_.ui_data_.parent_scale = 0.5f; // seems useless
+  gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_scale = 0.9f;
+
+
   vbos::UiData ui_data = fill_sprite_.ui_data_;
   gUiComponents[ui_data.id - details::kIdOffsetUi] = ui_data;
 }
@@ -173,9 +178,21 @@ void UiSlider::Set(float related_pos) {
   float offset = glm::clamp(related_pos - centre_,
                             -half_length_, +half_length_);
   progress_ = (offset + half_length_) / length_;
-  //  std::cout << progress_ << ' ' << length_ << ' ' << centre_ << std::endl;
-  std::cout << (1.0f - progress_) << " and scaled "
-            << ((1.0f - progress_) * scale_) << std::endl;
+  glm::mat3 transform{1.0f};
+  float scale = debug::gUiTransforms[icon_sprite_.GetVboOffset()].scale
+      * gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_scale;
+  std::cout << "scale " << gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_scale << std::endl;
+  transform = glm::translate(
+      transform,
+      glm::vec2(debug::gUiTransforms[icon_sprite_.GetVboOffset()].x_translate,
+                debug::gUiTransforms[icon_sprite_.GetVboOffset()].y_translate + offset));
+  transform = glm::scale(transform, glm::vec2(scale, scale));
+  icon_sprite_.SetTransform(transform);
+//  gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_offset_y = related_pos;
+//  std::cout << "ID: " << icon_sprite_.GetId() - details::kIdOffsetUi << std::endl;
+//    std::cout << related_pos << ' ' << progress_ << ' ' << length_ << ' ' << centre_ << std::endl;
+//  std::cout << (1.0f - progress_) << " and scaled "
+//            << ((1.0f - progress_) * scale_) << std::endl;
 }
 
 void UiSlider::UnHover() {
@@ -192,7 +209,15 @@ void UiSlider::UpdateTransform(
   length_ = scale *
             (fill_sprite_.GetTopBorder()
              - fill_sprite_.GetBottomBorder());
+//  std::cout << "length: " << length_ << ' ' << scale
+//            << ' ' << x_translate << ' ' << y_translate << std::endl;
+//  std::cout << "and " << fill_sprite_.GetTopBorder() << ' '
+//            << fill_sprite_.GetBottomBorder() << " id "
+//            << fill_sprite_.GetVboOffset() << std::endl;
   centre_ = y_translate;
+
+  float related_pos = progress_ * length_ - length_ / 2.0f + centre_;
+  Set(related_pos);
 }
 
 void UiSlider::Render(float related_pos) {
@@ -219,21 +244,25 @@ void UiSlider::Render(float related_pos) {
   UnHover();
 }
 
+void UiSlider::RenderIcon() {
+  icon_sprite_.Render();
+}
+
 UiOceanCascadeConfig::UiOceanCascadeConfig(
     UiStaticSprite&& scale_fill, UiStaticSprite&& scale_back,
-    UiStaticSprite&& scale_icon, float scale_scale,
+    UiDynamicSprite&& scale_icon, float scale_scale,
     UiStaticSprite&& fetch_fill, UiStaticSprite&& fetch_back,
-    UiStaticSprite&& fetch_icon, float fetch_scale,
+    UiDynamicSprite&& fetch_icon, float fetch_scale,
     UiStaticSprite&& spread_blend_fill, UiStaticSprite&& spread_blend_back,
-    UiStaticSprite&& spread_blend_icon, float spread_blend_scale,
+    UiDynamicSprite&& spread_blend_icon, float spread_blend_scale,
     UiStaticSprite&& swell_fill, UiStaticSprite&& swell_back,
-    UiStaticSprite&& swell_icon, float swell_scale,
+    UiDynamicSprite&& swell_icon, float swell_scale,
     UiStaticSprite&& peaks_fill, UiStaticSprite&& peaks_back,
-    UiStaticSprite&& peaks_icon, float peaks_scale,
+    UiDynamicSprite&& peaks_icon, float peaks_scale,
     UiStaticSprite&& fade_fill, UiStaticSprite&& fade_back,
-    UiStaticSprite&& fade_icon, float fade_scale,
+    UiDynamicSprite&& fade_icon, float fade_scale,
     UiStaticSprite&& lambda_fill, UiStaticSprite&& lambda_back,
-    UiStaticSprite&& lambda_icon, float lambda_scale)
+    UiDynamicSprite&& lambda_icon, float lambda_scale)
     : scale_(std::move(scale_fill), std::move(scale_back),
              std::move(scale_icon), scale_scale),
       fetch_(std::move(fetch_fill), std::move(fetch_back),
@@ -345,6 +374,16 @@ void UiOceanCascadeConfig::Render(float related_pos) {
   peak_enhancement_.Render(related_pos);
   short_waves_fade_.Render(related_pos);
   lambda_.Render(related_pos);
+}
+
+void UiOceanCascadeConfig::RenderIcons() {
+  scale_.RenderIcon();
+  fetch_.RenderIcon();
+  spread_blend_.RenderIcon();
+  swell_.RenderIcon();
+  peak_enhancement_.RenderIcon();
+  short_waves_fade_.RenderIcon();
+  lambda_.RenderIcon();
 }
 
 void UiOceanCascadeConfig::RenderPicking() {
