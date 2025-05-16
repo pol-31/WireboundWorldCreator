@@ -5,8 +5,10 @@
 * lines without "equal" sign are ignored,
 
 texture_ui=../assets/TexAtlas.png
+texture_ui_mask=../assets/TabMask.png
 texture_text=../assets/Text.png
 
+shader_sprite_mask_frag=../shaders/SpriteMask.frag
 shader_sprite_static_vert=../shaders/Sprite.vert
 shader_sprite_static_vert_debug=../shaders/SpriteDebug.vert
 shader_sprite_dynamic_vert=../shaders/SpriteTransform.vert

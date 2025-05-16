@@ -114,3 +114,5 @@ TODO: resolution
 TODO: desk, ocean settings, draw sprites all (including water traits) + pop-up config, update sprite sheet
 
 
+Human (Objects), Placement (Update/SwitchMode)
+Water Config, Water Layers

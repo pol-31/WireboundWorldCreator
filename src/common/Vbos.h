@@ -21,6 +21,11 @@ struct UiData {
   // e.g. for Wheel-slider fill has 3 children and comes first
   int children_num{0};
 
+  //TODO: do I still need it?
+  float parent_offset_x{0.0f};
+  float parent_offset_y{0.0f};
+  float parent_scale{1.0f};
+
   // useful for e.g. slider to update centre/length of interactive area
   UiTransformDbg* ui{nullptr};
 };
@@ -37,22 +42,66 @@ inline constexpr std::size_t GetVboInstancedOffset(VboIdInstanced id);
 enum class VboIdMain {
   kMenuTerrain = details::kIdOffsetUi,
   kMenuWater,
+
   kMenuRoads,
   kMenuFences,
   kMenuPlacement,
   kMenuObjects,
+
   kMenuBiomes,
   kMenuTiles,
   kMenuTerrainOn,
   kMenuWaterOn,
+
   kMenuRoadsOn,
   kMenuFencesOn,
   kMenuPlacementOn,
   kMenuObjectsOn,
+
   kMenuBiomesOn,
   kMenuTilesOn,
   kMenuShaderWirebound,
   kMenuSettings,
+
+  kSettingsResolution,
+  kSettingsSound,
+  kSettingsMusic,
+  kSettingsSensitivity,
+  kSettingsKeyboard,
+
+  kSettingsCheckBox1Off,
+  kSettingsCheckBox1On1,
+  kSettingsCheckBox1On2,
+  kSettingsCheckBox1On3,
+
+  kSettingsCheckBox2Off,
+  kSettingsCheckBox2On1,
+  kSettingsCheckBox2On2,
+  kSettingsCheckBox2On3,
+
+  kSettingsCheckBox3Off,
+  kSettingsCheckBox3On1,
+  kSettingsCheckBox3On2,
+  kSettingsCheckBox3On3,
+
+  kSettingsCheckBox4Off,
+  kSettingsCheckBox4On1,
+  kSettingsCheckBox4On2,
+  kSettingsCheckBox4On3,
+
+  kCross,
+  kLoading0,
+  kLoading1,
+  kLoading2,
+  kLoading3,
+  kLoading4,
+  kLoading5,
+  kLoading6,
+  kLoading7,
+  kLoading8,
+  kLoading9,
+  kLoading10,
+
   kTerrainFlatten,
   kTerrainUpdate,
   kTerrainSizeFill,
@@ -61,124 +110,199 @@ enum class VboIdMain {
   kTerrainFalloffFill,
   kTerrainFalloffBack,
   kTerrainFalloffIcon,
+
   kWaterAdd,
   kWaterRemove,
   kWaterUpdate,
   kWaterLake,
   kWaterRiver,
   kWaterWaterfall,
+
+
+
   kWater1ScaleFill,
   kWater1ScaleBack,
+  kWater1ScaleHandler,
   kWater1ScaleIcon,
+
   kWater1FetchFill,
   kWater1FetchBack,
+  kWater1FetchHandler,
   kWater1FetchIcon,
+
   kWater1SpreadBlendFill,
   kWater1SpreadBlendBack,
+  kWater1SpreadBlendHandler,
   kWater1SpreadBlendIcon,
+
   kWater1SwellFill,
   kWater1SwellBack,
+  kWater1SwellHandler,
   kWater1SwellIcon,
+
   kWater1PeakEnhancementFill,
   kWater1PeakEnhancementBack,
+  kWater1PeakEnhancementHandler,
   kWater1PeakEnhancementIcon,
+
   kWater1ShortWavesFadeFill,
   kWater1ShortWavesFadeBack,
+  kWater1ShortWavesFadeHandler,
   kWater1ShortWavesFadeIcon,
+
   kWater1LambdaFill,
   kWater1LambdaBack,
+  kWater1LambdaHandler,
   kWater1LambdaIcon,
+
+
+
   kWater2ScaleFill,
   kWater2ScaleBack,
+  kWater2ScaleHandler,
   kWater2ScaleIcon,
+
   kWater2FetchFill,
   kWater2FetchBack,
+  kWater2FetchHandler,
   kWater2FetchIcon,
+
   kWater2SpreadBlendFill,
   kWater2SpreadBlendBack,
+  kWater2SpreadBlendHandler,
   kWater2SpreadBlendIcon,
+
   kWater2SwellFill,
   kWater2SwellBack,
+  kWater2SwellHandler,
   kWater2SwellIcon,
+
   kWater2PeakEnhancementFill,
   kWater2PeakEnhancementBack,
+  kWater2PeakEnhancementHandler,
   kWater2PeakEnhancementIcon,
+
   kWater2ShortWavesFadeFill,
   kWater2ShortWavesFadeBack,
+  kWater2ShortWavesFadeHandler,
   kWater2ShortWavesFadeIcon,
+
   kWater2LambdaFill,
   kWater2LambdaBack,
+  kWater2LambdaHandler,
   kWater2LambdaIcon,
+
+
+
   kWater3ScaleFill,
   kWater3ScaleBack,
+  kWater3ScaleHandler,
   kWater3ScaleIcon,
+
   kWater3FetchFill,
   kWater3FetchBack,
+  kWater3FetchHandler,
   kWater3FetchIcon,
+
   kWater3SpreadBlendFill,
   kWater3SpreadBlendBack,
+  kWater3SpreadBlendHandler,
   kWater3SpreadBlendIcon,
+
   kWater3SwellFill,
   kWater3SwellBack,
+  kWater3SwellHandler,
   kWater3SwellIcon,
+
   kWater3PeakEnhancementFill,
   kWater3PeakEnhancementBack,
+  kWater3PeakEnhancementHandler,
   kWater3PeakEnhancementIcon,
+
   kWater3ShortWavesFadeFill,
   kWater3ShortWavesFadeBack,
+  kWater3ShortWavesFadeHandler,
   kWater3ShortWavesFadeIcon,
+
   kWater3LambdaFill,
   kWater3LambdaBack,
+  kWater3LambdaHandler,
   kWater3LambdaIcon,
+
+
   kWaterSettings,
   kWaterLayer1,
+  kWaterLayer1Window,
   kWaterLayer2,
+  kWaterLayer4Window,
   kWaterLayer3,
+  kWaterLayer3Window,
+
+
   kRoadsAsphalt,
   kRoadsGravel,
   kRoadsSoil,
   kRoadsAdd,
   kRoadsRemove,
   kRoadsUpdate,
+
   kFencesPicket,
   kFencesChainLink,
   kFencesWooden,
   kFencesAdd,
   kFencesRemove,
   kFencesUpdate,
+
+
   kPlacementColorFill,
   kPlacementColorBack,
   kPlacementColorIcon,
+
   kPlacementSizeFill,
   kPlacementSizeBack,
   kPlacementSizeIcon,
+
   kPlacementFalloffFill,
   kPlacementFalloffBack,
   kPlacementFalloffIcon,
+
   kPlacementTrees,
   kPlacementBushes,
   kPlacementTallGrass,
   kPlacementUndergrowth,
+
   kPlacementChangeMode,
+
   kObjectMavka,
   kObjectVodyaniy,
   kObjectChugaister,
   kObjectPedestal,
   kObjectCampfire,
   kObjectRoadSign,
+  kObjectHuman,
+
   kBiomeWind,
   kBiomeSun,
   kBiomeTime,
   kBiomePrecipitations,
   kBiomeTemperature,
   kBiomeClouds,
+
   kTilesLeft,
   kTilesRight,
   kTilesUp,
   kTilesDown,
+
+  kMapArrow,
+  kMapDot,
+  kMapLine,
+  kMapTarget,
+  kMapX,
+
   kAcceptDeclineDesk,
   kConfigDesk,
   kTabDesk,
+
   kTotal,
 };
 

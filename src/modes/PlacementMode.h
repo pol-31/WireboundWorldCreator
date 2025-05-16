@@ -59,9 +59,9 @@ class PlacementMode final : public IEditMode {
 
   /// slider progress stored both on shader uniform and on UiSlider,
   /// but here there's no sense to keep it
-  UiSlider slider_color_;
-  UiSlider slider_size_;
-  UiSlider slider_falloff_;
+  UiSliderV slider_color_;
+  UiSliderV slider_size_;
+  UiSliderV slider_falloff_;
 
   // set "true" to initialize at first Render() call
   bool need_to_update_uniforms_{true};

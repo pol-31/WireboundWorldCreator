@@ -25,9 +25,9 @@ class Menu {
 
   // TODO: on switching reset all unsaved in previous, update
 
-  void Render();
+  void Render(bool show);
 
-  void RenderPicking() const;
+  void RenderPicking();
 
   int Hover(uint32_t global_id);
 
@@ -53,6 +53,9 @@ class Menu {
     // so we can block on call)
   }*/
 
+  void ShowSettings();
+  void HideSettings();
+
  private:
   struct TextParams {
     glm::vec2 translate{0.0f, 0.0f};
@@ -65,32 +68,19 @@ class Menu {
 
   SharedResources& shared_resources_;
 
-  std::array<UiStaticSprite, 20> buttons_;
+  UiTabMenu ui_tab_menu_;
+  UiSettings ui_settings_;
 
-  UiStaticSprite background_;
+  bool show_settings_{false};
+
 //
 //  UiStaticSprite text_mode_;
-//  UiStaticSprite btn_mode_terrain_;
-//  UiStaticSprite btn_mode_water_;
-//  UiStaticSprite btn_mode_roads_;
-//  UiStaticSprite btn_mode_fences_;
-//  UiStaticSprite btn_mode_placement_;
-//  UiStaticSprite btn_mode_objects_;
-//  UiStaticSprite btn_mode_biomes_;
-//  UiStaticSprite btn_mode_tiles_;
 //
 //  UiStaticSprite text_visibility_;
-//  UiStaticSprite btn_vision_terrain_;
-//  UiStaticSprite btn_vision_water_;
-//  UiStaticSprite btn_vision_roads_;
-//  UiStaticSprite btn_vision_fences_;
-//  UiStaticSprite btn_vision_placement_;
-//  UiStaticSprite btn_vision_objects_;
-//  UiStaticSprite btn_vision_biomes_;
-//  UiStaticSprite btn_vision_tiles_;
 //
 //  UiStaticSprite text_shaders_;
 //  UiStaticSprite btn_shaders_wirebound_;
+  // + settings
 
   /// we have 3 text total: "mode", "visibility", "shaders"
   std::array<TextParams, 3> text_params_;

@@ -27,10 +27,10 @@ Menu::Menu(SharedResources& shared_resources,
       /// text is first, then modes, then vision, then shaders (Menu::Press)
       /// TODO; more description
       /// first three are text, so not used as simple rendering, but only for text
-      buttons_({
-          UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kMode},
-          UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kVision},
-          UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kShaders},
+      ui_tab_menu_(
+          UiStaticSprite{vbos::VboIdMain::kTabDesk, vbos::VboIdText::kNone},
+          shared_resources_,
+
           UiStaticSprite{vbos::VboIdMain::kMenuTerrain, vbos::VboIdText::kTerrain},
           UiStaticSprite{vbos::VboIdMain::kMenuWater, vbos::VboIdText::kWater},
           UiStaticSprite{vbos::VboIdMain::kMenuRoads, vbos::VboIdText::kRoads},
@@ -39,6 +39,7 @@ Menu::Menu(SharedResources& shared_resources,
           UiStaticSprite{vbos::VboIdMain::kMenuObjects, vbos::VboIdText::kObject},
           UiStaticSprite{vbos::VboIdMain::kMenuBiomes, vbos::VboIdText::kBiome},
           UiStaticSprite{vbos::VboIdMain::kMenuTiles, vbos::VboIdText::kTiles},
+
           UiStaticSprite{vbos::VboIdMain::kMenuTerrainOn, vbos::VboIdText::kTerrain},
           UiStaticSprite{vbos::VboIdMain::kMenuWaterOn, vbos::VboIdText::kWater},
           UiStaticSprite{vbos::VboIdMain::kMenuRoadsOn, vbos::VboIdText::kRoads},
@@ -47,8 +48,47 @@ Menu::Menu(SharedResources& shared_resources,
           UiStaticSprite{vbos::VboIdMain::kMenuObjectsOn, vbos::VboIdText::kObject},
           UiStaticSprite{vbos::VboIdMain::kMenuBiomesOn, vbos::VboIdText::kBiome},
           UiStaticSprite{vbos::VboIdMain::kMenuTilesOn, vbos::VboIdText::kTiles},
-          UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kWirebound}}),
-      background_(UiStaticSprite{vbos::VboIdMain::kTabDesk, vbos::VboIdText::kNone}) {
+
+          UiStaticSprite{vbos::VboIdMain::kMenuSettings, vbos::VboIdText::kNone,
+                         [this]() {
+                           this->ShowSettings();
+                         }},
+          UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kWirebound},
+          UiDynamicSprite{vbos::VboIdMain::kCross, vbos::VboIdText::kNone}),
+      ui_settings_(
+          UiStaticSprite{vbos::VboIdMain::kConfigDesk, vbos::VboIdText::kNone},
+          shared_resources_,
+          UiStaticSprite{vbos::VboIdMain::kSettingsResolution, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kSettingsSound, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kSettingsMusic, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kSettingsSensitivity, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kSettingsKeyboard, vbos::VboIdText::kNone},
+          UiToggle{
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox1Off, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox1On1, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox1On2, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox1On3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox2Off, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox2On1, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox2On2, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox2On3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox3Off, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox3On1, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox3On2, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox3On3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox4Off, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox4On1, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox4On2, vbos::VboIdText::kNone},
+              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox4On3, vbos::VboIdText::kNone}
+          },
+          UiDynamicSprite{vbos::VboIdMain::kCross, vbos::VboIdText::kNone}
+      ) {
   Init();
 }
 
@@ -60,7 +100,7 @@ void Menu::Init() {
 
 void Menu::InitText() {
   for (int i = 0; i < 3; ++i) {
-    auto text_offset = buttons_[i].GetTextVboOffset();
+    auto text_offset = 0;//ui_components_.widgets_[i]->GetTextVboOffset();
     float width = vbos::kUiVboDataText[text_offset * 2]
                   - vbos::kUiVboDataText[text_offset * 2 + 4];
     float height = vbos::kUiVboDataText[text_offset * 2 + 3]
@@ -74,15 +114,23 @@ void Menu::InitText() {
   text_params_[2].translate = glm::vec2{-0.6f, -0.15f};
 }
 
-void Menu::Render() {
+void Menu::ShowSettings() {
+  show_settings_ = true;
+}
+
+void Menu::HideSettings() {
+  show_settings_ = false;
+}
+
+void Menu::Render(bool show) {
   text_renderer_.Bind();
   for (int i = 0; i < 3; ++i) {
-    glUniform2fv(shader::kTextTranslate, 1,
-                 glm::value_ptr(text_params_[i].translate));
-    glUniform2fv(shader::kTextScale, 1,
-                 glm::value_ptr(text_params_[i].scale));
-    glDrawArrays(GL_TRIANGLE_STRIP,
-                 static_cast<GLint>(buttons_[i].GetTextVboOffset()), 4);
+//    glUniform2fv(shader::kTextTranslate, 1,
+//                 glm::value_ptr(text_params_[i].translate));
+//    glUniform2fv(shader::kTextScale, 1,
+//                 glm::value_ptr(text_params_[i].scale));
+//    glDrawArrays(GL_TRIANGLE_STRIP,
+//                 static_cast<GLint>(ui_components_.widgets_[i]->GetTextVboOffset()), 4);
   }
 
   glBindVertexArray(shared_resources_.vao_ui_);
@@ -91,43 +139,52 @@ void Menu::Render() {
 
   shared_resources_.tex_ui_.Bind();
 
-  background_.Render();
+  if (show_settings_) {
+    ui_settings_.Render(show);
+    if (!show) {
+      HideSettings();
+    }
+    return;
+  } else {
+    ui_tab_menu_.Render(show);
+  }
 
   glUniform1f(shader::kSpriteBrightness, 0.5f);
-  for (int i = 3; i < 20; ++i) {
-    buttons_[i].Render();
-  }
+//  ui_components_.Render(); 11111
 
   glUniform1f(shader::kSpriteBrightness, 1.0f);
-  buttons_[selected_mode_idx_].Render();
+  /*ui_components_.widgets_[selected_mode_idx_]->Render();
 
   if (visibility_.IsTerrainVisible()) {
-    buttons_[11].Render();
+    ui_components_.widgets_[11]->Render();
   }
   if (visibility_.IsWaterVisible()) {
-    buttons_[12].Render();
+    ui_components_.widgets_[12]->Render();
   }
   if (visibility_.IsRoadsVisible()) {
-    buttons_[13].Render();
+    ui_components_.widgets_[13]->Render();
   }
   if (visibility_.IsFencesVisible()) {
-    buttons_[14].Render();
+    ui_components_.widgets_[14]->Render();
   }
   if (visibility_.IsPlacementVisible()) {
-    buttons_[15].Render();
+    ui_components_.widgets_[15]->Render();
   }
   if (visibility_.IsObjectsVisible()) {
-    buttons_[16].Render();
-  }
+    ui_components_.widgets_[16]->Render();
+  }*/ //11111
 }
 
-void Menu::RenderPicking() const {
+void Menu::RenderPicking() {
   shared_resources_.static_sprite_picking_shader_.Bind();
   glBindVertexArray(shared_resources_.vao_ui_);
   /// first three for text (we don;t need picking for it)
-  background_.RenderPicking();
-  for (int i = 3; i < 20; ++i) {
-    buttons_[i].RenderPicking();
+  ui_tab_menu_.RenderPicking();
+  if (show_settings_) {
+    ui_settings_.RenderPicking();
+  }
+  for (int i = 3; i < 18; ++i) {
+//    ui_components_.widgets_[i]->RenderPicking();
   }
 }
 
@@ -139,11 +196,11 @@ int Menu::Hover(uint32_t global_id) {
     return -1;
   }
   int local_id = static_cast<int>(global_id)
-                 - static_cast<int>(vbos::VboIdMain::kMenuTerrain) + 3;
+                 - static_cast<int>(vbos::VboIdMain::kMenuTerrain);
 
-  if (local_id < 20 &&
+  if (local_id < 18 &&
       selected_mode_idx_ != local_id &&
-      !(local_id > 10 && visibility_.visibility & (1 << (local_id - 11)))) {
+      !(local_id > 7 && visibility_.visibility & (1 << (local_id - 8)))) {
     if (last_hovered_ != local_id) {
       mode_hover_hover_ = 0.0f;
     }
@@ -153,15 +210,15 @@ int Menu::Hover(uint32_t global_id) {
     glBindVertexArray(shared_resources_.vao_ui_);
     shared_resources_.tex_ui_.Bind();
     glUniform1f(4, mode_hover_hover_); // TODO: do we need it? <-------
-    buttons_[local_id].Render(); // first 3 are text
+//    ui_components_.widgets_[local_id]->Render(); // first 3 are text
     last_hovered_ = local_id;
   }
-  return buttons_[local_id].Hover();
+  return 0;//ui_components_.widgets_[local_id]->Hover();
 }
 
 bool Menu::Press(uint32_t global_id) {
-  if (global_id < static_cast<int>(vbos::VboIdMain::kMenuTerrain) ||
-      global_id > static_cast<int>(vbos::VboIdMain::kMenuShaderWirebound)) {
+  /*if (global_id < static_cast<int>(vbos::VboIdMain::kMenuTerrain) ||
+      global_id > static_cast<int>(vbos::VboIdMain::kMenuSettings)) {
     return false;
   }
   int local_id = static_cast<int>(global_id)
@@ -173,8 +230,16 @@ bool Menu::Press(uint32_t global_id) {
     // TODO: reset prev mode?
   } else if (local_id < 16) {
     visibility_.SetMode(local_id - 8);
-  } else {
+  } else if (local_id == 17) {
 //    tile_renderer_.shaders.EnableWireboundShaders();
+  } else if (local_id == 18) {
+//    settings_.Show();
+  }*/
+
+  if (!show_settings_) {
+    ui_tab_menu_.Press(global_id);
+  } else {
+    ui_settings_.Press(global_id);
   }
   return true;
 }

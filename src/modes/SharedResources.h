@@ -24,9 +24,12 @@ class SharedResources {
     DeInit();
   }
 
+  void UpdateResolution();
+
   /// intentionally public
 //  Shader shader_ui_;
   Texture tex_ui_;
+  Texture tex_ui_mask_;
 
   GLuint vao_ui_{0};
 
@@ -44,6 +47,7 @@ class SharedResources {
   TileRenderer& tile_renderer_;
   Shader static_sprite_shader_;
   Shader static_sprite_picking_shader_;
+  Shader mask_sprite_shader_;
   Shader dynamic_sprite_shader_;
   Shader dynamic_sprite_picking_shader_;
   Shader static_sprite_progress_shader_;

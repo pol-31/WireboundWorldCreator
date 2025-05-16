@@ -26,32 +26,16 @@ void TerrainModeMouseButtonCallback(
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   global_data->camera_.ProcessMouseKey(button, action, mods);
 
-  if (action == GLFW_PRESS) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
-      if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
-        global_data->menu_.Press(pressed_id);
-      } else {
-        std::cout << pressed_id << std::endl;
-        if (pressed_id == terrain->btn_smooth_.GetId()) {
-          terrain->SwitchSmooth();
-        } else if (pressed_id == terrain->btn_bake_.GetId()) {
-          terrain->Bake();
-        } else if (pressed_id == terrain->slider_size_.GetTrackId()) {
-          terrain->need_to_update_uniforms_ = true;
-          terrain->slider_size_.Press();
-        } else if (pressed_id == terrain->slider_falloff_.GetTrackId()) {
-          terrain->need_to_update_uniforms_ = true;
-          terrain->slider_falloff_.Press();
-        }
-      }
+  if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
+    auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+      global_data->menu_.Press(pressed_id);
+    } else {
+      terrain->ui_event_handler_.Press(pressed_id);
     }
   } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
-    terrain->need_to_update_uniforms_ = false;
-    terrain->slider_size_.Release();
-    terrain->slider_falloff_.Release();
+    terrain->ui_event_handler_.Release();
   }
-
 }
 
 // TODO: possible more keys to press (now se use src/io/Window.h WasdKeyCallback
@@ -81,21 +65,36 @@ void TerrainModeKeyCallback(
   }*/
 }
 
+//TODO: attach to sliders:
+//    shader_draw_.Bind();
+//    glUniform1f(shader::kPlacementRadius, slider_size_.GetProgress());
+//    glUniform1f(shader::kPlacementFalloff, slider_falloff_.GetProgress());
+//    glUseProgram(0);
+
 TerrainMode::TerrainMode(SharedResources& shared_resources)
     : IEditMode(shared_resources),
-      btn_bake_(vbos::VboIdMain::kTerrainUpdate, vbos::VboIdText::kNone),
-      btn_smooth_(vbos::VboIdMain::kTerrainFlatten, vbos::VboIdText::kNone),
+      btn_bake_(vbos::VboIdMain::kTerrainUpdate, vbos::VboIdText::kNone,
+                [](){
+                    std::cout << "Press() : btn_bake_" << std::endl;
+                }),
+      btn_smooth_(vbos::VboIdMain::kTerrainFlatten, vbos::VboIdText::kNone,
+                  []() {
+                    std::cout << "Press() : btn_smooth_" << std::endl;
+                  }),
       slider_size_(
           UiStaticSprite{vbos::VboIdMain::kTerrainSizeFill, vbos::VboIdText::kNone},
           UiStaticSprite{vbos::VboIdMain::kTerrainSizeBack, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainSizeIcon, vbos::VboIdText::kNone}),
+          UiDynamicSprite{vbos::VboIdMain::kTerrainSizeIcon, vbos::VboIdText::kNone}),
       slider_falloff_(
           UiStaticSprite{vbos::VboIdMain::kTerrainFalloffFill, vbos::VboIdText::kNone},
           UiStaticSprite{vbos::VboIdMain::kTerrainFalloffBack, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kTerrainFalloffIcon, vbos::VboIdText::kNone}) {}
+          UiDynamicSprite{vbos::VboIdMain::kTerrainFalloffIcon, vbos::VboIdText::kNone}),
+      ui_event_handler_({
+          &btn_bake_, &btn_smooth_, &slider_size_, &slider_falloff_
+      }) {}
 
 void TerrainMode::Bake() {
-  std::cout << "baked" << std::endl;
+  std::cout << "baked 2" << std::endl;
 }
 
 void TerrainMode::SwitchSmooth() {
@@ -127,18 +126,24 @@ void TerrainMode::Render() {
   btn_smooth_.Render();
 
   slider_size_.Render(
-      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);
+      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
   slider_falloff_.Render(
-      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);
+      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
 
-  if (need_to_update_uniforms_) {
+  shared_resources_.dynamic_sprite_shader_.Bind();
+//  test_popup_.Render(((static_cast<int>(glfwGetTime()) & 1) == 0));
+  slider_size_.RenderIcon();
+  slider_falloff_.RenderIcon();
+
+
+//  if (need_to_update_uniforms_) {
     //TODO: here we need separate POINT-LINES shader and its mechanic
 //    shader_draw_.Bind();
 //    glUniform1f(shader::kPlacementRadius, slider_size_.GetProgress());
 //    glUniform1f(shader::kPlacementFalloff, slider_falloff_.GetProgress());
 //    glUseProgram(0);
 //    need_to_update_uniforms_ = false;
-  }
+//  }
 
   double last_x_, last_y_;
   glfwGetCursorPos(gWindow, &last_x_, &last_y_);

@@ -8,12 +8,15 @@ SharedResources::SharedResources(
     const Paths& paths, Tile& cur_tile, TileRenderer& tile_renderer_,
     GlobalGlfwCallbackData& global_glfw_callback_data)
     : tex_ui_(paths.texture_ui, GL_RGBA),
+      tex_ui_mask_(paths.texture_ui_mask, GL_RGBA),
       static_sprite_shader_(paths.shader_sprite_static_vert,
                            paths.shader_sprite_frag),
       menu_icon_shader_(paths.shader_sprite_static_vert,
                         paths.menu_icon_shader),
       static_sprite_picking_shader_(paths.shader_sprite_static_vert,
                                    paths.shader_sprite_picking_frag),
+      mask_sprite_shader_(paths.shader_sprite_static_vert,
+                          paths.shader_sprite_mask_frag),
       dynamic_sprite_shader_(paths.shader_sprite_dynamic_vert,
                              paths.shader_sprite_frag),
       dynamic_sprite_picking_shader_(paths.shader_sprite_dynamic_vert,
@@ -26,21 +29,71 @@ SharedResources::SharedResources(
   Init();
 }
 
+void SharedResources::UpdateResolution() {
+  float res_factor = static_cast<float>(gWindowHeight) /
+                     static_cast<float>(gWindowWidth);
+  static_sprite_shader_.Bind();
+  glUniform1f(shader::kSpriteResolution, res_factor);
+
+  //Good!
+  static_sprite_picking_shader_.Bind();
+  glUniform1f(shader::kSpriteResolution, res_factor);
+  dynamic_sprite_picking_shader_.Bind();
+  glUniform1f(shader::kSpriteResolution, res_factor);
+
+//  static_sprite_progress_shader_.Bind();
+//  glUniform1f(shader::kSpriteResolution, res_factor);
+//  menu_icon_shader_.Bind();
+//  glUniform1f(shader::kSpriteResolution, res_factor);
+
+
+  mask_sprite_shader_.Bind();
+  glUniform1f(shader::kSpriteResolution, res_factor);
+
+  dynamic_sprite_shader_.Bind();
+  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUseProgram(0);
+}
+
 void SharedResources::Init() {
   InitVbos();
   InitVaos();
+  float res_factor = static_cast<float>(gWindowHeight) /
+                     static_cast<float>(gWindowWidth);
   static_sprite_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
+  glUniform1f(shader::kSpriteResolution, res_factor);
   static_sprite_progress_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
+
+  //Good!
+  static_sprite_picking_shader_.Bind();
+  glUniform1f(shader::kSpriteResolution, res_factor);
+  dynamic_sprite_picking_shader_.Bind();
+  glUniform1f(shader::kSpriteResolution, res_factor);
+
+//  glUniform1f(shader::kSpriteResolution, res_factor);
   menu_icon_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
+//  glUniform1f(shader::kSpriteResolution, res_factor);
+
+  mask_sprite_shader_.Bind();
+  glUniform1i(shader::kSpriteTexture, 0);
+  glUniform1f(shader::kSpriteBrightness, 1.0f);
+  glUniform1f(shader::kSpriteTransparency, 1.0f);
+  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1i(shader::kSpriteMask, 1);
+
   dynamic_sprite_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
+  glUniform1f(shader::kSpriteBrightness, 1.0f);
+  glUniform1f(shader::kSpriteTransparency, 1.0f);
+  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUseProgram(0);
 //  static_sprite_picking_shader_.Bind();
 //  glUniform1i(shader::kSpriteTexture, 0);
 //  dynamic_sprite_picking_shader_.Bind();

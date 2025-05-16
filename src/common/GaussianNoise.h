@@ -41,7 +41,7 @@ class GaussianNoise {
     float u = dis(gen);
     float v = dis(gen);
     // Box-Muller-Method
-    return 0.5f;
+//    return 0.5f; TODO
     return std::cos(2 * std::numbers::pi_v<float> * u) * std::sqrt(-2 * std::log(v));
   }
 

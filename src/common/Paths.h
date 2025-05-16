@@ -10,6 +10,7 @@
 //TODO: order
 struct Paths {
   std::string texture_ui;
+  std::string texture_ui_mask;
   std::string texture_text;
   std::string texture_cursor;
   std::string shader_cubemap_frag;
@@ -31,6 +32,7 @@ struct Paths {
   std::string shader_grass_comp;
   std::string shader_height_map_picking_frag;
   std::string shader_height_map_picking_vert;
+  std::string shader_sprite_mask_frag;
   std::string shader_sprite_static_vert;
   std::string shader_sprite_dynamic_vert;
   std::string shader_sprite_frag;
@@ -112,6 +114,7 @@ struct Paths {
 #else
         {"shader_sprite_static_vert", &shader_sprite_static_vert},
 #endif // NDEBUG
+        {"shader_sprite_mask_frag", &shader_sprite_mask_frag},
         {"config_vbo_sprites", &config_vbo_sprites},
         {"config_vbo_transform", &config_vbo_transform},
 
@@ -128,6 +131,7 @@ struct Paths {
         {"shader_dithering", &shader_dithering},
         {"shader_poisson_points", &shader_poisson_points},
         {"texture_ui", &texture_ui},
+        {"texture_ui_mask", &texture_ui_mask},
         {"texture_text", &texture_text},
         {"shader_placement_draw_comp", &shader_placement_draw_comp},
         {"world_map", &world_map},

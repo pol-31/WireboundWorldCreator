@@ -45,11 +45,11 @@ class TerrainMode final : public IEditMode {
 
   UiStaticSprite btn_bake_;
   UiStaticSprite btn_smooth_;
-  UiSlider slider_size_;
-  UiSlider slider_falloff_;
+  UiSliderV slider_size_;
+  UiSliderV slider_falloff_;
 
-  // set "true" to initialize at first Render() call
-  bool need_to_update_uniforms_{true};
+  // 2 buttons + 3 vert sliders (x2)
+  UiEventHandler<8> ui_event_handler_;
 
   bool smooth_mode_{false};
 };

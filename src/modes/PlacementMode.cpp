@@ -113,15 +113,15 @@ PlacementMode::PlacementMode(SharedResources& shared_resources,
       slider_color_(
           UiStaticSprite{vbos::VboIdMain::kPlacementColorFill, vbos::VboIdText::kNone},
           UiStaticSprite{vbos::VboIdMain::kPlacementColorBack, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementColorIcon, vbos::VboIdText::kNone}),
+          UiDynamicSprite{vbos::VboIdMain::kPlacementColorIcon, vbos::VboIdText::kNone}),
       slider_size_(
           UiStaticSprite{vbos::VboIdMain::kPlacementSizeFill, vbos::VboIdText::kNone},
           UiStaticSprite{vbos::VboIdMain::kPlacementSizeBack, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementSizeIcon, vbos::VboIdText::kNone}),
+          UiDynamicSprite{vbos::VboIdMain::kPlacementSizeIcon, vbos::VboIdText::kNone}),
       slider_falloff_(
           UiStaticSprite{vbos::VboIdMain::kPlacementFalloffFill, vbos::VboIdText::kNone},
           UiStaticSprite{vbos::VboIdMain::kPlacementFalloffBack, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kPlacementFalloffIcon, vbos::VboIdText::kNone}),
+          UiDynamicSprite{vbos::VboIdMain::kPlacementFalloffIcon, vbos::VboIdText::kNone}),
       shader_draw_(paths.shader_placement_draw_comp),
       last_modified_placement_(
           shared_resources_.tile_.map_placement_trees.GetId()),
@@ -197,11 +197,11 @@ void PlacementMode::Render() {
   btn_place_undergrowth_.Render();
 
   slider_color_.Render(
-      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);
+      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
   slider_size_.Render(
-      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);
+      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
   slider_falloff_.Render(
-      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y);
+      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
 
   if (need_to_update_uniforms_) {
     shader_draw_.Bind();

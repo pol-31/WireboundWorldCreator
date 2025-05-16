@@ -2,9 +2,15 @@
 #define WIREBOUNDWORLDCREATOR_SRC_UI_H_
 
 #include <array>
+#include <functional>
+#include <tuple>
 #include <vector>
 #include <memory>
 #include <limits>
+
+#ifndef NDEBUG
+#include <set>
+#endif
 
 #include <glm/glm.hpp>
 
@@ -18,11 +24,9 @@
 #include "../common/Vbos.h"
 #include "../io/Window.h"
 #include "../renderers/water/WaterBiome.h"
+#include "../modes/SharedResources.h"
 
-// TODO: we can accelerate our search by binary search, but
-//  looks like the best way to do this is "in-place" binary search and
-//  direct if-else branching
-
+//todo: relevant?
 /** All components stores vbo offset and provides AABB-like functions:
  * GetLeftBorder(), GetRightBorder(), GetTopBorder(), GetBottomBorder()
  * for more effective collision detection (let's take Terrain edit mode;
@@ -30,15 +34,125 @@
  * everything on the right side before ui_component.GetRightBorder()
  * */
 
-/// if function doesn't have shader in parameters,
-/// you should bind it before the call
+extern std::array<vbos::UiData, vbos::gVboIdSize> gUiComponents;
 
-// details::kUiVboDataMain store data both for Dynamic and Static sprites
-// in the same format, the only difference is how class initialize its data
+class UiCallable {
+ public:
+  using CallableType = std::function<void()>;
 
-// Let's draw the entire ui component with the same shader,
-// so if there's dynamic component - we draw with dynamic shader only
-// to reduce switching)
+  UiCallable(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text,
+         CallableType action)
+      : UiCallable(vbos::GetUiData(vbo_texture, vbo_text),
+                   std::move(action)) {}
+
+  explicit UiCallable(vbos::UiData ui_data, CallableType&& action)
+      : ui_data_(ui_data),
+        action_(std::move(action)) {
+    gUiComponents[ui_data_.id - details::kIdOffsetUi] = ui_data_;
+  }
+
+  /// different components have different params and shaders for Render()
+  /// and RenderPicking(), therefore now we can't provide enough support
+  //  virtual void Render(float value) {} // can change time (not const)
+  //  virtual void RenderPicking() const {}
+
+  /// each ui component has its functionality
+  virtual void Press() {
+    action_();
+  }
+
+  virtual void Release() {} // can change everything
+
+  /// one for all
+  size_t Hover() {
+    return GetTextVboOffset();
+  }
+
+  [[nodiscard]] std::uint32_t GetId() const {
+    return ui_data_.id;
+  }
+
+  [[nodiscard]] std::size_t GetVboOffset() const {
+    return ui_data_.vbo_offset;
+  }
+
+  [[nodiscard]] std::size_t GetTextVboOffset() const {
+    return ui_data_.text_vbo_offset_;
+  }
+
+  // no getter \_-_-_/
+  vbos::UiData ui_data_;
+
+ private:
+  std::function<void()> action_;
+};
+
+class UiCallablePad final : public UiCallable {
+ public:
+  UiCallablePad() : UiCallable(
+            vbos::VboIdMain::kMenuTerrain,
+            vbos::VboIdText::kNone, {}) {}
+
+  void Press() override {
+    std::cerr << "Pad was called, smt went wrong" << std::endl;
+  }
+};
+
+template<std::size_t MaxSize>
+class UiEventHandler {
+ public:
+  UiEventHandler(std::initializer_list<UiCallable*> widgets) {
+    Init(widgets);
+  }
+
+  bool Press(int id) {
+    if (id < start_ || id > end_) {
+      return false;
+    }
+    widgets_[id - start_]->Press();
+    return true;
+  }
+
+  void Release() {
+    for (auto widget : widgets_) {
+      widget->Release();
+    }
+  }
+
+ private:
+  void Init(std::initializer_list<UiCallable*> widgets) {
+    start_ = std::numeric_limits<int>::max();
+    end_ = std::numeric_limits<int>::min();
+
+    for (UiCallable* widget : widgets) {
+      int id = widget->GetId();
+      start_ = std::min(start_, id);
+      end_ = std::max(end_, id);
+    }
+
+    // Bounds check
+    if ((end_ - start_ + 1) > MaxSize) {
+      throw std::runtime_error("EventHandler array size exceeded MaxSize");
+    }
+
+    widgets_.fill(&ui_callable_pad_);
+
+    for (UiCallable* widget : widgets) {
+      int index = widget->GetId() - start_;
+#ifndef NDEBUG
+      // if exception is here - indices aren't conseq... maybe
+      widgets_.at(index) = widget;
+#else
+      widgets_.[index] = widget;
+#endif
+    }
+  }
+
+  int start_ = 0;
+  int end_ = 0;
+  std::array<UiCallable*, MaxSize> widgets_;
+  inline static UiCallablePad ui_callable_pad_{};
+};
 
 class UiTransformDbg {
  public:
@@ -46,19 +160,13 @@ class UiTransformDbg {
       float x_translate, float y_translate, float scale) = 0;
 };
 
-extern std::array<vbos::UiData, vbos::gVboIdSize> gUiComponents;
-
-// <--------- NOT IN USE BY NOW
-class UiDynamicSprite {
+class UiDynamicSprite : public UiCallable {
  public:
-  UiDynamicSprite(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text)
-      : UiDynamicSprite(vbos::GetUiData(vbo_texture, vbo_text)) {}
+  UiDynamicSprite(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text,
+                  CallableType action = {})
+      : UiCallable(vbo_texture, vbo_text, std::move(action)) {}
 
-  void Render() const;
-
-  [[nodiscard]] size_t Hover() const {
-    return GetTextVboOffset();
-  }
+  void Render();
 
   void Rotate(float radians) {
     transform_ = glm::rotate(transform_, radians);
@@ -89,40 +197,17 @@ class UiDynamicSprite {
 
   [[nodiscard]] float GetBottomBorder() const;
 
-  [[nodiscard]] std::uint32_t GetId() const {
-    return ui_data_.id;
-  }
-
-  [[nodiscard]] std::size_t GetVboOffset() const {
-    return ui_data_.vbo_offset;
-  }
-
-  [[nodiscard]] std::size_t GetTextVboOffset() const {
-    return ui_data_.text_vbo_offset_;
-  }
-
-  vbos::UiData ui_data_;
-
  private:
-  explicit UiDynamicSprite(vbos::UiData ui_data)
-      : ui_data_(ui_data) {
-    gUiComponents[ui_data_.id - details::kIdOffsetUi] = ui_data_;
-  }
-
-  //TODO: we need only tex coords (?)
   glm::mat3 transform_{1.0f};
 };
 
-class UiStaticSprite {
+class UiStaticSprite : public UiCallable {
  public:
-  UiStaticSprite(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text)
-      : UiStaticSprite(vbos::GetUiData(vbo_texture, vbo_text)) {}
+  UiStaticSprite(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text,
+                 CallableType action = {})
+      : UiCallable(vbo_texture, vbo_text, std::move(action)) {}
 
-  void Render() const;
-
-  [[nodiscard]] size_t Hover() const {
-    return GetTextVboOffset();
-  }
+  void Render();
 
   /// when we operate on arrays of buttons we don't want
   /// bind the same shader 20 times, so this function don't bind shader
@@ -136,41 +221,21 @@ class UiStaticSprite {
   [[nodiscard]] float GetTopBorder() const;
 
   [[nodiscard]] float GetBottomBorder() const;
-
-  [[nodiscard]] std::uint32_t GetId() const {
-    return ui_data_.id;
-  }
-
-  [[nodiscard]] std::size_t GetVboOffset() const {
-    return ui_data_.vbo_offset;
-  }
-
-  [[nodiscard]] std::size_t GetTextVboOffset() const {
-    return ui_data_.text_vbo_offset_;
-  }
-
-  vbos::UiData ui_data_;
-
- private:
-  explicit UiStaticSprite(vbos::UiData ui_data)
-      : ui_data_(ui_data) {
-    gUiComponents[ui_data_.id - details::kIdOffsetUi] = ui_data_;
-  }
 };
 
-class UiSlider final : public UiTransformDbg {
+class UiSliderV final : public UiTransformDbg, public UiCallable {
  public:
-  UiSlider(UiStaticSprite&& fill_sprite,
+  UiSliderV(UiStaticSprite&& fill_sprite,
            UiStaticSprite&& back_sprite,
            UiDynamicSprite&& icon_sprite,
-           float scale = 1.0f);
+            float scale = 1.0f);
 
-  void Render(float related_pos);
+  void Render(glm::vec2 mouse_pos);
   void RenderIcon();
 
-  void RenderPicking();
+  void RenderPicking() const;
 
-  [[nodiscard]] size_t Hover(std::uint32_t id) const;
+  [[nodiscard]] size_t Hover(std::uint32_t id);
 
   void Press() {
     pressed_ = true;
@@ -193,7 +258,7 @@ class UiSlider final : public UiTransformDbg {
 
  private:
   // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
-  void Set(float related_pos);
+  void Set(glm::vec2 mouse_pos);
 
   void UnHover();
 
@@ -208,23 +273,225 @@ class UiSlider final : public UiTransformDbg {
   float scale_{1.0f};
 };
 
+class UiSliderH final : public UiTransformDbg, public UiCallable {
+ public:
+  UiSliderH(UiStaticSprite&& fill_sprite,
+            UiStaticSprite&& back_sprite,
+            UiDynamicSprite&& handler_sprite,
+            UiStaticSprite&& icon_sprite,
+            float scale = 1.0f);
+
+  void Render(glm::vec2 mouse_pos);
+
+  void RenderIcon();
+
+  void RenderPicking() const;
+
+  [[nodiscard]] size_t Hover(std::uint32_t id);
+
+  void Press() override {
+    pressed_ = true;
+  }
+
+  void Release() override {
+    pressed_ = false;
+  }
+
+  /// UiSlider has the same id as a track_, so it's like its wrapper.
+  /// We don't render UiSlider id, but
+  /// for comparison (e.g. in key callback) we directly slider.GetId()
+  [[nodiscard]] std::uint32_t GetTrackId() const {
+    return fill_sprite_.GetId();
+  }
+
+  [[nodiscard]] float GetProgress() const;
+
+  void UpdateTransform(float x_translate, float y_translate, float scale);
+
+ private:
+  // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
+  void Set(glm::vec2 mouse_pos);
+
+  void UnHover();
+
+  UiStaticSprite fill_sprite_;
+  UiStaticSprite back_sprite_;
+  UiStaticSprite icon_sprite_;
+  UiDynamicSprite handler_sprite_;
+
+  float progress_{0.0f};
+  bool pressed_{false};
+  float centre_;
+  float length_;
+  float scale_{1.0f};
+};
+
+// UiWIndowBACK
+
+class UiPopUpBase {
+ public:
+  UiPopUpBase(UiStaticSprite&& sprite,
+              SharedResources& shared_resources,
+              glm::vec2 start_translate,
+              glm::vec2 end_translate,
+              glm::vec2 start_scale,
+              glm::vec2 end_scale,
+              float start_angle,
+              float end_angle);
+
+  /// back_ready_==false when appearing or disappearing animation
+  /// returs false when disappearing fading is over
+  bool RenderBack(bool show);
+
+  void RenderPickingBack();
+
+  [[nodiscard]] bool BackIsReady() const {
+    return back_ready_;
+  }
+
+ protected:
+  // cubic interpolation here (not shader)
+  glm::mat3 cur_transform_{1.0f};
+
+ private:
+  void CubicInterpolation();
+  // not dynamic (transformation stored here, not in the sprite)
+  UiStaticSprite sprite_;
+
+  // store separately for easiest interpolation
+  const glm::vec2 start_translate_;
+  const glm::vec2 end_translate_;
+  const glm::vec2 start_scale_;
+  const glm::vec2 end_scale_;
+  const float start_angle_;
+  const float end_angle_;
+
+  const float speed_{0.5f};
+  float progress_{0.0f};
+
+  bool back_ready_{false};
+
+  SharedResources& shared_resources_; // for shader bindings, mask texture
+};
+
+class UiWaterLayerConfig final : public UiPopUpBase {
+  using Base = UiPopUpBase;
+
+  UiWaterLayerConfig(
+      UiStaticSprite&& sprite,
+      SharedResources& shared_resources,
+      glm::vec2 start_translate,
+      glm::vec2 end_translate,
+      glm::vec2 start_scale,
+      glm::vec2 end_scale,
+      float start_angle,
+      float end_angle,
+      UiStaticSprite&& sprite_layer_,
+      UiSliderH&& scale,
+      UiSliderH&& fetch,
+      UiSliderH&& spread_blend,
+      UiSliderH&& swell,
+      UiSliderH&& peak_enhancement,
+      UiSliderH&& short_waves_fade,
+      UiSliderH&& lambda);
+
+  // returns "stop render"
+  bool Render(bool show);
+
+  void RenderPicking();
+
+  void Press(int id) {
+    ui_event_handler_.Press(id);
+  }
+
+ private:
+  UiStaticSprite sprite_layer_;
+  UiSliderH scale_;
+  UiSliderH fetch_;
+  UiSliderH spread_blend_;
+  UiSliderH swell_;
+  UiSliderH peak_enhancement_;
+  UiSliderH short_waves_fade_;
+  UiSliderH lambda_;
+
+  // 1 button + 7 hor sliders (x4)
+  UiEventHandler<29> ui_event_handler_;
+
+  SharedResources& shared_resources_;
+};
+
+class UiToggle : public UiCallable {
+ public:
+  UiToggle(UiStaticSprite&& off, UiStaticSprite&& on1,
+           UiStaticSprite&& on2, UiStaticSprite&& on3);
+
+  void Render();
+
+  void RenderPicking() const;
+
+  void Press() override;
+
+ private:
+  UiStaticSprite off_;
+  UiStaticSprite on1_;
+  UiStaticSprite on2_;
+  UiStaticSprite on3_;
+
+  UiStaticSprite* state_{nullptr};
+
+  bool turned_off_{true};
+
+  const float speed_{0.2f};
+  float progress_{0.0f};
+};
+
+/// loading only on the bottom of the screen (so use UiStaticSprite)
+class UiLoading {
+ public:
+  UiLoading(UiStaticSprite&& sprite0,
+            UiStaticSprite&& sprite10,
+            UiStaticSprite&& sprite20,
+            UiStaticSprite&& sprite30,
+            UiStaticSprite&& sprite40,
+            UiStaticSprite&& sprite50,
+            UiStaticSprite&& sprite60,
+            UiStaticSprite&& sprite70,
+            UiStaticSprite&& sprite80,
+            UiStaticSprite&& sprite90,
+            UiStaticSprite&& sprite100);
+
+  void Render(float progress);
+
+  void RenderPicking() const;
+
+ private:
+  std::array<UiStaticSprite, 11> sprites_;
+};
+
 class UiOceanCascadeConfig {
  public:
   UiOceanCascadeConfig(
       UiStaticSprite&& scale_fill, UiStaticSprite&& scale_back,
-      UiDynamicSprite&& scale_icon, float scale_scale,
+      UiDynamicSprite&& scale_handler, UiStaticSprite&& scale_icon,
+      float scale_scale,
       UiStaticSprite&& fetch_fill, UiStaticSprite&& fetch_back,
-      UiDynamicSprite&& fetch_icon, float fetch_scale,
+      UiDynamicSprite&& fetch_handler, UiStaticSprite&& fetch_icon,
+      float fetch_scale,
       UiStaticSprite&& spread_blend_fill, UiStaticSprite&& spread_blend_back,
-      UiDynamicSprite&& spread_blend_icon, float spread_blend_scale,
+      UiDynamicSprite&& spread_blend_handler, UiStaticSprite&& spread_blend_icon,
+      float spread_blend_scale,
       UiStaticSprite&& swell_fill, UiStaticSprite&& swell_back,
-      UiDynamicSprite&& swell_icon, float swell_scale,
+      UiDynamicSprite&& swell_handler, UiStaticSprite&& swell_icon,
+      float swell_scale,
       UiStaticSprite&& peaks_fill, UiStaticSprite&& peaks_back,
-      UiDynamicSprite&& peaks_icon, float peaks_scale,
+      UiDynamicSprite&& peaks_handler, UiStaticSprite&& peaks_icon,
+      float peaks_scale,
       UiStaticSprite&& fade_fill, UiStaticSprite&& fade_back,
-      UiDynamicSprite&& fade_icon, float fade_scale,
+      UiDynamicSprite&& fade_handler, UiStaticSprite&& fade_icon,
+      float fade_scale,
       UiStaticSprite&& lambda_fill, UiStaticSprite&& lambda_back,
-      UiDynamicSprite&& lambda_icon, float lambda_scale);
+      UiDynamicSprite&& lambda_handler, UiStaticSprite&& lambda_icon,
+      float lambda_scale);
 
   //  void Update(); // update ubo not here
 
@@ -240,63 +507,222 @@ class UiOceanCascadeConfig {
 
   void Release();
 
-  void Render(float related_pos);
+  void Render(glm::vec2 mouse_pos);
   void RenderIcons();
 
-  void RenderPicking();
+  void RenderPicking() const;
 
  private:
   bool modified_{false};
 
-  UiSlider scale_;
-  UiSlider fetch_;
-  UiSlider spread_blend_;
-  UiSlider swell_;
-  UiSlider peak_enhancement_;
-  UiSlider short_waves_fade_;
-  UiSlider lambda_;
+  UiSliderH scale_;
+  UiSliderH fetch_;
+  UiSliderH spread_blend_;
+  UiSliderH swell_;
+  UiSliderH peak_enhancement_;
+  UiSliderH short_waves_fade_;
+  UiSliderH lambda_;
 };
 
-/// position lerp based on time
-class UiTabAnimation {
+// --- complex (separate header?) ---
+// --- complex (separate header?) ---
+// --- complex (separate header?) ---
+
+class UiWindowBase {
  public:
-  UiTabAnimation(UiDynamicSprite&& sprite, glm::vec2 start_pos,
-                 glm::vec2 end_pos, float speed = 1.0f);
+  UiWindowBase(UiStaticSprite&& sprite,
+               SharedResources& shared_resources);
 
-  void Render();
+  /// back_ready_==false when appearing or disappearing animation
+  /// returs false when disappearing fading is over
+  bool RenderBack(bool show);
 
-  void RenderPicking() {
-    sprite_.RenderPicking();
+  void RenderPickingBack();
+
+ public:
+  [[nodiscard]] bool BackIsReady() const {
+    return back_ready_;
   }
-
-  [[nodiscard]] size_t Hover() {
-    return sprite_.Hover();
-  }
-
-  [[nodiscard]] std::uint32_t GetId() const {
-    return sprite_.GetId();
-  }
-
-  void Start();
-
-  void End();
 
  private:
-  UiDynamicSprite sprite_;
-  glm::vec2 start_pos_;
-  glm::vec2 end_pos_;
+  UiStaticSprite sprite_;
 
-  // 0-1 for progress; 1 means either "not active" or end_pos_
-  float progress_{1.0f};
-  float speed_;
+  const float speed_{0.5f};
+  float progress_{0.0f};
+
+  bool back_ready_{false};
+
+  SharedResources& shared_resources_; // for shader bindings, mask texture
 };
+
+class UiSettings final : public UiWindowBase {
+ public:
+  using Base = UiWindowBase;
+
+  UiSettings(
+      UiStaticSprite&& sprite,
+      SharedResources& shared_resources,
+      UiStaticSprite&& resolution,
+      UiStaticSprite&& music,
+      UiStaticSprite&& sound,
+      UiStaticSprite&& sensitivity,
+      UiStaticSprite&& keyboard,
+      UiToggle&& toggle_music,
+      UiToggle&& toggle_sound,
+      UiToggle&& toggle_3,
+      UiToggle&& toggle_4,
+      UiDynamicSprite&& cross);
+
+  // returns "stop render"
+  bool Render(bool show);
+
+  void RenderPicking();
+
+  void Press(int id) {
+    ui_event_handler_.Press(id);
+  }
+
+ private:
+  //TODO: UiSliderH
+  UiStaticSprite resolution_;
+  UiStaticSprite music_;
+  UiStaticSprite sound_;
+  UiStaticSprite sensitivity_;
+  UiStaticSprite keyboard_;
+
+  UiToggle toggle_music_;
+  UiToggle toggle_sound_;
+  UiToggle toggle_3_;
+  UiToggle toggle_4_;
+
+  // 5 buttons + 4 toggles (x4)
+  UiEventHandler<21> ui_event_handler_;
+
+  UiDynamicSprite cross_;
+
+  SharedResources& shared_resources_; // for shader bindings
+};
+
+class UiTabMenu final : public UiWindowBase {
+ public:
+  using Base = UiWindowBase;
+
+  UiTabMenu(
+      UiStaticSprite&& sprite,
+      SharedResources& shared_resources,
+
+      UiStaticSprite&& btn_mode_terrain,
+      UiStaticSprite&& btn_mode_water,
+      UiStaticSprite&& btn_mode_roads,
+      UiStaticSprite&& btn_mode_fences,
+      UiStaticSprite&& btn_mode_placement,
+      UiStaticSprite&& btn_mode_objects,
+      UiStaticSprite&& btn_mode_biomes,
+      UiStaticSprite&& btn_mode_tiles,
+
+      UiStaticSprite&& btn_vision_terrain,
+      UiStaticSprite&& btn_vision_water,
+      UiStaticSprite&& btn_vision_roads,
+      UiStaticSprite&& btn_vision_fences,
+      UiStaticSprite&& btn_vision_placement,
+      UiStaticSprite&& btn_vision_objects,
+      UiStaticSprite&& btn_vision_biomes,
+      UiStaticSprite&& btn_vision_tiles,
+
+      UiStaticSprite&& btn_settings,
+      UiStaticSprite&& btn_shader_wirebound,
+
+      UiDynamicSprite&& cross);
+
+  // returns "stop render"
+  bool Render(bool show);
+
+  void RenderPicking();
+
+  void Press(int id) {
+    ui_event_handler_.Press(id);
+  }
+
+ private:
+  UiStaticSprite btn_mode_terrain_;
+  UiStaticSprite btn_mode_water_;
+  UiStaticSprite btn_mode_roads_;
+  UiStaticSprite btn_mode_fences_;
+  UiStaticSprite btn_mode_placement_;
+  UiStaticSprite btn_mode_objects_;
+  UiStaticSprite btn_mode_biomes_;
+  UiStaticSprite btn_mode_tiles_;
+
+  UiStaticSprite btn_vision_terrain_;
+  UiStaticSprite btn_vision_water_;
+  UiStaticSprite btn_vision_roads_;
+  UiStaticSprite btn_vision_fences_;
+  UiStaticSprite btn_vision_placement_;
+  UiStaticSprite btn_vision_objects_;
+  UiStaticSprite btn_vision_biomes_;
+  UiStaticSprite btn_vision_tiles_;
+
+  UiStaticSprite btn_settings_;
+  UiStaticSprite btn_shader_wirebound_;
+
+  // 18 buttons
+  UiEventHandler<18> ui_event_handler_;
+
+  UiDynamicSprite cross_;
+
+  SharedResources& shared_resources_; // for shader bindings
+};
+
+class UiConfirmation final : public UiWindowBase {
+ public:
+  using Base = UiWindowBase;
+
+  UiConfirmation(
+      UiStaticSprite&& sprite,
+      SharedResources& shared_resources,
+
+      UiStaticSprite&& btn_close,
+      UiStaticSprite&& btn_accept,
+      UiStaticSprite&& btn_decline,
+
+      UiDynamicSprite&& cross);
+
+  // returns "stop render"
+  bool Render(bool show);
+
+  void RenderPicking();
+
+  void Press(int id) {
+    ui_event_handler_.Press(id);
+  }
+
+ private:
+  UiStaticSprite btn_close_;
+  UiStaticSprite btn_accept_;
+  UiStaticSprite btn_decline_;
+
+  // 3 buttons
+  UiEventHandler<3> ui_event_handler_;
+
+  UiDynamicSprite cross_;
+
+  SharedResources& shared_resources_; // for shader bindings
+};
+
+
+//TODO: WIP, no ideas
+//  --- --- --- ---- --- ---- --- --- --- -- -- --
+//  --- --- --- ---- --- ---- --- --- --- -- -- --
+//  --- --- --- ---- --- ---- --- --- --- -- -- --
+//  --- --- --- ---- --- ---- --- --- --- -- -- --
+//  --- --- --- ---- --- ---- --- --- --- -- -- --
+//  --- --- --- ---- --- ---- --- --- --- -- -- --
 
 //TODO: UiSlots, UiBiomes, UiTiles, UiObjects - all drawn as:
 // - static background texture;
 // - N x M equally alligned clickable sprites
 // so we have std::array<InstanceData, n * m>,
 // - single vbo_offset
-
 
 //TODO: let's not draw sprites of objects, but only text name
 // (we can also add search bar).
@@ -314,7 +740,7 @@ class UiSlots {
           int& edit_mode_selected_sample_id,
           const TextRenderer& text_renderer);
 
-  void Render() const;
+  void Render();
 
   void RenderPicking() const;
 
@@ -323,7 +749,7 @@ class UiSlots {
   /// return true if there was a button with such id
   bool Press(std::uint32_t id);
 
-  [[nodiscard]] size_t Hover(std::uint32_t id) const;
+  [[nodiscard]] size_t Hover(std::uint32_t id);
 
  private:
   void InitTextIdsPositions();
@@ -339,9 +765,6 @@ class UiSlots {
 
   const TextRenderer& text_renderer_;
 };
-
-//TODO; we need different type of UiSprite: with vbo offset only for texture,
-//  but we still can use the same UiStaticSprite, but we don't need description
 
 /*class UiBiomesList {
  public:

@@ -21,7 +21,11 @@ inline constexpr int kSpriteTransparency = 1;
 inline constexpr int kSpriteId = 1;
 inline constexpr int kSpriteBrightness = 2;
 inline constexpr int kSpriteTransform = 3;
+
+// e.g. for time-based with mask
 inline constexpr int kSpriteProgress = 4;
+inline constexpr int kSpriteMask = 6;
+
 inline constexpr float kSpriteResolution = 5;
 
 
