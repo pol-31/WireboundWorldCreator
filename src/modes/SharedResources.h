@@ -52,6 +52,8 @@ class SharedResources {
   Shader dynamic_sprite_picking_shader_;
   Shader static_sprite_progress_shader_;
 
+  Shader arbitrary_grapn_shader_;
+
   Shader menu_icon_shader_;
 
   Tile& tile_;

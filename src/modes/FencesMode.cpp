@@ -31,17 +31,27 @@ void FencesModeMouseButtonCallback(
       if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
         global_data->menu_.Press(pressed_id);
       } else {
-        //TODO: bvh?
-        if (pressed_id == fences->btn_bake_picket_.GetId()) {
+        // terrain point selected
+        if (pressed_id < details::kIdOffsetWater) {
+          std::cout << "Add point #" << pressed_id << std::endl;
+          std::cout << "Coordinates are: " << (pressed_id & 1023)
+                    << " and " << (pressed_id >> 10) << std::endl;
+          //TODO: if water/other subtract maybe...
+          fences->graphs_.Press(pressed_id);
+        } else if (pressed_id == fences->btn_edge_mode_.GetId()) {
+          fences->graphs_.FlipPointsMode();
+        } else if (pressed_id == fences->btn_press_mode_.GetId()) {
+          fences->graphs_.FlipPressMode();
+        } else if (pressed_id == fences->btn_remove_.GetId()) {
+          fences->Remove();
+        } else if (pressed_id == fences->btn_bake_picket_.GetId()) {
           fences->BakePicket();
         } else if (pressed_id == fences->btn_bake_chain_linked_.GetId()) {
           fences->BakeChainLinked();
         } else if (pressed_id == fences->btn_bake_wooden_.GetId()) {
           fences->BakeWooden();
         } else if (pressed_id == fences->btn_create_.GetId()) {
-          fences->Create(pressed_id);
-        } else if (pressed_id == fences->btn_remove_.GetId()) {
-          fences->Remove();
+          fences->graphs_.CreateGraph();
         }
       }
     }
@@ -94,7 +104,10 @@ FencesMode::FencesMode(
              UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
              UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
              UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             edit_mode_selected_sample_id_test_, text_renderer) {}
+             edit_mode_selected_sample_id_test_, text_renderer),
+      btn_edge_mode_(vbos::VboIdMain::kMapTarget, vbos::VboIdText::kNone),
+      btn_press_mode_(vbos::VboIdMain::kMapX, vbos::VboIdText::kNone),
+      graphs_() {}
 
 void FencesMode::Render() {
   shared_resources_.tile_renderer_.Render();
@@ -110,7 +123,11 @@ void FencesMode::Render() {
   btn_bake_wooden_.Render();
   btn_create_.Render();
   btn_remove_.Render();
+  btn_edge_mode_.Render();
+  btn_press_mode_.Render();
   slots_.Render();
+
+  graphs_.Render();
 }
 
 void FencesMode::RenderPicking() {
@@ -127,27 +144,13 @@ void FencesMode::RenderPicking() {
   btn_bake_wooden_.RenderPicking();
   btn_create_.RenderPicking();
   btn_remove_.RenderPicking();
+  btn_edge_mode_.RenderPicking();
+  btn_press_mode_.RenderPicking();
   slots_.RenderPicking();
 }
 
-void FencesMode::Create(GLuint id) {
-  std::cout << "created new point set" << std::endl;
-  /*  if (points_data_.size() == 64) {
-      std::cerr << "points overflow; rewriting last" << std::endl;
-      points_data_.pop_back();
-    }
-    for (const auto& i : points_data_) {
-      if (i == id) {
-        return;
-      }
-    }
-    std::cout << "Point id: " << id << std::endl;
-    points_data_.push_back(id);*/
-}
-
 void FencesMode::Remove() {
-  std::cout << "removed selected point set" << std::endl;
-  //  points_data_.clear();
+  graphs_.Remove();
 }
 
 // auto insidePoints = GenHeightMap();
@@ -159,9 +162,11 @@ void FencesMode::Remove() {
 void FencesMode::BakePicket() {
   std::cout << "baked as a picket fence" << std::endl;
 }
+
 void FencesMode::BakeChainLinked() {
   std::cout << "baked as a chain linked fence" << std::endl;
 }
+
 void FencesMode::BakeWooden() {
   std::cout << "baked as a wooden fence" << std::endl;
 }

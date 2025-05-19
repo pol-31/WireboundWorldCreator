@@ -1,5 +1,5 @@
 #version 460 core
-layout (location = 0) in uint in_vertex_id;
+layout(location = 0) in uint in_vertex_id;
 
 layout(location = 0) uniform sampler2D tex_displacement;
 
@@ -19,6 +19,11 @@ layout(binding = 0) uniform CameraBufferObject {
     mat4 proj;
 } camera;
 
+out vec3 color;
+
+layout(location = 1) uniform uint selected_id_1;
+layout(location = 2) uniform uint selected_id_2;
+
 void main() {
     const vec4 quad_centre_pos = vec4(0.0, 0.0, 0.0, 1.0);
     int x = int(in_vertex_id & uint(1023));
@@ -32,5 +37,9 @@ void main() {
     float(y - 512), 0.0) / 16.0f;
     p.y = texture(tex_displacement, tc).r * dmap_depth;
     gl_Position = camera.proj * camera.view * transform * p;
-}  
+    float t = float(
+    in_vertex_id == selected_id_1
+    || in_vertex_id == selected_id_2);
+    color = mix(vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0), t);
+}
 

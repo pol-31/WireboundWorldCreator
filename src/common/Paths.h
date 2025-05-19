@@ -47,6 +47,8 @@ struct Paths {
   std::string shader_placement_draw_comp;
   std::string shader_dithering;
   std::string shader_poisson_points;
+  std::string shader_graph_vert;
+  std::string shader_graph_frag;
 
   std::string shader_ocean_ifft;
   std::string shader_ocean_init_spectrum;
@@ -111,14 +113,15 @@ struct Paths {
         {"shader_height_map_picking_vert", &shader_height_map_picking_vert},
 #ifndef NDEBUG
         {"shader_sprite_static_vert_debug", &shader_sprite_static_vert},
+        {"shader_sprite_dynamic_vert_debug", &shader_sprite_dynamic_vert},
 #else
         {"shader_sprite_static_vert", &shader_sprite_static_vert},
+        {"shader_sprite_dynamic_vert", &shader_sprite_dynamic_vert},
 #endif // NDEBUG
         {"shader_sprite_mask_frag", &shader_sprite_mask_frag},
         {"config_vbo_sprites", &config_vbo_sprites},
         {"config_vbo_transform", &config_vbo_transform},
 
-        {"shader_sprite_dynamic_vert", &shader_sprite_dynamic_vert},
         {"shader_sprite_frag", &shader_sprite_frag},
         {"shader_sprite_picking_frag", &shader_sprite_picking_frag},
 
@@ -130,6 +133,8 @@ struct Paths {
         {"menu_icon_shader", &menu_icon_shader},
         {"shader_dithering", &shader_dithering},
         {"shader_poisson_points", &shader_poisson_points},
+        {"shader_graph_vert", &shader_graph_vert},
+        {"shader_graph_frag", &shader_graph_frag},
         {"texture_ui", &texture_ui},
         {"texture_ui_mask", &texture_ui_mask},
         {"texture_text", &texture_text},

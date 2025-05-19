@@ -40,7 +40,7 @@ std::vector<GraphTraits> GraphTraits::Parse(std::string_view path) {
     std::cerr << "cannot open the file " << path << std::endl;
     return graphs;
   }
-  std::string line;
+  /*std::string line;
   std::istringstream iss_line;
   while (std::getline(file, line)) {
     iss_line.clear();
@@ -72,13 +72,13 @@ std::vector<GraphTraits> GraphTraits::Parse(std::string_view path) {
       });
     }
     graphs.push_back(graph);
-  }
+  }*/
   return graphs;
 }
 
 void GraphTraits::Serialize(std::string_view path,
                             std::vector<GraphTraits> graphs) {
-  std::ofstream file(path.data());
+  /*std::ofstream file(path.data());
   if (!file.is_open()) {
     std::cerr << "cannot open the file " << path << std::endl;
     return;
@@ -96,7 +96,7 @@ void GraphTraits::Serialize(std::string_view path,
       all_data << std::to_string(edge.first) << ';'
                << std::to_string(edge.second) << ";\n";
     }
-  }
+  }*/
 }
 
 // uint32 pos_x, uint32 pos_y, uint32 id

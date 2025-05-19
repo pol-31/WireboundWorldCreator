@@ -23,6 +23,8 @@ SharedResources::SharedResources(
                                      paths.shader_sprite_picking_frag),
       static_sprite_progress_shader_(paths.shader_sprite_progress_vert,
                                      paths.shader_sprite_frag),
+      arbitrary_grapn_shader_(paths.shader_graph_vert,
+                              paths.shader_graph_frag),
       global_glfw_callback_data_(global_glfw_callback_data),
       tile_renderer_(tile_renderer_),
       tile_(cur_tile) {
@@ -30,16 +32,16 @@ SharedResources::SharedResources(
 }
 
 void SharedResources::UpdateResolution() {
-  float res_factor = static_cast<float>(gWindowHeight) /
-                     static_cast<float>(gWindowWidth);
   static_sprite_shader_.Bind();
-  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
+  dynamic_sprite_shader_.Bind();
+  glUniform1f(shader::kSpriteResolution, gResFactor);
 
   //Good!
   static_sprite_picking_shader_.Bind();
-  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
   dynamic_sprite_picking_shader_.Bind();
-  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
 
 //  static_sprite_progress_shader_.Bind();
 //  glUniform1f(shader::kSpriteResolution, res_factor);
@@ -48,51 +50,51 @@ void SharedResources::UpdateResolution() {
 
 
   mask_sprite_shader_.Bind();
-  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
 
-  dynamic_sprite_shader_.Bind();
-  glUniform1f(shader::kSpriteResolution, res_factor);
   glUseProgram(0);
 }
 
 void SharedResources::Init() {
   InitVbos();
   InitVaos();
-  float res_factor = static_cast<float>(gWindowHeight) /
-                     static_cast<float>(gWindowWidth);
   static_sprite_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
-  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
   static_sprite_progress_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
 
   //Good!
   static_sprite_picking_shader_.Bind();
-  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
   dynamic_sprite_picking_shader_.Bind();
-  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
 
 //  glUniform1f(shader::kSpriteResolution, res_factor);
   menu_icon_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
 //  glUniform1f(shader::kSpriteResolution, res_factor);
 
+  arbitrary_grapn_shader_.Bind();
+  glUniform1i(0, 0); // terrain height map
+
   mask_sprite_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
-  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
   glUniform1i(shader::kSpriteMask, 1);
 
   dynamic_sprite_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
-  glUniform1f(shader::kSpriteResolution, res_factor);
+  glUniform1f(shader::kSpriteResolution, gResFactor);
   glUseProgram(0);
 //  static_sprite_picking_shader_.Bind();
 //  glUniform1i(shader::kSpriteTexture, 0);
