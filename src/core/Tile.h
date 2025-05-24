@@ -8,7 +8,7 @@
 
 #include <glm/glm.hpp>
 
-#include "../common/ArbitraryGraph.h"
+//#include "../common/ArbitraryGraph.h"
 #include "../common/Texture.h"
 
 //TODO: biome - at least one for each tile; we don't rely on neighbours,
@@ -55,7 +55,7 @@ weather: general attennuation(sun), wind, ... idk...
 
 // for roads and fences
 struct GraphTraits {
-  ArbitraryGraph graph;
+//  ArbitraryGraph graph;
   int type_id; //TODO; map id::type (roads, fences)
 
   static std::vector<GraphTraits> Parse(std::string_view path);

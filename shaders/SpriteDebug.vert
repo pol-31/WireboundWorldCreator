@@ -1,3 +1,4 @@
+/**
 #version 460 core
 
 layout (location = 0) in vec2 in_position;
@@ -34,12 +35,6 @@ out vec2 texcoord;
 //TODO: should i Write a program for tex atlas....
 
 void main() {
-    const vec2 vertices[] = vec2[](
-    vec2(0.5, -0.5),
-    vec2(0.5, 0.5),
-    vec2(-0.5, -0.5),
-    vec2(-0.5, 0.5)
-);
     // we discard any pos at in_position simply ignoring it
     vec2 position = in_position;
 //    vec2 position = vertices[gl_VertexID].xy;
@@ -48,5 +43,25 @@ void main() {
     // vec2(res_factor, 1.0f) is cur RESOLUTION factor
     position = position * scale * vec2(res_factor, 1.0f) + translate;
     gl_Position = vec4(position, -1.0f, 1.0f);
+    texcoord = in_texcoord;
+}
+*/
+
+#version 460 core
+layout (location = 0) in vec2 in_position;
+layout (location = 1) in vec2 in_texcoord;
+
+layout(location = 3) uniform mat3 transform;
+layout(location = 5) uniform float res_factor;
+
+out vec2 texcoord;
+/*
+it's easier to hold transformations as vec3{translate.xy, scale}
+so now we always apply transformations in correct order
+*/
+
+void main() {
+    vec3 position = transform * vec3(in_position, 1.0f);
+    gl_Position = vec4(position.xy, -1.0f, 1.0f);
     texcoord = in_texcoord;
 }

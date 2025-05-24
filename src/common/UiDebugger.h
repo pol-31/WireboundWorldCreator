@@ -4,6 +4,7 @@
 #include "../common/Paths.h"
 #include "../common/Vbos.h"
 #include "../common/Details.h"
+#include "../common/LocalTransform.h"
 #include "../io/Window.h"
 
 #include <string_view>
@@ -12,6 +13,8 @@
 #include <glad/glad.h>
 
 namespace debug {
+
+extern bool gCtrlMode;
 
 void UiScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset);
@@ -30,12 +33,6 @@ void UiKeyCallback(
 // there's not much usage of it, so skip
 class UiDebugger {
  public:
-  struct Transform {
-    float x_translate;
-    float y_translate;
-    float scale;
-  };
-
   UiDebugger(const Paths& paths, GLuint vbo_id_coords,
              GLuint vbo_id_transform, const glm::vec2& cursor_pos);
 
@@ -77,7 +74,7 @@ class UiDebugger {
   float gScaleStep = 0.01f;
 
  private:
-  void UpdateBuffer(Transform pos);
+  void UpdateBuffer(LocalTransformLinear pos);
 
   // for translate vbo
   int GetVboOffset() const {
@@ -92,7 +89,7 @@ class UiDebugger {
 
   static void SerializeConfigFile(
       std::string_view path,
-      std::array<Transform, vbos::gUiVboTransformSize / 3> transforms);
+      std::array<LocalTransformLinear, vbos::gUiVboTransformSize / 3> transforms);
 
   const Paths& paths_;
 
@@ -106,12 +103,14 @@ class UiDebugger {
 
   const glm::vec2& cursor_pos_;
 
-  Transform delta_transform_{0.0f};
+  // we don't need rotation here! (sprites should be drawn approprietlyasdfga)
+  LocalTransformLinear delta_transform_{};
 
   bool mouse_pressed_{false};
 };
 
-extern std::array<UiDebugger::Transform, vbos::gUiVboTransformSize / 3>
+// we also don't serialize / parse it: data is always {T.x, T.y, S}
+extern std::array<LocalTransformLinear, vbos::gUiVboTransformSize / 3>
     gUiTransforms;
 
 } // namespace debug

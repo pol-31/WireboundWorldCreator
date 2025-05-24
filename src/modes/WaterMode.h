@@ -20,12 +20,6 @@ void WaterModeKeyCallback(
 
 class WaterMode final : public IEditMode {
  public:
-  enum class WaterType {
-    kLake,
-    kRiver,
-    kWaterfall,
-  };
-
   explicit WaterMode(SharedResources& shared_resources,
                      const Paths& paths, const TextRenderer& text_renderer);
 
@@ -54,11 +48,6 @@ class WaterMode final : public IEditMode {
   void BindCallbacks() override;
 
  protected:
-  // protected, but not private because of GLFW callbacks,
-  // that are c-style functions (global scope)
-  //TODO: we still can make private functions like Init() or
-  // fields not used in callbacks OR add protected setters, etc...
-
   friend void WaterModeScrollCallback(
       GLFWwindow* window, double xoffset, double yoffset);
 
@@ -68,23 +57,17 @@ class WaterMode final : public IEditMode {
   friend void WaterModeKeyCallback(
       GLFWwindow* window, int key, int scancode, int action, int mods);
 
+  enum class WaterType {
+    kLake,
+    kRiver,
+    kWaterfall,
+  };
   void Init();
-
   void RenderPoints();
-
-  //TODO: OPTIMIZE!!! (e.g. we can check only with water and only with borders)
-  //TODO: gpu / concurrency ?
-  /// cpu; returns false if the water has stabilized
-  /// (i.e. no changes after the flood fill)
-
-  /// stable means TODO:..
   bool FloodFillStablePass();
   bool FloodFillMovingPass();
-
   void FloodFill();
-
   void AddNewPoint(std::uint32_t id);
-
   void ReBake();
 
   void UpdateOcean();
@@ -92,16 +75,16 @@ class WaterMode final : public IEditMode {
   /// currently only CPU
   /// checks are points indices in ccw order, and
   /// is points polygon convex (only convex allowed)
-  std::vector<Point> GenControlPoints();
+//  std::vector<Point> GenControlPoints();
 
   /// these two init height for given points based on WaterType and user params
   /// TODO: (2 user params)
 
   /// stable means TODO:..
-  void InitStableArea(
-      const std::vector<Point>& control_points);
-  void InitMovingArea(
-      const std::vector<Point>& control_points);
+//  void InitStableArea(
+//      const std::vector<Point>& control_points);
+//  void InitMovingArea(
+//      const std::vector<Point>& control_points);
 
   struct WaterInstance {
     WaterType type;
@@ -150,9 +133,9 @@ class WaterMode final : public IEditMode {
   /// is considered as a new point for point set
   bool do_add_points_{false}; //TODO rename to creation_mode_
 
-  UiOceanCascadeConfig ocean_layer_config_1_;
-  UiOceanCascadeConfig ocean_layer_config_2_;
-  UiOceanCascadeConfig ocean_layer_config_3_;
+  UiWaterLayerConfig ocean_layer_config_1_;
+  UiWaterLayerConfig ocean_layer_config_2_;
+  UiWaterLayerConfig ocean_layer_config_3_;
 
   OceanTraits CollectOceanTraits() {
     return {ocean_layer_config_1_.GetOceanLayerTraits(),

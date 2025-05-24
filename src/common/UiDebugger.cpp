@@ -7,8 +7,9 @@
 
 namespace debug {
 
-std::array<UiDebugger::Transform, vbos::gUiVboTransformSize / 3>
-    gUiTransforms{};
+bool gCtrlMode = false;
+
+std::array<LocalTransformLinear, vbos::gUiVboTransformSize / 3> gUiTransforms{};
 
 void UiScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
@@ -115,28 +116,21 @@ void UiDebugger::Update() {
 }
 
 void UiDebugger::UpdatePosition() {
-  if (delta_transform_.x_translate == 0.0f &&
-      delta_transform_.y_translate == 0.0f && delta_transform_.scale == 0.0f) {
+  if (delta_transform_.Empty()) {
     return;
   }
   // duplicate 4 times for each vertex
-  Transform pos = gUiTransforms[GetVboOffset()];
-  pos.x_translate += delta_transform_.x_translate;
-  pos.y_translate += delta_transform_.y_translate;
+  LocalTransformLinear pos = gUiTransforms[GetVboOffset()];
+  /// not just apply - sum scales
+  pos.translate += delta_transform_.translate;
   pos.scale += delta_transform_.scale;
   UpdateBuffer(pos);
 }
 
-void UiDebugger::UpdateBuffer(Transform pos) {
-  for (int k = 0; k < gUiComponents[cur_ui_vbo_id_].children_num + 1; ++k) {
-    // if it's parent - offset is 0 by default
-    for (int i = 0; i < 4; ++i) {
-      gUiTransforms[GetVboOffset() + i + k * 4] = Transform(
-          pos.x_translate + gUiComponents[cur_ui_vbo_id_ + k].parent_offset_x,
-          pos.y_translate + gUiComponents[cur_ui_vbo_id_ + k].parent_offset_y,
-          pos.scale * gUiComponents[cur_ui_vbo_id_ + k].parent_scale
-          );
-    }
+void UiDebugger::UpdateBuffer(LocalTransformLinear pos) {
+  for (int i = 0; i < 4; ++i) {
+    /// for each vertex
+    gUiTransforms[GetVboOffset() + i] = pos;
   }
 }
 
@@ -185,7 +179,7 @@ std::vector<float> UiDebugger::ParseConfigFile(
 
 void UiDebugger::SerializeConfigFile(
     std::string_view path,
-    std::array<Transform, vbos::gUiVboTransformSize / 3> transforms) {
+    std::array<LocalTransformLinear, vbos::gUiVboTransformSize / 3> transforms) {
   std::ofstream file(path.data());
   if (!file.is_open()) {
     std::cerr << "Error: Could not open file: " << path << std::endl;
@@ -194,8 +188,8 @@ void UiDebugger::SerializeConfigFile(
   std::ostringstream oss_file, oss_line;
   oss_file << "// should be applied to all transforms\n";
   for (int i = 0; i < vbos::gUiVboTransformSize / 3; i += 4) {
-    oss_line << std::to_string(transforms[i].x_translate) << ','
-             << std::to_string(transforms[i].y_translate) << ','
+    oss_line << std::to_string(transforms[i].translate.x) << ','
+             << std::to_string(transforms[i].translate.y) << ','
              << std::to_string(transforms[i].scale) << ",\n"; // x4
     auto per_vertex_line = oss_line.str();
     for (int j = 0; j < 4; ++j) {
@@ -210,19 +204,20 @@ void UiDebugger::SerializeConfigFile(
 
 void UiDebugger::TranslateToCursorPos() {
   float prev_scale = gUiTransforms[GetVboOffset()].scale;
-  Transform pos = {cursor_pos_.x, cursor_pos_.y, prev_scale};
+  LocalTransformLinear pos = {
+      glm::vec2{cursor_pos_.x, cursor_pos_.y}, prev_scale};
   UpdateBuffer(pos);
 }
 
 void UiDebugger::SetXTranslate(float value) {
   if (cur_ui_vbo_id_ != -1) {
-    delta_transform_.x_translate = value;
+    delta_transform_.translate.x = value;
   }
 }
 
 void UiDebugger::SetYTranslate(float value) {
   if (cur_ui_vbo_id_ != -1) {
-    delta_transform_.y_translate = value;
+    delta_transform_.translate.y = value;
   }
 }
 
@@ -249,11 +244,11 @@ void UiDebugger::ApplyAndReset() {
   auto transform = gUiTransforms[GetVboOffset()];
   auto ui = gUiComponents[cur_ui_vbo_id_].ui;
   if (ui) {
-    ui->UpdateTransform(transform.x_translate, transform.y_translate,
+    ui->UpdateTransform(transform.translate.x, transform.translate.y,
                        transform.scale);
   }
-  cur_ui_vbo_id_ = -1;
-  delta_transform_ = Transform{0.0f, 0.0f, 0.0f};
+//  cur_ui_vbo_id_ = -1;
+//  delta_transform_ = Transform{0.0f, 0.0f, 0.0f};
 }
 
 void UiDebugger::Release() {

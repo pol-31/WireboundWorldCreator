@@ -33,75 +33,67 @@ void TerrainModeMouseButtonCallback(
     } else {
       terrain->ui_event_handler_.Press(pressed_id);
     }
-  } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
+  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     terrain->ui_event_handler_.Release();
   }
 }
 
 // TODO: possible more keys to press (now se use src/io/Window.h WasdKeyCallback
 void TerrainModeKeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods) {
-/*  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
-  auto terrain = dynamic_cast<TerrainMode*>(global_data->cur_mode_);
-  if (action == GLFW_PRESS) {
-    if (key == GLFW_KEY_ESCAPE) {
-      glfwSetWindowShouldClose(window, true);
-    } else if (key == GLFW_KEY_LEFT_SHIFT) {
-      global_data->camera_.SpeedUp();
-    } else if (key == GLFW_KEY_BACKSPACE) {
-      global_data->terrain_.ClearPoints();
-    } else if (key == GLFW_KEY_ENTER) {
-      global_data->terrain_.Bake();
-    } else if (key == GLFW_KEY_TAB) {
-      global_data->tab_pressed_ = true;
-    }
-  } else if (action == GLFW_RELEASE) {
-    if (key == GLFW_KEY_LEFT_SHIFT) {
-      global_data->camera_.SlowDown();
-    } else if (key == GLFW_KEY_TAB) {
-      global_data->tab_pressed_ = false;
-    }
-  }*/
-}
-
-//TODO: attach to sliders:
-//    shader_draw_.Bind();
-//    glUniform1f(shader::kPlacementRadius, slider_size_.GetProgress());
-//    glUniform1f(shader::kPlacementFalloff, slider_falloff_.GetProgress());
-//    glUseProgram(0);
+    GLFWwindow* window, int key, int scancode, int action, int mods) {}
 
 TerrainMode::TerrainMode(SharedResources& shared_resources)
     : IEditMode(shared_resources),
-      btn_bake_(vbos::VboIdMain::kTerrainUpdate, vbos::VboIdText::kNone,
-                [](){
-                    std::cout << "Press() : btn_bake_" << std::endl;
-                }),
-      btn_smooth_(vbos::VboIdMain::kTerrainFlatten, vbos::VboIdText::kNone,
-                  []() {
-                    std::cout << "Press() : btn_smooth_" << std::endl;
-                  }),
+      sprite_flatten_(
+          vbos::VboIdMain::kTerrainFlatten, vbos::VboIdText::kNone),
+      sprite_terrain_mode_(
+          vbos::VboIdMain::kTerrainTerrainMode, vbos::VboIdText::kNone),
+      btn_update_(
+          vbos::VboIdMain::kTerrainUpdate, vbos::VboIdText::kNone,
+          [this]() {
+            this->BtnUpdate();
+          }),
+      btn_regenerate_(
+          vbos::VboIdMain::kTerrainRegenerate, vbos::VboIdText::kNone,
+          [this]() {
+            this->BtnRegenerate();
+          }),
       slider_size_(
           UiStaticSprite{vbos::VboIdMain::kTerrainSizeFill, vbos::VboIdText::kNone},
           UiStaticSprite{vbos::VboIdMain::kTerrainSizeBack, vbos::VboIdText::kNone},
-          UiDynamicSprite{vbos::VboIdMain::kTerrainSizeIcon, vbos::VboIdText::kNone}),
+          UiDynamicSprite{vbos::VboIdMain::kTerrainSizeIcon, vbos::VboIdText::kNone}
+          ),
       slider_falloff_(
           UiStaticSprite{vbos::VboIdMain::kTerrainFalloffFill, vbos::VboIdText::kNone},
           UiStaticSprite{vbos::VboIdMain::kTerrainFalloffBack, vbos::VboIdText::kNone},
-          UiDynamicSprite{vbos::VboIdMain::kTerrainFalloffIcon, vbos::VboIdText::kNone}),
+          UiDynamicSprite{vbos::VboIdMain::kTerrainFalloffIcon, vbos::VboIdText::kNone}
+          ),
+      toggle_flatten_(
+          UiStaticSprite{vbos::VboIdMain::kTerrainFlattenOff, vbos::VboIdText::kNone,
+                         [this]() {
+                           this->ToggleFlatten();
+                         }},
+          UiStaticSprite{vbos::VboIdMain::kTerrainFlattenOn1, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainFlattenOn2, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kTerrainFlattenOn3, vbos::VboIdText::kNone}
+          ),
       ui_event_handler_({
-          &btn_bake_, &btn_smooth_, &slider_size_, &slider_falloff_
-      }) {}
+          &btn_update_, &btn_regenerate_, &slider_size_,
+          &slider_falloff_, &toggle_flatten_}) {}
 
-void TerrainMode::Bake() {
-  std::cout << "baked 2" << std::endl;
+
+void TerrainMode::BtnUpdate() {
+  std::cout << "btn_update" << std::endl;
 }
 
-void TerrainMode::SwitchSmooth() {
-  smooth_mode_ = !smooth_mode_;
-  std::cout << "smooth mode enabled: " << std::boolalpha << smooth_mode_
-            << std::noboolalpha << std::endl;
+void TerrainMode::BtnRegenerate() {
+  std::cout << "btn_regenerate" << std::endl;
 }
+
+void TerrainMode::ToggleFlatten() {
+  std::cout << "toggle_flatten" << std::endl;
+}
+
 
 void TerrainMode::BindCallbacks() {
   glfwSetScrollCallback(gWindow, TerrainModeScrollCallback);
@@ -122,32 +114,22 @@ void TerrainMode::Render() {
 
   shared_resources_.static_sprite_shader_.Bind();
 
-  btn_bake_.Render();
-  btn_smooth_.Render();
+  sprite_flatten_.Render();
+  sprite_terrain_mode_.Render();
+
+  btn_update_.Render();
+  btn_regenerate_.Render();
 
   slider_size_.Render(
       shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
   slider_falloff_.Render(
       shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
 
+  toggle_flatten_.Render();
+
   shared_resources_.dynamic_sprite_shader_.Bind();
-//  test_popup_.Render(((static_cast<int>(glfwGetTime()) & 1) == 0));
   slider_size_.RenderIcon();
   slider_falloff_.RenderIcon();
-
-
-//  if (need_to_update_uniforms_) {
-    //TODO: here we need separate POINT-LINES shader and its mechanic
-//    shader_draw_.Bind();
-//    glUniform1f(shader::kPlacementRadius, slider_size_.GetProgress());
-//    glUniform1f(shader::kPlacementFalloff, slider_falloff_.GetProgress());
-//    glUseProgram(0);
-//    need_to_update_uniforms_ = false;
-//  }
-
-  double last_x_, last_y_;
-  glfwGetCursorPos(gWindow, &last_x_, &last_y_);
-//  std::cout << "LAST: " << last_x_ << ' ' << last_y_ << std::endl;
 }
 
 void TerrainMode::RenderPicking() {
@@ -159,24 +141,21 @@ void TerrainMode::RenderPicking() {
 
   shared_resources_.static_sprite_picking_shader_.Bind();
 
-  btn_bake_.RenderPicking();
-  btn_smooth_.RenderPicking();
+  sprite_flatten_.RenderPicking();
+  sprite_terrain_mode_.RenderPicking();
+
+  btn_update_.RenderPicking();
+  btn_regenerate_.RenderPicking();
 
   slider_size_.RenderPicking();
   slider_falloff_.RenderPicking();
+
+  toggle_flatten_.RenderPicking();
+
+  shared_resources_.dynamic_sprite_picking_shader_.Bind();
 }
 
 int TerrainMode::Hover(std::uint32_t global_id) {
-  if (global_id == btn_smooth_.GetId()) {
-    return btn_smooth_.Hover();
-  } else if (global_id == btn_bake_.GetId()) {
-    return btn_bake_.Hover();
-  } /*else if (global_id == terrain->slider_size_.GetTrackId()) {
-    terrain->slider_size_pressed_ = true;
-    terrain->slider_size_.UpdateSliderPos(global_data->cursor_pos_tex_norm_);
-  } else if (global_id == terrain->slider_falloff_.GetTrackId()) {
-    terrain->slider_falloff_pressed_ = true;
-    terrain->slider_falloff_.UpdateSliderPos(global_data->cursor_pos_tex_norm_);
-  }*/
+  // NOT IMPLEMENTED
   return -1;
 }

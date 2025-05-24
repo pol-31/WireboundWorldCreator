@@ -29,9 +29,10 @@ class TerrainMode final : public IEditMode {
 
   void BindCallbacks() override;
 
-  void Bake();
+  void BtnUpdate();
+  void BtnRegenerate();
 
-  void SwitchSmooth();
+  void ToggleFlatten();
 
  protected:
   friend void TerrainModeScrollCallback(
@@ -43,13 +44,21 @@ class TerrainMode final : public IEditMode {
   friend void TerrainModeKeyCallback(
       GLFWwindow* window, int key, int scancode, int action, int mods);
 
-  UiStaticSprite btn_bake_;
-  UiStaticSprite btn_smooth_;
+  UiStaticSprite sprite_flatten_;
+  UiStaticSprite sprite_terrain_mode_;
+
+  UiStaticSprite btn_update_;
+  UiStaticSprite btn_regenerate_;
+
   UiSliderV slider_size_;
   UiSliderV slider_falloff_;
 
-  // 2 buttons + 3 vert sliders (x2)
-  UiEventHandler<8> ui_event_handler_;
+  UiToggle toggle_flatten_;
+
+  UiEventHandler<
+      static_cast<int>(vbos::VboIdMain::kTerrainFalloffIcon) -
+      static_cast<int>(vbos::VboIdMain::kTerrainFlatten) + 1
+      > ui_event_handler_;
 
   bool smooth_mode_{false};
 };

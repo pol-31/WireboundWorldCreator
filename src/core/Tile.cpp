@@ -124,7 +124,7 @@ Tile::Tile(const TileInfo& tile_info) {
   pos_x = tile_info.pos_x;
   pos_y = tile_info.pos_y;
   // map_terrain_height is necessary (if float GL_RED is ignored)
-  map_terrain_height = Texture(tile_info.map_terrain_height, GL_R8);
+  map_terrain_height = Texture(tile_info.map_terrain_height, GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
   map_erosion_wear = Texture(tile_info.map_erosion_wear, GL_RED);
   map_erosion_flow = Texture(tile_info.map_erosion_flow, GL_RED);
   map_erosion_deposition = Texture(tile_info.map_erosion_deposition, GL_RGBA);

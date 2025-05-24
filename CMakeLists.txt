@@ -66,6 +66,7 @@ add_executable(WireboundWorldCreator
         src/io/Cameras.h
         src/common/PlayerCharacter.h
         src/common/SkylineBottomLeft.h
+        src/common/LocalTransform.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

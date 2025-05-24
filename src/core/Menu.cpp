@@ -30,64 +30,172 @@ Menu::Menu(SharedResources& shared_resources,
       ui_tab_menu_(
           UiStaticSprite{vbos::VboIdMain::kTabDesk, vbos::VboIdText::kNone},
           shared_resources_,
-
-          UiStaticSprite{vbos::VboIdMain::kMenuTerrain, vbos::VboIdText::kTerrain},
-          UiStaticSprite{vbos::VboIdMain::kMenuWater, vbos::VboIdText::kWater},
-          UiStaticSprite{vbos::VboIdMain::kMenuRoads, vbos::VboIdText::kRoads},
-          UiStaticSprite{vbos::VboIdMain::kMenuFences, vbos::VboIdText::kFences},
-          UiStaticSprite{vbos::VboIdMain::kMenuPlacement, vbos::VboIdText::kPlacement},
-          UiStaticSprite{vbos::VboIdMain::kMenuObjects, vbos::VboIdText::kObject},
-          UiStaticSprite{vbos::VboIdMain::kMenuBiomes, vbos::VboIdText::kBiome},
-          UiStaticSprite{vbos::VboIdMain::kMenuTiles, vbos::VboIdText::kTiles},
-
-          UiStaticSprite{vbos::VboIdMain::kMenuTerrainOn, vbos::VboIdText::kTerrain},
-          UiStaticSprite{vbos::VboIdMain::kMenuWaterOn, vbos::VboIdText::kWater},
-          UiStaticSprite{vbos::VboIdMain::kMenuRoadsOn, vbos::VboIdText::kRoads},
-          UiStaticSprite{vbos::VboIdMain::kMenuFencesOn, vbos::VboIdText::kFences},
-          UiStaticSprite{vbos::VboIdMain::kMenuPlacementOn, vbos::VboIdText::kPlacement},
-          UiStaticSprite{vbos::VboIdMain::kMenuObjectsOn, vbos::VboIdText::kObject},
-          UiStaticSprite{vbos::VboIdMain::kMenuBiomesOn, vbos::VboIdText::kBiome},
-          UiStaticSprite{vbos::VboIdMain::kMenuTilesOn, vbos::VboIdText::kTiles},
-
+          UiStaticSprite{vbos::VboIdMain::kMenuTerrain, vbos::VboIdText::kTerrain,
+                         [this]() {
+                           this->BtnModeTerrain();
+                         }},
+          UiStaticSprite{vbos::VboIdMain::kMenuWater, vbos::VboIdText::kWater,
+                         [this]() {
+                           this->BtnModeWater();
+                         }},
+          UiStaticSprite{vbos::VboIdMain::kMenuRoads, vbos::VboIdText::kRoads,
+                         [this]() {
+                           this->BtnModeRoads();
+                         }},
+          UiStaticSprite{vbos::VboIdMain::kMenuFences, vbos::VboIdText::kFences,
+                         [this]() {
+                           this->BtnModeFences();
+                         }},
+          UiStaticSprite{vbos::VboIdMain::kMenuPlacement, vbos::VboIdText::kPlacement,
+                         [this]() {
+                           this->BtnModePlacement();
+                         }},
+          UiStaticSprite{vbos::VboIdMain::kMenuObjects, vbos::VboIdText::kObject,
+                         [this]() {
+                           this->BtnModeObjects();
+                         }},
+          UiStaticSprite{vbos::VboIdMain::kMenuBiomes, vbos::VboIdText::kBiome,
+                         [this]() {
+                           this->BtnModeBiomes();
+                         }},
+          UiStaticSprite{vbos::VboIdMain::kMenuTiles, vbos::VboIdText::kTiles,
+                         [this]() {
+                           this->BtnModeTiles();
+                         }},
+          UiToggle{
+              {vbos::VboIdMain::kMenuTerrainOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->ToggleTerrain();
+               }},
+              {vbos::VboIdMain::kMenuTerrainOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuTerrainOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuTerrainOn3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              {vbos::VboIdMain::kMenuWaterOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->ToggleWater();
+               }},
+              {vbos::VboIdMain::kMenuWaterOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuWaterOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuWaterOn3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              {vbos::VboIdMain::kMenuRoadsOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->ToggleRoads();
+               }},
+              {vbos::VboIdMain::kMenuRoadsOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuRoadsOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuRoadsOn3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              {vbos::VboIdMain::kMenuFencesOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->ToggleFences();
+               }},
+              {vbos::VboIdMain::kMenuFencesOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuFencesOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuFencesOn3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              {vbos::VboIdMain::kMenuPlacementOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->TogglePlacement();
+               }},
+              {vbos::VboIdMain::kMenuPlacementOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuPlacementOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuPlacementOn3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              {vbos::VboIdMain::kMenuObjectsOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->ToggleObjects();
+               }},
+              {vbos::VboIdMain::kMenuObjectsOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuObjectsOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuObjectsOn3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              {vbos::VboIdMain::kMenuBiomesOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->ToggleBiomes();
+               }},
+              {vbos::VboIdMain::kMenuBiomesOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuBiomesOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuBiomesOn3, vbos::VboIdText::kNone}
+          },
+          UiToggle{
+              {vbos::VboIdMain::kMenuTilesOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->ToggleTiles();
+               }},
+              {vbos::VboIdMain::kMenuTilesOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuTilesOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kMenuTilesOn3, vbos::VboIdText::kNone}
+          },
           UiStaticSprite{vbos::VboIdMain::kMenuSettings, vbos::VboIdText::kNone,
                          [this]() {
                            this->ShowSettings();
                          }},
           UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kWirebound},
+          UiToggle{
+              {vbos::VboIdMain::kMenuShadersOff, vbos::VboIdText::kTerrain,
+               [this]() {
+                 this->ToggleShaders();
+               }},
+              {vbos::VboIdMain::kMenuShadersOn1, vbos::VboIdText::kTerrain},
+              {vbos::VboIdMain::kMenuShadersOn2, vbos::VboIdText::kTerrain},
+              {vbos::VboIdMain::kMenuShadersOn3, vbos::VboIdText::kTerrain}
+          },
           UiDynamicSprite{vbos::VboIdMain::kCross, vbos::VboIdText::kNone}),
       ui_settings_(
           UiStaticSprite{vbos::VboIdMain::kConfigDesk, vbos::VboIdText::kNone},
           shared_resources_,
-          UiStaticSprite{vbos::VboIdMain::kSettingsResolution, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kSettingsSound, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kSettingsMusic, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kSettingsSensitivity, vbos::VboIdText::kNone},
+          UiSliderH{
+              {vbos::VboIdMain::kSettingsResolutionFill, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsResolutionBack, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsResolutionIcon, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsResolutionHandler, vbos::VboIdText::kNone},
+          },
+          UiSliderH{
+              {vbos::VboIdMain::kSettingsSoundFill, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsSoundBack, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsSoundIcon, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsSoundHandler, vbos::VboIdText::kNone},
+          },
+          UiSliderH{
+              {vbos::VboIdMain::kSettingsMusicFill, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsMusicBack, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsMusicIcon, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsMusicHandler, vbos::VboIdText::kNone},
+          },
+          UiSliderH{
+              {vbos::VboIdMain::kSettingsSensitivityFill, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsSensitivityBack, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsSensitivityIcon, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsSensitivityHandler, vbos::VboIdText::kNone},
+          },
           UiStaticSprite{vbos::VboIdMain::kSettingsKeyboard, vbos::VboIdText::kNone},
           UiToggle{
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox1Off, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox1On1, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox1On2, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox1On3, vbos::VboIdText::kNone}
+              {vbos::VboIdMain::kSettingsMusicOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->ToggleMusic();
+               }},
+              {vbos::VboIdMain::kSettingsMusicOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsMusicOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsMusicOn3, vbos::VboIdText::kNone}
           },
           UiToggle{
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox2Off, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox2On1, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox2On2, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox2On3, vbos::VboIdText::kNone}
+              {vbos::VboIdMain::kSettingsSoundOff, vbos::VboIdText::kNone,
+               [this]() {
+                 this->ToggleSound();
+               }},
+              {vbos::VboIdMain::kSettingsSoundOn1, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsSoundOn2, vbos::VboIdText::kNone},
+              {vbos::VboIdMain::kSettingsSoundOn3, vbos::VboIdText::kNone}
           },
-          UiToggle{
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox3Off, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox3On1, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox3On2, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox3On3, vbos::VboIdText::kNone}
-          },
-          UiToggle{
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox4Off, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox4On1, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox4On2, vbos::VboIdText::kNone},
-              UiStaticSprite{vbos::VboIdMain::kSettingsCheckBox4On3, vbos::VboIdText::kNone}
-          },
-          UiDynamicSprite{vbos::VboIdMain::kCross, vbos::VboIdText::kNone}
+          UiDynamicSprite{vbos::VboIdMain::kObjectsVodyaniy, vbos::VboIdText::kNone}
       ) {
   Init();
 }
@@ -148,31 +256,6 @@ void Menu::Render(bool show) {
   } else {
     ui_tab_menu_.Render(show);
   }
-
-  glUniform1f(shader::kSpriteBrightness, 0.5f);
-//  ui_components_.Render(); 11111
-
-  glUniform1f(shader::kSpriteBrightness, 1.0f);
-  /*ui_components_.widgets_[selected_mode_idx_]->Render();
-
-  if (visibility_.IsTerrainVisible()) {
-    ui_components_.widgets_[11]->Render();
-  }
-  if (visibility_.IsWaterVisible()) {
-    ui_components_.widgets_[12]->Render();
-  }
-  if (visibility_.IsRoadsVisible()) {
-    ui_components_.widgets_[13]->Render();
-  }
-  if (visibility_.IsFencesVisible()) {
-    ui_components_.widgets_[14]->Render();
-  }
-  if (visibility_.IsPlacementVisible()) {
-    ui_components_.widgets_[15]->Render();
-  }
-  if (visibility_.IsObjectsVisible()) {
-    ui_components_.widgets_[16]->Render();
-  }*/ //11111
 }
 
 void Menu::RenderPicking() {
@@ -182,9 +265,6 @@ void Menu::RenderPicking() {
   ui_tab_menu_.RenderPicking();
   if (show_settings_) {
     ui_settings_.RenderPicking();
-  }
-  for (int i = 3; i < 18; ++i) {
-//    ui_components_.widgets_[i]->RenderPicking();
   }
 }
 
@@ -217,25 +297,6 @@ int Menu::Hover(uint32_t global_id) {
 }
 
 bool Menu::Press(uint32_t global_id) {
-  /*if (global_id < static_cast<int>(vbos::VboIdMain::kMenuTerrain) ||
-      global_id > static_cast<int>(vbos::VboIdMain::kMenuSettings)) {
-    return false;
-  }
-  int local_id = static_cast<int>(global_id)
-                 - static_cast<int>(vbos::VboIdMain::kMenuTerrain);
-  if (local_id < 8) {
-    cur_mode_ = modes_[local_id];
-    cur_mode_->BindCallbacks();
-    selected_mode_idx_ = local_id + 3;
-    // TODO: reset prev mode?
-  } else if (local_id < 16) {
-    visibility_.SetMode(local_id - 8);
-  } else if (local_id == 17) {
-//    tile_renderer_.shaders.EnableWireboundShaders();
-  } else if (local_id == 18) {
-//    settings_.Show();
-  }*/
-
   if (!show_settings_) {
     ui_tab_menu_.Press(global_id);
   } else {

@@ -68,7 +68,6 @@ class Interface {
   bool debug_ui_prev_{false};
 
   UiLoading ui_loading_;
-  UiPopUpBack ui_pop_up_back_;
   UiConfirmation ui_confirmation_;
 };
 

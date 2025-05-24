@@ -17,14 +17,18 @@ struct UiData {
   /// which showed in some specific area externally.
   std::size_t text_vbo_offset_;
 
+  // DEPRECATED! :
+  // child.Render() independent, can't see parent data (not serialized)
   // more than 0 for complex objects
   // e.g. for Wheel-slider fill has 3 children and comes first
-  int children_num{0};
+//  int children_num{0};
 
-  //TODO: do I still need it?
-  float parent_offset_x{0.0f};
-  float parent_offset_y{0.0f};
-  float parent_scale{1.0f};
+  // we need parent_id_ to ask for the parent_transform_ and grandparents...
+  // we also need children_num_ to update num after... wait, we can UpdateTra
+  // nsform like in ctors...
+
+  // parent id to take transform from it/
+  std::size_t parent_id_{0};
 
   // useful for e.g. slider to update centre/length of interactive area
   UiTransformDbg* ui{nullptr};
@@ -42,52 +46,96 @@ inline constexpr std::size_t GetVboInstancedOffset(VboIdInstanced id);
 enum class VboIdMain {
   kMenuTerrain = details::kIdOffsetUi,
   kMenuWater,
-
   kMenuRoads,
   kMenuFences,
   kMenuPlacement,
   kMenuObjects,
-
   kMenuBiomes,
   kMenuTiles,
-  kMenuTerrainOn,
-  kMenuWaterOn,
 
-  kMenuRoadsOn,
-  kMenuFencesOn,
-  kMenuPlacementOn,
-  kMenuObjectsOn,
 
-  kMenuBiomesOn,
-  kMenuTilesOn,
+  kMenuTerrainOff,
+  kMenuTerrainOn1,
+  kMenuTerrainOn2,
+  kMenuTerrainOn3,
+
+  kMenuWaterOff,
+  kMenuWaterOn1,
+  kMenuWaterOn2,
+  kMenuWaterOn3,
+
+  kMenuRoadsOff,
+  kMenuRoadsOn1,
+  kMenuRoadsOn2,
+  kMenuRoadsOn3,
+
+  kMenuFencesOff,
+  kMenuFencesOn1,
+  kMenuFencesOn2,
+  kMenuFencesOn3,
+
+  kMenuPlacementOff,
+  kMenuPlacementOn1,
+  kMenuPlacementOn2,
+  kMenuPlacementOn3,
+
+  kMenuObjectsOff,
+  kMenuObjectsOn1,
+  kMenuObjectsOn2,
+  kMenuObjectsOn3,
+
+  kMenuBiomesOff,
+  kMenuBiomesOn1,
+  kMenuBiomesOn2,
+  kMenuBiomesOn3,
+
+  kMenuTilesOff,
+  kMenuTilesOn1,
+  kMenuTilesOn2,
+  kMenuTilesOn3,
+
+
   kMenuShaderWirebound,
+  kMenuShadersOff,
+  kMenuShadersOn1,
+  kMenuShadersOn2,
+  kMenuShadersOn3,
+
+
+
   kMenuSettings,
 
-  kSettingsResolution,
-  kSettingsSound,
-  kSettingsMusic,
-  kSettingsSensitivity,
+  kSettingsResolutionFill,
+  kSettingsResolutionBack,
+  kSettingsResolutionHandler,
+  kSettingsResolutionIcon,
+
+  kSettingsSoundFill,
+  kSettingsSoundBack,
+  kSettingsSoundHandler,
+  kSettingsSoundIcon,
+
+  kSettingsMusicFill,
+  kSettingsMusicBack,
+  kSettingsMusicHandler,
+  kSettingsMusicIcon,
+
+  kSettingsSensitivityFill,
+  kSettingsSensitivityBack,
+  kSettingsSensitivityHandler,
+  kSettingsSensitivityIcon,
+
   kSettingsKeyboard,
 
-  kSettingsCheckBox1Off,
-  kSettingsCheckBox1On1,
-  kSettingsCheckBox1On2,
-  kSettingsCheckBox1On3,
+  kSettingsSoundOff,
+  kSettingsSoundOn1,
+  kSettingsSoundOn2,
+  kSettingsSoundOn3,
 
-  kSettingsCheckBox2Off,
-  kSettingsCheckBox2On1,
-  kSettingsCheckBox2On2,
-  kSettingsCheckBox2On3,
-
-  kSettingsCheckBox3Off,
-  kSettingsCheckBox3On1,
-  kSettingsCheckBox3On2,
-  kSettingsCheckBox3On3,
-
-  kSettingsCheckBox4Off,
-  kSettingsCheckBox4On1,
-  kSettingsCheckBox4On2,
-  kSettingsCheckBox4On3,
+  kSettingsMusicOff,
+  kSettingsMusicOn1,
+  kSettingsMusicOn2,
+  kSettingsMusicOn3,
 
   kCross,
   kLoading0,
@@ -102,8 +150,23 @@ enum class VboIdMain {
   kLoading9,
   kLoading10,
 
+  kUiSlotsSlot,
+  kUiSlotsRemove,
+  kUiSlotsSelected,
+  kUiSlotsHandler,
+
+  // --- Mode Terrain ---
+
   kTerrainFlatten,
+
+  kTerrainFlattenOff,
+  kTerrainFlattenOn1,
+  kTerrainFlattenOn2,
+  kTerrainFlattenOn3,
+
+  kTerrainTerrainMode,
   kTerrainUpdate,
+  kTerrainRegenerate,
   kTerrainSizeFill,
   kTerrainSizeBack,
   kTerrainSizeIcon,
@@ -111,6 +174,9 @@ enum class VboIdMain {
   kTerrainFalloffBack,
   kTerrainFalloffIcon,
 
+  // --- Mode Water ---
+
+  kWaterWaterMode,
   kWaterAdd,
   kWaterRemove,
   kWaterUpdate,
@@ -118,6 +184,12 @@ enum class VboIdMain {
   kWaterRiver,
   kWaterWaterfall,
 
+  kWaterSlotsBack,
+  kWaterSlotsCreate,
+  kWaterSlotsFlipPointEdge_Back,
+  kWaterSlotsFlipSelectEdit_Back,
+  kWaterSlotsFlipPointEdge,
+  kWaterSlotsFlipSelectEdit,
 
 
   kWater1ScaleFill,
@@ -234,11 +306,13 @@ enum class VboIdMain {
   kWaterLayer1,
   kWaterLayer1Window,
   kWaterLayer2,
-  kWaterLayer4Window,
+  kWaterLayer2Window,
   kWaterLayer3,
   kWaterLayer3Window,
 
+  // --- Mode Roads ---
 
+  kRoadsRoadsMode,
   kRoadsAsphalt,
   kRoadsGravel,
   kRoadsSoil,
@@ -246,6 +320,15 @@ enum class VboIdMain {
   kRoadsRemove,
   kRoadsUpdate,
 
+  kRoadsSlotsBack,
+  kRoadsSlotsCreate,
+  kRoadsSlotsFlipPointEdge_Back,
+  kRoadsSlotsFlipSelectEdit_Back,
+  kRoadsSlotsFlipPointEdge,
+  kRoadsSlotsFlipSelectEdit,
+
+
+  kFencesFencesMode,
   kFencesPicket,
   kFencesChainLink,
   kFencesWooden,
@@ -253,6 +336,15 @@ enum class VboIdMain {
   kFencesRemove,
   kFencesUpdate,
 
+  kFencesSlotsBack,
+  kFencesSlotsCreate,
+  kFencesSlotsFlipPointEdge_Back,
+  kFencesSlotsFlipSelectEdit_Back,
+  kFencesSlotsFlipPointEdge,
+  kFencesSlotsFlipSelectEdit,
+
+
+  kPlacementPlacementMode,
 
   kPlacementColorFill,
   kPlacementColorBack,
@@ -273,21 +365,24 @@ enum class VboIdMain {
 
   kPlacementChangeMode,
 
-  kObjectMavka,
-  kObjectVodyaniy,
-  kObjectChugaister,
-  kObjectPedestal,
-  kObjectCampfire,
-  kObjectRoadSign,
-  kObjectHuman,
+  kObjectsObjectsMode,
+  kObjectsMavka,
+  kObjectsVodyaniy,
+  kObjectsChugaister,
+  kObjectsPedestal,
+  kObjectsCampfire,
+  kObjectsRoadSign,
+  kObjectsHuman,
 
-  kBiomeWind,
-  kBiomeSun,
-  kBiomeTime,
-  kBiomePrecipitations,
-  kBiomeTemperature,
-  kBiomeClouds,
+  kBiomesBiomesMode,
+  kBiomesWind,
+  kBiomesSun,
+  kBiomesTime,
+  kBiomesPrecipitations,
+  kBiomesTemperature,
+  kBiomesClouds,
 
+  kTilesTilesMode,
   kTilesLeft,
   kTilesRight,
   kTilesUp,

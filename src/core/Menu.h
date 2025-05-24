@@ -56,6 +56,76 @@ class Menu {
   void ShowSettings();
   void HideSettings();
 
+  inline void BtnModeTerrain() noexcept {
+    cur_mode_ = modes_[0];
+    cur_mode_->BindCallbacks();
+  }
+  inline void BtnModeWater() noexcept {
+    cur_mode_ = modes_[1];
+    cur_mode_->BindCallbacks();
+  }
+  inline void BtnModeRoads() noexcept {
+    cur_mode_ = modes_[2];
+    cur_mode_->BindCallbacks();
+  }
+  inline void BtnModeFences() noexcept {
+    cur_mode_ = modes_[3];
+    cur_mode_->BindCallbacks();
+  }
+  inline void BtnModePlacement() noexcept {
+    cur_mode_ = modes_[4];
+    cur_mode_->BindCallbacks();
+  }
+  inline void BtnModeObjects() noexcept {
+    cur_mode_ = modes_[5];
+    cur_mode_->BindCallbacks();
+  }
+  inline void BtnModeBiomes() noexcept {
+    cur_mode_ = modes_[6];
+    cur_mode_->BindCallbacks();
+  }
+  inline void BtnModeTiles() noexcept {
+    cur_mode_ = modes_[7];
+    cur_mode_->BindCallbacks();
+  }
+
+  inline void ToggleTerrain() noexcept {
+    visibility_.SetMode(0);
+  }
+  inline void ToggleWater() noexcept {
+    visibility_.SetMode(1);
+  }
+  inline void ToggleRoads() noexcept {
+    visibility_.SetMode(2);
+  }
+  inline void ToggleFences() noexcept {
+    visibility_.SetMode(3);
+  }
+  inline void TogglePlacement() noexcept {
+    visibility_.SetMode(4);
+  }
+  inline void ToggleObjects() noexcept {
+    visibility_.SetMode(5);
+  }
+  inline void ToggleBiomes() noexcept {
+    visibility_.SetMode(6);
+  }
+  inline void ToggleTiles() noexcept {
+    visibility_.SetMode(7);
+  }
+
+  inline void ToggleShaders() {
+    std::cout << "toggle shaders" << std::endl;
+  }
+
+  inline void ToggleMusic() {
+    std::cout << "toggle music" << std::endl;
+  }
+
+  inline void ToggleSound() {
+    std::cout << "toggle sound" << std::endl;
+  }
+
  private:
   struct TextParams {
     glm::vec2 translate{0.0f, 0.0f};
@@ -73,11 +143,8 @@ class Menu {
 
   bool show_settings_{false};
 
-//
 //  UiStaticSprite text_mode_;
-//
 //  UiStaticSprite text_visibility_;
-//
 //  UiStaticSprite text_shaders_;
 //  UiStaticSprite btn_shaders_wirebound_;
   // + settings

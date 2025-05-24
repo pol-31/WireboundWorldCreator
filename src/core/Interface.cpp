@@ -38,18 +38,13 @@ Interface::Interface(const Paths& paths, CameraHandler& camera, Map& map)
           UiStaticSprite{vbos::VboIdMain::kLoading8, vbos::VboIdText::kNone},
           UiStaticSprite{vbos::VboIdMain::kLoading9, vbos::VboIdText::kNone},
           UiStaticSprite{vbos::VboIdMain::kLoading10, vbos::VboIdText::kNone}),
-      ui_pop_up_back_(
-          UiStaticSprite{vbos::VboIdMain::kAcceptDeclineDesk, vbos::VboIdText::kNone},
-          glm::vec2{0.0f}, glm::vec2{1.0f},
-          glm::vec2{1.0f}, glm::vec2{1.0f},
-          0.0f, 0.0f),
       ui_confirmation_(
           UiStaticSprite{vbos::VboIdMain::kAcceptDeclineDesk, vbos::VboIdText::kNone},
           shared_resources_,
-          UiStaticSprite{vbos::VboIdMain::kObjectChugaister, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kObjectMavka, vbos::VboIdText::kNone},
-          UiStaticSprite{vbos::VboIdMain::kObjectVodyaniy, vbos::VboIdText::kNone},
-          UiDynamicSprite{vbos::VboIdMain::kCross, vbos::VboIdText::kNone}) {
+          UiStaticSprite{vbos::VboIdMain::kObjectsChugaister, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kObjectsMavka, vbos::VboIdText::kNone},
+          UiStaticSprite{vbos::VboIdMain::kObjectsVodyaniy, vbos::VboIdText::kNone},
+          UiDynamicSprite{vbos::VboIdMain::kObjectsVodyaniy, vbos::VboIdText::kNone}) {
   Init();
 }
 
@@ -74,18 +69,23 @@ void Interface::Render() {
 
 #ifndef NDEBUG
   bool debug_ui = glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
-  if (debug_ui && !debug_ui_prev_) {
+  if (debug_ui) {
     // it's static, but... idk ui_debugger_.BindCallbacks() looks better
     debug::UiDebugger::BindCallbacks();
-  } else if (!debug_ui && debug_ui_prev_) {
+    ui_debugger_.ApplyAndReset();
+    ui_debugger_.Update();
+  } else if (debug_ui_prev_) {
     cur_mode_->BindCallbacks();
     ui_debugger_.ApplyAndReset();
   }
   debug_ui_prev_ = debug_ui;
   if (debug_ui) {
-    ui_debugger_.Update();
+    debug::gCtrlMode = true;
+  } else {
+    debug::gCtrlMode = false;
   }
 #endif // NDEBUG
+
   cur_mode_->Render();
   auto pressed_id = global_data_.GetIdByMousePos();
 
@@ -106,8 +106,9 @@ void Interface::Render() {
   // - showed(until Hover(), Picking for all nested components)
   // - disappear(dynamic objects, moving up, Picking only for desk)
 
-  RunLoading();
-  ShowConfirmationWindow();
+  //TODO:
+//  RunLoading();
+//  ShowConfirmationWindow();
 
 
   text_renderer_.RenderDescription(text_offset);
