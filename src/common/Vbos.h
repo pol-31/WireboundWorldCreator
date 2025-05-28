@@ -52,6 +52,7 @@ enum class VboIdMain {
   kMenuObjects,
   kMenuBiomes,
   kMenuTiles,
+  kMenuCross,
 
 
   kMenuTerrainOff,
@@ -101,28 +102,26 @@ enum class VboIdMain {
   kMenuShadersOn2,
   kMenuShadersOn3,
 
-
-
   kMenuSettings,
+
+
+  kSettingsCross,
+  kSettingsSettings,
 
   kSettingsResolutionFill,
   kSettingsResolutionBack,
-  kSettingsResolutionHandler,
   kSettingsResolutionIcon,
 
   kSettingsSoundFill,
   kSettingsSoundBack,
-  kSettingsSoundHandler,
   kSettingsSoundIcon,
 
   kSettingsMusicFill,
   kSettingsMusicBack,
-  kSettingsMusicHandler,
   kSettingsMusicIcon,
 
   kSettingsSensitivityFill,
   kSettingsSensitivityBack,
-  kSettingsSensitivityHandler,
   kSettingsSensitivityIcon,
 
   kSettingsKeyboard,
@@ -150,13 +149,6 @@ enum class VboIdMain {
   kLoading9,
   kLoading10,
 
-  kUiSlotsSlot,
-  kUiSlotsRemove,
-  kUiSlotsSelected,
-  kUiSlotsHandler,
-
-  // --- Mode Terrain ---
-
   kTerrainFlatten,
 
   kTerrainFlattenOff,
@@ -166,6 +158,8 @@ enum class VboIdMain {
 
   kTerrainTerrainMode,
   kTerrainUpdate,
+  kTerrainSettings,
+  kTerrainSettingsDesk,
   kTerrainRegenerate,
   kTerrainSizeFill,
   kTerrainSizeBack,
@@ -173,8 +167,6 @@ enum class VboIdMain {
   kTerrainFalloffFill,
   kTerrainFalloffBack,
   kTerrainFalloffIcon,
-
-  // --- Mode Water ---
 
   kWaterWaterMode,
   kWaterAdd,
@@ -184,6 +176,11 @@ enum class VboIdMain {
   kWaterRiver,
   kWaterWaterfall,
 
+  kWaterSlotsSlot,
+  kWaterSlotsRemove,
+  kWaterSlotsSelected,
+  kWaterSlotsHandler,
+  kWaterSlotsSlider,
   kWaterSlotsBack,
   kWaterSlotsCreate,
   kWaterSlotsFlipPointEdge_Back,
@@ -303,6 +300,7 @@ enum class VboIdMain {
 
 
   kWaterSettings,
+  kWaterSettingsDesk,
   kWaterLayer1,
   kWaterLayer1Window,
   kWaterLayer2,
@@ -310,7 +308,6 @@ enum class VboIdMain {
   kWaterLayer3,
   kWaterLayer3Window,
 
-  // --- Mode Roads ---
 
   kRoadsRoadsMode,
   kRoadsAsphalt,
@@ -320,6 +317,11 @@ enum class VboIdMain {
   kRoadsRemove,
   kRoadsUpdate,
 
+  kRoadsSlotsSlot,
+  kRoadsSlotsRemove,
+  kRoadsSlotsSelected,
+  kRoadsSlotsHandler,
+  kRoadsSlotsSlider,
   kRoadsSlotsBack,
   kRoadsSlotsCreate,
   kRoadsSlotsFlipPointEdge_Back,
@@ -336,6 +338,11 @@ enum class VboIdMain {
   kFencesRemove,
   kFencesUpdate,
 
+  kFencesSlotsSlot,
+  kFencesSlotsRemove,
+  kFencesSlotsSelected,
+  kFencesSlotsHandler,
+  kFencesSlotsSlider,
   kFencesSlotsBack,
   kFencesSlotsCreate,
   kFencesSlotsFlipPointEdge_Back,
@@ -345,7 +352,6 @@ enum class VboIdMain {
 
 
   kPlacementPlacementMode,
-
   kPlacementColorFill,
   kPlacementColorBack,
   kPlacementColorIcon,
@@ -364,6 +370,12 @@ enum class VboIdMain {
   kPlacementUndergrowth,
 
   kPlacementChangeMode,
+
+  kPlacementDrawOff,
+  kPlacementDrawOn1,
+  kPlacementDrawOn2,
+  kPlacementDrawOn3,
+
 
   kObjectsObjectsMode,
   kObjectsMavka,
@@ -393,6 +405,11 @@ enum class VboIdMain {
   kMapLine,
   kMapTarget,
   kMapX,
+
+  kConfirmationClose,
+  kConfirmationAccept,
+  kConfirmationDecline,
+  kConfirmationCross,
 
   kAcceptDeclineDesk,
   kConfigDesk,

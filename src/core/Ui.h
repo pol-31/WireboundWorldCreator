@@ -27,13 +27,7 @@
 #include "../renderers/water/WaterBiome.h"
 #include "../modes/SharedResources.h"
 
-//todo: relevant?
-/** All components stores vbo offset and provides AABB-like functions:
- * GetLeftBorder(), GetRightBorder(), GetTopBorder(), GetBottomBorder()
- * for more effective collision detection (let's take Terrain edit mode;
- * then because we know that ui located on the left side, we can discard
- * everything on the right side before ui_component.GetRightBorder()
- * */
+#include "../common/ArbitraryGraph.h"
 
 /// dbg serializing - stored without rotation
 LocalTransformLinear GetParentDbgTransform(size_t id);
@@ -45,15 +39,9 @@ class UiCallable {
   using CallableType = std::function<void()>;
 
   UiCallable(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text,
-         CallableType action)
-      : UiCallable(vbos::GetUiData(vbo_texture, vbo_text),
-                   std::move(action)) {}
+             CallableType action);
 
-  explicit UiCallable(vbos::UiData ui_data, CallableType&& action)
-      : ui_data_(ui_data),
-        action_(std::move(action)) {
-    gUiComponents[ui_data_.id - details::kIdOffsetUi] = ui_data_;
-  }
+  UiCallable(size_t ui_data_id, CallableType&& action);
 
   UiCallable(UiCallable&& other) noexcept = default;
   UiCallable(const UiCallable& other) = delete;
@@ -67,33 +55,23 @@ class UiCallable {
   //  virtual void RenderPicking() const {}
 
   /// each ui component has its functionality
-  virtual void Press() {
-    action_();
-  }
+  virtual void Press();
 
-  virtual void Release() {} // can change everything
+  virtual void Release();
 
   /// one for all
-  size_t Hover() {
-    return GetTextVboOffset();
-  }
+  size_t Hover();
 
-  [[nodiscard]] std::uint32_t GetId() const {
-    return ui_data_.id;
-  }
+  [[nodiscard]] std::uint32_t GetId() const;
 
-  [[nodiscard]] std::size_t GetVboOffset() const {
-    return ui_data_.vbo_offset;
-  }
+  [[nodiscard]] std::size_t GetVboOffset() const;
 
-  [[nodiscard]] std::size_t GetTextVboOffset() const {
-    return ui_data_.text_vbo_offset_;
-  }
-
-  // no getter \_-_-_/
-  vbos::UiData ui_data_;
+  [[nodiscard]] std::size_t GetTextVboOffset() const;
 
  private:
+  UiCallable(vbos::UiData ui_data, CallableType&& action);
+
+  size_t ui_data_id_;
   std::function<void()> action_;
 };
 
@@ -116,7 +94,7 @@ class UiEventHandler {
   }
 
   /// according to UiCallable as a member
-  UiEventHandler(UiEventHandler&& other) noexcept = default;
+  UiEventHandler(UiEventHandler&& other) = delete;
   UiEventHandler(const UiEventHandler& other) = delete;
 
   UiEventHandler& operator=(UiEventHandler&& other) = delete;
@@ -216,6 +194,7 @@ class UiDynamicSprite : public UiCallable, public UiTransformDbg {
     local_transform_.translate = translate;
   }
 
+  /// useful for transform-animated parent ui components
   void SetParentTransform(LocalTransform transform) {
     parent_transform_ = transform;
   }
@@ -286,6 +265,62 @@ class UiStaticSprite : public UiCallable, public UiTransformDbg {
   glm::mat3 final_transform_;
 };
 
+class UiSpriteTransformation {
+ public:
+  UiSpriteTransformation(UiDynamicSprite& sprite,
+                         LocalTransform start, LocalTransform end);
+
+  void Render();
+
+  void RenderPicking();
+
+  void RunAnimation(bool looping = false);
+
+  void StopAnimation();
+
+  [[nodiscard]] LocalTransform GetStart() const noexcept {
+    return start_;
+  }
+
+  [[nodiscard]] LocalTransform GetEnd() const noexcept {
+    return end_;
+  }
+
+  [[nodiscard]] LocalTransform GetCur() const noexcept {
+    return cur_;
+  }
+
+  void SetStart(LocalTransform transform) {
+    start_ = transform;
+  }
+
+  void SetEnd(LocalTransform transform) {
+    end_ = transform;
+  }
+
+  void SetCur(LocalTransform transform) {
+    cur_ = transform;
+  }
+
+  // manual looping
+  void SwapStartEnd();
+
+ private:
+  void CubicInterpolation();
+
+  void UpdateAnimation();
+
+  // take by ref to avoid UpdateTransform / parent dependency issues
+  UiDynamicSprite& sprite_;
+  LocalTransform start_;
+  LocalTransform end_;
+  LocalTransform cur_;
+
+  const float speed_;
+  float progress_{0.0f};
+  bool looping_{false};
+};
+
 class UiSliderV final : public UiTransformDbg, public UiCallable {
  public:
   UiSliderV(UiStaticSprite&& fill_sprite,
@@ -322,7 +357,6 @@ class UiSliderV final : public UiTransformDbg, public UiCallable {
   void UpdateTransform() override;
 
  private:
-  // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
   void Set(glm::vec2 mouse_pos);
 
   void UnHover();
@@ -411,6 +445,76 @@ class UiSliderH final : public UiTransformDbg, public UiCallable {
   static const float kTrackLengthFactor;
 };
 
+class UiSliderH3 final : public UiTransformDbg, public UiCallable {
+ public:
+  UiSliderH3(UiDynamicSprite&& fill_sprite,
+             UiDynamicSprite&& back_sprite,
+             UiDynamicSprite&& icon_sprite,
+            float scale = 1.0f);
+
+  UiSliderH3(UiSliderH3&& other) noexcept;
+  UiSliderH3(const UiSliderH3& other) = delete;
+
+  UiSliderH3& operator=(UiSliderH3&& other) = delete;
+  UiSliderH3& operator=(const UiSliderH3& other) = delete;
+
+  void Render(glm::vec2 mouse_pos);
+
+  void RenderIcon();
+
+  void RenderPicking() const;
+
+  [[nodiscard]] size_t Hover(std::uint32_t id);
+
+  void Press() override {
+    pressed_ = true;
+  }
+
+  void Release() override {
+    pressed_ = false;
+  }
+
+  /// UiSlider has the same id as a track_, so it's like its wrapper.
+  /// We don't render UiSlider id, but
+  /// for comparison (e.g. in key callback) we directly slider.GetId()
+  [[nodiscard]] std::uint32_t GetTrackId() const {
+    return fill_sprite_.GetId();
+  }
+
+  void SetParentTransform(LocalTransform transform);
+
+  [[nodiscard]] float GetProgress() const;
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+  void UpdateTransform() override;
+
+ private:
+  // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
+  void Set(glm::vec2 mouse_pos);
+
+  void UnHover();
+
+  /// we want to use UiDynamicSprite only for handler_sprite_,
+  /// BUT to use it in complex hierarhies we need all to be UiDynamicSprite
+  //  UiStaticSprite fill_sprite_;
+  //  UiStaticSprite back_sprite_;
+  //  UiStaticSprite icon_sprite_;
+  //  UiDynamicSprite handler_sprite_;
+
+  UiDynamicSprite fill_sprite_;
+  UiDynamicSprite back_sprite_;
+  UiDynamicSprite icon_sprite_;
+
+  float progress_{0.0f};
+  bool pressed_{false};
+  float centre_;
+  float length_;
+  float scale_{1.0f};
+  static const float kTrackLengthFactor;
+};
+
 /// You should pass action to off_ sprite (see Press());
 class UiToggle final : public UiTransformDbg, public UiCallable {
  public:
@@ -488,7 +592,8 @@ class UiWindowBase : public UiTransformDbg, public UiCallable {
  public:
   using UiTransformDbg::UpdateTransform;
 
-  UiWindowBase(UiStaticSprite&& sprite,
+  UiWindowBase(UiDynamicSprite&& sprite,
+               float size_scale,
                SharedResources& shared_resources);
 
   UiWindowBase(UiWindowBase&& other) noexcept;
@@ -510,10 +615,13 @@ class UiWindowBase : public UiTransformDbg, public UiCallable {
   void UpdateTransform() final;
 
  protected:
-  UiStaticSprite sprite_;
+  UiDynamicSprite sprite_; // dynamic to set scale
 
-  const float speed_{0.5f};
+  float speed_{0.5f};
   float progress_{0.0f};
+
+  // how it differs from the nested components
+  float size_scale_{1.0f};
 
   bool back_ready_{false};
 
@@ -525,7 +633,8 @@ class UiTabMenu final : public UiWindowBase {
   using Base = UiWindowBase;
 
   UiTabMenu(
-      UiStaticSprite&& sprite,
+      UiDynamicSprite&& sprite,
+      float size_scale,
       SharedResources& shared_resources,
 
       UiStaticSprite&& btn_mode_terrain,
@@ -608,12 +717,13 @@ class UiSettings final : public UiWindowBase {
   using Base = UiWindowBase;
 
   UiSettings(
-      UiStaticSprite&& sprite,
+      UiDynamicSprite&& sprite,
+      float size_scale,
       SharedResources& shared_resources,
-      UiSliderH&& resolution,
-      UiSliderH&& music,
-      UiSliderH&& sound,
-      UiSliderH&& sensitivity,
+      UiSliderH3&& resolution,
+      UiSliderH3&& music,
+      UiSliderH3&& sound,
+      UiSliderH3&& sensitivity,
       UiStaticSprite&& keyboard,
       UiToggle&& toggle_music,
       UiToggle&& toggle_sound,
@@ -638,10 +748,10 @@ class UiSettings final : public UiWindowBase {
                        float scale) override;
 
  private:
-  UiSliderH resolution_;
-  UiSliderH music_;
-  UiSliderH sound_;
-  UiSliderH sensitivity_;
+  UiSliderH3 resolution_;
+  UiSliderH3 music_;
+  UiSliderH3 sound_;
+  UiSliderH3 sensitivity_;
   UiStaticSprite keyboard_;
 
   UiToggle toggle_music_;
@@ -660,7 +770,8 @@ class UiConfirmation final : public UiWindowBase {
   using Base = UiWindowBase;
 
   UiConfirmation(
-      UiStaticSprite&& sprite,
+      UiDynamicSprite&& sprite,
+      float size_scale,
       SharedResources& shared_resources,
 
       UiStaticSprite&& btn_close,
@@ -703,7 +814,8 @@ class UiPopUpBase : public UiTransformDbg, public UiCallable {
  public:
   using UiTransformDbg::UpdateTransform;
 
-  UiPopUpBase(UiStaticSprite&& sprite,
+  UiPopUpBase(UiDynamicSprite&& sprite,
+              float size_scale,
               SharedResources& shared_resources,
               LocalTransform start_transform,
               LocalTransform end_transform);
@@ -729,7 +841,7 @@ class UiPopUpBase : public UiTransformDbg, public UiCallable {
  protected:
   // cubic interpolation here (not shader)
   LocalTransform cur_transform_;
-  UiStaticSprite sprite_;
+  UiDynamicSprite sprite_; // dynamic to set scale
 
   // for shader bindings, mask texture
   SharedResources& shared_resources_;
@@ -742,6 +854,9 @@ class UiPopUpBase : public UiTransformDbg, public UiCallable {
   LocalTransform start_transform_;
   LocalTransform end_transform_;
 
+  // how it differs from the nested components
+  float size_scale_{1.0f};
+
   const float speed_{0.5f};
   float progress_{0.0f};
 
@@ -753,7 +868,8 @@ class UiWaterLayerConfig final : public UiPopUpBase {
   using Base = UiPopUpBase;
 
   UiWaterLayerConfig(
-      UiStaticSprite&& sprite,
+      UiDynamicSprite&& sprite,
+      float size_scale,
       SharedResources& shared_resources,
       LocalTransform start_transform,
       LocalTransform end_transform,
@@ -805,44 +921,21 @@ class UiWaterLayerConfig final : public UiPopUpBase {
   UiEventHandler<28> ui_event_handler_;
 };
 
-class UiSlots {};
-
-/*
-/// no shaders managing
-class UiSlot {
- public:
-  void Render() {
-    slot_.Render();
-    selected_.Render();
-    remove_.Render();
-  }
-  void RenderPicking() {
-    slot_.RenderPicking();
-    selected_.RenderPicking();
-    remove_.RenderPicking();
-  }
-
-  void Update(LocalTransform transform) {
-    slot_.SetParentTransform(transform_);
-    selected_.SetParentTransform(transform_);
-    remove_.SetParentTransform(transform_);
-  }
-
- private:
-  UiDynamicSprite slot_;
-  UiDynamicSprite selected_;
-  UiDynamicSprite remove_;
-  LocalTransform transform_;
-  //TODO: each one should have a name or picture, etc...
-};
-
-
-// UiSlots transform -> UiSlot transform -> Sprite transform (in-slot)
-//TODO: static sprites + reusing amond Modes
 class UiSlots final : public UiTransformDbg, public UiCallable {
  public:
-  UiSlots(SharedResources& shared_resources, // TODO:
-          float scale = 1.0f);
+  UiSlots(SharedResources& shared_resources,
+          UiDynamicSprite&& handler,
+          UiDynamicSprite&& slider,
+          UiDynamicSprite&& back,
+          UiDynamicSprite&& create,
+          vbos::VboIdMain flip_select_edit_back_vbo_texture, vbos::VboIdText flip_select_edit_back_vbo_text,
+          vbos::VboIdMain flip_point_edge_back_vbo_texture, vbos::VboIdText flip_point_edge_back_vbo_text,
+          UiDynamicSprite&& flip_select_edit,
+          UiDynamicSprite&& flip_point_edge,
+          UiDynamicSprite&& slot_back,
+          UiDynamicSprite&& slot_remove,
+          UiDynamicSprite&& slot_selected,
+          ArbitraryGraph& graph);
 
   UiSlots(UiSlots&& other) noexcept;
   UiSlots(const UiSlots& other) = delete;
@@ -850,75 +943,81 @@ class UiSlots final : public UiTransformDbg, public UiCallable {
   UiSlots& operator=(UiSlots&& other) = delete;
   UiSlots& operator=(const UiSlots& other) = delete;
 
-  void Set(glm::vec2 cursor_pos) {
-    //...
-    LocalTransform transform;
-    float prev_y = ;
-    glm::vec2 local_translate = glm::vec2{1.0f};
-    for (auto& slot : slots_) {
-      local_translate = prev_y - slot_height;
-      slot.Update();
-      prev_y -= slot_height;
-      // set parent transform
-    }
-  }
+  void SetParentTransform(LocalTransform);
 
-  void Render() {
-    /// --- render static part ---
-    shared_resources_.static_sprite_shader_.Bind();
-    back_.Render();
-    create_.Render();
-    flip_select_edit_back_.Render();
-    flip_point_edge_back_.Render();
+  void Render(glm::vec2 mouse_pos);
 
-    //rotated (scale -> -1)
-    flip_select_edit_.Render();
-    flip_point_edge_.Render();
+  void RenderPicking();
 
-    /// --- render dynamic part ---
-    shared_resources_.dynamic_sprite_shader_.Bind();
-    handle_.Render(); // slide
-    flip_point_edge_.Render(); // rotate
-    flip_select_edit_.Render(); // rotate
+  [[nodiscard]] size_t Hover(std::uint32_t id);
 
-    /// --- render slots ---
-    for (auto& slot : slots_) {
-      slot.Render();
-    }
-  }
+  void Press() override;
+
+  bool Press(int id);
+
+  void Release() override;
+
+  [[nodiscard]] float GetProgress() const;
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+  void UpdateTransform() override;
+
+ void FlipSelectEdit();
+
+ void FlipPointEdge();
 
  private:
-  UiStaticSprite back_;
-  UiStaticSprite create_;
-  UiStaticSprite flip_select_edit_back_;
-  UiStaticSprite flip_point_edge_back_;
+  int GetSlotId();
 
-  UiDynamicSprite handle_;
-  UiDynamicSprite flip_select_edit_; // just scale to -1 to flip vertically (and hor?)
+  /// --- as a slider ---
+  void Set(glm::vec2 mouse_pos);
+
+  UiDynamicSprite handler_;
+  UiDynamicSprite slider_;
+  UiDynamicSprite back_;
+  UiDynamicSprite create_;
+  UiDynamicSprite flip_select_edit_back_;
+  UiDynamicSprite flip_point_edge_back_;
+
+  UiDynamicSprite flip_select_edit_;
   UiDynamicSprite flip_point_edge_;
+  UiSpriteTransformation flip_select_edit_animation_;
+  UiSpriteTransformation flip_point_edge_animation_;
 
-  glm::mat3 transform_;
+  UiDynamicSprite slot_back_;
+  UiDynamicSprite slot_remove_;
+  UiDynamicSprite slot_selected_;
 
-  //TODO:
+  /// --- as a slider ---
 
   float progress_{0.0f};
+  bool pressed_{false};
+  float centre_;
+  float length_;
+  float length_slots_;
+  static const float kTrackLengthFactor;
+  static const float kSlotsLengthFactor;
+  static const int kSlotsNum;
 
-  /// we starts with 5 slots, so nothing scrolls;
-  /// therefore the centre is the middle of the track (0.5f out of [0.0f;1.0f]);
-  /// therefore the offset is 0.5f on two sides
-  float slots_progress_{0.5f}; // the centre, so we don't reorder the slots
-  float slots_safe_offset{0.5f}; // how much we can deviate
+  /// so we could get id related to slots (0-5)
+  int cur_slots_offset_{0};
+  glm::vec2 start_slot_translate_{0.0f};
 
-  /// max 6 on the screen, but 7 for convenience (spare top & bottom)
-  std::array<UiSlot, 7> slots_;
+  // for shader bindings & mouse pos
+  SharedResources& shared_resources_;
 
-
+  /// --- as a complex component ---
 
   UiEventHandler<
-      static_cast<int>(vbos::VboIdMain::kSettingsMusicOn3) -
-      static_cast<int>(vbos::VboIdMain::kSettingsResolutionFill) + 1
+      static_cast<int>(vbos::VboIdMain::kFencesSlotsFlipSelectEdit) -
+      static_cast<int>(vbos::VboIdMain::kFencesSlotsSlot) + 1
       > ui_event_handler_;
-  SharedResources& shared_resources_; // for shader bindings
-};*/
+
+  /// --- graph - related ---
+
+  ArbitraryGraph& graph_;
+};
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_UI_H_

@@ -10,6 +10,15 @@
 
 #include "../modes/SharedResources.h"
 
+// api:
+// Press() <- press on map, Select/Add Point/Edge based on internal states
+// Remove() <- removes selected Point/Edge based on internal states
+// Flip edge-point
+// Flip select-create
+// UiSlots (NewGraph, RemoveGraph, EditGraph)
+
+// missing in sprites: 2xFlip
+
 //template <size_t kMaxPoints>
 class ArbitraryGraph {
  public:
@@ -22,8 +31,17 @@ class ArbitraryGraph {
 
   //TODO: SelectGraph && RemoveGraph we can't test (don't have UiSlots sprites)
   // UiSlots (2 btns for each)
-  void SelectGraph();
-  void RemoveGraph();
+  void SelectGraph(int slot_id);
+  void RemoveGraph(int slot_id);
+
+  [[nodiscard]] int GetGraphNum() const noexcept {
+    return instances_.size();
+  }
+
+  /// -1 in case of non-selected
+  [[nodiscard]] int GetSlotId() const noexcept {
+    return selected_slot_id_;
+  }
 
   void Remove(); // btn remove
 
@@ -34,7 +52,18 @@ class ArbitraryGraph {
 
   void Render();
 
+  static constexpr size_t kMaxPoints = 100;
+
  private:
+  // struct, not class (*_)
+  struct InstanceData {
+    int vertices_offset_;
+    int vertices_amount_;
+    int edges_offset_;
+    int edges_amount_;
+    int graph_id_;
+  };
+
   void Init();
 
   void DeInit();
@@ -51,18 +80,26 @@ class ArbitraryGraph {
   void RemoveEdge();
 
   //TODO: use iterators
-  GLuint FindVerticesOffsetById(GLuint id);
-  GLuint FindEdgeBySelected(GLuint offset_1, GLuint offset_2);
+  std::array<GLuint, ArbitraryGraph::kMaxPoints>::iterator
+  FindVerticesOffsetById(GLuint id);
+  std::array<glm::uvec2, ArbitraryGraph::kMaxPoints>::iterator
+  FindEdgeBySelected(GLuint offset_1, GLuint offset_2);
 
-  struct InstanceData {
-    int vertices_offset_;
-    int vertices_amount_;
-    int edges_offset_;
-    int edges_amount_;
-  };
+  // wrt slots, so at creation we push_back, at remove we remove & decrement
+  // instances_[slot_id] and NOT instances_[instance_id]
+  // so the dependency is: graph_id == instances_[slot_id]
   std::vector<InstanceData> instances_;
 
-  static constexpr size_t kMaxPoints = 100;
+  // order: 0 1 2 3 4 5 6
+  // select [5]: 0 1 2 3 4 5 6
+  // select [1]:
+  // - remember idx 1
+  // - carry forward 0 2 3 4 5 6 1
+  // select [2]:
+  // - get [1] back: 0 1 2 3 4 5 6
+  // - select [2]
+  // selected_graph_id_ == instances_.size() - 1
+  int selected_slot_id_{-1};
 
   // point as a single number - in shader decompose to x;y by mask
   std::array<GLuint, kMaxPoints>::size_type total_vertices_{0};

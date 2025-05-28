@@ -5,7 +5,7 @@
 * lines without "equal" sign are ignored,
 
 texture_ui=../assets/TexAtlas.png
-texture_ui_mask=../assets/TabMask.png
+texture_ui_mask=../assets/2.png
 texture_text=../assets/Text.png
 
 shader_sprite_mask_frag=../shaders/SpriteMask.frag

@@ -25,35 +25,28 @@ void FencesModeMouseButtonCallback(
   auto fences = dynamic_cast<FencesMode*>(global_data->cur_mode_);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   global_data->camera_.ProcessMouseKey(button, action, mods);
-  if (action == GLFW_PRESS) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
-      if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
-        global_data->menu_.Press(pressed_id);
-      } else {
-        // terrain point selected
-        if (pressed_id < details::kIdOffsetWater) {
-          std::cout << "Add point #" << pressed_id << std::endl;
-          std::cout << "Coordinates are: " << (pressed_id & 1023)
-                    << " and " << (pressed_id >> 10) << std::endl;
-          //TODO: if water/other subtract maybe...
-          fences->graphs_.Press(pressed_id);
-        } else if (pressed_id == fences->btn_edge_mode_.GetId()) {
-          fences->graphs_.FlipPointsMode();
-        } else if (pressed_id == fences->btn_press_mode_.GetId()) {
-          fences->graphs_.FlipPressMode();
-        } else if (pressed_id == fences->btn_remove_.GetId()) {
-          fences->Remove();
-        } else if (pressed_id == fences->btn_bake_picket_.GetId()) {
-          fences->BakePicket();
-        } else if (pressed_id == fences->btn_bake_chain_linked_.GetId()) {
-          fences->BakeChainLinked();
-        } else if (pressed_id == fences->btn_bake_wooden_.GetId()) {
-          fences->BakeWooden();
-        } else if (pressed_id == fences->btn_create_.GetId()) {
-          fences->graphs_.CreateGraph();
-        }
+
+  if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
+    auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+      global_data->menu_.Press(pressed_id);
+    } else {
+      if (pressed_id < details::kIdOffsetWater) {
+        std::cout << "Add point #" << pressed_id << std::endl;
+        std::cout << "Coordinates are: " << (pressed_id & 1023)
+                  << " and " << (pressed_id >> 10) << std::endl;
+        //TODO: if water/other subtract maybe...
+        fences->graphs_.Press(pressed_id);
       }
+      fences->ui_event_handler_.Press(pressed_id);
+      fences->slots_.Press(pressed_id);
+    }
+  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+      global_data->menu_.Release();
+    } else {
+      fences->ui_event_handler_.Release();
+      fences->slots_.Release();
     }
   }
 }
@@ -94,20 +87,28 @@ FencesMode::FencesMode(
       btn_bake_chain_linked_(vbos::VboIdMain::kFencesChainLink,
                              vbos::VboIdText::kBakeAsAChainLinkedFence),
       btn_bake_wooden_(vbos::VboIdMain::kFencesWooden, vbos::VboIdText::kBakeAsAWoodenFence),
-      btn_create_(vbos::VboIdMain::kFencesAdd, vbos::VboIdText::kAddNew),
       btn_remove_(vbos::VboIdMain::kFencesRemove, vbos::VboIdText::kRemoveSelected),
-      slots_(temp_size_,
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNextSlot},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kPreviousSlot},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             edit_mode_selected_sample_id_test_, text_renderer),
-      btn_edge_mode_(vbos::VboIdMain::kMapTarget, vbos::VboIdText::kNone),
-      btn_press_mode_(vbos::VboIdMain::kMapX, vbos::VboIdText::kNone),
-      graphs_() {}
+      graphs_(shared_resources_),
+      slots_(
+          shared_resources_,
+          {vbos::VboIdMain::kFencesSlotsHandler, vbos::VboIdText::kNone},
+          {vbos::VboIdMain::kFencesSlotsSlider, vbos::VboIdText::kNone},
+          {vbos::VboIdMain::kFencesSlotsBack, vbos::VboIdText::kNone},
+          {vbos::VboIdMain::kFencesSlotsCreate, vbos::VboIdText::kNone,
+           [this]() {
+             this->graphs_.CreateGraph();
+           }},
+          vbos::VboIdMain::kFencesSlotsFlipSelectEdit_Back, vbos::VboIdText::kNone,
+          vbos::VboIdMain::kFencesSlotsFlipPointEdge_Back, vbos::VboIdText::kNone,
+          {vbos::VboIdMain::kFencesSlotsFlipSelectEdit, vbos::VboIdText::kNone},
+          {vbos::VboIdMain::kFencesSlotsFlipPointEdge, vbos::VboIdText::kNone},
+          {vbos::VboIdMain::kFencesSlotsSlot, vbos::VboIdText::kNone},
+          {vbos::VboIdMain::kFencesSlotsRemove, vbos::VboIdText::kNone},
+          {vbos::VboIdMain::kFencesSlotsSelected, vbos::VboIdText::kNone},
+          graphs_),
+      ui_event_handler_({
+          &btn_bake_picket_, &btn_bake_chain_linked_,
+          &btn_bake_wooden_, &btn_remove_, &slots_}) {}
 
 void FencesMode::Render() {
   shared_resources_.tile_renderer_.Render();
@@ -121,11 +122,12 @@ void FencesMode::Render() {
   btn_bake_picket_.Render();
   btn_bake_chain_linked_.Render();
   btn_bake_wooden_.Render();
-  btn_create_.Render();
   btn_remove_.Render();
-  btn_edge_mode_.Render();
-  btn_press_mode_.Render();
-  slots_.Render();
+
+  shared_resources_.dynamic_sprite_shader_.Bind();
+  auto mouse_pos
+      = shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+  slots_.Render(mouse_pos);
 
   graphs_.Render();
 }
@@ -142,10 +144,9 @@ void FencesMode::RenderPicking() {
   btn_bake_picket_.RenderPicking();
   btn_bake_chain_linked_.RenderPicking();
   btn_bake_wooden_.RenderPicking();
-  btn_create_.RenderPicking();
   btn_remove_.RenderPicking();
-  btn_edge_mode_.RenderPicking();
-  btn_press_mode_.RenderPicking();
+
+  shared_resources_.dynamic_sprite_picking_shader_.Bind();
   slots_.RenderPicking();
 }
 
