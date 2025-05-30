@@ -49,6 +49,10 @@ void UiCallable::Press() {
 
 void UiCallable::Release() {} // can change everything
 
+bool UiCallable::Scroll(GLuint id, float yoffset) {
+  return false;
+}
+
 /// one for all
 size_t UiCallable::Hover() {
   return GetTextVboOffset();
@@ -403,12 +407,30 @@ void UiSliderV::Set(glm::vec2 mouse_pos) {
   icon_sprite_.SetTranslate(translate);
 }
 
+void UiSliderV::Set(float progress) {
+  progress_ = progress;
+  float half_length_ = length_ / 2.0f;
+  float offset = progress_ * length_ - half_length_;
+  glm::vec2 translate = {0.0f, offset};
+  icon_sprite_.SetTranslate(translate);
+}
+
 size_t UiSliderV::Hover(std::uint32_t id) {
   return back_sprite_.Hover();
 }
 
 void UiSliderV::UnHover() {
   //TODO: set lower brightness?
+}
+
+bool UiSliderV::Scroll(GLuint id, float yoffset) {
+  if (id > icon_sprite_.GetId() || id < fill_sprite_.GetId()) {
+    return false;
+  }
+  float factor = 0.01f * yoffset;
+  float progress = std::clamp(progress_ + factor, 0.0f, 1.0f);
+  Set(progress);
+  return true;
 }
 
 float UiSliderV::GetProgress() const {
@@ -536,12 +558,30 @@ void UiSliderH::Set(glm::vec2 mouse_pos) {
   handler_sprite_.SetTranslate(translate);
 }
 
+void UiSliderH::Set(float progress) {
+  progress_ = progress;
+  float half_length_ = length_ / 2.0f;
+  float offset = progress_ * length_ - half_length_;
+  glm::vec2 translate = {offset, 0.0f};
+  handler_sprite_.SetTranslate(translate);
+}
+
 size_t UiSliderH::Hover(std::uint32_t id) {
   return back_sprite_.Hover();
 }
 
 void UiSliderH::UnHover() {
   //TODO: set lower brightness?
+}
+
+bool UiSliderH::Scroll(GLuint id, float yoffset) {
+  if (id > icon_sprite_.GetId() || id < fill_sprite_.GetId()) {
+    return false;
+  }
+  float factor = 0.01f * yoffset;
+  float progress = std::clamp(progress_ + factor, 0.0f, 1.0f);
+  Set(progress);
+  return true;
 }
 
 float UiSliderH::GetProgress() const {
@@ -662,12 +702,30 @@ void UiSliderH3::Set(glm::vec2 mouse_pos) {
   icon_sprite_.SetTranslate(translate);
 }
 
+void UiSliderH3::Set(float progress) {
+  progress_ = progress;
+  float half_length_ = length_ / 2.0f;
+  float offset = progress_ * length_ - half_length_;
+  glm::vec2 translate = {offset, 0.0f};
+  icon_sprite_.SetTranslate(translate);
+}
+
 size_t UiSliderH3::Hover(std::uint32_t id) {
   return back_sprite_.Hover();
 }
 
 void UiSliderH3::UnHover() {
   //TODO: set lower brightness?
+}
+
+bool UiSliderH3::Scroll(GLuint id, float yoffset) {
+  if (id > icon_sprite_.GetId() || id < fill_sprite_.GetId()) {
+    return false;
+  }
+  float factor = 0.01f * yoffset;
+  float progress = std::clamp(progress_ + factor, 0.0f, 1.0f);
+  Set(progress);
+  return true;
 }
 
 float UiSliderH3::GetProgress() const {
@@ -1294,6 +1352,13 @@ void UiSettings::RenderPicking() {
   cross_.RenderPicking();
 }
 
+bool UiSettings::Scroll(GLuint id, float yoffset) {
+  return resolution_.Scroll(id, yoffset) ||
+         music_.Scroll(id, yoffset) ||
+         sound_.Scroll(id, yoffset) ||
+         sensitivity_.Scroll(id, yoffset);
+}
+
 void UiSettings::UpdateTransform(
     float x_translate, float y_translate, float scale) {
   /// back
@@ -1589,6 +1654,16 @@ void UiWaterLayerConfig::Release() {
   lambda_.Release();
 }
 
+bool UiWaterLayerConfig::Scroll(GLuint id, float yoffset) {
+  return scale_.Scroll(id, yoffset) ||
+         fetch_.Scroll(id, yoffset) ||
+         spread_blend_.Scroll(id, yoffset) ||
+         swell_.Scroll(id, yoffset) ||
+         peak_enhancement_.Scroll(id, yoffset) ||
+         short_waves_fade_.Scroll(id, yoffset) ||
+         lambda_.Scroll(id, yoffset);
+}
+
 void UiWaterLayerConfig::RenderPicking() {
   Base::RenderPickingBack();
   if (!Base::BackIsReady()) {
@@ -1664,8 +1739,8 @@ UiSlots::UiSlots(
     UiDynamicSprite&& create,
     vbos::VboIdMain flip_select_edit_back_vbo_texture, vbos::VboIdText flip_select_edit_back_vbo_text,
     vbos::VboIdMain flip_point_edge_back_vbo_texture, vbos::VboIdText flip_point_edge_back_vbo_text,
-    UiDynamicSprite&& flip_select_edit,
-    UiDynamicSprite&& flip_point_edge,
+    UiDynamicSprite&& flip_select_edit_sprite,
+    UiDynamicSprite&& flip_point_edge_sprite,
     UiDynamicSprite&& slot_back,
     UiDynamicSprite&& slot_remove,
     UiDynamicSprite&& slot_selected,
@@ -1685,14 +1760,14 @@ UiSlots::UiSlots(
           [this]() {
             this->FlipPointEdge();
           }),
-      flip_select_edit_(std::move(flip_select_edit)),
-      flip_point_edge_(std::move(flip_point_edge)),
-      flip_select_edit_animation_(
-          flip_select_edit_,
+      flip_select_edit_sprite_(std::move(flip_select_edit_sprite)),
+      flip_point_edge_sprite_(std::move(flip_point_edge_sprite)),
+      flip_select_edit_(
+          flip_select_edit_sprite_,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f}, 1.0f, glm::pi<float>()}),
-      flip_point_edge_animation_(
-          flip_point_edge_,
+      flip_point_edge_(
+          flip_point_edge_sprite_,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f}, 1.0f, glm::pi<float>()}),
       slot_back_(std::move(slot_back)),
@@ -1718,9 +1793,9 @@ UiSlots::UiSlots(
       = back_.GetId();
   gUiComponents[flip_point_edge_back_.GetId() - details::kIdOffsetUi].parent_id_
       = back_.GetId();
-  gUiComponents[flip_select_edit_.GetId() - details::kIdOffsetUi].parent_id_
+  gUiComponents[flip_select_edit_sprite_.GetId() - details::kIdOffsetUi].parent_id_
       = back_.GetId();
-  gUiComponents[flip_point_edge_.GetId() - details::kIdOffsetUi].parent_id_
+  gUiComponents[flip_point_edge_sprite_.GetId() - details::kIdOffsetUi].parent_id_
       = back_.GetId();
   gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].parent_id_
       = back_.GetId();
@@ -1743,14 +1818,14 @@ UiSlots::UiSlots(UiSlots&& other) noexcept
       create_(std::move(other.create_)),
       flip_select_edit_back_(std::move(other.flip_select_edit_back_)),
       flip_point_edge_back_(std::move(other.flip_point_edge_back_)),
-      flip_select_edit_(std::move(other.flip_select_edit_)),
-      flip_point_edge_(std::move(other.flip_point_edge_)),
-      flip_select_edit_animation_(
-          flip_select_edit_, other.flip_select_edit_animation_.GetStart(),
-          other.flip_select_edit_animation_.GetEnd()),
-      flip_point_edge_animation_(
-          flip_point_edge_, other.flip_point_edge_animation_.GetStart(),
-          other.flip_point_edge_animation_.GetEnd()),
+      flip_select_edit_sprite_(std::move(other.flip_select_edit_sprite_)),
+      flip_point_edge_sprite_(std::move(other.flip_point_edge_sprite_)),
+      flip_select_edit_(
+          flip_select_edit_sprite_, other.flip_select_edit_.GetStart(),
+          other.flip_select_edit_.GetEnd()),
+      flip_point_edge_(
+          flip_point_edge_sprite_, other.flip_point_edge_.GetStart(),
+          other.flip_point_edge_.GetEnd()),
       slot_back_(std::move(other.slot_back_)),
       slot_remove_(std::move(other.slot_remove_)),
       slot_selected_(std::move(other.slot_selected_)),
@@ -1771,18 +1846,21 @@ UiSlots::UiSlots(UiSlots&& other) noexcept
       static_cast<UiTransformDbg*>(this);
 }
 
-void UiSlots::SetParentTransform(LocalTransform transform) {
-  back_.SetParentTransform(transform);
-  handler_.SetParentTransform(transform);
-  slider_.SetParentTransform(transform);
-  create_.SetParentTransform(transform);
-  flip_select_edit_back_.SetParentTransform(transform);
-  flip_point_edge_back_.SetParentTransform(transform);
-  flip_select_edit_.SetParentTransform(transform);
-  flip_point_edge_.SetParentTransform(transform);
-  slot_back_.SetParentTransform(transform);
-  slot_remove_.SetParentTransform(transform);
-  slot_selected_.SetParentTransform(transform);
+void UiSlots::UpdateRenderData() {
+  auto graphs_num = graph_.GetGraphNum();
+  // total 6, visible 5
+  slot_height_ = kSlotsLengthFactor * (slot_back_.GetTopBorder() - slot_back_.GetBottomBorder());
+  auto scrollable_slots = static_cast<float>(std::max(graphs_num - 5, 0));
+  float float_index = scrollable_slots * progress_;
+  cur_slots_offset_ = (int)float_index;
+  float fractional_part = float_index - cur_slots_offset_;
+  float offset_y = fractional_part * slot_height_;
+  start_slot_translate_ = glm::vec2{0.0f, -0.201f + offset_y};
+
+  // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
+  float y_ndc = centre_ - length_ / 2;
+  scissors_start_ = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
+  scissors_length_ = int(length_ * 0.5f * gWindowHeight);
 }
 
 void UiSlots::Render(glm::vec2 mouse_pos) {
@@ -1792,31 +1870,14 @@ void UiSlots::Render(glm::vec2 mouse_pos) {
   back_.Render();
   slider_.Render();
   handler_.Render();
-
-  auto graphs_num = graph_.GetGraphNum();
-
-  // total 6, visible 5
-  float slot_height = 0.8f * (slot_back_.GetTopBorder() - slot_back_.GetBottomBorder());
-  auto scrollable_slots = static_cast<float>(std::max(graphs_num - 5, 0));
-  float float_index = scrollable_slots * progress_;
-  cur_slots_offset_ = (int)float_index;
-  float fractional_part = float_index - cur_slots_offset_;
-  float offset_y = fractional_part * slot_height;
-  start_slot_translate_ = glm::vec2{0.0f, -0.201f + offset_y};
-  glm::vec2 next_offset = start_slot_translate_;
-
   glEnable(GL_SCISSOR_TEST);
-  // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
-  float y_ndc = centre_ - length_ / 2;
-  int y_px = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
-  int height_px = int(length_ * 0.5f * gWindowHeight);
-  glScissor(0, y_px, 4000, height_px);
+  glScissor(0, scissors_start_, 4000, scissors_length_);
 
   bool show_selected = false;
   glm::vec2 selected_offset{0.0f};
-
   auto selected_slot_id = graph_.GetSlotId();
-
+  auto graphs_num = graph_.GetGraphNum();
+  glm::vec2 next_offset = start_slot_translate_;
   for (int i = 0; i < std::min(kSlotsNum, graphs_num); ++i) {
     slot_back_.SetTranslate(next_offset);
     slot_remove_.SetTranslate(next_offset);
@@ -1826,7 +1887,7 @@ void UiSlots::Render(glm::vec2 mouse_pos) {
     }
     slot_back_.Render();
     slot_remove_.Render();
-    next_offset.y -= slot_height;
+    next_offset.y -= slot_height_;
   }
 
   // we should draw it last (on top of slots)
@@ -1836,44 +1897,24 @@ void UiSlots::Render(glm::vec2 mouse_pos) {
   }
   glDisable(GL_SCISSOR_TEST);
 
-
   create_.Render();
   flip_select_edit_back_.Render();
   flip_point_edge_back_.Render();
-  flip_select_edit_animation_.Render();
-  flip_point_edge_animation_.Render();
-//  flip_select_edit_.Render();
-//  flip_point_edge_.Render();
+  flip_select_edit_.Render();
+  flip_point_edge_.Render();
 }
 
 void UiSlots::RenderPicking() {
   back_.RenderPicking();
   slider_.RenderPicking();
-
-  auto graphs_num = graph_.GetGraphNum();
-
-  // total 6, visible 5
-  float slot_height = 0.8f * (slot_back_.GetTopBorder() - slot_back_.GetBottomBorder());
-  auto scrollable_slots = static_cast<float>(std::max(graphs_num - 5, 0));
-  float float_index = scrollable_slots * progress_;
-  cur_slots_offset_ = (int)float_index;
-  float fractional_part = float_index - cur_slots_offset_;
-  float offset_y = fractional_part * slot_height;
-  start_slot_translate_ = glm::vec2{0.0f, -0.201f + offset_y};
-  glm::vec2 next_offset = start_slot_translate_;
-
   glEnable(GL_SCISSOR_TEST);
-  // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
-  float y_ndc = centre_ - length_ / 2;
-  int y_px = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
-  int height_px = int(length_ * 0.5f * gWindowHeight);
-  glScissor(0, y_px, 4000, height_px);
+  glScissor(0, scissors_start_, 4000, scissors_length_);
 
   bool show_selected = false;
   glm::vec2 selected_offset{0.0f};
-
   auto selected_slot_id = graph_.GetSlotId();
-
+  auto graphs_num = graph_.GetGraphNum();
+  glm::vec2 next_offset = start_slot_translate_;
   for (int i = 0; i < std::min(kSlotsNum, graphs_num); ++i) {
     slot_back_.SetTranslate(next_offset);
     slot_remove_.SetTranslate(next_offset);
@@ -1883,7 +1924,7 @@ void UiSlots::RenderPicking() {
     }
     slot_back_.RenderPicking();
     slot_remove_.RenderPicking();
-    next_offset.y -= slot_height;
+    next_offset.y -= slot_height_;
   }
 
   // we should draw it last (on top of slots)
@@ -1892,7 +1933,6 @@ void UiSlots::RenderPicking() {
     slot_selected_.RenderPicking();
   }
   glDisable(GL_SCISSOR_TEST);
-
   create_.RenderPicking();
   flip_select_edit_back_.RenderPicking();
   flip_point_edge_back_.RenderPicking();
@@ -1900,23 +1940,21 @@ void UiSlots::RenderPicking() {
     handler_.RenderPicking();
 //    flip_select_edit_.RenderPicking();
 //    flip_point_edge_.RenderPicking();
-    flip_select_edit_animation_.RenderPicking();
-    flip_point_edge_animation_.RenderPicking();
+    flip_select_edit_.RenderPicking();
+    flip_point_edge_.RenderPicking();
   }
 }
 
 int UiSlots::GetSlotId() {
   auto mouse_pos =
       shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y;
-  float slot_height =
-      0.8f * (slot_back_.GetTopBorder() - slot_back_.GetBottomBorder());
-  float half_slot_height = slot_height / 2.0f;
+  float half_slot_height = slot_height_ / 2.0f;
   float border = centre_ + length_slots_ / 2.0f + half_slot_height + start_slot_translate_.y;
   for (int i = 0; i < 5; ++i) {
     if (mouse_pos > border) {
       return i + cur_slots_offset_;
     }
-    border -= slot_height;
+    border -= slot_height_;
   }
   return 5 + cur_slots_offset_; // else cond
 }
@@ -1928,6 +1966,16 @@ void UiSlots::Set(glm::vec2 mouse_pos) {
   progress_ = 1.0 - (offset + half_length_) / length_slots_;
   glm::vec2 translate = {0.0f, offset};
   handler_.SetTranslate(translate);
+  UpdateRenderData();
+}
+
+void UiSlots::Set(float progress) {
+  progress_ = progress;
+  float half_length_ = length_slots_ / 2.0f;
+  float offset = -((progress_ - 1.0f) * length_slots_) - half_length_;
+  glm::vec2 translate = {0.0f, offset};
+  handler_.SetTranslate(translate);
+  UpdateRenderData();
 }
 
 size_t UiSlots::Hover(std::uint32_t id) {
@@ -1938,17 +1986,46 @@ void UiSlots::Press() {
   pressed_ = true;
 }
 
+void UiSlots::FocusOnSelected(int slot_id) {
+  if (slot_id == -1 || graph_.GetGraphNum() < kSlotsNum) {
+    return;
+  }
+  float fractional_part;
+  if (slot_id - cur_slots_offset_ == 0) {
+    fractional_part = 0.0f;
+  } else if (slot_id - cur_slots_offset_ == 5) {
+    fractional_part = 0.99f;
+  } else {
+    return;
+  }
+  float float_index = fractional_part + cur_slots_offset_;
+  auto graphs_num = graph_.GetGraphNum();
+  auto scrollable_slots = static_cast<float>(std::max(graphs_num - 5, 0));
+  std::cout << "was " << progress_;
+  progress_ = float_index / scrollable_slots;
+  std::cout << " become " << progress_ << std::endl;
+  Set(progress_);
+}
+
 bool UiSlots::Press(int id) {
   if (id == slot_back_.GetId()) {
-    graph_.SelectGraph(GetSlotId());
+    auto slot_id = GetSlotId();
+    graph_.SelectGraph(slot_id);
+    FocusOnSelected(slot_id);
   } else if (id == slot_remove_.GetId()) {
     auto removed_id = GetSlotId();
     if (graph_.GetGraphNum() > 0) {
       std::cout << "graph removed " << removed_id << std::endl;
       graph_.RemoveGraph(removed_id);
+      UpdateRenderData();
     }
   } else {
-    return ui_event_handler_.Press(id);
+    bool handled = ui_event_handler_.Press(id);
+    if (id == create_.GetId()) {
+      // instead of FocusOnSelected();
+      Set(1.0f);
+    }
+    return handled;
   }
   return true;
 }
@@ -1958,9 +2035,16 @@ void UiSlots::Release() {
   ui_event_handler_.Release();
 }
 
-float UiSlots::GetProgress() const {
-  //TODO: make some *magic* with sprite and "return progress_;"
-  return progress_;
+bool UiSlots::Scroll(GLuint id, float yoffset) {
+  if (id < slot_back_.GetId() ||
+      id > flip_select_edit_sprite_.GetId()) {
+    return false;
+  }
+  float normalized_yoffset = 0.2f * yoffset;
+  float factor = 1.0f / std::max(graph_.GetGraphNum() - kSlotsNum, 1);
+  float progress = std::clamp(progress_ - normalized_yoffset * factor, 0.0f, 1.0f);
+  Set(progress);
+  return true;
 }
 
 void UiSlots::UpdateTransform(
@@ -1971,8 +2055,8 @@ void UiSlots::UpdateTransform(
   create_.UpdateTransform();
   flip_select_edit_back_.UpdateTransform();
   flip_point_edge_back_.UpdateTransform();
-  flip_select_edit_.UpdateTransform();
-  flip_point_edge_.UpdateTransform();
+  flip_select_edit_sprite_.UpdateTransform();
+  flip_point_edge_sprite_.UpdateTransform();
   slot_back_.UpdateTransform();
   slot_remove_.UpdateTransform();
   slot_selected_.UpdateTransform();
@@ -1995,34 +2079,34 @@ void UiSlots::UpdateTransform() {
 
 void UiSlots::FlipSelectEdit() {
   bool edit_mode = graph_.FlipPressMode();
-  flip_select_edit_animation_.StopAnimation();
+  flip_select_edit_.StopAnimation();
   if (edit_mode) {
-    flip_select_edit_animation_.SetStart(
+    flip_select_edit_.SetStart(
         {glm::vec2{0.0f}, 1.0f, 0.0f});
-    flip_select_edit_animation_.SetEnd(
+    flip_select_edit_.SetEnd(
         {glm::vec2{0.0f}, 1.0f, glm::pi<float>()});
   } else {
-    flip_select_edit_animation_.SetStart(
+    flip_select_edit_.SetStart(
         {glm::vec2{0.0f}, 1.0f, glm::pi<float>()});
-    flip_select_edit_animation_.SetEnd(
+    flip_select_edit_.SetEnd(
         {glm::vec2{0.0f}, 1.0f, glm::two_pi<float>()});
   }
-  flip_select_edit_animation_.RunAnimation();
+  flip_select_edit_.RunAnimation();
 }
 
 void UiSlots::FlipPointEdge() {
   bool point_mode = graph_.FlipPointsMode();
-  flip_point_edge_animation_.StopAnimation();
+  flip_point_edge_.StopAnimation();
   if (point_mode) {
-    flip_point_edge_animation_.SetStart(
+    flip_point_edge_.SetStart(
         {glm::vec2{0.0f}, 1.0f, 0.0f});
-    flip_point_edge_animation_.SetEnd(
+    flip_point_edge_.SetEnd(
         {glm::vec2{0.0f}, 1.0f, glm::pi<float>()});
   } else {
-    flip_point_edge_animation_.SetStart(
+    flip_point_edge_.SetStart(
         {glm::vec2{0.0f}, 1.0f, glm::pi<float>()});
-    flip_point_edge_animation_.SetEnd(
+    flip_point_edge_.SetEnd(
         {glm::vec2{0.0f}, 1.0f, glm::two_pi<float>()});
   }
-  flip_point_edge_animation_.RunAnimation();
+  flip_point_edge_.RunAnimation();
 }

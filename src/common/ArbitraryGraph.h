@@ -10,15 +10,6 @@
 
 #include "../modes/SharedResources.h"
 
-// api:
-// Press() <- press on map, Select/Add Point/Edge based on internal states
-// Remove() <- removes selected Point/Edge based on internal states
-// Flip edge-point
-// Flip select-create
-// UiSlots (NewGraph, RemoveGraph, EditGraph)
-
-// missing in sprites: 2xFlip
-
 //template <size_t kMaxPoints>
 class ArbitraryGraph {
  public:
@@ -26,12 +17,15 @@ class ArbitraryGraph {
 
   void Press(GLuint vertex_id);
 
-  // btn create button
+  /// emplace back
   void CreateGraph();
 
-  //TODO: SelectGraph && RemoveGraph we can't test (don't have UiSlots sprites)
-  // UiSlots (2 btns for each)
+  /// move instances_[slot_id] data to the end, as well as
+  /// modify all offsets and edge vertices id (ebo buffer data)
   void SelectGraph(int slot_id);
+
+  /// remove instances_[slot_id] from all buffers, as well as
+  /// modify all offsets and edge vertices id (ebo buffer data)
   void RemoveGraph(int slot_id);
 
   [[nodiscard]] int GetGraphNum() const noexcept {
@@ -43,10 +37,9 @@ class ArbitraryGraph {
     return selected_slot_id_;
   }
 
-  void Remove(); // btn remove
+  void Remove();
 
   // btn flip points/edges, btn flip select/create
-  // such a weird functions
   bool FlipPointsMode(); // points, edges
   bool FlipPressMode(); // select, modify
 
@@ -55,13 +48,15 @@ class ArbitraryGraph {
   static constexpr size_t kMaxPoints = 100;
 
  private:
-  // struct, not class (*_)
   struct InstanceData {
-    int vertices_offset_;
-    int vertices_amount_;
-    int edges_offset_;
-    int edges_amount_;
-    int graph_id_;
+    int vertices_offset;
+    int vertices_amount;
+    int edges_offset;
+    int edges_amount;
+    /// i-th slot -> instances_[i], but
+    /// graph data always bear selected forward in buffer,
+    /// that means instances order != graph order in buffer
+    int graph_id;
   };
 
   void Init();
@@ -79,7 +74,6 @@ class ArbitraryGraph {
   void RemovePoint();
   void RemoveEdge();
 
-  //TODO: use iterators
   std::array<GLuint, ArbitraryGraph::kMaxPoints>::iterator
   FindVerticesOffsetById(GLuint id);
   std::array<glm::uvec2, ArbitraryGraph::kMaxPoints>::iterator
@@ -90,15 +84,6 @@ class ArbitraryGraph {
   // so the dependency is: graph_id == instances_[slot_id]
   std::vector<InstanceData> instances_;
 
-  // order: 0 1 2 3 4 5 6
-  // select [5]: 0 1 2 3 4 5 6
-  // select [1]:
-  // - remember idx 1
-  // - carry forward 0 2 3 4 5 6 1
-  // select [2]:
-  // - get [1] back: 0 1 2 3 4 5 6
-  // - select [2]
-  // selected_graph_id_ == instances_.size() - 1
   int selected_slot_id_{-1};
 
   // point as a single number - in shader decompose to x;y by mask
@@ -115,27 +100,11 @@ class ArbitraryGraph {
   GLuint selected_id_1_{static_cast<GLuint>(-1)};
   GLuint selected_id_2_{static_cast<GLuint>(-1)};
 
-  bool target_points_{true}; // opposite target_edges_
-  bool press_select_{true}; // opposite modify
+  bool target_points_{true}; // opposite target - edges
+  bool press_select_{true}; // opposite mode - edit (modify)
 
   SharedResources& shared_resources_;
 };
-
-//TODO:
-// huge std::array<int, 1000 vertices> graph_vertex_data_;
-// huge std::array<int, 500 indices * 2> graph_index_data_;
-// int total_vertices, total_edges;
-// create new graph: {
-//   offset_vertex(total_vertices), amount_vertex,
-//   offset_index(total_edges * 2), offset_index
-//   }
-// edit created graph: move it back, modify all offsets, start editing
-
-
-
-
-
-
 
 
 

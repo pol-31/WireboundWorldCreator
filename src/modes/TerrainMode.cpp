@@ -10,7 +10,15 @@ void TerrainModeScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
+  auto terrain = dynamic_cast<TerrainMode*>(global_data->cur_mode_);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
+  if (pressed_id >= details::kIdOffsetUi &&
+      pressed_id != static_cast<GLuint>(-1)) {
+    terrain->slider_falloff_.Scroll(pressed_id, yoffset);
+    terrain->slider_size_.Scroll(pressed_id, yoffset);
+    return;
+  }
   if (yoffset < 0.0f) {
     global_data->tile_renderer_.DownScale();
   } else {
@@ -34,7 +42,11 @@ void TerrainModeMouseButtonCallback(
       terrain->ui_event_handler_.Press(pressed_id);
     }
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
-    terrain->ui_event_handler_.Release();
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+      global_data->menu_.Release();
+    } else {
+      terrain->ui_event_handler_.Release();
+    }
   }
 }
 
@@ -88,6 +100,15 @@ void TerrainMode::BtnUpdate() {
 
 void TerrainMode::BtnRegenerate() {
   std::cout << "btn_regenerate" << std::endl;
+  struct TerrainParams {
+    struct Noise {
+      float resolution;           // slider
+      glm::vec2 tex_offset; // slider
+      Texture texture;
+    };
+
+  };
+  TerrainParams params;
 }
 
 void TerrainMode::ToggleFlatten() {

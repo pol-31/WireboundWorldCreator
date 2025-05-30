@@ -12,38 +12,13 @@ void ArbitraryGraph::CreateGraph() {
   if (total_vertices_ >= kMaxPoints || total_edges_ >= kMaxPoints) {
     std::cerr << "Unable to add more graphs (data overflow)" << std::endl;
   } else {
-    std::cout << "Graph created" << std::endl;
     selected_slot_id_ = instances_.size();
     selected_id_1_ = -1;
     selected_id_2_ = -1;
     instances_.emplace_back(total_vertices_, 0, total_edges_, 0,
                             selected_slot_id_);
   }
-  std::cout << "total vertices " << total_vertices_ << "edges " << total_edges_ << std::endl;
 }
-
-  // selecting 5:
-  // already selected slot#4 - it's an instance at the end
-  // remember_slot_id = 3
-  // indices_  [3 2 5 7 0 4 6 1]
-  // instances_[0 1 2 3 4 5 6 7]
-  // instance_id = 7
-
-  //create
-  // remember=size(), emplace_back, indices_emplace_back $<remember>
-  //select
-  // [3 2 4 6 0 7 5 1] --> bear forward, for (i : indices) if (i > id) --i; if (==) = (size() - 1)
-  //remove
-  // i:indices (>id) --i (==id) erase
-
-  // SELECT SLOT 5:
-  // instance_id = 4;
-  //Revert():
-  // instances_[indices_[remember_slot_id]] <==> instances_[instance_id]
-  // for instances: [7]->buffer, [3-6]->[4-7], buffer->[3]
-  // indices:indices[5] = instances.size()-1
-  // for (i > select_slot) ++i
-
 
 void ArbitraryGraph::SelectGraph(int slot_id) {
   if (slot_id == selected_slot_id_) {
@@ -58,50 +33,48 @@ void ArbitraryGraph::SelectGraph(int slot_id) {
   /// start from next
   GLuint add_vertices = 0;
   for (auto it = instances_.begin(); it != instances_.end(); ++it) {
-    if (it->graph_id_ <= graph_data.graph_id_) {
+    if (it->graph_id <= graph_data.graph_id) {
       continue;
     }
-    --(it->graph_id_);
+    --(it->graph_id);
     // decrement larger edge indices
-    for (int i = it->edges_offset_; i < it->edges_offset_ + it->edges_amount_; ++i) {
-      edges_[i] -= glm::uvec2{graph_data.vertices_amount_,
-                              graph_data.vertices_amount_};
+    for (int i = it->edges_offset; i < it->edges_offset + it->edges_amount; ++i) {
+      edges_[i] -= glm::uvec2{graph_data.vertices_amount,
+                              graph_data.vertices_amount};
     }
     // move it offsets backward
-    it->vertices_offset_ -= graph_data.vertices_amount_;
-    it->edges_offset_ -= graph_data.edges_amount_;
+    it->vertices_offset -= graph_data.vertices_amount;
+    it->edges_offset -= graph_data.edges_amount;
     // move selected forward
-    add_vertices += it->vertices_amount_;
-    instances_[slot_id].vertices_offset_ += it->vertices_amount_;
-    instances_[slot_id].edges_offset_ += it->edges_amount_;
+    add_vertices += it->vertices_amount;
+    instances_[slot_id].vertices_offset += it->vertices_amount;
+    instances_[slot_id].edges_offset += it->edges_amount;
   }
   if (add_vertices != 0) {
     // increment current edge indices
-    for (int i = graph_data.edges_offset_;
-         i < graph_data.edges_offset_ + graph_data.edges_amount_; ++i) {
+    for (int i = graph_data.edges_offset;
+         i < graph_data.edges_offset + graph_data.edges_amount; ++i) {
       edges_[i] += glm::uvec2{add_vertices};
     }
   }
 
   /// vertices
   std::rotate(
-      vertices_.begin() + graph_data.vertices_offset_,
-      vertices_.begin() + graph_data.vertices_offset_ + graph_data.vertices_amount_,
+      vertices_.begin() + graph_data.vertices_offset,
+      vertices_.begin() + graph_data.vertices_offset + graph_data.vertices_amount,
       vertices_.begin() + total_vertices_);
 
   /// edges
   std::rotate(
-      edges_.begin() + graph_data.edges_offset_,
-      edges_.begin() + graph_data.edges_offset_ + graph_data.edges_amount_,
+      edges_.begin() + graph_data.edges_offset,
+      edges_.begin() + graph_data.edges_offset + graph_data.edges_amount,
       edges_.begin() + total_edges_);
 
   /// graphs (we don't rotate, .graph_id_ modifying only)
-  instances_[slot_id].graph_id_ = instances_.size() - 1;
+  instances_[slot_id].graph_id = instances_.size() - 1;
   selected_slot_id_ = slot_id;
   selected_id_1_ = -1;
   selected_id_2_ = -1;
-
-  std::cout << "total vertices " << total_vertices_ << "edges " << total_edges_ << std::endl;
 
   UpdateBuffers();
 }
@@ -119,53 +92,47 @@ void ArbitraryGraph::RemoveGraph(int slot_id) {
 //    selected_id_1_ = -1;
 //    selected_id_2_ = -1;
   }
-  // if last slot and last graph
-  // if last slot, not last graph -- nothing
-  // if not last slot, last graph
 
   // last graph (not necessarily last slot!)
-  if (instances_[slot_id].graph_id_ == instances_.size() - 1) {
+  if (instances_[slot_id].graph_id == instances_.size() - 1) {
     // remove from end
-    total_vertices_ = instances_[slot_id].vertices_offset_;
-    total_edges_ = instances_[slot_id].edges_offset_;
+    total_vertices_ = instances_[slot_id].vertices_offset;
+    total_edges_ = instances_[slot_id].edges_offset;
     instances_.erase(instances_.begin() + slot_id);
-    std::cout << "removed vertices " << instances_[slot_id].vertices_amount_ << "edges " << instances_[slot_id].edges_amount_ << std::endl;
-    std::cout << "total vertices " << total_vertices_ << "edges " << total_edges_ << std::endl;
     return;
   }
   auto graph_data = instances_[slot_id];
 
   /// start from next
   for (auto it = instances_.begin(); it != instances_.end(); ++it) {
-    if (it->graph_id_ <= graph_data.graph_id_) {
+    if (it->graph_id <= graph_data.graph_id) {
       continue;
     }
-    --(it->graph_id_);
+    --(it->graph_id);
     // decrement larger edge indices
-    for (int i = it->edges_offset_; i < it->edges_offset_ + it->edges_amount_; ++i) {
-      edges_[i] -= glm::uvec2{graph_data.vertices_amount_,
-                              graph_data.vertices_amount_};
+    for (int i = it->edges_offset; i < it->edges_offset + it->edges_amount; ++i) {
+      edges_[i] -= glm::uvec2{graph_data.vertices_amount,
+                              graph_data.vertices_amount};
     }
     // move offsets backward
-    it->vertices_offset_ -= graph_data.vertices_amount_;
-    it->edges_offset_ -= graph_data.edges_amount_;
+    it->vertices_offset -= graph_data.vertices_amount;
+    it->edges_offset -= graph_data.edges_amount;
   }
 
   std::move(
-      vertices_.begin() + graph_data.vertices_offset_ + graph_data.vertices_amount_,
+      vertices_.begin() + graph_data.vertices_offset + graph_data.vertices_amount,
       vertices_.begin() + total_vertices_,
-      vertices_.begin() + graph_data.vertices_offset_);
+      vertices_.begin() + graph_data.vertices_offset);
   std::move(
-      edges_.begin() + graph_data.edges_offset_ + graph_data.edges_amount_,
+      edges_.begin() + graph_data.edges_offset + graph_data.edges_amount,
       edges_.begin() + total_edges_,
-      edges_.begin() + graph_data.edges_offset_);
+      edges_.begin() + graph_data.edges_offset);
 
-  total_vertices_ -= graph_data.vertices_amount_;
-  total_edges_ -= graph_data.edges_amount_;
+  total_vertices_ -= graph_data.vertices_amount;
+  total_edges_ -= graph_data.edges_amount;
 
   instances_.erase(instances_.begin() + slot_id);
 
-  std::cout << "removed, total: " << instances_.size() << std::endl;
   std::cout << total_vertices_ << ' ' << total_edges_ << std::endl;
 
   // anyway deselect because of vbo data changes (todo;)
@@ -173,8 +140,6 @@ void ArbitraryGraph::RemoveGraph(int slot_id) {
   selected_id_2_ = -1;
 
   UpdateBuffers();
-  std::cout << "removed vertices " << graph_data.vertices_amount_ << "edges " << graph_data.edges_amount_ << std::endl;
-  std::cout << "total vertices " << total_vertices_ << "edges " << total_edges_ << std::endl;
 }
 
 bool ArbitraryGraph::FlipPointsMode() {
@@ -197,8 +162,8 @@ bool ArbitraryGraph::FlipPressMode() {
 
 std::array<glm::uvec2, ArbitraryGraph::kMaxPoints>::iterator
 ArbitraryGraph::FindEdgeBySelected(GLuint offset_1, GLuint offset_2) {
-  auto edges_offset = instances_[selected_slot_id_].edges_offset_;
-  auto edges_amount = instances_[selected_slot_id_].edges_amount_;
+  auto edges_offset = instances_[selected_slot_id_].edges_offset;
+  auto edges_amount = instances_[selected_slot_id_].edges_amount;
   for (auto it = edges_.begin() + edges_offset;
        it != edges_.begin() + edges_offset + edges_amount; ++it) {
     if ((it->x == offset_1 && it->y == offset_2) ||
@@ -228,15 +193,15 @@ void ArbitraryGraph::AddEdge(GLuint vertex_id) {
     return;
   }
   edges_[total_edges_] = {offset_1, offset_2};
-  ++instances_[selected_slot_id_].edges_amount_;
+  ++instances_[selected_slot_id_].edges_amount;
   ++total_edges_;
   UpdateBuffers();
 }
 
 std::array<GLuint, ArbitraryGraph::kMaxPoints>::iterator
 ArbitraryGraph::FindVerticesOffsetById(GLuint id) {
-  auto vertices_offset = instances_[selected_slot_id_].vertices_offset_;
-  auto vertices_amount = instances_[selected_slot_id_].vertices_amount_;
+  auto vertices_offset = instances_[selected_slot_id_].vertices_offset;
+  auto vertices_amount = instances_[selected_slot_id_].vertices_amount;
   for (auto it = vertices_.begin() + vertices_offset;
        it != vertices_.begin() + vertices_offset + vertices_amount; ++it) {
     if (*it == id) {
@@ -270,8 +235,8 @@ void ArbitraryGraph::AddPoint(GLuint vertex_id) {
     std::cerr << "Unable to add more vertices (data overflow)" << std::endl;
     return;
   }
-  auto vertices_offset = instances_[selected_slot_id_].vertices_offset_;
-  for (int i = 0; i < instances_[selected_slot_id_].vertices_amount_; ++i) {
+  auto vertices_offset = instances_[selected_slot_id_].vertices_offset;
+  for (int i = 0; i < instances_[selected_slot_id_].vertices_amount; ++i) {
     if (vertex_id == vertices_[vertices_offset + i]) {
       std::cerr << "point already exists in the graph, skip" << std::endl;
       return;
@@ -279,18 +244,18 @@ void ArbitraryGraph::AddPoint(GLuint vertex_id) {
   }
 
   vertices_[total_vertices_] = vertex_id;
-  ++(instances_[selected_slot_id_].vertices_amount_);
+  ++(instances_[selected_slot_id_].vertices_amount);
   ++total_vertices_;
 
   selected_id_1_ = vertex_id;
   std::cout << selected_id_1_ << ' ' << total_vertices_ << std::endl;
 
-  if (instances_[selected_slot_id_].vertices_amount_ > 1) {
+  if (instances_[selected_slot_id_].vertices_amount > 1) {
     auto offset = static_cast<GLuint>(
-        instances_[selected_slot_id_].vertices_offset_
-        + instances_[selected_slot_id_].vertices_amount_);
+        instances_[selected_slot_id_].vertices_offset
+        + instances_[selected_slot_id_].vertices_amount);
     edges_[total_edges_] = {offset - 2, offset - 1};
-    ++instances_[selected_slot_id_].edges_amount_;
+    ++instances_[selected_slot_id_].edges_amount;
     ++total_edges_;
   }
   UpdateBuffers();
@@ -313,8 +278,8 @@ void ArbitraryGraph::RemovePoint() {
     return;
   }
   /// --- remove point
-  int vertices_offset = instances_[selected_slot_id_].vertices_offset_;
-  int vertices_amount = instances_[selected_slot_id_].vertices_amount_;
+  int vertices_offset = instances_[selected_slot_id_].vertices_offset;
+  int vertices_amount = instances_[selected_slot_id_].vertices_amount;
   auto found = std::find(
       vertices_.begin() + vertices_offset,
       vertices_.end() + vertices_offset + vertices_amount,
@@ -327,11 +292,11 @@ void ArbitraryGraph::RemovePoint() {
             vertices_.begin() + vertices_offset + vertices_amount,
             vertices_.begin() + offset);
   --total_vertices_; // just render 1 point less
-  --instances_[selected_slot_id_].vertices_amount_;
+  --instances_[selected_slot_id_].vertices_amount;
 
   /// --- remove connected edges
-  auto edges_amount = instances_[selected_slot_id_].edges_amount_;
-  auto edges_offset = instances_[selected_slot_id_].edges_offset_;
+  auto edges_amount = instances_[selected_slot_id_].edges_amount;
+  auto edges_offset = instances_[selected_slot_id_].edges_offset;
   for (int i = edges_offset; i < edges_amount; ++i) {
     if (edges_[i].x == erased_local_offset ||
         edges_[i].y == erased_local_offset) {
@@ -341,13 +306,13 @@ void ArbitraryGraph::RemovePoint() {
       std::copy(edges_.begin() + edge_offset + 1,
                 edges_.begin() + edges_offset + edges_amount,
                 edges_.begin() + edge_offset);
-      edges_amount = --instances_[selected_slot_id_].edges_amount_;
+      edges_amount = --instances_[selected_slot_id_].edges_amount;
       --total_edges_;
       --i;
     }
   }
   //decrement larger indices
-  for (int i = instances_[selected_slot_id_].edges_offset_;
+  for (int i = instances_[selected_slot_id_].edges_offset;
        i < edges_amount; ++i) {
     if (edges_[i].x > erased_local_offset) {
       --edges_[i].x;
@@ -377,13 +342,13 @@ void ArbitraryGraph::RemoveEdge() {
     return;
   }
   auto existing_edge_offset = std::distance(edges_.begin(), existing_edge);
-  auto edges_offset = instances_[selected_slot_id_].edges_offset_;
-  auto edges_amount = instances_[selected_slot_id_].edges_amount_;
+  auto edges_offset = instances_[selected_slot_id_].edges_offset;
+  auto edges_amount = instances_[selected_slot_id_].edges_amount;
   std::copy(edges_.begin() + existing_edge_offset + 1,
             edges_.begin() + edges_offset + edges_amount,
             edges_.begin() + existing_edge_offset);
   --total_edges_; // just render 1 point less
-  --instances_[selected_slot_id_].edges_amount_;
+  --instances_[selected_slot_id_].edges_amount;
 }
 
 void ArbitraryGraph::EditEdgePoint(GLuint vertex_id) {
@@ -430,7 +395,9 @@ void ArbitraryGraph::Render() {
   glUniform1ui(2, selected_id_2_);
   glBindVertexArray(points_vao_);
   glPointSize(5.0f);
-  glDrawArrays(GL_POINTS, 0, total_vertices_);
+//  glDrawArrays(GL_POINTS, 0, total_vertices_);
+
+//  glUniform1i(glGetUniformLocation(shader_id, "segments"), 16); // or dynamic
   /// no GL_LINE_STRIP - the graph is complex
   glDrawElements(GL_LINES, total_edges_ * 2, GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);

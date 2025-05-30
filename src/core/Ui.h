@@ -59,6 +59,8 @@ class UiCallable {
 
   virtual void Release();
 
+  virtual bool Scroll(GLuint id, float yoffset);
+
   /// one for all
   size_t Hover();
 
@@ -349,6 +351,8 @@ class UiSliderV final : public UiTransformDbg, public UiCallable {
     pressed_ = false;
   }
 
+  bool Scroll(GLuint id, float yoffset) override;
+
   [[nodiscard]] float GetProgress() const;
 
   void UpdateTransform(float x_translate, float y_translate,
@@ -358,6 +362,8 @@ class UiSliderV final : public UiTransformDbg, public UiCallable {
 
  private:
   void Set(glm::vec2 mouse_pos);
+
+  void Set(float progress);
 
   void UnHover();
 
@@ -403,6 +409,8 @@ class UiSliderH final : public UiTransformDbg, public UiCallable {
     pressed_ = false;
   }
 
+  bool Scroll(GLuint id, float yoffset) override;
+
   /// UiSlider has the same id as a track_, so it's like its wrapper.
   /// We don't render UiSlider id, but
   /// for comparison (e.g. in key callback) we directly slider.GetId()
@@ -422,6 +430,8 @@ class UiSliderH final : public UiTransformDbg, public UiCallable {
  private:
   // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
   void Set(glm::vec2 mouse_pos);
+
+  void Set(float progress);
 
   void UnHover();
 
@@ -474,6 +484,8 @@ class UiSliderH3 final : public UiTransformDbg, public UiCallable {
     pressed_ = false;
   }
 
+  bool Scroll(GLuint id, float yoffset) override;
+
   /// UiSlider has the same id as a track_, so it's like its wrapper.
   /// We don't render UiSlider id, but
   /// for comparison (e.g. in key callback) we directly slider.GetId()
@@ -493,6 +505,8 @@ class UiSliderH3 final : public UiTransformDbg, public UiCallable {
  private:
   // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
   void Set(glm::vec2 mouse_pos);
+
+  void Set(float progress);
 
   void UnHover();
 
@@ -744,6 +758,8 @@ class UiSettings final : public UiWindowBase {
     ui_event_handler_.Press(id);
   }
 
+  bool Scroll(GLuint id, float yoffset) override;
+
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
 
@@ -893,6 +909,8 @@ class UiWaterLayerConfig final : public UiPopUpBase {
 
   void Release();
 
+  bool Scroll(GLuint id, float yoffset) override;
+
   void RenderPicking();
 
   void Press(int id) {
@@ -930,8 +948,8 @@ class UiSlots final : public UiTransformDbg, public UiCallable {
           UiDynamicSprite&& create,
           vbos::VboIdMain flip_select_edit_back_vbo_texture, vbos::VboIdText flip_select_edit_back_vbo_text,
           vbos::VboIdMain flip_point_edge_back_vbo_texture, vbos::VboIdText flip_point_edge_back_vbo_text,
-          UiDynamicSprite&& flip_select_edit,
-          UiDynamicSprite&& flip_point_edge,
+          UiDynamicSprite&& flip_select_edit_sprite,
+          UiDynamicSprite&& flip_point_edge_sprite,
           UiDynamicSprite&& slot_back,
           UiDynamicSprite&& slot_remove,
           UiDynamicSprite&& slot_selected,
@@ -942,8 +960,6 @@ class UiSlots final : public UiTransformDbg, public UiCallable {
 
   UiSlots& operator=(UiSlots&& other) = delete;
   UiSlots& operator=(const UiSlots& other) = delete;
-
-  void SetParentTransform(LocalTransform);
 
   void Render(glm::vec2 mouse_pos);
 
@@ -957,7 +973,7 @@ class UiSlots final : public UiTransformDbg, public UiCallable {
 
   void Release() override;
 
-  [[nodiscard]] float GetProgress() const;
+  bool Scroll(GLuint id, float yoffset) override;
 
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
@@ -974,6 +990,12 @@ class UiSlots final : public UiTransformDbg, public UiCallable {
   /// --- as a slider ---
   void Set(glm::vec2 mouse_pos);
 
+  void Set(float progress);
+
+  void UpdateRenderData();
+
+  void FocusOnSelected(int slot_id);
+
   UiDynamicSprite handler_;
   UiDynamicSprite slider_;
   UiDynamicSprite back_;
@@ -981,10 +1003,10 @@ class UiSlots final : public UiTransformDbg, public UiCallable {
   UiDynamicSprite flip_select_edit_back_;
   UiDynamicSprite flip_point_edge_back_;
 
-  UiDynamicSprite flip_select_edit_;
-  UiDynamicSprite flip_point_edge_;
-  UiSpriteTransformation flip_select_edit_animation_;
-  UiSpriteTransformation flip_point_edge_animation_;
+  UiDynamicSprite flip_select_edit_sprite_;
+  UiDynamicSprite flip_point_edge_sprite_;
+  UiSpriteTransformation flip_select_edit_;
+  UiSpriteTransformation flip_point_edge_;
 
   UiDynamicSprite slot_back_;
   UiDynamicSprite slot_remove_;
@@ -1000,6 +1022,10 @@ class UiSlots final : public UiTransformDbg, public UiCallable {
   static const float kTrackLengthFactor;
   static const float kSlotsLengthFactor;
   static const int kSlotsNum;
+
+  float slot_height_{0.0f};
+  int scissors_start_{0};
+  int scissors_length_{0};
 
   /// so we could get id related to slots (0-5)
   int cur_slots_offset_{0};

@@ -11,6 +11,12 @@ void FencesModeScrollCallback(
       glfwGetWindowUserPointer(window));
   auto fences = dynamic_cast<FencesMode*>(global_data->cur_mode_);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
+  if (pressed_id >= details::kIdOffsetUi &&
+      pressed_id != static_cast<GLuint>(-1) &&
+      fences->slots_.Scroll(pressed_id, yoffset)) {
+    return;
+  }
   if (yoffset < 0.0f) {
     global_data->tile_renderer_.DownScale();
   } else {

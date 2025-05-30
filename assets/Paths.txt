@@ -17,6 +17,7 @@ shader_sprite_frag=../shaders/Sprite.frag
 shader_sprite_picking_frag=../shaders/SpritePicking.frag
 shader_sprite_progress_vert=../shaders/SpriteProgress.vert
 shader_graph_vert=../shaders/PointsPolygon.vert
+shader_graph_geom=../shaders/PointsPolygon.geom
 shader_graph_frag=../shaders/PointsPolygon.frag
 
 shader_text_vert=../shaders/Text.vert

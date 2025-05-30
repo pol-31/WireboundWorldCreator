@@ -48,6 +48,7 @@ struct Paths {
   std::string shader_dithering;
   std::string shader_poisson_points;
   std::string shader_graph_vert;
+  std::string shader_graph_geom;
   std::string shader_graph_frag;
 
   std::string shader_ocean_ifft;
@@ -134,6 +135,7 @@ struct Paths {
         {"shader_dithering", &shader_dithering},
         {"shader_poisson_points", &shader_poisson_points},
         {"shader_graph_vert", &shader_graph_vert},
+        {"shader_graph_geom", &shader_graph_geom},
         {"shader_graph_frag", &shader_graph_frag},
         {"texture_ui", &texture_ui},
         {"texture_ui_mask", &texture_ui_mask},

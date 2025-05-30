@@ -24,7 +24,8 @@ SharedResources::SharedResources(
       static_sprite_progress_shader_(paths.shader_sprite_progress_vert,
                                      paths.shader_sprite_frag),
       arbitrary_grapn_shader_(paths.shader_graph_vert,
-                              paths.shader_graph_frag),
+                              paths.shader_graph_frag,
+                              paths.shader_graph_geom),
       global_glfw_callback_data_(global_glfw_callback_data),
       tile_renderer_(tile_renderer_),
       tile_(cur_tile) {
