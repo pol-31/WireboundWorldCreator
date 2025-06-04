@@ -37,6 +37,14 @@ class ArbitraryGraph {
     return selected_slot_id_;
   }
 
+  [[nodiscard]] int GetSize() const noexcept {
+    return instances_.size();
+  }
+
+  FixedSizeQueue<char, 64>* GetNamePtr(int id);
+
+  const FixedSizeQueue<char, 64>* GetNamePtr(int id) const;
+
   void Remove();
 
   // btn flip points/edges, btn flip select/create
@@ -49,6 +57,7 @@ class ArbitraryGraph {
 
  private:
   struct InstanceData {
+    FixedSizeQueue<char, 64> name;
     int vertices_offset;
     int vertices_amount;
     int edges_offset;

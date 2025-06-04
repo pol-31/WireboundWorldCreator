@@ -19,7 +19,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../common/Shader.h"
-#include "../common/TextRenderer.h"
 #include "../common/Colors.h"
 #include "../common/Vbos.h"
 #include "../common/LocalTransform.h"
@@ -28,6 +27,8 @@
 #include "../modes/SharedResources.h"
 
 #include "../common/ArbitraryGraph.h"
+
+#include "../common/Text.h"
 
 /// dbg serializing - stored without rotation
 LocalTransformLinear GetParentDbgTransform(size_t id);
@@ -38,7 +39,7 @@ class UiCallable {
  public:
   using CallableType = std::function<void()>;
 
-  UiCallable(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text,
+  UiCallable(vbos::VboIdMain vbo_texture, text::Id text_id,
              CallableType action);
 
   UiCallable(size_t ui_data_id, CallableType&& action);
@@ -61,14 +62,14 @@ class UiCallable {
 
   virtual bool Scroll(GLuint id, float yoffset);
 
-  /// one for all
-  size_t Hover();
+  /// non-virtual - one for all
+  virtual size_t Hover();
 
   [[nodiscard]] std::uint32_t GetId() const;
 
   [[nodiscard]] std::size_t GetVboOffset() const;
 
-  [[nodiscard]] std::size_t GetTextVboOffset() const;
+  [[nodiscard]] std::size_t GetTextId() const;
 
  private:
   UiCallable(vbos::UiData ui_data, CallableType&& action);
@@ -81,7 +82,7 @@ class UiCallablePad final : public UiCallable {
  public:
   UiCallablePad() : UiCallable(
             vbos::VboIdMain::kMenuTerrain,
-            vbos::VboIdText::kNone, {}) {}
+            text::Id::kNone, {}) {}
 
   void Press() override {
     std::cerr << "Pad was called, smt went wrong" << std::endl;
@@ -115,6 +116,14 @@ class UiEventHandler {
       widget->Release();
     }
   }
+
+  size_t Hover(int id) {
+    if (id < start_ || id > end_) {
+      return static_cast<size_t>(text::Id::kNone);
+    }
+    return widgets_[id - start_]->Hover();
+  }
+
 
  private:
   void Init(std::initializer_list<UiCallable*> widgets) {
@@ -161,7 +170,7 @@ class UiTransformDbg {
 
 class UiDynamicSprite : public UiCallable, public UiTransformDbg {
  public:
-  UiDynamicSprite(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text,
+  UiDynamicSprite(vbos::VboIdMain vbo_texture, text::Id text_id,
                   CallableType action = {});
 
   UiDynamicSprite(UiDynamicSprite&& other) noexcept;
@@ -190,6 +199,10 @@ class UiDynamicSprite : public UiCallable, public UiTransformDbg {
 
   void SetScale(float scale) {
     local_transform_.scale = scale;
+  }
+
+  void SetExtraScale(float scale) {
+    extra_scale_ = scale;
   }
 
   void SetTranslate(glm::vec2 translate) {
@@ -230,11 +243,14 @@ class UiDynamicSprite : public UiCallable, public UiTransformDbg {
 
   /// collected from gUiTransform & gUiComponents, so dbg - no rotation
   LocalTransformLinear final_dbg_transform_;
+
+  // TODO: affects only x or y, kostyl
+  float extra_scale_{1.0f};
 };
 
 class UiStaticSprite : public UiCallable, public UiTransformDbg {
  public:
-  UiStaticSprite(vbos::VboIdMain vbo_texture, vbos::VboIdText vbo_text,
+  UiStaticSprite(vbos::VboIdMain vbo_texture, text::Id text_id,
                  CallableType action = {});
 
   UiStaticSprite(UiStaticSprite&& other) noexcept;
@@ -547,6 +563,10 @@ class UiToggle final : public UiTransformDbg, public UiCallable {
 
   void Press() override;
 
+  size_t Hover(std::uint32_t id) {
+    return off_.Hover();
+  }
+
   void UpdateTransform(
       float x_translate, float y_translate, float scale) override;
 
@@ -691,6 +711,10 @@ class UiTabMenu final : public UiWindowBase {
     ui_event_handler_.Press(id);
   }
 
+  size_t Hover(int id) {
+    return ui_event_handler_.Hover(id);
+  }
+
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
 
@@ -758,6 +782,10 @@ class UiSettings final : public UiWindowBase {
     ui_event_handler_.Press(id);
   }
 
+  size_t Hover(int id) {
+    return ui_event_handler_.Hover(id);
+  }
+
   bool Scroll(GLuint id, float yoffset) override;
 
   void UpdateTransform(float x_translate, float y_translate,
@@ -809,6 +837,10 @@ class UiConfirmation final : public UiWindowBase {
 
   void Press(int id) {
     ui_event_handler_.Press(id);
+  }
+
+  size_t Hover(int id) {
+    return ui_event_handler_.Hover(id);
   }
 
   void UpdateTransform(float x_translate, float y_translate,
@@ -917,6 +949,10 @@ class UiWaterLayerConfig final : public UiPopUpBase {
     modified_ = ui_event_handler_.Press(id);
   }
 
+  size_t Hover(int id) {
+    return ui_event_handler_.Hover(id);
+  }
+
   bool Modified();
 
  OceanLayerTraits GetOceanLayerTraits() const;
@@ -937,113 +973,6 @@ class UiWaterLayerConfig final : public UiPopUpBase {
   bool modified_{false};
 
   UiEventHandler<28> ui_event_handler_;
-};
-
-class UiSlots final : public UiTransformDbg, public UiCallable {
- public:
-  UiSlots(SharedResources& shared_resources,
-          UiDynamicSprite&& handler,
-          UiDynamicSprite&& slider,
-          UiDynamicSprite&& back,
-          UiDynamicSprite&& create,
-          vbos::VboIdMain flip_select_edit_back_vbo_texture, vbos::VboIdText flip_select_edit_back_vbo_text,
-          vbos::VboIdMain flip_point_edge_back_vbo_texture, vbos::VboIdText flip_point_edge_back_vbo_text,
-          UiDynamicSprite&& flip_select_edit_sprite,
-          UiDynamicSprite&& flip_point_edge_sprite,
-          UiDynamicSprite&& slot_back,
-          UiDynamicSprite&& slot_remove,
-          UiDynamicSprite&& slot_selected,
-          ArbitraryGraph& graph);
-
-  UiSlots(UiSlots&& other) noexcept;
-  UiSlots(const UiSlots& other) = delete;
-
-  UiSlots& operator=(UiSlots&& other) = delete;
-  UiSlots& operator=(const UiSlots& other) = delete;
-
-  void Render(glm::vec2 mouse_pos);
-
-  void RenderPicking();
-
-  [[nodiscard]] size_t Hover(std::uint32_t id);
-
-  void Press() override;
-
-  bool Press(int id);
-
-  void Release() override;
-
-  bool Scroll(GLuint id, float yoffset) override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
-  void UpdateTransform() override;
-
- void FlipSelectEdit();
-
- void FlipPointEdge();
-
- private:
-  int GetSlotId();
-
-  /// --- as a slider ---
-  void Set(glm::vec2 mouse_pos);
-
-  void Set(float progress);
-
-  void UpdateRenderData();
-
-  void FocusOnSelected(int slot_id);
-
-  UiDynamicSprite handler_;
-  UiDynamicSprite slider_;
-  UiDynamicSprite back_;
-  UiDynamicSprite create_;
-  UiDynamicSprite flip_select_edit_back_;
-  UiDynamicSprite flip_point_edge_back_;
-
-  UiDynamicSprite flip_select_edit_sprite_;
-  UiDynamicSprite flip_point_edge_sprite_;
-  UiSpriteTransformation flip_select_edit_;
-  UiSpriteTransformation flip_point_edge_;
-
-  UiDynamicSprite slot_back_;
-  UiDynamicSprite slot_remove_;
-  UiDynamicSprite slot_selected_;
-
-  /// --- as a slider ---
-
-  float progress_{0.0f};
-  bool pressed_{false};
-  float centre_;
-  float length_;
-  float length_slots_;
-  static const float kTrackLengthFactor;
-  static const float kSlotsLengthFactor;
-  static const int kSlotsNum;
-
-  float slot_height_{0.0f};
-  int scissors_start_{0};
-  int scissors_length_{0};
-
-  /// so we could get id related to slots (0-5)
-  int cur_slots_offset_{0};
-  glm::vec2 start_slot_translate_{0.0f};
-
-  // for shader bindings & mouse pos
-  SharedResources& shared_resources_;
-
-  /// --- as a complex component ---
-
-  UiEventHandler<
-      static_cast<int>(vbos::VboIdMain::kFencesSlotsFlipSelectEdit) -
-      static_cast<int>(vbos::VboIdMain::kFencesSlotsSlot) + 1
-      > ui_event_handler_;
-
-  /// --- graph - related ---
-
-  ArbitraryGraph& graph_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_UI_H_

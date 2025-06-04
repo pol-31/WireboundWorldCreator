@@ -8,6 +8,14 @@ ArbitraryGraph::ArbitraryGraph(
   Init();
 }
 
+FixedSizeQueue<char, 64>* ArbitraryGraph::GetNamePtr(int id) {
+  return &instances_[id].name;
+}
+
+const FixedSizeQueue<char, 64>* ArbitraryGraph::GetNamePtr(int id) const {
+  return &instances_[id].name;
+}
+
 void ArbitraryGraph::CreateGraph() {
   if (total_vertices_ >= kMaxPoints || total_edges_ >= kMaxPoints) {
     std::cerr << "Unable to add more graphs (data overflow)" << std::endl;
@@ -15,8 +23,9 @@ void ArbitraryGraph::CreateGraph() {
     selected_slot_id_ = instances_.size();
     selected_id_1_ = -1;
     selected_id_2_ = -1;
-    instances_.emplace_back(total_vertices_, 0, total_edges_, 0,
-                            selected_slot_id_);
+    instances_.emplace_back(
+        FixedSizeQueue<char, 64>{}, total_vertices_, 0,
+        total_edges_, 0, selected_slot_id_);
   }
 }
 
