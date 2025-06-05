@@ -272,7 +272,7 @@ void TextRenderer::PrerenderImpl(
   glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo_read_id_);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_write_id_);
   for (int i = start; i < end; ++i) {
-    coords.push_back(RenderPhrase(text::gText[i]));
+    coords.push_back(RenderPhrase(data::gText[i]));
   }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

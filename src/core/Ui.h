@@ -24,7 +24,7 @@
 #include "../common/LocalTransform.h"
 #include "../io/Window.h"
 #include "../renderers/water/WaterBiome.h"
-#include "../modes/SharedResources.h"
+#include "../modes/UiSharedResources.h"
 
 #include "../common/ArbitraryGraph.h"
 
@@ -33,13 +33,13 @@
 /// dbg serializing - stored without rotation
 LocalTransformLinear GetParentDbgTransform(size_t id);
 
-extern std::array<vbos::UiData, vbos::gVboIdSize> gUiComponents;
+extern std::array<data::UiData, data::gVboIdSize> gUiComponents;
 
 class UiCallable {
  public:
   using CallableType = std::function<void()>;
 
-  UiCallable(vbos::VboIdMain vbo_texture, text::Id text_id,
+  UiCallable(data::VboIdMain vbo_texture, data::TextId text_id,
              CallableType action);
 
   UiCallable(size_t ui_data_id, CallableType&& action);
@@ -72,7 +72,7 @@ class UiCallable {
   [[nodiscard]] std::size_t GetTextId() const;
 
  private:
-  UiCallable(vbos::UiData ui_data, CallableType&& action);
+  UiCallable(data::UiData ui_data, CallableType&& action);
 
   size_t ui_data_id_;
   std::function<void()> action_;
@@ -80,9 +80,7 @@ class UiCallable {
 
 class UiCallablePad final : public UiCallable {
  public:
-  UiCallablePad() : UiCallable(
-            vbos::VboIdMain::kMenuTerrain,
-            text::Id::kNone, {}) {}
+  UiCallablePad() : UiCallable(data::VboIdMain::kMenuTerrain, data::TextId::kNone, {}) {}
 
   void Press() override {
     std::cerr << "Pad was called, smt went wrong" << std::endl;
@@ -119,7 +117,7 @@ class UiEventHandler {
 
   size_t Hover(int id) {
     if (id < start_ || id > end_) {
-      return static_cast<size_t>(text::Id::kNone);
+      return static_cast<size_t>(data::TextId::kNone);
     }
     return widgets_[id - start_]->Hover();
   }
@@ -170,7 +168,7 @@ class UiTransformDbg {
 
 class UiDynamicSprite : public UiCallable, public UiTransformDbg {
  public:
-  UiDynamicSprite(vbos::VboIdMain vbo_texture, text::Id text_id,
+  UiDynamicSprite(data::VboIdMain vbo_texture, data::TextId text_id,
                   CallableType action = {});
 
   UiDynamicSprite(UiDynamicSprite&& other) noexcept;
@@ -250,7 +248,7 @@ class UiDynamicSprite : public UiCallable, public UiTransformDbg {
 
 class UiStaticSprite : public UiCallable, public UiTransformDbg {
  public:
-  UiStaticSprite(vbos::VboIdMain vbo_texture, text::Id text_id,
+  UiStaticSprite(data::VboIdMain vbo_texture, data::TextId text_id,
                  CallableType action = {});
 
   UiStaticSprite(UiStaticSprite&& other) noexcept;
@@ -628,7 +626,7 @@ class UiWindowBase : public UiTransformDbg, public UiCallable {
 
   UiWindowBase(UiDynamicSprite&& sprite,
                float size_scale,
-               SharedResources& shared_resources);
+               UiSharedResources& ui_shared_resources);
 
   UiWindowBase(UiWindowBase&& other) noexcept;
   UiWindowBase(const UiWindowBase& other) = delete;
@@ -659,7 +657,7 @@ class UiWindowBase : public UiTransformDbg, public UiCallable {
 
   bool back_ready_{false};
 
-  SharedResources& shared_resources_; // for shader bindings, mask texture
+  UiSharedResources& ui_shared_resources_; // for shader bindings, mask texture
 };
 
 class UiTabMenu final : public UiWindowBase {
@@ -669,7 +667,7 @@ class UiTabMenu final : public UiWindowBase {
   UiTabMenu(
       UiDynamicSprite&& sprite,
       float size_scale,
-      SharedResources& shared_resources,
+      UiSharedResources& ui_shared_resources,
 
       UiStaticSprite&& btn_mode_terrain,
       UiStaticSprite&& btn_mode_water,
@@ -743,8 +741,8 @@ class UiTabMenu final : public UiWindowBase {
   UiToggle toggle_shaders_;
 
   UiEventHandler<
-      static_cast<int>(vbos::VboIdMain::kMenuSettings) -
-      static_cast<int>(vbos::VboIdMain::kMenuTerrain) + 1
+      static_cast<int>(data::VboIdMain::kMenuSettings) -
+      static_cast<int>(data::VboIdMain::kMenuTerrain) + 1
       > ui_event_handler_;
 
   UiDynamicSprite cross_;
@@ -757,7 +755,7 @@ class UiSettings final : public UiWindowBase {
   UiSettings(
       UiDynamicSprite&& sprite,
       float size_scale,
-      SharedResources& shared_resources,
+      UiSharedResources& ui_shared_resources,
       UiSliderH3&& resolution,
       UiSliderH3&& music,
       UiSliderH3&& sound,
@@ -802,8 +800,8 @@ class UiSettings final : public UiWindowBase {
   UiToggle toggle_sound_;
 
   UiEventHandler<
-      static_cast<int>(vbos::VboIdMain::kSettingsMusicOn3) -
-      static_cast<int>(vbos::VboIdMain::kSettingsResolutionFill) + 1
+      static_cast<int>(data::VboIdMain::kSettingsMusicOn3) -
+      static_cast<int>(data::VboIdMain::kSettingsResolutionFill) + 1
       > ui_event_handler_;
 
   UiDynamicSprite cross_;
@@ -816,7 +814,7 @@ class UiConfirmation final : public UiWindowBase {
   UiConfirmation(
       UiDynamicSprite&& sprite,
       float size_scale,
-      SharedResources& shared_resources,
+      UiSharedResources& ui_shared_resources,
 
       UiStaticSprite&& btn_close,
       UiStaticSprite&& btn_accept,
@@ -864,7 +862,7 @@ class UiPopUpBase : public UiTransformDbg, public UiCallable {
 
   UiPopUpBase(UiDynamicSprite&& sprite,
               float size_scale,
-              SharedResources& shared_resources,
+              UiSharedResources& ui_shared_resources,
               LocalTransform start_transform,
               LocalTransform end_transform);
 
@@ -892,7 +890,7 @@ class UiPopUpBase : public UiTransformDbg, public UiCallable {
   UiDynamicSprite sprite_; // dynamic to set scale
 
   // for shader bindings, mask texture
-  SharedResources& shared_resources_;
+  UiSharedResources& ui_shared_resources_;
 
  private:
   void CubicInterpolation();
@@ -918,7 +916,7 @@ class UiWaterLayerConfig final : public UiPopUpBase {
   UiWaterLayerConfig(
       UiDynamicSprite&& sprite,
       float size_scale,
-      SharedResources& shared_resources,
+      UiSharedResources& ui_shared_resources,
       LocalTransform start_transform,
       LocalTransform end_transform,
       UiDynamicSprite&& sprite_layer,

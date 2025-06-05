@@ -5,13 +5,15 @@
 
 class UiSlots final : public UiTransformDbg, public UiCallable {
  public:
-  UiSlots(SharedResources& shared_resources,
+  UiSlots(UiSharedResources& ui_shared_resources,
           UiDynamicSprite&& handler,
           UiDynamicSprite&& slider,
           UiDynamicSprite&& back,
           UiDynamicSprite&& create,
-          vbos::VboIdMain flip_select_edit_back_vbo_texture, text::Id flip_select_edit_back_text_id,
-          vbos::VboIdMain flip_point_edge_back_vbo_texture, text::Id flip_point_edge_back_text_id,
+          data::VboIdMain flip_select_edit_back_vbo_texture,
+          data::TextId flip_select_edit_back_text_id,
+          data::VboIdMain flip_point_edge_back_vbo_texture,
+          data::TextId flip_point_edge_back_text_id,
           UiDynamicSprite&& flip_select_edit_sprite,
           UiDynamicSprite&& flip_point_edge_sprite,
           UiDynamicSprite&& slot_back,
@@ -100,13 +102,13 @@ class UiSlots final : public UiTransformDbg, public UiCallable {
   glm::vec2 start_slot_translate_{0.0f};
 
   // for shader bindings & mouse pos
-  SharedResources& shared_resources_;
+  UiSharedResources& ui_shared_resources_;
 
   /// --- as a complex component ---
 
   UiEventHandler<
-      static_cast<int>(vbos::VboIdMain::kFencesSlotsFlipSelectEdit) -
-      static_cast<int>(vbos::VboIdMain::kFencesSlotsSlot) + 1
+      static_cast<int>(data::VboIdMain::kFencesSlotsFlipSelectEdit) -
+      static_cast<int>(data::VboIdMain::kFencesSlotsSlot) + 1
       > ui_event_handler_;
 
   /// --- graph - related ---

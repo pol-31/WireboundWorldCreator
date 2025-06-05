@@ -15,7 +15,7 @@
 //    float x_translate, float y_translate, float scale)
 // ?
 
-std::array<vbos::UiData, vbos::gVboIdSize> gUiComponents{};
+std::array<data::UiData, data::gVboIdSize> gUiComponents{};
 
 LocalTransformLinear GetParentDbgTransform(size_t id) {
   auto parent_id = gUiComponents[id - details::kIdOffsetUi].parent_id_;
@@ -28,12 +28,12 @@ LocalTransformLinear GetParentDbgTransform(size_t id) {
   return transform;
 }
 
-UiCallable::UiCallable(vbos::VboIdMain vbo_texture, text::Id text_id,
+UiCallable::UiCallable(data::VboIdMain vbo_texture, data::TextId text_id,
            CallableType action)
-    : UiCallable(vbos::GetUiData(vbo_texture, text_id),
+    : UiCallable(data::GetUiData(vbo_texture, text_id),
                  std::move(action)) {}
 
-UiCallable::UiCallable(vbos::UiData ui_data, CallableType&& action)
+UiCallable::UiCallable(data::UiData ui_data, CallableType&& action)
     : ui_data_id_(ui_data.id),
       action_(std::move(action)) {
   gUiComponents[ui_data_id_ - details::kIdOffsetUi] = ui_data;
@@ -71,8 +71,7 @@ std::size_t UiCallable::GetTextId() const {
       gUiComponents[ui_data_id_ - details::kIdOffsetUi].text_id);
 }
 
-UiDynamicSprite::UiDynamicSprite(
-    vbos::VboIdMain vbo_texture, text::Id text_id,
+UiDynamicSprite::UiDynamicSprite(data::VboIdMain vbo_texture, data::TextId text_id,
     CallableType action)
     : UiCallable(vbo_texture, text_id, std::move(action)) {
   UpdateTransform();
@@ -110,8 +109,9 @@ float UiDynamicSprite::GetLeftBorder() const {
   auto final_translate = final_dbg_transform_.translate + local_transform_.translate
                          + parent_transform_.translate;
   auto vbo_offset = gUiComponents[GetId() - details::kIdOffsetUi].vbo_offset;
-  float width = vbos::kUiVboDataMain[vbo_offset * 4]
-                - vbos::kUiVboDataMain[vbo_offset * 4 + 8];
+  float width = data::kUiVboDataMain[vbo_offset * 4]
+                -
+                data::kUiVboDataMain[vbo_offset * 4 + 8];
   return final_translate.x - final_scale.x * width / 2.0f;
 }
 
@@ -121,8 +121,9 @@ float UiDynamicSprite::GetRightBorder() const {
   auto final_translate = final_dbg_transform_.translate + local_transform_.translate
                          + parent_transform_.translate;
   auto vbo_offset = gUiComponents[GetId() - details::kIdOffsetUi].vbo_offset;
-  float width = vbos::kUiVboDataMain[vbo_offset * 4]
-                - vbos::kUiVboDataMain[vbo_offset * 4 + 8];
+  float width = data::kUiVboDataMain[vbo_offset * 4]
+                -
+                data::kUiVboDataMain[vbo_offset * 4 + 8];
   return final_translate.x + final_scale.x * width / 2.0f;
 }
 
@@ -132,8 +133,9 @@ float UiDynamicSprite::GetTopBorder() const {
   auto final_translate = final_dbg_transform_.translate + local_transform_.translate
                          + parent_transform_.translate;
   auto vbo_offset = gUiComponents[GetId() - details::kIdOffsetUi].vbo_offset;
-  float height = vbos::kUiVboDataMain[vbo_offset * 4 + 5]
-                - vbos::kUiVboDataMain[vbo_offset * 4 + 1];
+  float height = data::kUiVboDataMain[vbo_offset * 4 + 5]
+                -
+                 data::kUiVboDataMain[vbo_offset * 4 + 1];
   return final_translate.y + final_scale.y * height / 2.0f;
 }
 
@@ -143,8 +145,9 @@ float UiDynamicSprite::GetBottomBorder() const {
   auto final_translate = final_dbg_transform_.translate + local_transform_.translate
                          + parent_transform_.translate;
   auto vbo_offset = gUiComponents[GetId() - details::kIdOffsetUi].vbo_offset;
-  float height = vbos::kUiVboDataMain[vbo_offset * 4 + 5]
-                 - vbos::kUiVboDataMain[vbo_offset * 4 + 1];
+  float height = data::kUiVboDataMain[vbo_offset * 4 + 5]
+                 -
+                 data::kUiVboDataMain[vbo_offset * 4 + 1];
   return final_translate.y - final_scale.y * height / 2.0f;
 }
 
@@ -180,8 +183,7 @@ void UiDynamicSprite::RenderPicking() const {
 }
 
 
-UiStaticSprite::UiStaticSprite(
-    vbos::VboIdMain vbo_texture, text::Id text_id,
+UiStaticSprite::UiStaticSprite(data::VboIdMain vbo_texture, data::TextId text_id,
     CallableType action)
     : UiCallable(vbo_texture, text_id, std::move(action)) {
   UpdateTransform();
@@ -219,22 +221,22 @@ void UiStaticSprite::UpdateTransform() {
 
 float UiStaticSprite::GetLeftBorder() const {
   auto vbo_offset = gUiComponents[GetId() - details::kIdOffsetUi].vbo_offset;
-  return vbos::kUiVboDataMain[vbo_offset * 4 + 8];
+  return data::kUiVboDataMain[vbo_offset * 4 + 8];
 }
 
 float UiStaticSprite::GetRightBorder() const {
   auto vbo_offset = gUiComponents[GetId() - details::kIdOffsetUi].vbo_offset;
-  return vbos::kUiVboDataMain[vbo_offset * 4];
+  return data::kUiVboDataMain[vbo_offset * 4];
 }
 
 float UiStaticSprite::GetTopBorder() const {
   auto vbo_offset = gUiComponents[GetId() - details::kIdOffsetUi].vbo_offset;
-  return vbos::kUiVboDataMain[vbo_offset * 4 + 5];
+  return data::kUiVboDataMain[vbo_offset * 4 + 5];
 }
 
 float UiStaticSprite::GetBottomBorder() const {
   auto vbo_offset = gUiComponents[GetId() - details::kIdOffsetUi].vbo_offset;
-  return vbos::kUiVboDataMain[vbo_offset * 4 + 1];
+  return data::kUiVboDataMain[vbo_offset * 4 + 1];
 }
 
 void UiStaticSprite::Render() {
@@ -903,10 +905,10 @@ void UiLoading::UpdateTransform() {
 
 UiWindowBase::UiWindowBase(
     UiDynamicSprite&& sprite,
-    float size_scale, SharedResources& shared_resources)
+    float size_scale, UiSharedResources& ui_shared_resources)
     : UiCallable(sprite.GetId(), {}),
       sprite_(std::move(sprite)),
-      shared_resources_(shared_resources),
+      ui_shared_resources_(ui_shared_resources),
       speed_(4.0f),
       size_scale_(size_scale) {
   sprite_.SetScale(size_scale_);
@@ -919,12 +921,12 @@ UiWindowBase::UiWindowBase(UiWindowBase&& other) noexcept
       progress_(other.progress_),
       back_ready_(other.back_ready_),
       size_scale_(other.size_scale_),
-      shared_resources_(other.shared_resources_) {}
+      ui_shared_resources_(other.ui_shared_resources_) {}
 
 /// back_ready_==false when appearing or disappearing animation
 /// returs false when disappearing fading is over
 bool UiWindowBase::RenderBack(bool show) {
-  shared_resources_.mask_sprite_shader_.Bind();
+  ui_shared_resources_.mask_sprite_shader_.Bind();
   if (show) {
     progress_ += speed_ * gDeltaTime;
     if (progress_ >= 1.0f) {
@@ -942,7 +944,7 @@ bool UiWindowBase::RenderBack(bool show) {
   //    glActiveTexture(0);
   //    desk_sprite_.Bind();
   glActiveTexture(GL_TEXTURE1);
-  shared_resources_.tex_ui_mask_.Bind();
+  ui_shared_resources_.tex_ui_mask_.Bind();
   glUniform1f(shader::kSpriteProgress, progress_);
   sprite_.Render();
   glActiveTexture(GL_TEXTURE0); // go back to default
@@ -950,7 +952,7 @@ bool UiWindowBase::RenderBack(bool show) {
 }
 
 void UiWindowBase::RenderPickingBack() {
-  shared_resources_.static_sprite_picking_shader_.Bind();
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
   sprite_.RenderPicking();
 }
 
@@ -965,7 +967,7 @@ void UiWindowBase::UpdateTransform() {
 UiTabMenu::UiTabMenu(
     UiDynamicSprite&& sprite,
     float size_scale,
-    SharedResources& shared_resources,
+    UiSharedResources& ui_shared_resources,
 
     UiStaticSprite&& btn_mode_terrain,
     UiStaticSprite&& btn_mode_water,
@@ -1144,7 +1146,7 @@ bool UiTabMenu::Render(bool show) {
     return stop_show;
   }
 
-  shared_resources_.static_sprite_shader_.Bind();
+  ui_shared_resources_.static_sprite_shader_.Bind();
 
   btn_mode_terrain_.Render();
   btn_mode_water_.Render();
@@ -1169,7 +1171,7 @@ bool UiTabMenu::Render(bool show) {
 
   toggle_shaders_.Render();
 
-  shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
   cross_.Render();
 
   return stop_show;
@@ -1180,7 +1182,7 @@ void UiTabMenu::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  shared_resources_.static_sprite_picking_shader_.Bind();
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
   btn_mode_terrain_.RenderPicking();
   btn_mode_water_.RenderPicking();
@@ -1205,7 +1207,7 @@ void UiTabMenu::RenderPicking() {
 
   toggle_shaders_.RenderPicking();
 
-  shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   cross_.RenderPicking();
 }
 
@@ -1243,7 +1245,7 @@ void UiTabMenu::UpdateTransform(
 UiSettings::UiSettings(
     UiDynamicSprite&& sprite,
     float size_scale,
-    SharedResources& shared_resources,
+    UiSharedResources& ui_shared_resources,
     UiSliderH3&& resolution,
     UiSliderH3&& music,
     UiSliderH3&& sound,
@@ -1310,10 +1312,10 @@ bool UiSettings::Render(bool show) {
     return stop_show;
   }
 
-  shared_resources_.static_sprite_shader_.Bind();
+  ui_shared_resources_.static_sprite_shader_.Bind();
 
   auto mouse_pos =
-      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
   resolution_.Render(mouse_pos);
   music_.Render(mouse_pos);
   sound_.Render(mouse_pos);
@@ -1328,7 +1330,7 @@ bool UiSettings::Render(bool show) {
   sound_.RenderIcon();
   sensitivity_.RenderIcon();
 
-  shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
   cross_.Render();
 
   return stop_show;
@@ -1339,7 +1341,7 @@ void UiSettings::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  shared_resources_.static_sprite_picking_shader_.Bind();
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
   resolution_.RenderPicking();
   music_.RenderPicking();
@@ -1350,7 +1352,7 @@ void UiSettings::RenderPicking() {
   toggle_music_.RenderPicking();
   toggle_sound_.RenderPicking();
 
-  shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   cross_.RenderPicking();
 }
 
@@ -1380,7 +1382,7 @@ void UiSettings::UpdateTransform(
 UiConfirmation::UiConfirmation(
     UiDynamicSprite&& sprite,
     float size_scale,
-    SharedResources& shared_resources,
+    UiSharedResources& ui_shared_resources,
 
     UiStaticSprite&& btn_close,
     UiStaticSprite&& btn_accept,
@@ -1424,13 +1426,13 @@ bool UiConfirmation::Render(bool show) {
     return stop_show;
   }
 
-  shared_resources_.static_sprite_shader_.Bind();
+  ui_shared_resources_.static_sprite_shader_.Bind();
 
   btn_close_.Render();
   btn_accept_.Render();
   btn_decline_.Render();
 
-  shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
   cross_.Render();
 
   return stop_show;
@@ -1441,13 +1443,13 @@ void UiConfirmation::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  shared_resources_.static_sprite_picking_shader_.Bind();
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
   btn_close_.RenderPicking();
   btn_accept_.RenderPicking();
   btn_decline_.RenderPicking();
 
-  shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   cross_.RenderPicking();
 }
 
@@ -1466,14 +1468,14 @@ void UiConfirmation::UpdateTransform(
 UiPopUpBase::UiPopUpBase(
     UiDynamicSprite&& sprite,
     float size_scale,
-    SharedResources& shared_resources,
+    UiSharedResources& ui_shared_resources,
     LocalTransform start_transform,
     LocalTransform end_transform)
     : UiCallable(sprite.GetId(), {}),
       sprite_(std::move(sprite)),
       start_transform_(start_transform),
       end_transform_(end_transform),
-      shared_resources_(shared_resources),
+      ui_shared_resources_(ui_shared_resources),
       size_scale_(size_scale),
       speed_(4.0f) {
   sprite_.SetScale(size_scale);
@@ -1489,10 +1491,10 @@ UiPopUpBase::UiPopUpBase(UiPopUpBase&& other) noexcept
       progress_(other.progress_),
       back_ready_(other.back_ready_),
       size_scale_(other.size_scale_),
-      shared_resources_(other.shared_resources_) {}
+      ui_shared_resources_(other.ui_shared_resources_) {}
 
 bool UiPopUpBase::RenderBack(bool show) {
-  shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
   show = std::sin(static_cast<int>(glfwGetTime()) % 4) > 0.5f;
   if (show) {
     progress_ += speed_ * gDeltaTime;
@@ -1513,7 +1515,7 @@ bool UiPopUpBase::RenderBack(bool show) {
 }
 
 void UiPopUpBase::RenderPickingBack() {
-  shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   sprite_.SetParentTransform(cur_transform_);
   sprite_.RenderPicking();
 }
@@ -1541,7 +1543,7 @@ void UiPopUpBase::UpdateTransform() {
 UiWaterLayerConfig::UiWaterLayerConfig(
     UiDynamicSprite&& sprite,
     float size_scale,
-    SharedResources& shared_resources,
+    UiSharedResources& ui_shared_resources,
     LocalTransform start_transform,
     LocalTransform end_transform,
     UiDynamicSprite&& sprite_layer,
@@ -1552,7 +1554,7 @@ UiWaterLayerConfig::UiWaterLayerConfig(
     UiSliderH&& peak_enhancement,
     UiSliderH&& short_waves_fade,
     UiSliderH&& lambda)
-    : Base(std::move(sprite), size_scale, shared_resources,
+    : Base(std::move(sprite), size_scale, ui_shared_resources,
            start_transform, end_transform),
       sprite_layer_(std::move(sprite_layer)),
       scale_(std::move(scale)),
@@ -1613,7 +1615,7 @@ bool UiWaterLayerConfig::Render(bool show) {
     return stop_show;
   }
 
-  shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
   scale_.SetParentTransform(Base::cur_transform_);
   fetch_.SetParentTransform(Base::cur_transform_);
@@ -1625,7 +1627,7 @@ bool UiWaterLayerConfig::Render(bool show) {
 
   /// shader & transform matrix already bind by Base class
   auto mouse_pos =
-      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
   sprite_layer_.Render();
   scale_.Render(mouse_pos);
   fetch_.Render(mouse_pos);
@@ -1671,7 +1673,7 @@ void UiWaterLayerConfig::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   sprite_layer_.RenderPicking();
   scale_.RenderPicking();
   fetch_.RenderPicking();

@@ -5,42 +5,23 @@
 #include <cinttypes>
 
 #include "Details.h"
+#include "Text.h"
 
 class UiTransformDbg;
 
-namespace vbos {
+namespace data {
 
 struct UiData {
   int32_t id;
   std::size_t vbo_offset;
-  /// comparing to Wirebound, here we add description for each button,
-  /// which showed in some specific area externally.
-  std::size_t text_vbo_offset_;
+  data::TextId text_id;
 
-  // DEPRECATED! :
-  // child.Render() independent, can't see parent data (not serialized)
-  // more than 0 for complex objects
-  // e.g. for Wheel-slider fill has 3 children and comes first
-//  int children_num{0};
-
-  // we need parent_id_ to ask for the parent_transform_ and grandparents...
-  // we also need children_num_ to update num after... wait, we can UpdateTra
-  // nsform like in ctors...
-
-  // parent id to take transform from it/
+  // parent id to take transform from it
   std::size_t parent_id_{0};
 
   // useful for e.g. slider to update centre/length of interactive area
   UiTransformDbg* ui{nullptr};
 };
-
-enum class VboIdMain;
-enum class VboIdText;
-enum class VboIdInstanced;
-
-inline constexpr std::size_t GetVboMainOffset(VboIdMain id);
-inline constexpr std::size_t GetVboTextOffset(VboIdText id);
-inline constexpr std::size_t GetVboInstancedOffset(VboIdInstanced id);
 
 /// related to kUiVboDataMain
 enum class VboIdMain {
@@ -415,6 +396,7 @@ enum class VboIdMain {
   kConfigDesk,
   kTabDesk,
 
+  kFullScreen,
   kTotal,
 };
 
@@ -436,80 +418,11 @@ inline constexpr int gVboIdSize =
 // This way we can check positions by module without
 // adding excessive transform uniform or dependencies
 
-//TODO: depends on DEBUG or NDEBUG use different vao/vbo
-//  and accordingly std::arrays
-
-// TODO: but it's seems to be not cache-friendly...
-
 inline constexpr int gUiVboTransformSize = gVboIdSize * 4 * 3;
 
 extern const std::array<float, gUiVboTransformSize> kUiVboDataTransform;
 
 #endif // NDEBUG
-
-
-enum class VboIdText {
-  kMode = static_cast<int>(VboIdMain::kTotal) + 1,
-  kVision,
-  kTerrain,
-  kWater,
-  kRoads,
-  kFences,
-  kPlacement,
-  kObject,
-  kBiome,
-  kTiles,
-  kShaders,
-  kWirebound,
-  kSmooth,
-  kUpdateModesMaps,
-  kAdjustSize,
-  kAdjustFalloff,
-  kAddNew,
-  kRemoveSelected,
-  kBakeAsALake,
-  kBakeAsARiver,
-  kBakeAsAWaterfall,
-  kBakeAsAnAsphaltRoad,
-  kBakeAsAGravelRoad,
-  kBakeAsASoilRoad,
-  kBakeAsAPicketFence,
-  kBakeAsAChainLinkedFence,
-  kBakeAsAWoodenFence,
-  kPreviousSlot,
-  kNextSlot,
-  kPlaceTrees,
-  kPlaceBushes,
-  kPlaceTallGrass,
-  kPlaceUndergrowth,
-  kSetDrawColorToWhite,
-  kSetDrawColorToLightGrey,
-  kSetDrawColorToGrey,
-  kSetDrawColorToDarkGrey,
-  kSetDrawColorToBlack,
-  kPreviousPage,
-  kNextPage,
-  kPreviousRow,
-  kNextRow,
-  kPreviousColumn,
-  kNextColumn,
-  kCurrentTile,
-  kBakingInProcess,
-  kObjectWasNotBakedSoRemoved,
-  kSaving,
-  kLoading,
-  kUnableToOpenTheFile,
-  kUnableToSaveTheFile,
-  kTotal,
-  kNone, // doesn't describe any data, but used to set -1 at ctors
-};
-
-enum class VboIdInstanced {
-  kObjects = static_cast<int>(VboIdText::kTotal) + 1,
-  kBiomes,
-  kTiles,
-  kTotal,
-};
 
 inline constexpr std::size_t GetVboMainOffset(VboIdMain id) {
   // for each Ui component 16 floats
@@ -517,34 +430,8 @@ inline constexpr std::size_t GetVboMainOffset(VboIdMain id) {
   return (static_cast<std::size_t>(id) - (details::kIdOffsetUi)) * 4; // TODO: 4?
 }
 
-inline constexpr std::size_t GetVboTextOffset(VboIdText id) {
-  if (id == VboIdText::kNone) {
-    return -1;
-  } else {
-    return (static_cast<std::size_t>(id) -
-        static_cast<int>(VboIdText::kMode)) * 4; // TODO: or 8?
-  }
-}
-
-inline constexpr std::size_t GetVboInstancedOffset(VboIdInstanced id) {
-  switch(id) {
-    case VboIdInstanced::kObjects:
-      return 0;
-    case VboIdInstanced::kBiomes:
-      return 8 * 4 * 8;
-    case VboIdInstanced::kTiles:
-      return (8 * 4 + 8) * 8;
-  }
-}
-
-inline UiData GetUiData(VboIdMain btn_type, VboIdText description) {
-  return {static_cast<int>(btn_type), GetVboMainOffset(btn_type),
-          GetVboTextOffset(description), 0};
-}
-
-inline UiData GetUiData(VboIdInstanced btn_type) {
-  // TODO: description as 0?
-  return {static_cast<int>(btn_type), GetVboInstancedOffset(btn_type), 0, 0};
+inline UiData GetUiData(VboIdMain btn_type, data::TextId text_id) {
+  return {static_cast<int>(btn_type), GetVboMainOffset(btn_type), text_id, 0};
 }
 
 // We put all button data to the same vbo buffer;
@@ -563,32 +450,6 @@ inline UiData GetUiData(VboIdInstanced btn_type) {
 // in case of dynamic position component (like slider) we
 // need to use another shader (vbo with starting position is the same)
 extern const std::array<float, gVboIdSize * 16> kUiVboDataMain;
-
-// tex coords were generated with https://github.com/pol-31/WireboundTextBaker;
-extern const std::array<float, 402> kUiVboDataText;
-
-/// here position instanced data (only for Modes "Objects", "Biomes", "Tiles")
-extern const std::array<float, (8 * 4 + 8 + 6 * 6) * 8> kUiVboDataInstanced;
-
-inline int GetTextVbo(std::string_view str) {
-  //TODO: lookup by perf hash table
-  throw;
-}
-
-inline int GetTextVbo(char c) {
-  //TODO: lookup by perf hash table
-  throw;
-}
-
-inline int GetTextWidth(int vbo_offset) {
-  return kUiVboDataText[vbo_offset * 2]
-         - kUiVboDataText[vbo_offset * 2 + 4];
-}
-
-inline int GetTextHeight(int vbo_offset) {
-  return kUiVboDataText[vbo_offset * 2 + 3]
-         - kUiVboDataText[vbo_offset * 2 + 1];
-}
 
 } // namespace vbos
 

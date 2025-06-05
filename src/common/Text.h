@@ -4,9 +4,9 @@
 #include <array>
 #include <string>
 
-namespace text {
+namespace data {
 
-enum class Id {
+enum class TextId {
   kMenuTerrain,
   kMenuWater,
   kMenuRoads,
@@ -18,27 +18,28 @@ enum class Id {
   kMenu,
 
   Newgame,
-      Loadgame,
-          Continue,
-              Archive,
-                  Options,
-                      Credits,
-                          Quit,
-                              Loading,
-                                  Copyright,
-                                      https,
-                                          github,
-                                              com,
-                                                  Superman,
-                                                      LambofGod,
-                                                          Pantera,
-                                                              Hatebreed,
+  Loadgame,
+  Continue,
+  Archive,
+  Options,
+  Credits,
+  Quit,
+  Loading,
+  Copyright,
+  https,
+  github,
+  com,
+  Superman,
+  LambofGod,
+  Pantera,
+  Hatebreed,
+
   kTotal,
   kNone, // shouldn't be used (always check != kNone)
 };
 
-inline constexpr int gTotalText = static_cast<int>(Id::kTotal)
-                                  - static_cast<int>(Id::kMenuTerrain);
+inline constexpr int gTotalText = static_cast<int>(TextId::kTotal)
+                                  - static_cast<int>(TextId::kMenuTerrain);
 
 extern const std::array<std::string_view, gTotalText> gText;
 

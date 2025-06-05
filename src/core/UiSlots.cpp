@@ -9,13 +9,15 @@ const int UiSlots::kSlotsNum = 6;
 /// parent is back_ BUT UiSlots is taken from slider, so
 /// outside is's shown as a slider area
 UiSlots::UiSlots(
-    SharedResources& shared_resources,
+    UiSharedResources& ui_shared_resources,
     UiDynamicSprite&& handler,
     UiDynamicSprite&& slider,
     UiDynamicSprite&& back,
     UiDynamicSprite&& create,
-    vbos::VboIdMain flip_select_edit_back_vbo_texture, text::Id flip_select_edit_back_text_id,
-    vbos::VboIdMain flip_point_edge_back_vbo_texture, text::Id flip_point_edge_back_text_id,
+                 data::VboIdMain flip_select_edit_back_vbo_texture,
+                 data::TextId flip_select_edit_back_text_id,
+                 data::VboIdMain flip_point_edge_back_vbo_texture,
+                 data::TextId flip_point_edge_back_text_id,
     UiDynamicSprite&& flip_select_edit_sprite,
     UiDynamicSprite&& flip_point_edge_sprite,
     UiDynamicSprite&& slot_back,
@@ -58,7 +60,7 @@ UiSlots::UiSlots(
                + back_.GetBottomBorder()) / 2.0f),
       ui_event_handler_({&create_, &flip_select_edit_back_,
                          &flip_point_edge_back_}),
-      shared_resources_(shared_resources),
+      ui_shared_resources_(ui_shared_resources),
       graph_(graph) {
   gUiComponents[handler_.GetId() - details::kIdOffsetUi].parent_id_
       = back_.GetId();
@@ -110,7 +112,7 @@ UiSlots::UiSlots(UiSlots&& other) noexcept
       start_slot_translate_(other.start_slot_translate_),
       ui_event_handler_({&create_, &flip_select_edit_back_,
                          &flip_point_edge_back_}),
-      shared_resources_(other.shared_resources_),
+      ui_shared_resources_(other.ui_shared_resources_),
       graph_(other.graph_) {
   progress_ = other.progress_;
   pressed_ = other.pressed_;
@@ -182,7 +184,7 @@ void UiSlots::Render(glm::vec2 mouse_pos) {
   next_offset = start_slot_translate_;
   for (int i = 0; i < std::min(kSlotsNum, graphs_num); ++i) {
     auto graph_name = graph_.GetNamePtr(i + cur_slots_offset_);
-    shared_resources_.global_glfw_callback_data_.text_renderer_->
+    ui_shared_resources_.global_glfw_callback_data_.text_renderer_->
         RenderText(graph_name, 1.0f, next_offset);
     next_offset.y -= slot_height_;
   }
@@ -231,7 +233,7 @@ void UiSlots::RenderPicking() {
   next_offset = start_slot_translate_;
   for (int i = 0; i < std::min(kSlotsNum, graphs_num); ++i) {
     auto graph_name = graph_.GetNamePtr(i + cur_slots_offset_);
-    shared_resources_.global_glfw_callback_data_.text_renderer_->
+    ui_shared_resources_.global_glfw_callback_data_.text_renderer_->
         RenderTextPicking(graph_name, 1.0f, next_offset);
     next_offset.y -= slot_height_;
   }
@@ -239,7 +241,7 @@ void UiSlots::RenderPicking() {
 
 int UiSlots::GetSlotId() {
   auto mouse_pos =
-      shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y;
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_.y;
   float half_slot_height = slot_height_ / 2.0f;
   float border = centre_ + length_slots_ / 2.0f + half_slot_height + start_slot_translate_.y;
   for (int i = 0; i < 5; ++i) {

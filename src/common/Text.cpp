@@ -1,6 +1,6 @@
 #include "Text.h"
 
-namespace text {
+namespace data {
 
 // should be sorted by length locally for each sector, for prerender
 
