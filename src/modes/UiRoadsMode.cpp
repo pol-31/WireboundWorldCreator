@@ -1,34 +1,35 @@
-#include "RoadsMode.h"
+#include "UiRoadsMode.h"
 
 #include "../io/Window.h"
-#include "../common/GlobalGlfwCallbackData.h"
 #include "../core/Menu.h"
-#include "../common/Vbos.h"
+#include "../io/Cameras.h"
+#include "../common/PickingFramebuffer.h"
+#include "../core/TileRenderer.h"
 
-void RoadsModeScrollCallback(
+void UiRoadsMode::ScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (yoffset < 0.0f) {
-    global_data->tile_renderer_.DownScale();
+    global_data->tile_renderer->DownScale();
   } else {
-    global_data->tile_renderer_.UpScale();
+    global_data->tile_renderer->UpScale();
   }
 }
 
-void RoadsModeMouseButtonCallback(
+void UiRoadsMode::MouseButtonCallback(
     GLFWwindow* window, int button, int action, int mods) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
-  auto fences = dynamic_cast<RoadsMode*>(global_data->cur_mode_);
+  auto fences = dynamic_cast<UiRoadsMode*>(*global_data->cur_mode);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
-  global_data->camera_.ProcessMouseKey(button, action, mods);
+  global_data->camera->ProcessMouseKey(button, action, mods);
   if (action == GLFW_PRESS) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
+      auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
       if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
-        global_data->menu_.Press(pressed_id);
+        global_data->menu->Press(pressed_id);
       } else {
         //TODO: bvh?
         if (pressed_id == fences->btn_bake_asphalt_.GetId()) {
@@ -47,19 +48,16 @@ void RoadsModeMouseButtonCallback(
   }
 }
 
-//TODO: multiple water areas. GLFW_KEY_0-9 to switch (chosen highlighted in shader)
-
-// TODO: possible more keys to press (now se use src/io/Window.h WasdKeyCallback
-void RoadsModeKeyCallback(
+void UiRoadsMode::KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {
   /*  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
         glfwGetWindowUserPointer(window));
-    auto terrain = dynamic_cast<TerrainMode*>(global_data->cur_mode_);
+    auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
     if (action == GLFW_PRESS) {
       if (key == GLFW_KEY_ESCAPE) {
         glfwSetWindowShouldClose(window, true);
       } else if (key == GLFW_KEY_LEFT_SHIFT) {
-        global_data->camera_.SpeedUp();
+        global_data->camera->SpeedUp();
       } else if (key == GLFW_KEY_BACKSPACE) {
         global_data->terrain_.ClearPoints();
       } else if (key == GLFW_KEY_ENTER) {
@@ -69,66 +67,55 @@ void RoadsModeKeyCallback(
       }
     } else if (action == GLFW_RELEASE) {
       if (key == GLFW_KEY_LEFT_SHIFT) {
-        global_data->camera_.SlowDown();
+        global_data->camera->SlowDown();
       } else if (key == GLFW_KEY_TAB) {
         global_data->tab_pressed_ = false;
       }
     }*/
 }
 
-RoadsMode::RoadsMode(
-    SharedResources& shared_resources, const TextRenderer& text_renderer)
-    : IEditMode(shared_resources),
-      btn_bake_asphalt_(vbos::VboIdMain::kRoadsAsphalt, vbos::VboIdText::kBakeAsAnAsphaltRoad),
-      btn_bake_gravel_(vbos::VboIdMain::kRoadsGravel, vbos::VboIdText::kBakeAsAGravelRoad),
-      btn_bake_soil_(vbos::VboIdMain::kRoadsSoil, vbos::VboIdText::kBakeAsASoilRoad),
-      btn_create_(vbos::VboIdMain::kRoadsAdd, vbos::VboIdText::kAddNew),
-      btn_remove_(vbos::VboIdMain::kRoadsRemove, vbos::VboIdText::kRemoveSelected),
-      slots_(temp_size_,
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNextSlot},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kPreviousSlot},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             UiStaticSprite{vbos::VboIdMain::kMenuShaderWirebound, vbos::VboIdText::kNone},
-             edit_mode_selected_sample_id_test_, text_renderer) {}
+UiRoadsMode::UiRoadsMode(
+    UiSharedResources& ui_shared_resources)
+    : IUiMode(ui_shared_resources,
+              UiStaticSprite{data::VboIdMain::kRoadsUiRoadsMode,
+                             data::TextId::kNone}),
+      btn_bake_asphalt_(data::VboIdMain::kRoadsAsphalt, data::TextId::kNone),
+      btn_bake_gravel_(data::VboIdMain::kRoadsGravel, data::TextId::kNone),
+      btn_bake_soil_(data::VboIdMain::kRoadsSoil, data::TextId::kNone),
+      btn_create_(data::VboIdMain::kRoadsAdd, data::TextId::kNone),
+      btn_remove_(data::VboIdMain::kRoadsRemove, data::TextId::kNone) {}
 
-void RoadsMode::Render() {
-  shared_resources_.tile_renderer_.Render();
-
+void UiRoadsMode::Render() {
   glActiveTexture(GL_TEXTURE0);
-  shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(shared_resources_.vao_ui_);
+  ui_shared_resources_.tex_ui_.Bind();
+  glBindVertexArray(ui_shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_shader_.Bind();
+  ui_shared_resources_.static_sprite_shader_.Bind();
 
+  sprite_mode_.Render();
   btn_bake_asphalt_.Render();
   btn_bake_gravel_.Render();
   btn_bake_soil_.Render();
   btn_create_.Render();
   btn_remove_.Render();
-  slots_.Render();
 }
 
-void RoadsMode::RenderPicking() {
-  shared_resources_.tile_renderer_.RenderPickingTerrain();
-
+void UiRoadsMode::RenderPicking() {
   glActiveTexture(GL_TEXTURE0);
-  shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(shared_resources_.vao_ui_);
+  ui_shared_resources_.tex_ui_.Bind();
+  glBindVertexArray(ui_shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_picking_shader_.Bind();
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
+  sprite_mode_.RenderPicking();
   btn_bake_asphalt_.RenderPicking();
   btn_bake_gravel_.RenderPicking();
   btn_bake_soil_.RenderPicking();
   btn_create_.RenderPicking();
   btn_remove_.RenderPicking();
-  slots_.RenderPicking();
 }
 
-void RoadsMode::Create(GLuint id) {
+void UiRoadsMode::Create(GLuint id) {
   std::cout << "created new point set" << std::endl;
   /*  if (points_data_.size() == 64) {
       std::cerr << "points overflow; rewriting last" << std::endl;
@@ -143,7 +130,7 @@ void RoadsMode::Create(GLuint id) {
     points_data_.push_back(id);*/
 }
 
-void RoadsMode::Remove() {
+void UiRoadsMode::Remove() {
   std::cout << "removed selected point set" << std::endl;
   //  points_data_.clear();
 }
@@ -154,23 +141,23 @@ void RoadsMode::Remove() {
 //TODO: from points generate height map (!)
 // wrt each triangle surface slope, we gen flow map (how - idk)
 
-void RoadsMode::BakeAsphalt() {
+void UiRoadsMode::BakeAsphalt() {
   std::cout << "baked as an asphalt road" << std::endl;
 }
-void RoadsMode::BakeGravel() {
+void UiRoadsMode::BakeGravel() {
   std::cout << "baked as a gravel road" << std::endl;
 }
-void RoadsMode::BakeSoil() {
+void UiRoadsMode::BakeSoil() {
   std::cout << "baked as a soil road" << std::endl;
 }
 
-void RoadsMode::BindCallbacks() {
-  glfwSetScrollCallback(gWindow, RoadsModeScrollCallback);
-  glfwSetMouseButtonCallback(gWindow, RoadsModeMouseButtonCallback);
-  //  glfwSetKeyCallback(gWindow, TerrainModeKeyCallback);
+void UiRoadsMode::BindCallbacks() {
+  glfwSetScrollCallback(gWindow, ScrollCallback);
+  glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
+  //  glfwSetKeyCallback(gWindow, KeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
 }
 
-int RoadsMode::Hover(std::uint32_t global_id) {
+int UiRoadsMode::Hover(std::uint32_t global_id) {
   return -1;
 }

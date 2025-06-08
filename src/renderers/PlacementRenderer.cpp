@@ -85,7 +85,8 @@ void PlacementRenderer::RenderDraw() const {
   tile_.map_terrain_height.Bind();
 
   glActiveTexture(GL_TEXTURE1);
-  tile_.cur_placement_mode_tex_->Bind();
+  tile_.map_terrain_wetness.Bind();
+//  tile_.cur_placement_mode_tex_->Bind();
 
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
@@ -104,7 +105,7 @@ void PlacementRenderer::UpdatePipeline() {
    * at lower priorities.
    * Then we should call UpdatePlacement() for each affected placement type
    * */
-  poisson_shader_.Bind();
+  /*poisson_shader_.Bind();
   glBindImageTexture(0, density_extreme_.GetId(),
                      0, GL_FALSE, 0, GL_READ_ONLY, density_extreme_.GetFormat());
   glBindImageTexture(1, tile_.map_placement_undergrowth.GetId(),
@@ -131,5 +132,5 @@ void PlacementRenderer::UpdatePipeline() {
 
 
   // need map_terrain_height to init blades heights
-  grass_.UpdatePlacement(tile_.undergrowth_, tile_.terrain_heights_);
+  grass_.UpdatePlacement(tile_.undergrowth_, tile_.terrain_heights_);*/
 }

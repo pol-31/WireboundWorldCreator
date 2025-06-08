@@ -8,7 +8,7 @@
 
 class RoadsRenderer {
  public:
-  RoadsRenderer(Tile& tile) : tile_(tile) {}
+  RoadsRenderer(Tile& tile, const Paths& paths) : tile_(tile) {}
 
   void Render() const {
     if(glfwGetKey(gWindow, GLFW_KEY_3)) {
@@ -17,6 +17,8 @@ class RoadsRenderer {
     //TODO: render roads here
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
+
+  void RenderPicking() const {}
 
  private:
   Tile& tile_;

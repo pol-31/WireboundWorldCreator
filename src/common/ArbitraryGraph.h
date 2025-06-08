@@ -8,12 +8,12 @@
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 
-#include "../modes/SharedResources.h"
+#include "../modes/UiSharedResources.h"
 
 //template <size_t kMaxPoints>
 class ArbitraryGraph {
  public:
-  ArbitraryGraph(SharedResources& shared_resources);
+  ArbitraryGraph(UiSharedResources& ui_shared_resources);
 
   void Press(GLuint vertex_id);
 
@@ -112,7 +112,7 @@ class ArbitraryGraph {
   bool target_points_{true}; // opposite target - edges
   bool press_select_{true}; // opposite mode - edit (modify)
 
-  SharedResources& shared_resources_;
+  UiSharedResources& ui_shared_resources_;
 };
 
 

@@ -4,8 +4,8 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../modes/TerrainMode.h"
-#include "../modes/WaterMode.h"
+#include "../modes/UiTerrainMode.h"
+#include "../modes/UiWaterMode.h"
 #include "../common/Colors.h"
 #include "../common/ShadersBinding.h"
 
@@ -993,7 +993,7 @@ UiTabMenu::UiTabMenu(
     UiToggle&& toggle_shaders,
 
     UiDynamicSprite&& cross)
-    : Base(std::move(sprite), size_scale, shared_resources),
+    : Base(std::move(sprite), size_scale, ui_shared_resources),
       btn_mode_terrain_(std::move(btn_mode_terrain)),
       btn_mode_water_(std::move(btn_mode_water)),
       btn_mode_roads_(std::move(btn_mode_roads)),
@@ -1254,7 +1254,7 @@ UiSettings::UiSettings(
     UiToggle&& toggle_music,
     UiToggle&& toggle_sound,
     UiDynamicSprite&& cross)
-    : Base(std::move(sprite), size_scale, shared_resources),
+    : Base(std::move(sprite), size_scale, ui_shared_resources),
       resolution_(std::move(resolution)),
       music_(std::move(music)),
       sound_(std::move(sound)),
@@ -1389,7 +1389,7 @@ UiConfirmation::UiConfirmation(
     UiStaticSprite&& btn_decline,
 
     UiDynamicSprite&& cross)
-    : Base(std::move(sprite), size_scale, shared_resources),
+    : Base(std::move(sprite), size_scale, ui_shared_resources),
       btn_close_(std::move(btn_close)),
       btn_accept_(std::move(btn_accept)),
       btn_decline_(std::move(btn_decline)),

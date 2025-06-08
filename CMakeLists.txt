@@ -21,23 +21,19 @@ add_executable(WireboundWorldCreator
         src/common/Texture.cpp
         src/common/TextRenderer.cpp
         src/common/Vbos.cpp
-        src/core/Map.cpp
-        src/core/Interface.cpp
         src/core/Menu.cpp
-        src/core/Tile.cpp
         src/core/TileRenderer.cpp
         src/core/WireboundWorldCreator.cpp
         src/io/Cursor.cpp
         src/io/Window.cpp
-        src/modes/BiomesMode.cpp
-        src/modes/FencesMode.cpp
-        src/modes/ObjectsMode.cpp
-        src/modes/PlacementMode.cpp
-        src/modes/RoadsMode.cpp
-        src/modes/SharedResources.cpp
-        src/modes/TerrainMode.cpp
-        src/modes/TilesMode.cpp
-        src/modes/WaterMode.cpp
+        src/modes/UiBiomesMode.cpp
+        src/modes/UiFencesMode.cpp
+        src/modes/UiObjectsMode.cpp
+        src/modes/UiPlacementMode.cpp
+        src/modes/UiRoadsMode.cpp
+        src/modes/UiTerrainMode.cpp
+        src/modes/UiTilesMode.cpp
+        src/modes/UiWaterMode.cpp
         src/renderers/PlacementRenderer.cpp
         src/renderers/TerrainRenderer.cpp
         src/renderers/WaterRenderer.cpp
@@ -67,6 +63,20 @@ add_executable(WireboundWorldCreator
         src/common/PlayerCharacter.h
         src/common/SkylineBottomLeft.h
         src/common/LocalTransform.h
+        src/common/Font.h
+        src/common/Text.h
+        src/common/Text.cpp
+        src/common/GlobalGlfwCallbackData.cpp
+        src/core/UiSlots.cpp
+        src/core/UiSlots.h
+        src/modes/UiTerrainGenerator.cpp
+        src/modes/UiTerrainGenerator.h
+        src/renderers/UiRenderer.cpp
+        src/renderers/UiRenderer.h
+        src/modes/UiSharedResources.cpp
+        src/modes/UiSharedResources.h
+        src/modes/AllUiModes.h
+
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

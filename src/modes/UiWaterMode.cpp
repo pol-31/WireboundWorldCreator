@@ -1,39 +1,48 @@
-#include "WaterMode.h"
+#include "UiWaterMode.h"
 
 #include "../io/Window.h"
-#include "../common/GlobalGlfwCallbackData.h"
 #include "../core/Menu.h"
-#include "../common/Vbos.h"
+#include "../io/Cameras.h"
+#include "../common/PickingFramebuffer.h"
+#include "../core/TileRenderer.h"
 #include "../common/ShadersBinding.h"
-
 #include "../common/ArbitraryGraph.h"
 
-void WaterModeScrollCallback(
+void UiWaterMode::ScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
+  auto water = dynamic_cast<UiWaterMode*>(*global_data->cur_mode);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+  if (pressed_id >= details::kIdOffsetUi &&
+      pressed_id != static_cast<GLuint>(-1)) {
+    water->ocean_layer_config_1_.Scroll(pressed_id, yoffset);
+    water->ocean_layer_config_2_.Scroll(pressed_id, yoffset);
+    water->ocean_layer_config_3_.Scroll(pressed_id, yoffset);
+    return;
+  }
   if (yoffset < 0.0f) {
-    global_data->tile_renderer_.DownScale();
+    global_data->tile_renderer->DownScale();
   } else {
-    global_data->tile_renderer_.UpScale();
+    global_data->tile_renderer->UpScale();
   }
 }
 
-void WaterModeMouseButtonCallback(
+void UiWaterMode::MouseButtonCallback(
     GLFWwindow* window, int button, int action, int mods) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
-  auto water = dynamic_cast<WaterMode*>(global_data->cur_mode_);
+  auto water = dynamic_cast<UiWaterMode*>(*global_data->cur_mode);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   //TODO: refactor to "if(!cond) return"
   //TODO: change order (based on usage frequency)
-  global_data->camera_.ProcessMouseKey(button, action, mods);
+  global_data->camera->ProcessMouseKey(button, action, mods);
   if (action == GLFW_PRESS) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      auto pressed_id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
+      auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
       if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
-        global_data->menu_.Press(pressed_id);
+        global_data->menu->Press(pressed_id);
       } else {
         //TODO: bvh?
         if (pressed_id < details::kIdOffsetUi && water->do_add_points_) {
@@ -70,18 +79,16 @@ void WaterModeMouseButtonCallback(
 }
 
 //TODO: multiple water areas. GLFW_KEY_0-9 to switch (chosen highlighted in shader)
-
-// TODO: possible more keys to press (now se use src/io/Window.h WasdKeyCallback
-void WaterModeKeyCallback(
+void UiWaterMode::KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {
   /*  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
         glfwGetWindowUserPointer(window));
-    auto terrain = dynamic_cast<TerrainMode*>(global_data->cur_mode_);
+    auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
     if (action == GLFW_PRESS) {
       if (key == GLFW_KEY_ESCAPE) {
         glfwSetWindowShouldClose(window, true);
       } else if (key == GLFW_KEY_LEFT_SHIFT) {
-        global_data->camera_.SpeedUp();
+        global_data->camera->SpeedUp();
       } else if (key == GLFW_KEY_BACKSPACE) {
         global_data->terrain_.ClearPoints();
       } else if (key == GLFW_KEY_ENTER) {
@@ -91,171 +98,176 @@ void WaterModeKeyCallback(
       }
     } else if (action == GLFW_RELEASE) {
       if (key == GLFW_KEY_LEFT_SHIFT) {
-        global_data->camera_.SlowDown();
+        global_data->camera->SlowDown();
       } else if (key == GLFW_KEY_TAB) {
         global_data->tab_pressed_ = false;
       }
     }*/
 }
 
-WaterMode::WaterMode(
-    SharedResources& shared_resources,
-    const Paths& paths, const TextRenderer& text_renderer)
-    : IEditMode(shared_resources),
+UiWaterMode::UiWaterMode(
+    UiSharedResources& ui_shared_resources,
+    const Paths& paths)
+    : IUiMode(ui_shared_resources,
+              UiStaticSprite{data::VboIdMain::kWaterUiWaterMode,
+                             data::TextId::kNone}),
       points_shader_(paths.shader_points_polygon_vert,
                      paths.shader_points_polygon_frag),
-      btn_bake_lake_(vbos::VboIdMain::kWaterLake, vbos::VboIdText::kBakeAsALake,
+      btn_bake_lake_(data::VboIdMain::kWaterLake, data::TextId::kNone,
                      [this]() {
                        this->BakeLake();
                      }),
-      btn_bake_river_(vbos::VboIdMain::kWaterRiver, vbos::VboIdText::kBakeAsARiver,
+      btn_bake_river_(data::VboIdMain::kWaterRiver, data::TextId::kNone,
                       [this]() {
                         this->BakeRiver();
                       }),
-      btn_bake_waterfall_(vbos::VboIdMain::kWaterWaterfall, vbos::VboIdText::kBakeAsAWaterfall,
+      btn_bake_waterfall_(data::VboIdMain::kWaterWaterfall, data::TextId::kNone,
                           [this]() {
                             this->BakeWaterfall();
                           }),
-      btn_create_(vbos::VboIdMain::kWaterAdd, vbos::VboIdText::kAddNew,
+      btn_create_(data::VboIdMain::kWaterAdd, data::TextId::kNone,
                   [this]() {
                     std::cout << "AddNewPoint" << std::endl;
 //                    this->AddNewPoint();
                   }),
-      btn_remove_(vbos::VboIdMain::kWaterRemove, vbos::VboIdText::kRemoveSelected,
+      btn_remove_(data::VboIdMain::kWaterRemove, data::TextId::kNone,
                   [this]() {
                     this->Remove();
                   }),
-      btn_update_(vbos::VboIdMain::kWaterUpdate, vbos::VboIdText::kNone,
+      btn_update_(data::VboIdMain::kWaterUpdate, data::TextId::kNone,
                   [this]() {
                     this->UpdateOcean();
                   }),
       ocean_layer_config_1_(
-          UiStaticSprite{vbos::VboIdMain::kWaterLayer1Window, vbos::VboIdText::kNone, [](){}},
-          shared_resources,
+          UiDynamicSprite{data::VboIdMain::kWaterLayer1Window, data::TextId::kNone, [](){}},
+          1.4f,
+          ui_shared_resources,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          UiDynamicSprite{vbos::VboIdMain::kWaterLayer1, vbos::VboIdText::kNone, [](){}},
-          UiSliderH{{vbos::VboIdMain::kWater1ScaleFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1ScaleBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1ScaleHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1ScaleIcon, vbos::VboIdText::kNone},
+          UiDynamicSprite{data::VboIdMain::kWaterLayer1, data::TextId::kNone, [](){}},
+          UiSliderH{{data::VboIdMain::kWater1ScaleFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater1ScaleBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater1ScaleHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater1ScaleIcon, data::TextId::kNone},
                     1000.0f},
-          UiSliderH{{vbos::VboIdMain::kWater1FetchFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1FetchBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1FetchHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1FetchIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater1FetchFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater1FetchBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater1FetchHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater1FetchIcon, data::TextId::kNone},
                     100000.0f},
-          UiSliderH{{vbos::VboIdMain::kWater1SpreadBlendFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1SpreadBlendBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1SpreadBlendHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1SpreadBlendIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater1SpreadBlendFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater1SpreadBlendBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater1SpreadBlendHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater1SpreadBlendIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater1SwellFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1SwellBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1SwellHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1SwellIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater1SwellFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater1SwellBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater1SwellHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater1SwellIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater1PeakEnhancementFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1PeakEnhancementBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1PeakEnhancementHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1PeakEnhancementIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater1PeakEnhancementFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater1PeakEnhancementBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater1PeakEnhancementHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater1PeakEnhancementIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater1ShortWavesFadeFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1ShortWavesFadeBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1ShortWavesFadeHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1ShortWavesFadeIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater1ShortWavesFadeFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater1ShortWavesFadeBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater1ShortWavesFadeHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater1ShortWavesFadeIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater1LambdaFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1LambdaBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1LambdaHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater1LambdaIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater1LambdaFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater1LambdaBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater1LambdaHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater1LambdaIcon, data::TextId::kNone},
                     1.0f}),
       ocean_layer_config_2_(
-          UiStaticSprite{vbos::VboIdMain::kWaterLayer2Window, vbos::VboIdText::kNone, [](){}},
-          shared_resources,
+          UiDynamicSprite{data::VboIdMain::kWaterLayer2Window, data::TextId::kNone, [](){}},
+          1.4f,
+          ui_shared_resources,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          UiDynamicSprite{vbos::VboIdMain::kWaterLayer2, vbos::VboIdText::kNone, [](){}},
-          UiSliderH{{vbos::VboIdMain::kWater2ScaleFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2ScaleBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2ScaleHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2ScaleIcon, vbos::VboIdText::kNone},
+          UiDynamicSprite{data::VboIdMain::kWaterLayer2, data::TextId::kNone, [](){}},
+          UiSliderH{{data::VboIdMain::kWater2ScaleFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater2ScaleBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater2ScaleHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater2ScaleIcon, data::TextId::kNone},
                     1000.0f},
-          UiSliderH{{vbos::VboIdMain::kWater2FetchFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2FetchBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2FetchHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2FetchIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater2FetchFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater2FetchBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater2FetchHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater2FetchIcon, data::TextId::kNone},
                     100000.0f},
-          UiSliderH{{vbos::VboIdMain::kWater2SpreadBlendFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2SpreadBlendBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2SpreadBlendHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2SpreadBlendIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater2SpreadBlendFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater2SpreadBlendBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater2SpreadBlendHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater2SpreadBlendIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater2SwellFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2SwellBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2SwellHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2SwellIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater2SwellFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater2SwellBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater2SwellHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater2SwellIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater2PeakEnhancementFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2PeakEnhancementBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2PeakEnhancementHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2PeakEnhancementIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater2PeakEnhancementFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater2PeakEnhancementBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater2PeakEnhancementHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater2PeakEnhancementIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater2ShortWavesFadeFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2ShortWavesFadeBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2ShortWavesFadeHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2ShortWavesFadeIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater2ShortWavesFadeFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater2ShortWavesFadeBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater2ShortWavesFadeHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater2ShortWavesFadeIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater2LambdaFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2LambdaBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2LambdaHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater2LambdaIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater2LambdaFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater2LambdaBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater2LambdaHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater2LambdaIcon, data::TextId::kNone},
                     1.0f}),
       ocean_layer_config_3_(
-          UiStaticSprite{vbos::VboIdMain::kWaterLayer3Window, vbos::VboIdText::kNone, [](){}},
-          shared_resources,
+          UiDynamicSprite{data::VboIdMain::kWaterLayer3Window, data::TextId::kNone, [](){}},
+          1.4f,
+          ui_shared_resources,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          UiDynamicSprite{vbos::VboIdMain::kWaterLayer3, vbos::VboIdText::kNone, [](){}},
-          UiSliderH{{vbos::VboIdMain::kWater3ScaleFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3ScaleBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3ScaleHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3ScaleIcon, vbos::VboIdText::kNone},
+          LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
+          UiDynamicSprite{data::VboIdMain::kWaterLayer3, data::TextId::kNone, [](){}},
+          UiSliderH{{data::VboIdMain::kWater3ScaleFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater3ScaleBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater3ScaleHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater3ScaleIcon, data::TextId::kNone},
                     1000.0f},
-          UiSliderH{{vbos::VboIdMain::kWater3FetchFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3FetchBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3FetchHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3FetchIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater3FetchFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater3FetchBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater3FetchHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater3FetchIcon, data::TextId::kNone},
                     100000.0f},
-          UiSliderH{{vbos::VboIdMain::kWater3SpreadBlendFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3SpreadBlendBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3SpreadBlendHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3SpreadBlendIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater3SpreadBlendFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater3SpreadBlendBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater3SpreadBlendHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater3SpreadBlendIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater3SwellFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3SwellBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3SwellHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3SwellIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater3SwellFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater3SwellBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater3SwellHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater3SwellIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater3PeakEnhancementFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3PeakEnhancementBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3PeakEnhancementHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3PeakEnhancementIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater3PeakEnhancementFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater3PeakEnhancementBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater3PeakEnhancementHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater3PeakEnhancementIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater3ShortWavesFadeFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3ShortWavesFadeBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3ShortWavesFadeHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3ShortWavesFadeIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater3ShortWavesFadeFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater3ShortWavesFadeBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater3ShortWavesFadeHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater3ShortWavesFadeIcon, data::TextId::kNone},
                     1.0f},
-          UiSliderH{{vbos::VboIdMain::kWater3LambdaFill, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3LambdaBack, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3LambdaHandler, vbos::VboIdText::kNone},
-                    {vbos::VboIdMain::kWater3LambdaIcon, vbos::VboIdText::kNone},
+          UiSliderH{{data::VboIdMain::kWater3LambdaFill, data::TextId::kNone},
+                    {data::VboIdMain::kWater3LambdaBack, data::TextId::kNone},
+                    {data::VboIdMain::kWater3LambdaHandler, data::TextId::kNone},
+                    {data::VboIdMain::kWater3LambdaIcon, data::TextId::kNone},
                     1.0f}) {
   Init();
 }
 
-void WaterMode::Init() {
+void UiWaterMode::Init() {
   //TODO: idk - looks like this is picking...
   glGenVertexArrays(1, &points_vao_);
   glBindVertexArray(points_vao_);
@@ -276,15 +288,16 @@ void WaterMode::Init() {
   glUniform1i(shader::kGraphHeightMap, 0);
 }
 
-void WaterMode::Render() {
-  shared_resources_.tile_renderer_.Render();
+void UiWaterMode::Render() {
+
 
   glActiveTexture(GL_TEXTURE0);
-  shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(shared_resources_.vao_ui_);
+  ui_shared_resources_.tex_ui_.Bind();
+  glBindVertexArray(ui_shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_shader_.Bind();
+  ui_shared_resources_.static_sprite_shader_.Bind();
 
+  sprite_mode_.Render();
   btn_bake_lake_.Render();
   btn_bake_river_.Render();
   btn_bake_waterfall_.Render();
@@ -310,8 +323,8 @@ void WaterMode::Render() {
   ocean_layer_config_3_.Render(show);
 
 
-//  glm::dvec2 cursor_pos = shared_resources_.global_glfw_callback_data_.cursor_pos_;
-//  auto pressed_id = shared_resources_.global_glfw_callback_data_
+//  glm::dvec2 cursor_pos = ui_shared_resources_.global_glfw_callback_data_.cursor_pos_;
+//  auto pressed_id = ui_shared_resources_.global_glfw_callback_data_
 //                        .picking_fbo_.GetIdByMousePos(cursor_pos);
 //  std::cout << pressed_id << std::endl;
 
@@ -327,10 +340,14 @@ void WaterMode::Render() {
 //  }
 }
 
-void WaterMode::UpdateOcean() {
-  if (!ocean_layer_config_1_.Modified() &&
-      !ocean_layer_config_2_.Modified() &&
-      !ocean_layer_config_3_.Modified()) {
+bool UiWaterMode::ConfigModified() {
+  return !ocean_layer_config_1_.Modified() &&
+         !ocean_layer_config_2_.Modified() &&
+         !ocean_layer_config_3_.Modified();
+}
+
+void UiWaterMode::UpdateOcean() {
+  if (ConfigModified()) {
     return;
   }
   OceanTraits traits = {
@@ -338,10 +355,12 @@ void WaterMode::UpdateOcean() {
       ocean_layer_config_2_.GetOceanLayerTraits(),
       ocean_layer_config_3_.GetOceanLayerTraits()
   };
-  shared_resources_.tile_renderer_.UpdateOcean(traits);
+  TileRenderer* tile_renderer =
+      ui_shared_resources_.global_glfw_callback_data_.tile_renderer;
+  tile_renderer->water.UpdateOcean(traits);
 }
 
-void WaterMode::RenderPoints() {
+void UiWaterMode::RenderPoints() {
   glBindVertexArray(points_vao_);
   if (points_vbo_modified_) {
     if (cur_points_data_idx_ != -1) {
@@ -356,7 +375,9 @@ void WaterMode::RenderPoints() {
   points_shader_.Bind();
 
   glActiveTexture(GL_TEXTURE0);
-  shared_resources_.tile_.map_terrain_height.Bind();
+  Tile& cur_tile =
+      ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_;
+  cur_tile.map_terrain_height.Bind();
 
   glUniform4fv(shader::kGraphColor, 1, glm::value_ptr(colors::kWhite));
   glPointSize(10.0f);
@@ -370,15 +391,14 @@ void WaterMode::RenderPoints() {
   glDrawArrays(GL_LINE_LOOP, 0, water_data_[cur_points_data_idx_].points.size());
 }
 
-void WaterMode::RenderPicking() {
-  shared_resources_.tile_renderer_.RenderPickingTerrain();
-
+void UiWaterMode::RenderPicking() {
   glActiveTexture(GL_TEXTURE0);
-  shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(shared_resources_.vao_ui_);
+  ui_shared_resources_.tex_ui_.Bind();
+  glBindVertexArray(ui_shared_resources_.vao_ui_);
 
-  shared_resources_.static_sprite_picking_shader_.Bind();
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
+  sprite_mode_.RenderPicking();
   btn_bake_lake_.RenderPicking();
   btn_bake_river_.RenderPicking();
   btn_bake_waterfall_.RenderPicking();
@@ -390,16 +410,16 @@ void WaterMode::RenderPicking() {
   ocean_layer_config_3_.RenderPicking();
 }
 
-void WaterMode::Create(GLuint id) {
+void UiWaterMode::Create(GLuint id) {
   std::cout << "created new point set" << std::endl;
   do_add_points_ = true;
-  //WaterType::kLake by default - anyway we'll replace it at WaterMode::Bake*()
+  //WaterType::kLake by default - anyway we'll replace it at UiWaterMode::Bake*()
   water_data_.EmplaceBack(WaterType::kLake, std::vector<GLuint>{});
   cur_points_data_idx_ = water_data_.Size() - 1;
   points_vbo_modified_ = true;
 }
 
-void WaterMode::Select(std::size_t idx) {
+void UiWaterMode::Select(std::size_t idx) {
   if (idx >= water_data_.Size()) {
     std::cerr << "idx" << std::endl;
     return;
@@ -413,7 +433,7 @@ void WaterMode::Select(std::size_t idx) {
 // cur_points_data_idx_ always valid, because we call it from callback only
 // if do_add_points_ is true, which is always true, when
 // cur_points_data_idx != -1
-void WaterMode::AddNewPoint(std::uint32_t id) {
+void UiWaterMode::AddNewPoint(std::uint32_t id) {
   if (water_data_[cur_points_data_idx_].points.size() == 64) {
     std::cerr << "points overflow; rewriting last" << std::endl;
     water_data_[cur_points_data_idx_].points.pop_back();
@@ -428,7 +448,7 @@ void WaterMode::AddNewPoint(std::uint32_t id) {
   water_data_[cur_points_data_idx_].points.push_back(id);
 }
 
-void WaterMode::Remove() {
+void UiWaterMode::Remove() {
   std::cout << "removed selected point set" << std::endl;
   if (do_add_points_) {
     water_data_.PopBack();
@@ -445,13 +465,14 @@ void WaterMode::Remove() {
   }
 }
 
-void WaterMode::ReBake() {
+void UiWaterMode::ReBake() {
   /// reset height map to starting (see declaration at Tile.h for explanation)
-  shared_resources_.tile_.water_heights_ =
-      shared_resources_.tile_.water_heights_init_;
-  shared_resources_.tile_.map_water_height.Bind();
+  Tile& cur_tile =
+      ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_;
+  cur_tile.water_heights_ = cur_tile.water_heights_init_;
+  cur_tile.map_water_height.Bind();
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED,
-               GL_UNSIGNED_BYTE, shared_resources_.tile_.water_heights_.data());
+               GL_UNSIGNED_BYTE, cur_tile.water_heights_.data());
   glBindTexture(GL_TEXTURE_2D, 0);
 
   for (int i = 0; i < water_data_.Size(); ++i) {
@@ -469,7 +490,7 @@ void WaterMode::ReBake() {
   do_add_points_ = false; //TODO: bear it all out to DeSelect()
 }
 
-void WaterMode::BakeLake() {
+void UiWaterMode::BakeLake() {
   std::cout << "bake as a lake" << std::endl;
   do_add_points_ = false; // no editing after baking by now
 //  auto control_points = GenControlPoints();
@@ -481,7 +502,7 @@ void WaterMode::BakeLake() {
 //  FloodFill();
 }
 
-void WaterMode::BakeRiver() {
+void UiWaterMode::BakeRiver() {
   std::cout << "bake as a river" << std::endl;
   do_add_points_ = false; // no editing after baking by now
 //  auto control_points = GenControlPoints();
@@ -493,7 +514,7 @@ void WaterMode::BakeRiver() {
 //  FloodFill();
 }
 
-void WaterMode::BakeWaterfall() {
+void UiWaterMode::BakeWaterfall() {
   std::cout << "bake as a waterfall" << std::endl;
   do_add_points_ = false; // no editing after baking by now
 //  auto control_points = GenControlPoints();
@@ -505,18 +526,18 @@ void WaterMode::BakeWaterfall() {
 //  FloodFill();
 }
 
-void WaterMode::BindCallbacks() {
-  glfwSetScrollCallback(gWindow, WaterModeScrollCallback);
-  glfwSetMouseButtonCallback(gWindow, WaterModeMouseButtonCallback);
-  //  glfwSetKeyCallback(gWindow, TerrainModeKeyCallback);
+void UiWaterMode::BindCallbacks() {
+  glfwSetScrollCallback(gWindow, ScrollCallback);
+  glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
+  //  glfwSetKeyCallback(gWindow, KeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
 
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(gWindow));
-  global_data->camera_.SetInspectCamera();
+  global_data->camera->SetInspectCamera();
 }
 /*
-std::vector<Point> WaterMode::GenControlPoints() {
+std::vector<Point> UiWaterMode::GenControlPoints() {
   /// here we collect info only about current(selected), but
   /// all previous have been already baked by now, so it's OK
   if (cur_points_data_idx_ == -1) {
@@ -544,7 +565,7 @@ std::vector<Point> WaterMode::GenControlPoints() {
       Point p = {x, y};
       if (isInsideConvexPolygon(polygon, p)) {
         max_height_ = std::max(
-            max_height_, static_cast<int>(shared_resources_.tile_
+            max_height_, static_cast<int>(ui_shared_resources_.tile_
                                               .terrain_heights_[y * 1024 + x]));
         control_points.push_back(p);
       }
@@ -553,25 +574,25 @@ std::vector<Point> WaterMode::GenControlPoints() {
   return control_points;
 }
 
-void WaterMode::InitStableArea(
+void UiWaterMode::InitStableArea(
     const std::vector<Point>& control_points) {
   for (auto p : control_points) {
-    shared_resources_.tile_.water_heights_[p.y * 1024 + p.x] = max_height_;
+    ui_shared_resources_.tile_.water_heights_[p.y * 1024 + p.x] = max_height_;
   }
 }
 
-void WaterMode::InitMovingArea(
+void UiWaterMode::InitMovingArea(
     const std::vector<Point>& control_points) {
   for (auto p : control_points) {
-    shared_resources_.tile_.water_heights_[p.y * 1024 + p.x] =
-        std::max(static_cast<int>(shared_resources_.tile_.water_heights_[p.y * 1024 + p.x]),
-                 static_cast<int>(shared_resources_.tile_.terrain_heights_[p.y * 1024 + p.x])
+    ui_shared_resources_.tile_.water_heights_[p.y * 1024 + p.x] =
+        std::max(static_cast<int>(ui_shared_resources_.tile_.water_heights_[p.y * 1024 + p.x]),
+                 static_cast<int>(ui_shared_resources_.tile_.terrain_heights_[p.y * 1024 + p.x])
                      + user_desired_river_raise_);
   }
 }*/
 
 // TODO: isn't it too slow (performance)?
-bool WaterMode::FloodFillStablePass() {
+bool UiWaterMode::FloodFillStablePass() {
   int total_changed = 0;
   std::uint8_t cur_water_height, near_water_height, near_terrain_height;
   int i, j;
@@ -580,10 +601,12 @@ bool WaterMode::FloodFillStablePass() {
   std::array<int, 8> dy = {+1, +1, +1, +0, +0, -1, -1, -1};
   // skip borders, we don't want segfault; anyway they will be initialized
   // by their neighbours using dx and dy
+  Tile& cur_tile =
+      ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_;
   for (int y = 1; y < 1023; ++y) {
     for (int x = 1; x < 1023; ++x) {
       int cur_idx = y * 1024 + x;
-      cur_water_height = shared_resources_.tile_.water_heights_[cur_idx];
+      cur_water_height = cur_tile.water_heights_[cur_idx];
       if (cur_water_height == 0) {
         continue;
       }
@@ -591,12 +614,12 @@ bool WaterMode::FloodFillStablePass() {
         i = dy[k];
         j = dx[k];
         int near_idx = cur_idx + i * 1024 + j;
-        near_water_height = shared_resources_.tile_.water_heights_[near_idx];
-        near_terrain_height = shared_resources_.tile_.terrain_heights_[near_idx];
+        near_water_height = cur_tile.water_heights_[near_idx];
+        near_terrain_height = cur_tile.terrain_heights_[near_idx];
         if (cur_water_height > near_terrain_height &&
             near_water_height < max_height_) {
           ++total_changed;
-          shared_resources_.tile_.water_heights_[near_idx] = max_height_;
+          cur_tile.water_heights_[near_idx] = max_height_;
         }
       }
     }
@@ -605,7 +628,7 @@ bool WaterMode::FloodFillStablePass() {
   return total_changed != 0;
 }
 
-bool WaterMode::FloodFillMovingPass() {
+bool UiWaterMode::FloodFillMovingPass() {
   int total_changed = 0;
   std::uint8_t cur_water_height, cur_terrain_height,
       near_water_height, near_terrain_height;
@@ -615,20 +638,22 @@ bool WaterMode::FloodFillMovingPass() {
   std::array<int, 8> dy = {+1, +1, +1, +0, +0, -1, -1, -1};
   // skip borders, we don't want segfault; anyway they will be initialized
   // by their neighbours using dx and dy
+  Tile& cur_tile =
+      ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_;
   for (int y = 1; y < 1023; ++y) {
     for (int x = 1; x < 1023; ++x) {
       int cur_idx = y * 1024 + x;
-      cur_water_height = shared_resources_.tile_.water_heights_[cur_idx];
+      cur_water_height = cur_tile.water_heights_[cur_idx];
       if (cur_water_height == 0) {
         continue;
       }
-      cur_terrain_height = shared_resources_.tile_.terrain_heights_[cur_idx];
+      cur_terrain_height = cur_tile.terrain_heights_[cur_idx];
       for (int k = 0; k < 8; ++k) {
         i = dy[k];
         j = dx[k];
         int near_idx = cur_idx + i * 1024 + j;
-        near_water_height = shared_resources_.tile_.water_heights_[near_idx];
-        near_terrain_height = shared_resources_.tile_.terrain_heights_[near_idx];
+        near_water_height = cur_tile.water_heights_[near_idx];
+        near_terrain_height = cur_tile.terrain_heights_[near_idx];
         if (cur_water_height <= near_terrain_height) {
           continue;
         }
@@ -642,7 +667,7 @@ bool WaterMode::FloodFillMovingPass() {
         }
         if (near_water_height < new_water_height) {
           ++total_changed;
-          shared_resources_.tile_.water_heights_[near_idx] = new_water_height;
+          cur_tile.water_heights_[near_idx] = new_water_height;
         }
       }
     }
@@ -651,7 +676,7 @@ bool WaterMode::FloodFillMovingPass() {
   return total_changed != 0;
 }
 
-void WaterMode::FloodFill() {
+void UiWaterMode::FloodFill() {
   int iterations_counter = 0;
   //TODO: for some reasons it looks disgusting (std::cout?)
   WaterType water_type = water_data_[cur_points_data_idx_].type;
@@ -673,15 +698,17 @@ void WaterMode::FloodFill() {
   }
   std::cout << "___ Flood fill is done" << std::endl;
 
-  shared_resources_.tile_.map_water_height.Bind();
+  Tile& cur_tile =
+      ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_;
+  cur_tile.map_water_height.Bind();
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED,
-               GL_UNSIGNED_BYTE, shared_resources_.tile_.water_heights_.data());
+               GL_UNSIGNED_BYTE, cur_tile.water_heights_.data());
   glBindTexture(GL_TEXTURE_2D, 0);
 
   max_height_ = std::numeric_limits<int>::min();
 }
 
-int WaterMode::Hover(std::uint32_t global_id) {
+int UiWaterMode::Hover(std::uint32_t global_id) {
   int value = -1;
   if (global_id == btn_bake_lake_.GetId()) {
     value = btn_bake_lake_.Hover();

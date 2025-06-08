@@ -11,10 +11,6 @@
 #include "common/Paths.h"
 #include "core/WireboundWorldCreator.h"
 
-#include "core/Map.h"
-
-// TODO: we don't need visibility: "tiles_mode"
-
 // TODO: after window size changing we should recreate all fbos
 //  with new resolution
 
@@ -43,6 +39,7 @@
 
 int main(int argc, char* args[]) {
   std::string world_map_path{};
+  // TODO: подавився кісточкою
   /*if (argc == 3) {
     world_map_path = args[1];
   } else if (argc != 2) {
@@ -63,9 +60,9 @@ int main(int argc, char* args[]) {
 
   SetupWindow();
 
-  {  // TODO: here? - refactor?
-    auto map = LoadMap(paths.world_map);
-    WireboundWorldCreator app(paths, map);
+  /// internal scope, so WireboundWorldCreator::DeInit() before glfwTerminate()
+  {
+    WireboundWorldCreator app(paths);
     app.RunRenderLoop();
   }
 

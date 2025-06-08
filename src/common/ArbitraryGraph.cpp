@@ -1,10 +1,12 @@
 #include "ArbitraryGraph.h"
 
+#include "../core/TileRenderer.h"
+
 #include <algorithm>
 
 ArbitraryGraph::ArbitraryGraph(
-    SharedResources& shared_resources)
-    : shared_resources_(shared_resources) {
+    UiSharedResources& ui_shared_resources)
+    : ui_shared_resources_(ui_shared_resources) {
   Init();
 }
 
@@ -397,9 +399,9 @@ void ArbitraryGraph::EditPoint(GLuint vertex_id) {
 }
 
 void ArbitraryGraph::Render() {
-  shared_resources_.arbitrary_grapn_shader_.Bind();
+  ui_shared_resources_.arbitrary_graph_shader_.Bind();
   glActiveTexture(GL_TEXTURE0);
-  shared_resources_.tile_.map_terrain_height.Bind();
+  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_height.Bind();
   glUniform1ui(1, selected_id_1_);
   glUniform1ui(2, selected_id_2_);
   glBindVertexArray(points_vao_);

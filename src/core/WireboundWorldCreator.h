@@ -3,24 +3,38 @@
 
 #include "../common/Paths.h"
 #include "../io/Cameras.h"
-#include "../io/Cursor.h"
 #include "../environment/Cubemap.h"
-#include "Interface.h"
+#include "../common/GlobalGlfwCallbackData.h"
+#include "../common/PickingFramebuffer.h"
+#include "TileRenderer.h"
+#include "../renderers/UiRenderer.h"
 
-// should be created only after OpenGL context initialization
 class WireboundWorldCreator {
  public:
-  WireboundWorldCreator(const Paths& paths, Map& map);
+  explicit WireboundWorldCreator(const Paths& paths);
+
+  ~WireboundWorldCreator();
 
   void RunRenderLoop();
 
  private:
   void Init(const Paths& paths);
 
+  void DeInit();
+
+  /// throw an exception in case of uninitialized global_data_ members
+  void CheckGlobalData();
+
   CameraHandler camera_;
   Cubemap cubemap_;
 
-  Interface interface_;
+  GlobalGlfwCallbackData global_data_;
+
+  PickingFramebuffer picking_fbo_;
+
+  TileRenderer tile_renderer_;
+
+  UiRenderer ui_renderer_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_WIREBOUNDWORLDCREATOR_H_

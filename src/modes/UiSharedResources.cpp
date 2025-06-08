@@ -1,20 +1,20 @@
-#include "SharedResources.h"
+#include "UiSharedResources.h"
 
+#include "../io/Window.h"
 #include "../common/Vbos.h"
-#include "../core/TileRenderer.h"
 #include "../common/ShadersBinding.h"
 
-SharedResources::SharedResources(
-    const Paths& paths, Tile& cur_tile, TileRenderer& tile_renderer_,
+UiSharedResources::UiSharedResources(
+    const Paths& paths,
     GlobalGlfwCallbackData& global_glfw_callback_data)
     : tex_ui_(paths.texture_ui, GL_RGBA),
       tex_ui_mask_(paths.texture_ui_mask, GL_RGBA),
       static_sprite_shader_(paths.shader_sprite_static_vert,
-                           paths.shader_sprite_frag),
+                            paths.shader_sprite_frag),
       menu_icon_shader_(paths.shader_sprite_static_vert,
                         paths.menu_icon_shader),
       static_sprite_picking_shader_(paths.shader_sprite_static_vert,
-                                   paths.shader_sprite_picking_frag),
+                                    paths.shader_sprite_picking_frag),
       mask_sprite_shader_(paths.shader_sprite_static_vert,
                           paths.shader_sprite_mask_frag),
       dynamic_sprite_shader_(paths.shader_sprite_dynamic_vert,
@@ -23,16 +23,14 @@ SharedResources::SharedResources(
                                      paths.shader_sprite_picking_frag),
       static_sprite_progress_shader_(paths.shader_sprite_progress_vert,
                                      paths.shader_sprite_frag),
-      arbitrary_grapn_shader_(paths.shader_graph_vert,
+      arbitrary_graph_shader_(paths.shader_graph_vert,
                               paths.shader_graph_frag,
                               paths.shader_graph_geom),
-      global_glfw_callback_data_(global_glfw_callback_data),
-      tile_renderer_(tile_renderer_),
-      tile_(cur_tile) {
+      global_glfw_callback_data_(global_glfw_callback_data) {
   Init();
 }
 
-void SharedResources::UpdateResolution() {
+void UiSharedResources::UpdateResolution() {
   static_sprite_shader_.Bind();
   glUniform1f(shader::kSpriteResolution, gResFactor);
   dynamic_sprite_shader_.Bind();
@@ -44,10 +42,10 @@ void SharedResources::UpdateResolution() {
   dynamic_sprite_picking_shader_.Bind();
   glUniform1f(shader::kSpriteResolution, gResFactor);
 
-//  static_sprite_progress_shader_.Bind();
-//  glUniform1f(shader::kSpriteResolution, res_factor);
-//  menu_icon_shader_.Bind();
-//  glUniform1f(shader::kSpriteResolution, res_factor);
+  //  static_sprite_progress_shader_.Bind();
+  //  glUniform1f(shader::kSpriteResolution, res_factor);
+  //  menu_icon_shader_.Bind();
+  //  glUniform1f(shader::kSpriteResolution, res_factor);
 
 
   mask_sprite_shader_.Bind();
@@ -56,7 +54,7 @@ void SharedResources::UpdateResolution() {
   glUseProgram(0);
 }
 
-void SharedResources::Init() {
+void UiSharedResources::Init() {
   InitVbos();
   InitVaos();
   static_sprite_shader_.Bind();
@@ -76,12 +74,12 @@ void SharedResources::Init() {
   dynamic_sprite_picking_shader_.Bind();
   glUniform1f(shader::kSpriteResolution, gResFactor);
 
-//  glUniform1f(shader::kSpriteResolution, res_factor);
+  //  glUniform1f(shader::kSpriteResolution, res_factor);
   menu_icon_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
-//  glUniform1f(shader::kSpriteResolution, res_factor);
+  //  glUniform1f(shader::kSpriteResolution, res_factor);
 
-  arbitrary_grapn_shader_.Bind();
+  arbitrary_graph_shader_.Bind();
   glUniform1i(0, 0); // terrain height map
 
   mask_sprite_shader_.Bind();
@@ -97,26 +95,25 @@ void SharedResources::Init() {
   glUniform1f(shader::kSpriteTransparency, 1.0f);
   glUniform1f(shader::kSpriteResolution, gResFactor);
   glUseProgram(0);
-//  static_sprite_picking_shader_.Bind();
-//  glUniform1i(shader::kSpriteTexture, 0);
-//  dynamic_sprite_picking_shader_.Bind();
-//  glUniform1i(shader::kSpriteTexture, 0);
+  //  static_sprite_picking_shader_.Bind();
+  //  glUniform1i(shader::kSpriteTexture, 0);
+  //  dynamic_sprite_picking_shader_.Bind();
+  //  glUniform1i(shader::kSpriteTexture, 0);
 }
 
-void SharedResources::InitVbos() {
+void UiSharedResources::InitVbos() {
 #ifndef NDEBUG
   GLuint vbos[3];
   glGenBuffers(3, vbos);
   vbo_ui_ = vbos[0];
   glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_);
-  glBufferData(GL_ARRAY_BUFFER,
-               vbos::kUiVboDataMain.size() * sizeof(float),
-               vbos::kUiVboDataMain.data(), GL_DYNAMIC_DRAW);
-  vbo_ui_transform_ = vbos[2];
+  glBufferData(GL_ARRAY_BUFFER, data::kUiVboDataMain.size() * sizeof(float),
+               data::kUiVboDataMain.data(), GL_DYNAMIC_DRAW);
+  vbo_ui_transform_ = vbos[1];
   glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_transform_);
   glBufferData(GL_ARRAY_BUFFER,
-               vbos::kUiVboDataTransform.size() * sizeof(float),
-               vbos::kUiVboDataTransform.data(), GL_DYNAMIC_DRAW);
+               data::kUiVboDataTransform.size() * sizeof(float),
+               data::kUiVboDataTransform.data(), GL_DYNAMIC_DRAW);
 #else
   GLuint vbos[2];
   glGenBuffers(2, vbos);
@@ -126,15 +123,9 @@ void SharedResources::InitVbos() {
                vbos::kUiVboDataMain.size() * sizeof(float),
                vbos::kUiVboDataMain.data(), GL_STATIC_DRAW);
 #endif // NDEBUG
-
-  vbo_instanced_ = vbos[1];
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_instanced_);
-  glBufferData(GL_ARRAY_BUFFER,
-               vbos::kUiVboDataInstanced.size() * sizeof(float),
-               vbos::kUiVboDataInstanced.data(), GL_STATIC_DRAW);
 }
 
-void SharedResources::InitVaos() {
+void UiSharedResources::InitVaos() {
   glGenVertexArrays(1, &vao_ui_);
 
   glBindVertexArray(vao_ui_);
@@ -157,26 +148,24 @@ void SharedResources::InitVaos() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void SharedResources::DeInit() {
+void UiSharedResources::DeInit() {
   DeInitVbos();
   DeInitVaos();
 }
 
-void SharedResources::DeInitVaos() {
+void UiSharedResources::DeInitVaos() {
   glDeleteVertexArrays(1, &vao_ui_);
 }
 
-void SharedResources::DeInitVbos() const {
+void UiSharedResources::DeInitVbos() const {
 #ifndef NDEBUG
-  GLuint vbos[3];
-  vbos[0] = vbo_ui_;
-  vbos[1] = vbo_instanced_;
-  vbos[2] = vbo_ui_transform_;
-  glDeleteBuffers(3, vbos);
-#else
   GLuint vbos[2];
   vbos[0] = vbo_ui_;
-  vbos[1] = vbo_instanced_;
+  vbos[1] = vbo_ui_transform_;
   glDeleteBuffers(2, vbos);
+#else
+  GLuint vbos[1];
+  vbos[0] = vbo_ui_;
+  glDeleteBuffers(1, vbos);
 #endif // NDEBUG
 }

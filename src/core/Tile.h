@@ -8,11 +8,7 @@
 
 #include <glm/glm.hpp>
 
-//#include "../common/ArbitraryGraph.h"
 #include "../common/Texture.h"
-
-//TODO: biome - at least one for each tile; we don't rely on neighbours,
-// like at water, so need to set all biomes even on edges
 
 struct TileInfo {
   // storing as string is convenient for CreateUnorderedMap() call,
@@ -42,47 +38,34 @@ struct TileInfo {
   std::string points_objects{};
   std::string points_biomes{}; // material effect
 
-  std::unordered_map<std::string, std::string*> CreateUnorderedMap();
+  std::unordered_map<std::string, std::string*> CreateUnorderedMap() {
+    return {
+        {"pos_x", &pos_x_str},
+        {"pos_y", &pos_y_str},
+        {"map_terrain_height", &map_terrain_height},
+        {"map_erosion_wear", &map_erosion_wear},
+        {"map_erosion_flow", &map_erosion_flow},
+        {"map_erosion_deposition", &map_erosion_deposition},
+        {"map_terrain_cavity", &map_terrain_cavity},
+        {"map_terrain_occlusion", &map_terrain_occlusion},
+        {"map_terrain_normal", &map_terrain_normal},
+        {"map_terrain_wetness", &map_terrain_wetness},
+        {"map_water_height", &map_water_height},
+        {"map_water_flow", &map_water_flow},
+        {"graph_water", &graph_water},
+        {"graph_roads", &graph_roads},
+        {"graph_fences", &graph_fences},
+        {"map_placement_trees", &map_placement_trees},
+        {"map_placement_bushes", &map_placement_bushes},
+        {"map_placement_tall_grass", &map_placement_tall_grass},
+        {"map_placement_undergrowth", &map_placement_undergrowth},
+        {"points_objects", &points_objects},
+        {"tile_info", &points_biomes}
+    };
+  }
 };
 
-/*TODO:
- * biome:
-terrain material: name, texture(8 wang tiles), erosion wear kef, erosion flow kef,
-    erosion deposition kef, wetness kef, radius to blend (when to start blend / where not to blend)
-water material: name, ... idk...
-weather: general attennuation(sun), wind, ... idk...
- */
-
-// for roads and fences
-struct GraphTraits {
-//  ArbitraryGraph graph;
-  int type_id; //TODO; map id::type (roads, fences)
-
-  static std::vector<GraphTraits> Parse(std::string_view path);
-  static void Serialize(std::string_view path,
-                        std::vector<GraphTraits> graphs);
-};
-
-//TODO: is this all needed data for objects & biomes
-
-struct ObjectTraits {
-  int model_id; //TODO: map id::path
-  glm::vec3 position; //3rd coord for placing onto other objects
-  glm::vec3 scale;
-  glm::vec3 rotation;
-  static std::vector<ObjectTraits> Parse(std::string_view path);
-  static void Serialize(std::string_view path, std::vector<ObjectTraits> objects);
-};
-
-struct BiomeTraits {
-  int biome_id; //TODO: map id::traits
-  static std::vector<BiomeTraits> Parse(std::string_view path);
-  static void Serialize(std::string_view path, std::vector<BiomeTraits> biomes);
-};
-
-// struct contains all data for current tile. The difference between Tile and
-// TileInfo is that Tile creates OpenGL objects (Texture, Shader),
-// while TileInfo keeps only "raw" data like paths, etc
+/// contains all data for current tile
 struct Tile {
   int pos_x;
   int pos_y;
@@ -92,25 +75,11 @@ struct Tile {
   Texture map_erosion_deposition{}; // material effect
   Texture map_terrain_cavity{}; // ssao
   Texture map_terrain_occlusion{};
-//  Texture map_terrain_normal{}; // TODO: do we need it?
+  Texture map_terrain_normal{};
   Texture map_terrain_wetness{};
   Texture map_water_height{};
   Texture map_water_flow{};
-  std::vector<GraphTraits> graph_water{};
-  std::vector<GraphTraits> graph_roads{};
-  std::vector<GraphTraits> graph_fences{};
-  Texture map_placement_trees{};
-  std::vector<int> trees_{};
-  Texture map_placement_bushes{};
-  std::vector<int> bushes_{};
-  Texture map_placement_tall_grass{};
-  std::vector<int> tall_grass_{};
-  Texture map_placement_undergrowth{};
-  std::vector<int> undergrowth_{};
-  std::vector<ObjectTraits> points_objects{};
-  std::vector<BiomeTraits> points_biomes{}; // material effect
-
-
+  // other data serializing called individually (e.g. graphs, placement)
 
   //TODO; indeed, wisdom here is
   /// need to duplicate both on GPU and CPU:
@@ -123,32 +92,49 @@ struct Tile {
   /// state (input map_water_height + water from external tiles)
   std::vector<uint8_t> water_heights_init_;
 
-  Texture* cur_placement_mode_tex_{&map_placement_trees};
+  explicit Tile(const TileInfo& tile_info) {
+    // TODO; use placeholders (full black / full white texture)
 
-  Tile() = default;
-  explicit Tile(const TileInfo& tile_info);
+    // position data already valid
+    // (we've thrown at TileRenderer::Init()) in case of missing
+    pos_x = tile_info.pos_x;
+    pos_y = tile_info.pos_y;
+    // map_terrain_height is necessary (if float GL_RED is ignored)
+    map_terrain_height = Texture(tile_info.map_terrain_height, GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+    map_erosion_wear = Texture(tile_info.map_erosion_wear, GL_RED);
+    map_erosion_flow = Texture(tile_info.map_erosion_flow, GL_RED);
+    map_erosion_deposition = Texture(tile_info.map_erosion_deposition, GL_RGBA);
+    map_terrain_cavity = Texture(tile_info.map_terrain_cavity, GL_RED);
+    map_terrain_occlusion = Texture(tile_info.map_terrain_occlusion, GL_RED);
+    //  map_terrain_normal = Texture(tile_info.map_terrain_normal, GL_RED);
+    map_terrain_wetness = Texture(tile_info.map_terrain_wetness, GL_RED);
 
-  static void InitHeightMap(std::string_view path, Texture& texture);
+    if (tile_info.map_water_height.empty()) {
+      map_water_height = Texture(1024, 1024, GL_RED, GL_LINEAR, GL_CLAMP_TO_EDGE);
+    } else {
+      map_water_height = Texture(tile_info.map_water_height, GL_RED);
+    }
+    //  InitHeightMap(tile_info.map_water_height, map_water_height);
 
-  void SetPlacementModeTrees() {
-    cur_placement_mode_tex_ = &map_placement_trees;
-  }
-  void SetPlacementModeBushes() {
-    cur_placement_mode_tex_ = &map_placement_bushes;
-  }
-  void SetPlacementModeTallGrass() {
-    cur_placement_mode_tex_ = &map_placement_tall_grass;
-  }
-  void SetPlacementModeUndergrowth() {
-    cur_placement_mode_tex_ = &map_placement_undergrowth;
+    map_water_flow = Texture(tile_info.map_water_flow, GL_RED);
+
+    // duplicating data both on CPU & GPU (see Tile.h for more info)
+    terrain_heights_.resize(1024 * 1024);
+    map_terrain_height.Bind();
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE,
+                  terrain_heights_.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    water_heights_init_.resize(1024 * 1024);
+    map_water_height.Bind();
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE,
+                  water_heights_init_.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    /// see explanation at header file (Tile.h)
+    water_heights_ = water_heights_init_;
   }
 
-  enum class Lod {
-    kLowest,
-    kLow,
-    kMedium,
-    kHight
-  };
   /* Can we compute only 9... why not - at least for grass and water yes:
    * 1 2 3 4 4 4 ...
    * 2 2 3 4 4 4 ...
@@ -160,21 +146,24 @@ struct Tile {
    * But can we use discs, not static squares... hm...
    * */
 
-  // At one time we can draw (assume
-/*  std::array<Lod, >;*/
+  //  enum class Lod {
+  //    kLowest,
+  //    kLow,
+  //    kMedium,
+  //    kHight
+  //  };
+
+  // At one time we can draw (total_lods * lod_per_tile)
+  // std::array<Lod, >;
 
   // grass blades have pos related to player, not global, so to draw,
   // we can use another transform matrix, that is related to player
+
+  //struct SubTile
+  // * we don;t need idx, cuz they are equal to Tile::sub_tiles_ indices
+  // * as well as their positions
 };
 
-/*class SubTile {
- public:
-  void GetPosition() {
-    return nothing;
-  }
- private:
-  // we don;t need idx, cuz they are equal to Tile::sub_tiles_ indices
-  // as well as their positions
-};*/
+
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_TILE_H_

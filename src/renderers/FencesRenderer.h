@@ -10,7 +10,7 @@
 
 class FencesRenderer {
  public:
-  FencesRenderer(Tile& tile) : tile_(tile) {}
+  FencesRenderer(Tile& tile, const Paths& paths) : tile_(tile) {}
 
   void Render() const {
     if (glfwGetKey(gWindow, GLFW_KEY_4)) {

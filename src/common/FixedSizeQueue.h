@@ -14,6 +14,7 @@ class FixedSizeQueue {
  public:
   using SizeType = std::size_t;
   using Iterator = typename std::array<T, N>::iterator;
+  using ConstIterator = typename std::array<T, N>::const_iterator;
 
   FixedSizeQueue() : cur_size_(0) {}
 
@@ -21,6 +22,29 @@ class FixedSizeQueue {
     assert(cur_size_ < N && "Queue overflow");
     data_[cur_size_] = value;
     return cur_size_++;
+  }
+
+  bool SafePushBack(const T& value) {
+    if (cur_size_ < N) {
+      data_[cur_size_++] = value;
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  SizeType PopBack() {
+    assert(cur_size_ > 0 && "Queue is empty, unable to PopBack");
+    return --cur_size_;
+  }
+
+  bool SafePopBack() {
+    if (cur_size_ > 0) {
+      --cur_size_;
+      return true;
+    } else {
+      return false;
+    }
   }
 
   void Clear() {
@@ -50,6 +74,14 @@ class FixedSizeQueue {
 
   Iterator end() {
     return std::next(data_.begin(), cur_size_);
+  }
+
+  ConstIterator cbegin() const {
+    return data_.cbegin();
+  }
+
+  ConstIterator cend() const {
+    return std::next(data_.cbegin(), cur_size_);
   }
 
  private:

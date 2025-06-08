@@ -63,26 +63,14 @@ void TerrainRenderer::RenderPicking() const {
 
 glm::vec3 TerrainRenderer::GetYPosition(int vertex_id) const {
   int coord_x = vertex_id & 1023;
-  int coord_z = vertex_id >> 10;/*
+  int coord_z = vertex_id >> 10;
+  /*
    auto where =
        glm::vec3(static_cast<float>(coord_x), 0, coord_z) / 16.0f - 32.0f;
    where.y = static_cast<float>(terrain_heights_[coord_x + coord_z * 1024]);
-   where.y /= 64.0f; // TODO: idk why 64.0f*/
-                                 //    return where;
+   where.y /= 64.0f; // TODO: idk why 64.0f
+   */
   return {};
-}
-
-void TerrainRenderer::UpdateNormalMap(const Shader& shader) {
-  shader.Bind();
-  glBindImageTexture(
-      0, tile_.map_terrain_height.GetId(), 0,
-      GL_FALSE, 0, GL_READ_ONLY, tile_.map_terrain_height.GetFormat());
-  glBindImageTexture(
-      1, nmap_.GetId(), 0,
-      GL_FALSE, 0, GL_WRITE_ONLY, nmap_.GetFormat());
-  glDispatchCompute(1024 / 8, 1024 / 8, 1);
-  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  nmap_.Store("d.png", 2, GL_RG, GL_UNSIGNED_BYTE);
 }
 
 void TerrainRenderer::Init() {

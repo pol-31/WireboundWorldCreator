@@ -77,7 +77,7 @@ struct Paths {
   std::string config_vbo_sprites;
   std::string config_vbo_transform;
 
-  Paths(std::string_view path) {
+  explicit Paths(std::string_view path) {
     std::ifstream file(path.data());
     if (!file.is_open()) {
       std::cerr << "Error opening file: " << path << std::endl;

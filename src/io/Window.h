@@ -27,6 +27,7 @@ extern float last_frame;
 
 extern int gWindowWidth;
 extern int gWindowHeight;
+extern float gResFactor;
 
 
 //TODO; maybe we can remove global variables, but this is not for now

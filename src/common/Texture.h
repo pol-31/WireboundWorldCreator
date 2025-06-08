@@ -5,7 +5,7 @@
 #include <string_view>
 #include <stdexcept>
 
-#include "glad/glad.h"
+#include <glad/glad.h>
 
 #include "Shader.h"
 

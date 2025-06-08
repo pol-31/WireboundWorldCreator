@@ -1,1 +1,1 @@
-src/modes/* inherited from IEditMode (src/IEditMode.h)
+src/modes/* inherited from IUiMode (src/IUiMode.h)

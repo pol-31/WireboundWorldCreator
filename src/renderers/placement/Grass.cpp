@@ -185,11 +185,11 @@ GLuint Grass::BladesNumByDistance(int distance) {
 
 
 void Grass::Render() {
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-  glBindVertexArray(grass_vao_);
-  grass_shader_.Bind();
-  glPatchParameteri(GL_PATCH_VERTICES, 1);
-  glDrawArraysIndirect(GL_PATCHES, reinterpret_cast<void*>(0));
+//  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+//  glBindVertexArray(grass_vao_);
+//  grass_shader_.Bind();
+//  glPatchParameteri(GL_PATCH_VERTICES, 1);
+//  glDrawArraysIndirect(GL_PATCHES, reinterpret_cast<void*>(0));
 }
 
 void Grass::SetWindMagnitude(float wind_magnitude) {

@@ -4,32 +4,33 @@
 
 #include "../common/GlobalGlfwCallbackData.h"
 #include "../core/Ui.h"
+#include "../common/PickingFramebuffer.h"
 
 namespace debug {
 
 bool gCtrlMode = false;
 
-std::array<LocalTransformLinear, vbos::gUiVboTransformSize / 3> gUiTransforms{};
+std::array<LocalTransformLinear, data::gUiVboTransformSize / 3> gUiTransforms{};
 
 void UiScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
   auto& ui_debugger = reinterpret_cast<GlobalGlfwCallbackData*>(
-                          glfwGetWindowUserPointer(window))->ui_debugger_;
-  ui_debugger.SetScale(static_cast<float>(yoffset) * ui_debugger.gScaleStep);
+                          glfwGetWindowUserPointer(window))->ui_debugger;
+  ui_debugger->SetScale(static_cast<float>(yoffset) * ui_debugger->gScaleStep);
 }
 
 void UiMouseButtonCallback(
     GLFWwindow* window, int button, int action, int mods) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
-  auto& ui_debugger = global_data->ui_debugger_;
+  auto& ui_debugger = global_data->ui_debugger;
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (button == GLFW_MOUSE_BUTTON_LEFT) {
     if (action == GLFW_PRESS) {
-      auto id = global_data->picking_fbo_.GetIdByMousePos(cursor_pos);
-      ui_debugger.Press(id);
+      auto id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+      ui_debugger->Press(id);
     } else {
-      ui_debugger.Release();
+      ui_debugger->Release();
     }
   }
 }
@@ -37,31 +38,31 @@ void UiMouseButtonCallback(
 void UiKeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {
   auto& ui_debugger = reinterpret_cast<GlobalGlfwCallbackData*>(
-                          glfwGetWindowUserPointer(window))->ui_debugger_;
+                          glfwGetWindowUserPointer(window))->ui_debugger;
   if (action == GLFW_PRESS) {
     // left control key is handled from Interface class (you should hold it)
     if (key == GLFW_KEY_ESCAPE) {
       glfwSetWindowShouldClose(window, true);
     } else if (key == GLFW_KEY_W) {
-      ui_debugger.SetYTranslate(ui_debugger.gTranslateStepV);
+      ui_debugger->SetYTranslate(ui_debugger->gTranslateStepV);
     } else if (key == GLFW_KEY_A) {
-      ui_debugger.SetXTranslate(-ui_debugger.gTranslateStepH);
+      ui_debugger->SetXTranslate(-ui_debugger->gTranslateStepH);
     } else if (key == GLFW_KEY_S) {
-      ui_debugger.SetYTranslate(-ui_debugger.gTranslateStepV);
+      ui_debugger->SetYTranslate(-ui_debugger->gTranslateStepV);
     } else if (key == GLFW_KEY_D) {
-      ui_debugger.SetXTranslate(ui_debugger.gTranslateStepH);
+      ui_debugger->SetXTranslate(ui_debugger->gTranslateStepH);
     } else if (key == GLFW_KEY_E) {
-      ui_debugger.SetScale(ui_debugger.gScaleStep);
+      ui_debugger->SetScale(ui_debugger->gScaleStep);
     } else if (key == GLFW_KEY_Q) {
-      ui_debugger.SetScale(-ui_debugger.gScaleStep);
+      ui_debugger->SetScale(-ui_debugger->gScaleStep);
     }
   } else if (action == GLFW_RELEASE) {
     if (key == GLFW_KEY_W || key == GLFW_KEY_S) {
-      ui_debugger.SetYTranslate(0.0f);
+      ui_debugger->SetYTranslate(0.0f);
     } else if (key == GLFW_KEY_A || key == GLFW_KEY_D) {
-      ui_debugger.SetXTranslate(0.0f);
+      ui_debugger->SetXTranslate(0.0f);
     } else if (key == GLFW_KEY_E || key == GLFW_KEY_Q) {
-      ui_debugger.SetScale(0.0f);
+      ui_debugger->SetScale(0.0f);
     }
   }
 }
@@ -72,7 +73,8 @@ UiDebugger::UiDebugger(
     : paths_(paths),
       vbo_id_(vbo_id_coords),
       vbo_id_transform_(vbo_id_transform),
-      cursor_pos_(cursor_pos) {
+      cursor_pos_(cursor_pos),
+      delta_transform_(glm::vec2{0.0f}, 0.0f) {
   Init();
 }
 
@@ -86,7 +88,7 @@ void UiDebugger::Init() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   data = ParseConfigFile(paths_.config_vbo_transform);
   std::memcpy(gUiTransforms.data(), data.data(), data.size() * sizeof(float));
-  UpdateForce();
+  ForceUpdate();
 }
 
 UiDebugger::~UiDebugger() {
@@ -110,7 +112,7 @@ void UiDebugger::Update() {
   glBindBuffer(GL_ARRAY_BUFFER, vbo_id_transform_);
   glBufferSubData(
       GL_ARRAY_BUFFER, 0,
-      static_cast<GLsizeiptr>(vbos::gUiVboTransformSize * sizeof(float)),
+      static_cast<GLsizeiptr>(data::gUiVboTransformSize * sizeof(float)),
       gUiTransforms.data());
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -134,11 +136,11 @@ void UiDebugger::UpdateBuffer(LocalTransformLinear pos) {
   }
 }
 
-void UiDebugger::UpdateForce() {
+void UiDebugger::ForceUpdate() {
   glBindBuffer(GL_ARRAY_BUFFER, vbo_id_transform_);
   glBufferSubData(
       GL_ARRAY_BUFFER, 0,
-      static_cast<GLsizeiptr>(vbos::gUiVboTransformSize * sizeof(float)),
+      static_cast<GLsizeiptr>(data::gUiVboTransformSize * sizeof(float)),
       gUiTransforms.data());
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -179,7 +181,7 @@ std::vector<float> UiDebugger::ParseConfigFile(
 
 void UiDebugger::SerializeConfigFile(
     std::string_view path,
-    std::array<LocalTransformLinear, vbos::gUiVboTransformSize / 3> transforms) {
+    std::array<LocalTransformLinear, data::gUiVboTransformSize / 3> transforms) {
   std::ofstream file(path.data());
   if (!file.is_open()) {
     std::cerr << "Error: Could not open file: " << path << std::endl;
@@ -187,7 +189,7 @@ void UiDebugger::SerializeConfigFile(
   }
   std::ostringstream oss_file, oss_line;
   oss_file << "// should be applied to all transforms\n";
-  for (int i = 0; i < vbos::gUiVboTransformSize / 3; i += 4) {
+  for (int i = 0; i < data::gUiVboTransformSize / 3; i += 4) {
     oss_line << std::to_string(transforms[i].translate.x) << ','
              << std::to_string(transforms[i].translate.y) << ','
              << std::to_string(transforms[i].scale) << ",\n"; // x4
@@ -229,9 +231,9 @@ void UiDebugger::SetScale(float value) {
 
 void UiDebugger::Press(unsigned int id) {
   mouse_pressed_ = true;
-  if (id >= static_cast<int>(vbos::VboIdMain::kMenuTerrain) &&
-      id < static_cast<int>(vbos::VboIdMain::kTotal)) {
-    cur_ui_vbo_id_ = id - static_cast<int>(vbos::VboIdMain::kMenuTerrain);
+  if (id >= static_cast<int>(data::VboIdMain::kMenuTerrain) &&
+      id < static_cast<int>(data::VboIdMain::kTotal)) {
+    cur_ui_vbo_id_ = id - static_cast<int>(data::VboIdMain::kMenuTerrain);
   } else {
     ApplyAndReset();
   }
@@ -249,6 +251,11 @@ void UiDebugger::ApplyAndReset() {
   }
 //  cur_ui_vbo_id_ = -1;
 //  delta_transform_ = Transform{0.0f, 0.0f, 0.0f};
+}
+
+void UiDebugger::Reset() {
+  cur_ui_vbo_id_ = -1;
+  delta_transform_ = LocalTransformLinear{glm::vec2{0.0f}, 0.0f};
 }
 
 void UiDebugger::Release() {

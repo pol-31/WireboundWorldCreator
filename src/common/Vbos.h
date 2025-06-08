@@ -137,7 +137,7 @@ enum class VboIdMain {
   kTerrainFlattenOn2,
   kTerrainFlattenOn3,
 
-  kTerrainTerrainMode,
+  kTerrainUiTerrainMode,
   kTerrainUpdate,
   kTerrainSettings,
   kTerrainSettingsDesk,
@@ -149,7 +149,7 @@ enum class VboIdMain {
   kTerrainFalloffBack,
   kTerrainFalloffIcon,
 
-  kWaterWaterMode,
+  kWaterUiWaterMode,
   kWaterAdd,
   kWaterRemove,
   kWaterUpdate,
@@ -290,7 +290,7 @@ enum class VboIdMain {
   kWaterLayer3Window,
 
 
-  kRoadsRoadsMode,
+  kRoadsUiRoadsMode,
   kRoadsAsphalt,
   kRoadsGravel,
   kRoadsSoil,
@@ -311,7 +311,7 @@ enum class VboIdMain {
   kRoadsSlotsFlipSelectEdit,
 
 
-  kFencesFencesMode,
+  kFencesUiFencesMode,
   kFencesPicket,
   kFencesChainLink,
   kFencesWooden,
@@ -332,7 +332,7 @@ enum class VboIdMain {
   kFencesSlotsFlipSelectEdit,
 
 
-  kPlacementPlacementMode,
+  kPlacementUiPlacementMode,
   kPlacementColorFill,
   kPlacementColorBack,
   kPlacementColorIcon,
@@ -358,7 +358,7 @@ enum class VboIdMain {
   kPlacementDrawOn3,
 
 
-  kObjectsObjectsMode,
+  kObjectsUiObjectsMode,
   kObjectsMavka,
   kObjectsVodyaniy,
   kObjectsChugaister,
@@ -367,7 +367,7 @@ enum class VboIdMain {
   kObjectsRoadSign,
   kObjectsHuman,
 
-  kBiomesBiomesMode,
+  kBiomesUiBiomesMode,
   kBiomesWind,
   kBiomesSun,
   kBiomesTime,
@@ -375,7 +375,7 @@ enum class VboIdMain {
   kBiomesTemperature,
   kBiomesClouds,
 
-  kTilesTilesMode,
+  kTilesUiTilesMode,
   kTilesLeft,
   kTilesRight,
   kTilesUp,

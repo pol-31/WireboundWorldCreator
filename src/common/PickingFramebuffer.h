@@ -3,10 +3,11 @@
 
 #include <stdexcept>
 
-#include "glad/glad.h"
+#include <glad/glad.h>
 
 #include "Texture.h"
 #include "Details.h"
+#include "../io/Window.h"
 
 class PickingFramebuffer {
  public:

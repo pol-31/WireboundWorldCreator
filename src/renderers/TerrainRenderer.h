@@ -18,9 +18,6 @@ class TerrainRenderer {
 
   [[nodiscard]] glm::vec3 GetYPosition(int vertex_id) const;
 
-  // after height map modifying
-  void UpdateNormalMap(const Shader& shader);
-
  private:
   void Init();
 

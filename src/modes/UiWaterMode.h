@@ -1,27 +1,18 @@
-#ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_WATERMODE_H_
-#define WIREBOUNDWORLDCREATOR_SRC_MODES_WATERMODE_H_
+#ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UIWATERMODE_H_
+#define WIREBOUNDWORLDCREATOR_SRC_MODES_UIWATERMODE_H_
 
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include <glad/glad.h>
 
-#include "IEditMode.h"
-#include "../core/Ui.h"
+#include "IUiMode.h"
+#include "../common/Vbos.h"
+#include "../core/UiSlots.h"
 #include "../common/Paths.h"
 #include "../common/VectorWithSize.h"
 
-void WaterModeScrollCallback(
-    GLFWwindow* window, double xoffset, double yoffset);
-
-void WaterModeMouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods);
-
-void WaterModeKeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods);
-
-class WaterMode final : public IEditMode {
+class UiWaterMode final : public IUiMode {
  public:
-  explicit WaterMode(SharedResources& shared_resources,
-                     const Paths& paths, const TextRenderer& text_renderer);
+  explicit UiWaterMode(UiSharedResources& ui_shared_resources,
+                     const Paths& paths);
 
   void Render() override;
   void RenderPicking() override;
@@ -48,13 +39,13 @@ class WaterMode final : public IEditMode {
   void BindCallbacks() override;
 
  protected:
-  friend void WaterModeScrollCallback(
+  static void ScrollCallback(
       GLFWwindow* window, double xoffset, double yoffset);
 
-  friend void WaterModeMouseButtonCallback(
+  static void MouseButtonCallback(
       GLFWwindow* window, int button, int action, int mods);
 
-  friend void WaterModeKeyCallback(
+  static void KeyCallback(
       GLFWwindow* window, int key, int scancode, int action, int mods);
 
   enum class WaterType {
@@ -71,6 +62,8 @@ class WaterMode final : public IEditMode {
   void ReBake();
 
   void UpdateOcean();
+
+  bool ConfigModified();
 
   /// currently only CPU
   /// checks are points indices in ccw order, and
@@ -118,7 +111,7 @@ class WaterMode final : public IEditMode {
   UiStaticSprite btn_create_;
   UiStaticSprite btn_remove_;
   UiStaticSprite btn_update_;
-  UiSlots slots_;
+  //UiSlots slots_;
 
   //TODO: user should set it
   int user_desired_river_raise_{10};
@@ -142,12 +135,7 @@ class WaterMode final : public IEditMode {
             ocean_layer_config_2_.GetOceanLayerTraits(),
             ocean_layer_config_3_.GetOceanLayerTraits()
     };
-    //TODO: outside is
-//    if (!first.Modified() && !second.Modified() && !third.Modified()) {
-//      return;
-//    }
-//    UpdateBufrer();
   }
 };
 
-#endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_WATERMODE_H_
+#endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIWATERMODE_H_

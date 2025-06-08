@@ -4,10 +4,15 @@
 
 #include "../common/Details.h"
 #include "../common/GlobalGlfwCallbackData.h"
-#include "../modes/SharedResources.h"
+#include "../modes/UiSharedResources.h"
+#include "Cameras.h"
+#include "../common/PickingFramebuffer.h"
+#include "../common/UiDebugger.h"
 
 extern int gWindowWidth = 1600;
 extern int gWindowHeight = 900;
+extern float gResFactor = static_cast<float>(gWindowHeight) /
+                          static_cast<float>(gWindowWidth);
 
 float lastX = static_cast<float>(gWindowWidth) / 2.0;
 float lastY = static_cast<float>(gWindowHeight) / 2.0;
@@ -21,15 +26,19 @@ GLFWwindow* gWindow = nullptr;
 
 void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
   auto resolution = SetWindowSize({width, height});
+  gWindowWidth = resolution.x;
+  gWindowHeight = resolution.y;
+  gResFactor = static_cast<float>(gWindowHeight) /
+               static_cast<float>(gWindowWidth);
   glViewport(0, 0, resolution.x, resolution.y);
   glfwSetWindowSize(gWindow, resolution.x, resolution.y);
 
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(gWindow));
-  global_data->camera_.UpdateProjectionMatrices();
-  global_data->ui_debugger_.UpdateMoveSteps();
-  global_data->picking_fbo_.UpdateResolution();
-  global_data->shared_resources_->UpdateResolution();
+  global_data->camera->UpdateProjectionMatrices();
+  global_data->ui_debugger->UpdateMoveSteps();
+  global_data->picking_fbo->UpdateResolution();
+  global_data->ui_shared_resources->UpdateResolution();
 }
 
 void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {
@@ -40,12 +49,12 @@ void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {
   lastY = ypos;
 
   void* global_data = glfwGetWindowUserPointer(window);
-  CameraHandler& camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera_;
-  camera.ProcessMouseMovement(xoffset, yoffset);
+  CameraHandler* camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera;
+  camera->ProcessMouseMovement(xoffset, yoffset);
 }
 
 /// wasd movement (for debugging purposes)
-/// each IEditMode has its own set of callbacks (scroll, mouse / keyboard btn),
+/// each IUiMode has its own set of callbacks (scroll, mouse / keyboard btn),
 /// so they are bind at mode switching (Menu.h)
 void WasdKeyCallback(GLFWwindow* window, int key,
                      int scancode, int action, int mods) {
@@ -53,25 +62,25 @@ void WasdKeyCallback(GLFWwindow* window, int key,
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
   if (action == GLFW_PRESS) {
     if (key == GLFW_KEY_W) {
-      global_data->camera_.SetMoveForward();
+      global_data->camera->SetMoveForward();
     } else if (key == GLFW_KEY_A) {
-      global_data->camera_.SetMoveLeft();
+      global_data->camera->SetMoveLeft();
     } else if (key == GLFW_KEY_S) {
-      global_data->camera_.SetMoveBackward();
+      global_data->camera->SetMoveBackward();
     } else if (key == GLFW_KEY_D) {
-      global_data->camera_.SetMoveRight();
+      global_data->camera->SetMoveRight();
     } else if (key == GLFW_KEY_ESCAPE) {
       glfwSetWindowShouldClose(window, true);
     }
   } else if (action == GLFW_RELEASE) {
     if (key == GLFW_KEY_W) {
-      global_data->camera_.SetMoveForward(0.0f);
+      global_data->camera->SetMoveForward(0.0f);
     } else if (key == GLFW_KEY_A) {
-      global_data->camera_.SetMoveLeft(0.0f);
+      global_data->camera->SetMoveLeft(0.0f);
     } else if (key == GLFW_KEY_S) {
-      global_data->camera_.SetMoveBackward(0.0f);
+      global_data->camera->SetMoveBackward(0.0f);
     } else if (key == GLFW_KEY_D) {
-      global_data->camera_.SetMoveRight(0.0f);
+      global_data->camera->SetMoveRight(0.0f);
     }
   }
 }

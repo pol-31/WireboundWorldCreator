@@ -39,7 +39,7 @@ class UiDebugger {
   ~UiDebugger();
 
   void Update();
-  void UpdateForce();
+  void ForceUpdate();
 
   static void BindCallbacks();
 
@@ -56,6 +56,8 @@ class UiDebugger {
   void Release();
 
   void ApplyAndReset();
+
+  void Reset();
 
 // TODO: --- maybe later ---
   // generate config file for vbo_id_ based on config_path_transform_
@@ -89,7 +91,7 @@ class UiDebugger {
 
   static void SerializeConfigFile(
       std::string_view path,
-      std::array<LocalTransformLinear, vbos::gUiVboTransformSize / 3> transforms);
+      std::array<LocalTransformLinear, data::gUiVboTransformSize / 3> transforms);
 
   const Paths& paths_;
 
@@ -110,7 +112,7 @@ class UiDebugger {
 };
 
 // we also don't serialize / parse it: data is always {T.x, T.y, S}
-extern std::array<LocalTransformLinear, vbos::gUiVboTransformSize / 3>
+extern std::array<LocalTransformLinear, data::gUiVboTransformSize / 3>
     gUiTransforms;
 
 } // namespace debug
