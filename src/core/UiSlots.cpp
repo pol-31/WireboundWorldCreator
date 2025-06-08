@@ -1,6 +1,7 @@
 #include "UiSlots.h"
 
 #include "../common/TextRenderer.h"
+#include "../common/UiDebugger.h"
 
 const float UiSlots::kTrackLengthFactor = 0.75f;
 const float UiSlots::kSlotsLengthFactor = 0.8f;
@@ -146,6 +147,8 @@ void UiSlots::Render(glm::vec2 mouse_pos) {
   if (pressed_) {
     Set(mouse_pos);
   }
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.tex_ui_.Bind();
   back_.Render();
   slider_.Render();
   handler_.Render();
@@ -168,6 +171,16 @@ void UiSlots::Render(glm::vec2 mouse_pos) {
     slot_remove_.Render();
     next_offset.y -= slot_height_;
   }
+  next_offset = start_slot_translate_;
+  for (int i = 0; i < std::min(kSlotsNum, graphs_num - cur_slots_offset_); ++i) {
+    auto graph_name = graph_.GetNamePtr(i + cur_slots_offset_);
+    ui_shared_resources_.global_glfw_callback_data_.text_renderer->
+        RenderText(graph_name, 1.0f, next_offset);
+    next_offset.y -= slot_height_;
+  }
+
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.tex_ui_.Bind();
   // we should draw it last (on top of slots)
   if (show_selected) {
     slot_selected_.SetTranslate(selected_offset);
@@ -180,14 +193,6 @@ void UiSlots::Render(glm::vec2 mouse_pos) {
   flip_point_edge_back_.Render();
   flip_select_edit_.Render();
   flip_point_edge_.Render();
-
-  next_offset = start_slot_translate_;
-  for (int i = 0; i < std::min(kSlotsNum, graphs_num); ++i) {
-    auto graph_name = graph_.GetNamePtr(i + cur_slots_offset_);
-    ui_shared_resources_.global_glfw_callback_data_.text_renderer_->
-        RenderText(graph_name, 1.0f, next_offset);
-    next_offset.y -= slot_height_;
-  }
 }
 
 void UiSlots::RenderPicking() {
@@ -213,12 +218,23 @@ void UiSlots::RenderPicking() {
     next_offset.y -= slot_height_;
   }
 
+  next_offset = start_slot_translate_;
+  for (int i = 0; i < std::min(kSlotsNum, graphs_num - cur_slots_offset_); ++i) {
+    auto graph_name = graph_.GetNamePtr(i + cur_slots_offset_);
+    ui_shared_resources_.global_glfw_callback_data_.text_renderer->
+        RenderTextPicking(graph_name, 1.0f, next_offset);
+    next_offset.y -= slot_height_;
+  }
+
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.tex_ui_.Bind();
   // we should draw it last (on top of slots)
   if (debug::gCtrlMode && show_selected) {
     slot_selected_.SetTranslate(selected_offset);
     slot_selected_.RenderPicking();
   }
   glDisable(GL_SCISSOR_TEST);
+
   create_.RenderPicking();
   flip_select_edit_back_.RenderPicking();
   flip_point_edge_back_.RenderPicking();
@@ -228,14 +244,6 @@ void UiSlots::RenderPicking() {
     //    flip_point_edge_.RenderPicking();
     flip_select_edit_.RenderPicking();
     flip_point_edge_.RenderPicking();
-  }
-
-  next_offset = start_slot_translate_;
-  for (int i = 0; i < std::min(kSlotsNum, graphs_num); ++i) {
-    auto graph_name = graph_.GetNamePtr(i + cur_slots_offset_);
-    ui_shared_resources_.global_glfw_callback_data_.text_renderer_->
-        RenderTextPicking(graph_name, 1.0f, next_offset);
-    next_offset.y -= slot_height_;
   }
 }
 

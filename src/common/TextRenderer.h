@@ -10,12 +10,7 @@
 #include "Shader.h"
 #include "Paths.h"
 #include "../core/Ui.h"
-
-
-void TextRendererCharCallback(GLFWwindow* window, unsigned int codepoint);
-
-void TextRendererMouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods);
+#include "Font.h"
 
 /// usage of GL_A (no color & transparency - one channel serves for both)
 
@@ -27,40 +22,42 @@ class TextRenderer {
     int top;
     int bottom;
   };
-
-  void AppendChar(int code) {
-    if (!input_source_) {
-      std::cerr << "no source for input" << std::endl;
-      return;
-    }
-    input_source_->PushBack(static_cast<char>(code));
-  }
-
-  void StartInput(FixedSizeQueue<char, 64>* input_source) {
-    input_source_ = input_source;
-  }
-
-  void StopInput() {
-    input_source_ = nullptr;
-  }
+  enum class Alignment {
+    kLeft,
+    kRight,
+    kCentre
+  };
 
   TextRenderer(UiDynamicSprite&& text_slot, const Paths& paths);
 
   ~TextRenderer();
 
+  void AppendChar(int code);
+
+  void RemoveLastChar();
+
+  /// binds its callbacks
+  void StartInput(FixedSizeQueue<char, 64>* input_source);
+
+  void StopInput();
+
   /// runtime text, no prerender:  each symbol rendered as a separate sprite
   /// (todo; prerender to some point is still possible)
   void RenderText(/*UiDynamicSprite& text_slot, */std::string_view text,
-                  float scale, glm::vec2 position);
+                  float scale, glm::vec2 position,
+                  Alignment alignment = Alignment::kCentre);
 
   void RenderText(const FixedSizeQueue<char, 64>* text,
-                  float scale, glm::vec2 position);
+                  float scale, glm::vec2 position,
+                  Alignment alignment = Alignment::kCentre);
 
   void RenderTextPicking(/*UiDynamicSprite& text_slot, */std::string_view text,
-                         float scale, glm::vec2 position);
+                         float scale, glm::vec2 position,
+                         Alignment alignment = Alignment::kCentre);
 
   void RenderTextPicking(const FixedSizeQueue<char, 64>* text,
-                         float scale, glm::vec2 position);
+                         float scale, glm::vec2 position,
+                         Alignment alignment = Alignment::kCentre);
 
   void RenderMenuText(int id);
 
@@ -75,6 +72,16 @@ class TextRenderer {
   void PrerenderModeText(int start, int end);
 
  private:
+  void BindCallbacks();
+
+  static void CharCallback(GLFWwindow* window, unsigned int codepoint);
+
+  static void KeyCallback(
+      GLFWwindow* window, int key, int scancode, int action, int mods);
+
+  static void MouseButtonCallback(
+      GLFWwindow* window, int button, int action, int mods);
+
   static Aabb GetGlyphCoords(char ch);
 
   glm::mat3 CoordsToTransformMatrix(TextRenderer::Aabb aabb);
@@ -88,21 +95,17 @@ class TextRenderer {
 
   Aabb RenderPhrase(std::string_view);
 
-  int CalculateLength(std::string_view text);
+  int CalculateLineLength(std::string_view text);
 
   void PrerenderImpl(
       int start, int end, Texture& texture,
       std::vector<Aabb>& coords);
 
-  // vao, vbo (special slot per text pos), shader, the same, texture differs
-
-
   /// we don't need invalidation ids - rerender only *good amount of text,
   /// so it's 100% pre-rendered, so don't need active_ or even id_-s
 
   // left-top of previous, so start from the top
-  glm::ivec2 fbo_cursor_{0, 1024};
-  //  int fbo_cursor_lowest_{1920}; // don't need if scale is the same
+  glm::ivec2 fbo_cursor_{0, font::gSize};
   GLuint fbo_read_id_;
   GLuint fbo_write_id_;
 

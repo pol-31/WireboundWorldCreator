@@ -1,7 +1,11 @@
 #include "GlobalGlfwCallbackData.h"
 
-#include "../modes/IEditMode.h"
+#define GLFW_INCLUDE_NONE
+#include "GLFW/glfw3.h"
+
 #include "../common/TextRenderer.h"
+#include "PickingFramebuffer.h"
+#include "../modes/IUiMode.h"
 
 void GlobalGlfwCallbackData::UpdateCursorPos() {
   glfwGetCursorPos(gWindow, &cursor_pos_.x, &cursor_pos_.y);
@@ -11,37 +15,16 @@ void GlobalGlfwCallbackData::UpdateCursorPos() {
   };
 }
 
-GlobalGlfwCallbackData::GlobalGlfwCallbackData(
-    CameraHandler& camera/*, Cursor& cursor*/,
-    TileRenderer& tile_renderer, IEditMode*& cur_mode,
-    Menu& menu, PickingFramebuffer& picking_fbo,
-    debug::UiDebugger& ui_debugger,
-    SharedResources* shared_resources,
-    TextRenderer* text_renderer)
-    : camera_(camera),
-      //        cursor_(cursor),
-      tile_renderer_(tile_renderer),
-      cur_mode_(cur_mode),
-      menu_(menu),
-      picking_fbo_(picking_fbo),
-      ui_debugger_(ui_debugger),
-      shared_resources_(shared_resources),
-      text_renderer_(text_renderer) {}
-
 GLuint GlobalGlfwCallbackData::GetIdByMousePos() const {
-  return picking_fbo_.GetIdByMousePos(cursor_pos_);
+  return picking_fbo->GetIdByMousePos(cursor_pos_);
 }
 
 void GlobalGlfwCallbackData::StartCharInput(FixedSizeQueue<char, 64>* name) {
-  glfwSetCharCallback(gWindow, TextRendererCharCallback);
-  glfwSetScrollCallback(gWindow, nullptr);
-  glfwSetKeyCallback(gWindow, nullptr);
-  glfwSetMouseButtonCallback(gWindow, TextRendererMouseButtonCallback);
-  text_renderer_->StartInput(name);
+  text_renderer->StartInput(name);
 }
 
 void GlobalGlfwCallbackData::StopCharInput() {
   glfwSetCharCallback(gWindow, nullptr);
-  cur_mode_->BindCallbacks();
-  text_renderer_->StopInput();
+  text_renderer->StopInput();
+  (*cur_mode)->BindCallbacks();
 }
