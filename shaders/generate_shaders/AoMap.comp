@@ -1,0 +1,50 @@
+#version 460 core
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+// 8-bit heightmap input
+layout (binding = 0, r8) uniform readonly image2D height_map;
+
+// AO output (grayscale)
+layout (binding = 1, r8) uniform writeonly image2D ao_map;
+
+uniform float radius = 5.0;          // sampling radius in texels
+uniform float intensity = 100000.0;       // strength of AO effect
+uniform float height_scale = 16.0f * 16.0f;    // real world height multiplier
+uniform int num_samples = 8;         // number of directions
+
+const float PI = 3.14159265;
+
+void main() {
+    ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(height_map);
+
+    float h_center = imageLoad(height_map, id).r / 255.0 * height_scale;
+
+    float occlusion = 0.0;
+
+    for (int i = 0; i < num_samples; ++i) {
+        float angle = 2.0 * PI * float(i) / float(num_samples);
+        vec2 dir = vec2(cos(angle), sin(angle));
+
+        for (float step = 1.0; step <= radius; step += 1.0) {
+            ivec2 sample_coord = clamp(id + ivec2(round(dir * step)), ivec2(0), size - 1);
+            float h_sample = imageLoad(height_map, sample_coord).r / 255.0 * height_scale;
+
+            float diff = h_sample - h_center;
+
+            if (diff > 0.0) {
+                occlusion += diff / (step * height_scale);
+            }
+        }
+    }
+
+    // Normalize occlusion
+    occlusion /= (radius * num_samples);
+    occlusion = clamp(occlusion * intensity, 0.0, 1.0);
+
+    // Invert to get AO: more occlusion → darker
+    float ao = 1.0 - occlusion;
+
+    imageStore(ao_map, id, vec4(ao, 0.0, 0.0, 1.0));
+}

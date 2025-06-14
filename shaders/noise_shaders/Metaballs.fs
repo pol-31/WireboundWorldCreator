@@ -1,0 +1,171 @@
+#version 460 core
+out float fragColor;
+
+layout (location = 1) uniform vec2 resolution;
+
+
+uint ihash1D(uint q)
+{
+    // hash by Hugo Elias, Integer Hash - I, 2017
+    q = q * 747796405u + 2891336453u;
+    q = (q << 13u) ^ q;
+    return q * (q * q * 15731u + 789221u) + 1376312589u;
+}
+
+uvec2 ihash1D(uvec2 q)
+{
+    // hash by Hugo Elias, Integer Hash - I, 2017
+    q = q * 747796405u + 2891336453u;
+    q = (q << 13u) ^ q;
+    return q * (q * q * 15731u + 789221u) + 1376312589u;
+}
+
+uvec4 ihash1D(uvec4 q)
+{
+    // hash by Hugo Elias, Integer Hash - I, 2017
+    q = q * 747796405u + 2891336453u;
+    q = (q << 13u) ^ q;
+    return q * (q * q * 15731u + 789221u) + 1376312589u;
+}
+
+// @return Value of the noise, range: [0, 1]
+float hash1D(float x)
+{
+    // based on: pcg by Mark Jarzynski: http://www.jcgt.org/published/0009/03/02/
+    uint state = uint(x * 8192.0) * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return float((word >> 22u) ^ word) * (1.0 / float(0xffffffffu));;
+}
+
+// @return Value of the noise, range: [0, 1]
+float hash1D(vec2 x)
+{
+    // hash by Inigo Quilez, Integer Hash - III, 2017
+    uvec2 q = uvec2(x * 8192.0);
+    q = 1103515245u * ((q >> 1u) ^ q.yx);
+    uint n = 1103515245u * (q.x ^ (q.y >> 3u));
+    return float(n) * (1.0 / float(0xffffffffu));
+}
+
+// @return Value of the noise, range: [0, 1]
+float hash1D(vec3 x)
+{
+    // based on: pcg3 by Mark Jarzynski: http://www.jcgt.org/published/0009/03/02/
+    uvec3 v = uvec3(x * 8192.0) * 1664525u + 1013904223u;
+    v += v.yzx * v.zxy;
+    v ^= v >> 16u;
+    return float(v.x + v.y * v.z) * (1.0 / float(0xffffffffu));
+}
+
+// @return Value of the noise, range: [0, 1]
+vec2 hash2D(vec2 x)
+{
+    // based on: Inigo Quilez, Integer Hash - III, 2017
+    uvec4 q = uvec2(x * 8192.0).xyyx + uvec2(0u, 3115245u).xxyy;
+    q = 1103515245u * ((q >> 1u) ^ q.yxwz);
+    uvec2 n = 1103515245u * (q.xz ^ (q.yw >> 3u));
+    return vec2(n) * (1.0 / float(0xffffffffu));
+}
+
+// generates 2 random numbers for the coordinate
+vec2 betterHash2D(vec2 x)
+{
+    uvec2 q = uvec2(x);
+    uint h0 = ihash1D(ihash1D(q.x) + q.y);
+    uint h1 = h0 * 1933247u + ~h0 ^ 230123u;
+    return vec2(h0, h1)  * (1.0 / float(0xffffffffu));
+}
+
+// generates a random number for each of the 4 cell corners
+vec4 betterHash2D(vec4 cell)
+{
+    uvec4 i = uvec4(cell);
+    uvec4 hash = ihash1D(ihash1D(i.xzxz) + i.yyww);
+    return vec4(hash) * (1.0 / float(0xffffffffu));
+}
+
+// generates 2 random numbers for each of the 4 cell corners
+void betterHash2D(vec4 cell, out vec4 hashX, out vec4 hashY)
+{
+    uvec4 i = uvec4(cell);
+    uvec4 hash0 = ihash1D(ihash1D(i.xzxz) + i.yyww);
+    uvec4 hash1 = ihash1D(hash0 ^ 1933247u);
+    hashX = vec4(hash0) * (1.0 / float(0xffffffffu));
+    hashY = vec4(hash1) * (1.0 / float(0xffffffffu));
+}
+
+// generates 2 random numbers for each of the 2D coordinates
+vec4 betterHash2D(vec2 coords0, vec2 coords1)
+{
+    uvec4 i = uvec4(coords0, coords1);
+    uvec4 hash = ihash1D(ihash1D(i.xz) + i.yw).xxyy;
+    hash.yw = hash.yw * 1933247u + ~hash.yw ^ 230123u;
+    return vec4(hash) * (1.0 / float(0xffffffffu));;
+}
+
+// generates 2 random numbers for each of the four 2D coordinates
+void betterHash2D(vec4 coords0, vec4 coords1, out vec4 hashX, out vec4 hashY)
+{
+    uvec4 hash0 = ihash1D(ihash1D(uvec4(coords0.xz, coords1.xz)) + uvec4(coords0.yw, coords1.yw));
+    uvec4 hash1 = hash0 * 1933247u + ~hash0 ^ 230123u;
+    hashX = vec4(hash0) * (1.0 / float(0xffffffffu));
+    hashY = vec4(hash1) * (1.0 / float(0xffffffffu));
+}
+
+// @note Can change to (faster to slower order): permuteHash2D, betterHash2D
+// Each has a tradeoff between quality and speed, some may also experience artifacts for certain ranges and are not realiable.
+#define multiHash2D betterHash2D
+
+// A variation of 3x3 Cellular noise that multiplies the minimum distance between the cells.
+// @param scale Number of tiles, must be  integer for tileable results, range: [2, inf]
+// @param jitter Jitter factor for the cells, if zero then it will result in a square grid, range: [0, 1], default: 1.0
+// @param phase The phase for rotating the cells, range: [0, inf], default: 0.0
+// @param seed Seed to randomize result, range: [0, inf], default: 0.0
+// @return Returns the metaballs distance from the cell edges, range: [0, 1]
+float metaballs(vec2 pos, vec2 scale, float jitter, float phase, float seed)
+{
+    const float kPI2 = 6.2831853071;
+    pos *= scale;
+    vec2 i = floor(pos);
+    vec2 f = pos - i;
+
+    const vec3 offset = vec3(-1.0, 0.0, 1.0);
+    vec4 cells = mod(i.xyxy + offset.xxzz, scale.xyxy) + seed;
+    i = mod(i, scale) + seed;
+    vec4 dx0, dy0, dx1, dy1;
+    multiHash2D(vec4(cells.xy, vec2(i.x, cells.y)), vec4(cells.zyx, i.y), dx0, dy0);
+    multiHash2D(vec4(cells.zwz, i.y), vec4(cells.xw, vec2(i.x, cells.w)), dx1, dy1);
+    dx0 = 0.5 * sin(phase + kPI2 * dx0) + 0.5;
+    dy0 = 0.5 * sin(phase + kPI2 * dy0) + 0.5;
+    dx1 = 0.5 * sin(phase + kPI2 * dx1) + 0.5;
+    dy1 = 0.5 * sin(phase + kPI2 * dy1) + 0.5;
+
+    dx0 = offset.xyzx + dx0 * jitter - f.xxxx; // -1 0 1 -1
+    dy0 = offset.xxxy + dy0 * jitter - f.yyyy; // -1 -1 -1 0
+    dx1 = offset.zzxy + dx1 * jitter - f.xxxx; // 1 1 -1 0
+    dy1 = offset.zyzz + dy1 * jitter - f.yyyy; // 1 0 1 1
+    vec4 d0 = dx0 * dx0 + dy0 * dy0;
+    vec4 d1 = dx1 * dx1 + dy1 * dy1;
+
+    vec2 centerPos = (0.5 * sin(phase + kPI2 * multiHash2D(i)) + 0.5) * jitter - f; // 0 0
+
+    float d = min(1.0, dot(centerPos, centerPos));
+    d = min(d, d * d0.x);
+    d = min(d, d * d0.y);
+    d = min(d, d * d0.z);
+    d = min(d, d * d0.w);
+    d = min(d, d * d1.x);
+    d = min(d, d * d1.y);
+    d = min(d, d * d1.z);
+    d = min(d, d * d1.w);
+
+    return sqrt(d);
+}
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / resolution;
+
+    float height = metaballs(uv, vec2(12.0f, 12.0f), 1.0f, 0.0f, 0.0f);
+
+    fragColor = height;
+}

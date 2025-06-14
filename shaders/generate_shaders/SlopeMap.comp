@@ -1,0 +1,32 @@
+#version 460 core
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+layout (binding = 0, r8) uniform readonly image2D height_map;
+layout (binding = 1, r8) uniform writeonly image2D slope_map;
+
+uniform float height_scale = 16.0f * 16.0f;
+uniform float texel_size = 1.0f;
+
+void main() {
+    ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(height_map);
+
+    // Clamp edge access
+    float hN = imageLoad(height_map, clamp(id + ivec2(0, 1), ivec2(0), size - 1)).r;
+    float hS = imageLoad(height_map, clamp(id + ivec2(0, -1), ivec2(0), size - 1)).r;
+    float hE = imageLoad(height_map, clamp(id + ivec2(1, 0), ivec2(0), size - 1)).r;
+    float hW = imageLoad(height_map, clamp(id + ivec2(-1, 0), ivec2(0), size - 1)).r;
+
+    // World-space gradients
+    vec3 dx = vec3(texel_size, 0.0, height_scale * (hE - hW));
+    vec3 dy = vec3(0.0, texel_size, height_scale * (hN - hS));
+
+    vec3 normal = normalize(cross(dx, dy));
+
+    // Angle between normal and Z-up (0,0,1)
+    float slope = acos(clamp(normal.z, 0.0, 1.0)); // radians
+
+    float sin_theta = sqrt(1.0 - normal.z * normal.z); // sin(θ)
+    imageStore(slope_map, id, vec4(sin_theta, 0.0, 0.0, 1.0));
+}
