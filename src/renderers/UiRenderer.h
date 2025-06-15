@@ -10,6 +10,7 @@
 
 #include "../core/Menu.h"
 #include "../common/TextRenderer.h"
+#include "../core/TileRenderer.h"
 #include "../modes/AllUiModes.h"
 
 #ifndef NDEBUG
@@ -19,13 +20,14 @@
 class UiRenderer {
  public:
   UiRenderer(const Paths& paths,
-             GlobalGlfwCallbackData& global_glfw_data_);
+             GlobalGlfwCallbackData& global_glfw_data_,
+             TileRenderer& tile_renderer);
 
-  void Render(int description_id);
+  void Render(data::TextId description_id);
 
-  int Hover(GLuint pressed_id);
+  data::TextId Hover(GLuint pressed_id);
 
-  void RenderPicking(int description_id);
+  void RenderPicking(data::TextId description_id);
 
   void Parse();
 

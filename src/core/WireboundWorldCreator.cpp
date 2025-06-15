@@ -11,7 +11,7 @@
 WireboundWorldCreator::WireboundWorldCreator(
     const Paths& paths)
     : tile_renderer_(paths),
-      ui_renderer_(paths, global_data_) {
+      ui_renderer_(paths, global_data_, tile_renderer_) {
   Init(paths);
 }
 
@@ -36,7 +36,7 @@ void WireboundWorldCreator::RunRenderLoop() {
     global_data_.UpdateCursorPos();
 
     auto pressed_id = global_data_.GetIdByMousePos();
-    int description_id = ui_renderer_.Hover(pressed_id);
+    auto description_id = ui_renderer_.Hover(pressed_id);
 
     tile_renderer_.Render();
     ui_renderer_.Render(description_id);

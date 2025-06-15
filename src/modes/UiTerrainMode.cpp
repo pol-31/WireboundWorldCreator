@@ -44,6 +44,7 @@ void UiTerrainMode::MouseButtonCallback(
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
       global_data->menu->Release();
+      std::cout << "Release()" << std::endl;
     } else {
       terrain->ui_event_handler_.Release();
     }
@@ -53,7 +54,8 @@ void UiTerrainMode::MouseButtonCallback(
 void UiTerrainMode::KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {}
 
-UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources)
+UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
+                             Tile& cur_tile)
     : IUiMode(ui_shared_resources,
               UiStaticSprite{data::VboIdMain::kTerrainUiTerrainMode,
                              data::TextId::kNone}),
@@ -61,6 +63,7 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources)
       btn_update_(data::VboIdMain::kTerrainUpdate, data::TextId::kMenuPlacement,
           [this]() {
                     std::cout << "btn_update" << std::endl;
+                    ui_terrain_generator_.Bake();
           }),
       btn_regenerate_(data::VboIdMain::kTerrainRegenerate, data::TextId::kNone,
           [this]() {
@@ -97,7 +100,9 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources)
           ),
       ui_event_handler_({
           &btn_update_, &btn_regenerate_, &slider_size_,
-          &slider_falloff_, &toggle_flatten_}) {}
+          &slider_falloff_, &toggle_flatten_}),
+      ui_terrain_generator_({data::VboIdMain::kMapArrow, data::TextId::kNone},
+                            1.0f, ui_shared_resources_, cur_tile) {}
 
 void UiTerrainMode::BindCallbacks() {
   glfwSetScrollCallback(gWindow, ScrollCallback);
@@ -160,6 +165,6 @@ void UiTerrainMode::RenderPicking() {
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
 }
 
-int UiTerrainMode::Hover(std::uint32_t global_id) {
+data::TextId UiTerrainMode::Hover(std::uint32_t global_id) {
   return ui_event_handler_.Hover(global_id);
 }

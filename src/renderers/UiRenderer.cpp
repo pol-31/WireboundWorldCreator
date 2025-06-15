@@ -1,12 +1,13 @@
 #include "UiRenderer.h"
 
 UiRenderer::UiRenderer(
-    const Paths& paths, GlobalGlfwCallbackData& global_glfw_data_)
+    const Paths& paths, GlobalGlfwCallbackData& global_glfw_data_,
+    TileRenderer& tile_renderer)
     : ui_shared_resources_(paths, global_glfw_data_),
       ui_debugger_(paths, ui_shared_resources_.vbo_ui_,
                    ui_shared_resources_.vbo_ui_transform_,
                    global_glfw_data_.cursor_pos_tex_norm_),
-      terrain_(ui_shared_resources_),
+      terrain_(ui_shared_resources_, tile_renderer.cur_tile_),
       water_(ui_shared_resources_, paths),
       roads_(ui_shared_resources_),
       fences_(ui_shared_resources_),
@@ -43,7 +44,7 @@ UiRenderer::UiRenderer(
   Init();
 }
 
-void UiRenderer::Render(int description_id) {
+void UiRenderer::Render(data::TextId description_id) {
 #ifndef NDEBUG
   bool debug_ui = glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
   if (debug_ui) {
@@ -113,33 +114,23 @@ void UiRenderer::Render(int description_id) {
   }
 }
 
-int UiRenderer::Hover(GLuint pressed_id) {
-  int description_id;
+data::TextId UiRenderer::Hover(GLuint pressed_id) {
+  data::TextId description_id;
   if (render_menu_) {
     description_id = menu_.Hover(pressed_id);
-    if (description_id == static_cast<int>(data::TextId::kNone)) {
-      description_id = static_cast<int>(data::TextId::kMenu);
+    if (description_id == data::TextId::kNone) {
+      description_id = data::TextId::kMenu;
     }
   } else {
     description_id = cur_mode_->Hover(pressed_id);
-    if (description_id != static_cast<int>(data::TextId::kNone)) {
+    if (description_id != data::TextId::kNone) {
     }
   }
   return description_id;
 }
 
-void UiRenderer::RenderPicking(int description_id) {
-  if (render_menu_) {
-    menu_.RenderPicking();
-    if (description_id != static_cast<int>(data::TextId::kNone)) {
-      text_renderer_.RenderMenuTextPicking(description_id);
-    }
-  } else {
-    cur_mode_->RenderPicking();
-    if (description_id != static_cast<int>(data::TextId::kNone)) {
-      text_renderer_.RenderModeTextPicking(description_id);
-    }
-  }
+void UiRenderer::RenderPicking(data::TextId description_id) {
+  glBindVertexArray(ui_shared_resources_.vao_ui_);
 
   text_renderer_.RenderTextPicking("yyyyyyyyyyyyyyyyy\ntttttttttttttttt\n"
       "The story is about a little weak Georgy,\n"
@@ -161,7 +152,7 @@ void UiRenderer::RenderPicking(int description_id) {
       "and I could see text input\n"
       "alignment by height\n"
       "ggwp\n",
-      0.6f, glm::vec2{0.5f, -1.0f}, TextRenderer::Alignment::kRight);
+      0.6f, glm::vec2{0.5f}, TextRenderer::Alignment::kLeft);
 
   text_renderer_.RenderTextPicking("yyyyyyyyyyyyyyyyy\ntttttttttttttttt\n"
       "The story is about a little weak Georgy,\n"
@@ -172,7 +163,19 @@ void UiRenderer::RenderPicking(int description_id) {
       "and I could see text input\n"
       "alignment by height\n"
       "ggwp\n",
-      0.3f, glm::vec2{-0.5f}, TextRenderer::Alignment::kLeft);
+      0.3f, glm::vec2{-0.5f}, TextRenderer::Alignment::kRight);
+
+  if (render_menu_) {
+    menu_.RenderPicking();
+    if (description_id != data::TextId::kNone) {
+      text_renderer_.RenderMenuTextPicking(description_id);
+    }
+  } else {
+    cur_mode_->RenderPicking();
+    if (description_id != data::TextId::kNone) {
+      text_renderer_.RenderModeTextPicking(description_id);
+    }
+  }
 }
 
 void UiRenderer::Parse() {

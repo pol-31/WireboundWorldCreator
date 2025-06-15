@@ -515,7 +515,7 @@ float fbmPerlinWarp(vec2 pos, vec2 scale, vec2 factors, int octaves, vec4 shifts
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
 
-    float height = fbmPerlinWarp(uv, vec2(10.0f, 10.0f), vec2(1.0f), 4, vec4(2.0f), 0.0f, 0.5f, vec2(2.0f), 0.5f, 0.0f, false, 0.0f, vec2(2.0f), vec2(2.0f));
+    float height = fbmPerlinWarp(uv, vec2(4.0f, 4.0f), vec2(1.0f), 4, vec4(2.0f), 0.0f, 0.5f, vec2(2.0f), 0.5f, 0.0f, false, 0.0f, vec2(2.0f), vec2(2.0f));
 
 
     fragColor = height;

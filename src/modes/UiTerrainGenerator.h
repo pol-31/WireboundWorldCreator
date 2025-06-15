@@ -4,147 +4,181 @@
 #include "../common/Shader.h"
 #include "../common/Texture.h"
 
-class UiTerrainGenerator {
+#include "../core/Ui.h"
+#include "../core/UiComplex.h"
+
+#include "../core/Tile.h"
+
+class UiTerrainGenerator final : public UiWindowBase {
  public:
-  UiTerrainGenerator()
-      : shader_gen_hmap_("../shaders/GenTerrainHMap.comp") {}
+  using Base = UiWindowBase;
 
-  //TODO: generation for height map, occlusion, erosion, etc...
+  UiTerrainGenerator(
+      UiDynamicSprite&& sprite,
+      float size_scale,
+      UiSharedResources& ui_shared_resources,
+      Tile& cur_tile
+      /*UiDynamicSprite&& sprite,
+      float size_scale,
+      UiSharedResources& ui_shared_resources,
 
-  /*void GenerateHmap(const Texture& texture_nmap,
-                    const Texture& texture_terrain_height) {
-    shader_gen_hmap_.Bind();
-    glBindImageTexture(
-        0, texture_terrain_height.GetId(), 0,
-        GL_FALSE, 0, GL_READ_ONLY, texture_terrain_height.GetFormat());
-    glBindImageTexture(
-        1, texture_nmap.GetId(), 0,
-        GL_FALSE, 0, GL_WRITE_ONLY, texture_nmap.GetFormat());
-    glDispatchCompute(1024 / 8, 1024 / 8, 1);
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-    texture_nmap.Store("d.png", 2, GL_RG, GL_UNSIGNED_BYTE);
-  }*/
+      UiStaticSprite&& btn_close,
+      UiStaticSprite&& btn_accept,
+      UiStaticSprite&& btn_decline,
 
+      UiDynamicSprite&& cross*/);
 
-  void ErodeWithFlow(std::vector<std::vector<float>>& heightmap,
-                     const std::vector<std::vector<Vec2>>& flow_dir,
-                     const std::vector<std::vector<float>>& water_accum,
-                     int cycles);
+  ~UiTerrainGenerator() {
+    DeInit();
+  }
 
+//  UiTerrainGenerator(UiTerrainGenerator&& other) noexcept;
+  UiTerrainGenerator(UiTerrainGenerator&& other) = delete;
+  UiTerrainGenerator(const UiTerrainGenerator& other) = delete;
 
-  Vec3 surfaceNormal(std::vector<std::vector<float>>& heightmap, int i, int j);
+  UiTerrainGenerator& operator=(UiTerrainGenerator&& other) = delete;
+  UiTerrainGenerator& operator=(const UiTerrainGenerator& other) = delete;
 
-  void ErodeWeathering(std::vector<std::vector<float>>& heightmap, int cycles);
+  // returns "stop render"
+  bool Render(bool show) {
+    return false;
+  }
 
+  void RenderPicking() {
+    //
+  }
 
-  Texture ProcessErosion(std::vector<std::vector<float>>& height_map_data,
-                         const std::vector<std::vector<Vec2>>& flow_dir,
-                         const std::vector<std::vector<float>>& water_accum,
-                         int iterations);
+  void Press(int id) {
+//    ui_event_handler_.Press(id);
+  }
 
-  Texture ProcessThermalWeathering(
-      std::vector<std::vector<float>>& height_map_data, int iterations,
-      float talus = 0.02f);
+  void Release() {
+//    ui_event_handler_.Release();
+  }
 
-  Texture GenerateSplatmap();
+  data::TextId Hover(int id) {
+    return data::TextId::kNone;
+//    return ui_event_handler_.Hover(id);
+  }
 
-  Texture GenerateNmap(
-      const Shader& shader_gen_nmap,
-      const Texture& tex_hmap);
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override {
+    //
+  }
 
-  Texture GenerateSlope(
-      const Shader& shader_gen_slope_map,
-      const Texture& tex_hmap);
+  void Bake();
 
-  Texture GenerateAo(
-      const Shader& shader_gen_ao_map,
-      const Texture& tex_hmap);
-
-  Texture Perturbate(
-      const Shader& shader_perturbate,
-      const Texture& tex_hmap);
-
-  void ComputeFlowMaps(
-      std::vector<std::vector<float>> height_map_data,
-      std::vector<std::vector<Vec2>>& flow_dir,
-      std::vector<std::vector<float>>& flow_accum);
-
-  Texture GenerateFlowMap(std::vector<std::vector<float>>& height_map_data,
-                          std::vector<std::vector<Vec2>>& flow_dir,
-                          std::vector<std::vector<float>>& flow_accum);
-
-  void Bake(std::vector<unsigned char>& height_map_data,
-            int width, int height, Texture& height_map);
+  static const int gTerrainWidth;
+  static const int gTerrainHeight;
 
  private:
-  struct Vec2 {
-    float x;
-    float y;
-
-    // Compute the Euclidean length of the vector
-    static float length(const Vec2& v) {
-      return std::sqrt(v.x * v.x + v.y * v.y);
-    }
-
-    // Return a normalized (unit-length) version of the vector
-    static Vec2 normalize(const Vec2& v) {
-      float len = length(v);
-      if (len > 1e-6f) {
-        return { v.x / len, v.y / len};
-      } else {
-        return { 0.0f, 0.0f }; // return zero vector if length is too small
-      }
-    }
-  };
-  struct Vec2i {
-    int x;
-    int y;
-  };
-  struct Vec3 {
-    float x;
-    float y;
-    float z;
-
-    // Compute the Euclidean length of the vector
-    static float length(const Vec3& v) {
-      return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    }
-
-    // Return a normalized (unit-length) version of the vector
-    static Vec3 normalize(const Vec3& v) {
-      float len = length(v);
-      if (len > 1e-6f) {
-        return { v.x / len, v.y / len, v.z / len };
-      } else {
-        return { 0.0f, 0.0f, 0.0f }; // return zero vector if length is too small
-      }
-    }
-    Vec3 operator*(float m) const {
-      return {x * m,
-              y * m,
-              z * m};
-    }
-
-    // scalar * Vec3 (global function)
-    void operator+=(const Vec3& v) {
-      x += v.x;
-      y += v.y;
-      z += v.z;
-    }
-  };
-
   struct Particle{
     //Construct Particle at Position
-    Particle(Vec2 _pos){ pos = _pos; }
+    Particle(glm::vec2 _pos) {
+      pos = _pos;
+    }
 
-    Vec2 pos;
-    Vec2 speed = Vec2(0.0);
+    glm::vec2 pos;
+    glm::vec2 speed = glm::vec2(0.0);
 
     float volume = 1.0;   //This will vary in time
     float sediment = 0.0; //Fraction of Volume that is Sediment!
   };
 
-  Shader shader_gen_hmap_;
+  void Init();
+
+  void DeInit();
+
+  Texture HmapFromNoise(const Shader& shader,
+                        std::vector<unsigned char>& buffer,
+                        std::string_view tex_name);
+
+  void UpdateCpuData();
+
+  //  UiStaticSprite btn_close_;
+//  UiStaticSprite btn_accept_;
+//  UiStaticSprite btn_decline_;
+//
+  // 3 buttons
+//  UiEventHandler<3> ui_event_handler_;
+//
+//  UiDynamicSprite cross_;
+
+
+  // --------------
+  // --------------
+  // --------------
+  // --------------
+
+  void GenerateHmap();
+
+  void ErodeWithFlow(const std::vector<std::vector<glm::vec2>>& flow_dir,
+                     const std::vector<std::vector<float>>& water_accum,
+                     int cycles);
+
+  glm::vec3 SurfaceNormal(int i, int j);
+
+  void ErodeWeathering(int cycles);
+
+
+  void ProcessErosion(const std::vector<std::vector<glm::vec2>>& flow_dir,
+                         const std::vector<std::vector<float>>& water_accum,
+                         int iterations);
+
+  void ProcessThermalWeathering(int iterations, float talus = 0.02f);
+
+  void GenerateSplatmap();
+
+  void GenerateNmap();
+
+  void GenerateSlope();
+
+  void GenerateAo();
+
+  void Perturbate();
+
+  void ComputeFlowMaps(
+      std::vector<std::vector<glm::vec2>>& flow_dir,
+      std::vector<std::vector<float>>& flow_accum);
+
+  void GenerateFlowMap(std::vector<std::vector<glm::vec2>>& flow_dir,
+                          std::vector<std::vector<float>>& flow_accum);
+
+  std::vector<std::vector<float>> height_map_data_;
+
+  Shader shader_gen_nmap_;
+  Shader shader_gen_slope_map_;
+  Shader shader_gen_ao_map_;
+  Shader shader_perturbate_;
+
+ public:
+  Texture& tex_hmap_;
+  Texture& tex_nmap_;
+  Texture& tex_slope_map_;
+  Texture& tex_ao_map_;
+  Texture& tex_splat_map_;
+
+  Texture& tex_erosion_thermal_map_;
+  Texture& tex_erosion_hydraulic_map_;
+
+  Texture& tex_water_accum_;
+  Texture& tex_water_flow_;
+
+ private:
+  GLuint vao_id_;
+  GLuint vbo_id_;
+  GLuint ebo_id_;
+  GLuint fbo_id_;
+  GLuint fbo_tex_id_;
+
+  Shader shader_terrain_cellular_;
+  Shader shader_terrain_fbmd_perlin_;
+  Shader shader_terrain_fbm_grid_;
+  Shader shader_terrain_fbm_multi_;
+  Shader shader_terrain_fbm_perlin_warp_;
+  Shader shader_terrain_fbm_warp_;
+  Shader shader_terrain_metaballs_;
+  Shader shader_terrain_perlin_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINGENERATOR_H_

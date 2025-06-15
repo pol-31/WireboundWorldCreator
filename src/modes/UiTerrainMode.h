@@ -7,13 +7,18 @@
 #include "IUiMode.h"
 #include "../common/Vbos.h"
 
+#include "UiTerrainGenerator.h"
+
+#include "../core/Tile.h"
+
 class UiTerrainMode final : public IUiMode {
  public:
-  explicit UiTerrainMode(UiSharedResources& ui_shared_resources);
+  explicit UiTerrainMode(UiSharedResources& ui_shared_resources,
+                         Tile& cur_tile);
 
   void Render() override;
   void RenderPicking() override;
-  int Hover(std::uint32_t global_id) override;
+  data::TextId Hover(std::uint32_t global_id) override;
 
   void BindCallbacks() override;
 
@@ -45,6 +50,8 @@ class UiTerrainMode final : public IUiMode {
       > ui_event_handler_;
 
   bool smooth_mode_{false};
+
+  UiTerrainGenerator ui_terrain_generator_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINMODE_H_

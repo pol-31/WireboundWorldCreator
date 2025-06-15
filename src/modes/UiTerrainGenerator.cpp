@@ -1,10 +1,77 @@
 #include "UiTerrainGenerator.h"
 
-void UiTerrainGenerator::ErodeWithFlow(std::vector<std::vector<float>>& heightmap,
-                   const std::vector<std::vector<Vec2>>& flow_dir,
-                   const std::vector<std::vector<float>>& water_accum,
-                   int cycles) {
-  Vec2 dim = Vec2(heightmap.size(), heightmap[0].size());
+#include <stb_image_write.h>
+
+const int UiTerrainGenerator::gTerrainWidth = 1024;
+const int UiTerrainGenerator::gTerrainHeight = 1024;
+
+UiTerrainGenerator::UiTerrainGenerator(
+    UiDynamicSprite&& sprite,
+    float size_scale,
+    UiSharedResources& ui_shared_resources,
+    Tile& cur_tile
+    /*UiDynamicSprite&& sprite,
+    float size_scale,
+    UiSharedResources& ui_shared_resources,
+
+    UiStaticSprite&& btn_close,
+    UiStaticSprite&& btn_accept,
+    UiStaticSprite&& btn_decline,
+
+    UiDynamicSprite&& cross*/)
+    : Base(std::move(sprite), size_scale, ui_shared_resources),
+      shader_gen_nmap_("../shaders/generate_shaders/NormalMap.comp"),
+      shader_gen_slope_map_("../shaders/generate_shaders/SlopeMap.comp"),
+      shader_gen_ao_map_("../shaders/generate_shaders/AoMap.comp"),
+      shader_perturbate_("../shaders/generate_shaders/Perturbate.comp"),
+
+      shader_terrain_cellular_("../shaders/noise_shaders/TerrainNoise.vert",
+                               "../shaders/noise_shaders/Cellular.frag"),
+      shader_terrain_fbmd_perlin_("../shaders/noise_shaders/TerrainNoise.vert",
+                                  "../shaders/noise_shaders/FbmdPerlin.frag"),
+      shader_terrain_fbm_grid_("../shaders/noise_shaders/TerrainNoise.vert",
+                               "../shaders/noise_shaders/FbmGrid.frag"),
+      shader_terrain_fbm_multi_("../shaders/noise_shaders/TerrainNoise.vert",
+                                "../shaders/noise_shaders/FbmMulti.frag"),
+      shader_terrain_fbm_perlin_warp_("../shaders/noise_shaders/TerrainNoise.vert",
+                                      "../shaders/noise_shaders/FbmPerlinWarp.frag"),
+      shader_terrain_fbm_warp_("../shaders/noise_shaders/TerrainNoise.vert",
+                               "../shaders/noise_shaders/FbmWarp.frag"),
+      shader_terrain_metaballs_("../shaders/noise_shaders/TerrainNoise.vert",
+                                "../shaders/noise_shaders/Metaballs.frag"),
+      shader_terrain_perlin_("../shaders/noise_shaders/TerrainNoise.vert",
+                             "../shaders/noise_shaders/Perlin.frag"),
+
+      tex_hmap_(cur_tile.map_terrain_height),
+      tex_nmap_(cur_tile.map_terrain_normal),
+      tex_slope_map_(cur_tile.map_erosion_deposition),
+      tex_ao_map_(cur_tile.map_terrain_occlusion),
+      tex_splat_map_(cur_tile.map_terrain_cavity),
+
+      tex_erosion_thermal_map_(cur_tile.map_erosion_flow),
+      tex_erosion_hydraulic_map_(cur_tile.map_erosion_wear),
+
+      tex_water_accum_(cur_tile.map_terrain_wetness),
+      tex_water_flow_(cur_tile.map_water_flow) {
+  Init();
+}
+
+/*UiTerrainGenerator::UiTerrainGenerator(UiTerrainGenerator&& other) noexcept
+    : Base(std::move(other)),
+      btn_close_(std::move(other.btn_close_)),
+      btn_accept_(std::move(other.btn_accept_)),
+      btn_decline_(std::move(other.btn_decline_)),
+      cross_(std::move(other.cross_)),
+      ui_event_handler_({&btn_close_, &btn_accept_, &btn_decline_}) {
+  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiTransformDbg*>(this);
+}*/
+
+void UiTerrainGenerator::ErodeWithFlow(
+    const std::vector<std::vector<glm::vec2>>& flow_dir,
+    const std::vector<std::vector<float>>& water_accum,
+    int cycles) {
+  glm::vec2 dim = glm::vec2(height_map_data_.size(), height_map_data_[0].size());
   float dt = 1.2f;
   float density = 1.0f;
   float evapRate = 0.001f;
@@ -14,23 +81,23 @@ void UiTerrainGenerator::ErodeWithFlow(std::vector<std::vector<float>>& heightma
 
   for(int i = 0; i < cycles; i++) {
     // Spawn droplet at a random position weighted by water accumulation to spawn more where water is abundant
-    Vec2 newpos;
+    glm::vec2 newpos;
     {
       // Example: choose position randomly, but biased by water_accum
       // For simplicity, just random now
-      newpos = Vec2(rand() % (int)dim.x, rand() % (int)dim.y);
+      newpos = glm::vec2(rand() % (int)dim.x, rand() % (int)dim.y);
     }
 
     Particle drop(newpos);
     drop.volume = water_accum[(int)newpos.y][(int)newpos.x];  // Use water accumulation as initial volume
 
     while(drop.volume > minVol) {
-      Vec2i ipos{static_cast<int>(drop.pos.x), static_cast<int>(drop.pos.y)};
+      glm::ivec2 ipos{static_cast<int>(drop.pos.x), static_cast<int>(drop.pos.y)};
       if (ipos.x < 0 || ipos.x >= (int)dim.x || ipos.y < 0 || ipos.y >= (int)dim.y)
         break;
 
       // Instead of updating speed by surface normal, move drop along flow_dir vector at current position
-      Vec2 dir = flow_dir[ipos.y][ipos.x];  // assuming [row][col] access
+      glm::vec2 dir = flow_dir[ipos.y][ipos.x];  // assuming [row][col] access
       // Apply velocity along flow direction scaled by dt and drop volume and maybe some factor
       drop.speed.x = dir.x * dt * drop.volume;
       drop.speed.y = dir.y * dt * drop.volume;
@@ -47,15 +114,15 @@ void UiTerrainGenerator::ErodeWithFlow(std::vector<std::vector<float>>& heightma
       if (x2 < 0 || x2 >= (int)dim.x || y2 < 0 || y2 >= (int)dim.y)
         break;
 
-      float heightDiff = heightmap[y1][x1] - heightmap[y2][x2];
-      float maxSediment = drop.volume * Vec2::length(drop.speed) * std::max(0.0f, heightDiff);
+      float heightDiff = height_map_data_[y1][x1] - height_map_data_[y2][x2];
+      float maxSediment = drop.volume * glm::length(drop.speed) * std::max(0.0f, heightDiff);
 
       float sdiff = maxSediment - drop.sediment;
 
       // Deposit or erode sediment
       drop.sediment += dt * depositionRate * sdiff;
-      heightmap[y1][x1] -= dt * drop.volume * depositionRate * sdiff;
-      heightmap[y1][x1] = std::max(0.0f, heightmap[y1][x1]);
+      height_map_data_[y1][x1] -= dt * drop.volume * depositionRate * sdiff;
+      height_map_data_[y1][x1] = std::max(0.0f, height_map_data_[y1][x1]);
 
       // Evaporate
       drop.volume *= (1.0f - dt * evapRate);
@@ -64,30 +131,34 @@ void UiTerrainGenerator::ErodeWithFlow(std::vector<std::vector<float>>& heightma
 }
 
 
-Vec3 UiTerrainGenerator::surfaceNormal(std::vector<std::vector<float>>& heightmap, int i, int j){
-  double scale = 16.0f * 16.0f;                  //"Physical" Height scaling of the map
+glm::vec3 UiTerrainGenerator::SurfaceNormal(int i, int j) {
+  //"Physical" Height scaling of the map
+  double scale = 16.0f * 16.0f;
   /*
-    Note: Surface normal is computed in this way, because the square-grid surface is meshed using triangles.
-    To avoid spatial artifacts, you need to weight properly with all neighbors.
+    Note: Surface normal is computed in this way, because the square-grid
+    surface is meshed using triangles. To avoid spatial artifacts,
+    you need to weight properly with all neighbors.
   */
-  i = std::clamp(i, 1, static_cast<int>(heightmap[0].size()) - 2);
-  j = std::clamp(j, 1, static_cast<int>(heightmap.size()) - 2);
-  Vec3 n = Vec3::normalize(Vec3(scale*(heightmap[i][j]-heightmap[i+1][j]), 1.0, 0.0)) * 0.15;  //Positive X
-  n += Vec3::normalize(Vec3(scale*(heightmap[i-1][j]-heightmap[i][j]), 1.0, 0.0)) * 0.15;  //Negative X
-  n += Vec3::normalize(Vec3(0.0, 1.0, scale*(heightmap[i][j]-heightmap[i][j+1]))) * 0.15;    //Positive Y
-  n += Vec3::normalize(Vec3(0.0, 1.0, scale*(heightmap[i][j-1]-heightmap[i][j]))) * 0.15;  //Negative Y
+  i = std::clamp(i, 1, static_cast<int>(height_map_data_[0].size()) - 2);
+  j = std::clamp(j, 1, static_cast<int>(height_map_data_.size()) - 2);
+  glm::vec3 n = glm::normalize(glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i+1][j]), 1.0, 0.0)) * glm::vec3(0.15);  //Positive X
+  n += glm::normalize(glm::vec3(scale*(height_map_data_[i-1][j]-height_map_data_[i][j]), 1.0, 0.0)) * glm::vec3(0.15);  //Negative X
+  n += glm::normalize(glm::vec3(0.0, 1.0, scale*(height_map_data_[i][j]-height_map_data_[i][j+1]))) * glm::vec3(0.15);    //Positive Y
+  n += glm::normalize(glm::vec3(0.0, 1.0, scale*(height_map_data_[i][j-1]-height_map_data_[i][j]))) * glm::vec3(0.15);  //Negative Y
 
   //Diagonals! (This removes the last spatial artifacts)
-  n += Vec3::normalize(Vec3(scale*(heightmap[i][j]-heightmap[i+1][j+1])/sqrt(2), sqrt(2), scale*(heightmap[i][j]-heightmap[i+1][j+1])/sqrt(2))) * 0.1;    //Positive Y
-  n += Vec3::normalize(Vec3(scale*(heightmap[i][j]-heightmap[i+1][j-1])/sqrt(2), sqrt(2), scale*(heightmap[i][j]-heightmap[i+1][j-1])/sqrt(2))) * 0.1;    //Positive Y
-  n += Vec3::normalize(Vec3(scale*(heightmap[i][j]-heightmap[i-1][j+1])/sqrt(2), sqrt(2), scale*(heightmap[i][j]-heightmap[i-1][j+1])/sqrt(2))) * 0.1;    //Positive Y
-  n += Vec3::normalize(Vec3(scale*(heightmap[i][j]-heightmap[i-1][j-1])/sqrt(2), sqrt(2), scale*(heightmap[i][j]-heightmap[i-1][j-1])/sqrt(2))) * 0.1;    //Positive Y
+  n += glm::normalize(
+           glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i+1][j+1])/sqrt(2), sqrt(2),scale*(height_map_data_[i][j]-height_map_data_[i+1][j+1])/sqrt(2))) * glm::vec3(0.1);    //Positive Y
+  n += glm::normalize(glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i+1][j-1])/sqrt(2), sqrt(2), scale*(height_map_data_[i][j]-height_map_data_[i+1][j-1])/sqrt(2))) * glm::vec3(0.1);    //Positive Y
+  n += glm::normalize(glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i-1][j+1])/sqrt(2), sqrt(2), scale*(height_map_data_[i][j]-height_map_data_[i-1][j+1])/sqrt(2))) * glm::vec3(0.1);    //Positive Y
+  n += glm::normalize(glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i-1][j-1])/sqrt(2), sqrt(2), scale*(height_map_data_[i][j]-height_map_data_[i-1][j-1])/sqrt(2))) * glm::vec3(0.1);    //Positive Y
 
   return n;
 }
 
-void UiTerrainGenerator::ErodeWeathering(std::vector<std::vector<float>>& heightmap, int cycles){
-  Vec2 dim = Vec2(1024, 1024);  //Size of the heightmap array
+void UiTerrainGenerator::ErodeWeathering(int cycles) {
+  //Size of the heightmap array
+  glm::vec2 dim = glm::vec2(gTerrainWidth, gTerrainHeight);
   //Erosion Steps
   //  int remaining = 200000;
   //  int erosionstep = 1000;
@@ -105,15 +176,17 @@ void UiTerrainGenerator::ErodeWeathering(std::vector<std::vector<float>>& height
   for(int i = 0; i < cycles; i++){
 
     //Spawn New Particle
-    Vec2 newpos = Vec2(rand()%(int)dim.x, rand()%(int)dim.y);
+    glm::vec2 newpos = glm::vec2(rand()%(int)dim.x, rand()%(int)dim.y);
     Particle drop(newpos);
     std::cout << "cycle " << i << std::endl;
 
     //As long as the droplet exists...
     while(drop.volume > minVol){
-
-      Vec2i ipos{static_cast<int>(drop.pos.x), static_cast<int>(drop.pos.y)};                   //Floored Droplet Initial Position
-      Vec3 n = surfaceNormal(heightmap, ipos.x, ipos.y);  //Surface Normal at Position
+      glm::ivec2 ipos{static_cast<int>(drop.pos.x),
+                      static_cast<int>(drop.pos.y)};
+      //Floored Droplet Initial Position
+      //Surface Normal at Position
+      glm::vec3 n = SurfaceNormal(ipos.x, ipos.y);
 
       //Accelerate particle using newtonian mechanics using the surface normal.
       //F = ma, so a = F/m
@@ -129,64 +202,78 @@ void UiTerrainGenerator::ErodeWeathering(std::vector<std::vector<float>>& height
         break;
 
       //Compute sediment capacity difference
-      float maxsediment = drop.volume*Vec2::length(drop.speed)*(heightmap[ipos.x][ipos.y]-heightmap[(int)drop.pos.x][(int)drop.pos.y]);
+      float maxsediment =
+          drop.volume * glm::length(drop.speed)
+          * (height_map_data_[ipos.x][ipos.y]
+             - height_map_data_[(int)drop.pos.x][(int)drop.pos.y]);
       if(maxsediment < 0.0) maxsediment = 0.0;
       float sdiff = maxsediment - drop.sediment;
 
       //Act on the Heightmap and Droplet!
       drop.sediment += dt*depositionRate*sdiff;
-      heightmap[ipos.x][ipos.y] -= dt*drop.volume*depositionRate*sdiff;
-      heightmap[ipos.x][ipos.y] = std::max(0.0f, heightmap[ipos.x][ipos.y]);
+      height_map_data_[ipos.x][ipos.y] -= dt*drop.volume*depositionRate*sdiff;
+      height_map_data_[ipos.x][ipos.y] =
+          std::max(0.0f, height_map_data_[ipos.x][ipos.y]);
 
-      //Evaporate the Droplet (Note: Proportional to Volume! Better: Use shape factor to make proportional to the area instead.)
+      //Evaporate the Droplet (Note: Proportional to Volume!
+      // Better: Use shape factor to make proportional to the area instead.)
       drop.volume *= (1.0-dt*evapRate);
     }
   }
 }
 
 
-Texture UiTerrainGenerator::ProcessErosion(std::vector<std::vector<float>>& height_map_data,
-                       const std::vector<std::vector<Vec2>>& flow_dir,
-                       const std::vector<std::vector<float>>& water_accum,
-                       int iterations) {
-  int height = height_map_data.size();
-  int width = height_map_data[0].size();
+void UiTerrainGenerator::ProcessErosion(
+    const std::vector<std::vector<glm::vec2>>& flow_dir,
+    const std::vector<std::vector<float>>& water_accum,
+    int iterations) {
+  int height = height_map_data_.size();
+  int width = height_map_data_[0].size();
 
-  auto start_height_map_data = height_map_data;
+  auto start_height_map_data = height_map_data_;
 
-  ErodeWithFlow(height_map_data, flow_dir, water_accum, iterations);
+  ErodeWithFlow(flow_dir, water_accum, iterations);
 
   // Convert float -> uint8 for saving
   std::vector<uint8_t> height_map_data_updated(width * height);
   for (int i = 0; i < width; ++i) {
     for (int j = 0; j < height; ++j) {
-      float acc = -height_map_data[i][j] + start_height_map_data[i][j];
-      height_map_data_updated[i * width + j] = static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
+      float acc = -height_map_data_[i][j] + start_height_map_data[i][j];
+      height_map_data_updated[i * width + j] =
+          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
 
-  stbi_write_png("erosion_wear.png", width, height, 1, height_map_data_updated.data(), width);
-  //  Texture erosion_wear("erosion_wear.png", GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+  tex_erosion_hydraulic_map_ = Texture(gTerrainWidth, gTerrainHeight,
+                                       GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+  tex_erosion_hydraulic_map_.Bind();
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED,
+               GL_UNSIGNED_BYTE, height_map_data_updated.data());
+  tex_erosion_hydraulic_map_.Store("erosion_wear.png", 1, GL_RED,
+                                   GL_UNSIGNED_BYTE);
 
   for (int i = 0; i < width; ++i) {
     for (int j = 0; j < height; ++j) {
-      float acc = height_map_data[i][j];
+      float acc = height_map_data_[i][j];
       height_map_data_updated[i * width + j] = static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
-
-  stbi_write_png("height_map_erosed.png", width, height, 1, height_map_data_updated.data(), width);
-  Texture height_map_erosed("height_map_erosed.png", GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
-  return height_map_erosed;
+  tex_hmap_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8, GL_LINEAR,
+                      GL_CLAMP_TO_EDGE);
+  tex_hmap_.Bind();
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED,
+               GL_UNSIGNED_BYTE, height_map_data_updated.data());
+  tex_hmap_.Store("height_map_erosed.png", 1, GL_RED, GL_UNSIGNED_BYTE);
 }
 
-Texture UiTerrainGenerator::ProcessThermalWeathering(std::vector<std::vector<float>>& height_map_data, int iterations, float talus = 0.02f) {
-  int height = height_map_data.size();
-  int width = height_map_data[0].size();
+void UiTerrainGenerator::ProcessThermalWeathering(
+    int iterations, float talus) {
+  int height = height_map_data_.size();
+  int width = height_map_data_[0].size();
 
-  auto start_height_map_data = height_map_data;
+  auto start_height_map_data = height_map_data_;
 
-  ErodeWeathering(height_map_data, iterations);
+  ErodeWeathering(iterations);
   //  RunThermalWeathering(height_map_data, 50, 0.2f);
 
   // Convert float -> uint8 for saving
@@ -194,118 +281,113 @@ Texture UiTerrainGenerator::ProcessThermalWeathering(std::vector<std::vector<flo
 
   for (int i = 0; i < width; ++i) {
     for (int j = 0; j < height; ++j) {
-      float acc = height_map_data[i][j] - start_height_map_data[i][j];
-      height_map_data_updated[i * width + j] = static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
+      float acc = height_map_data_[i][j] - start_height_map_data[i][j];
+      height_map_data_updated[i * width + j] =
+          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
 
-  stbi_write_png("weathering_wear.png", width, height, 1, height_map_data_updated.data(), width);
-  //  Texture weathering_wear("weathering_wear.png", GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+  tex_erosion_thermal_map_ = Texture(gTerrainWidth, gTerrainHeight,
+                                     GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+  tex_erosion_thermal_map_.Bind();
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0,
+               GL_RED, GL_UNSIGNED_BYTE, height_map_data_updated.data());
+  tex_erosion_thermal_map_.Store("weathering_wear.png", 1,
+                                 GL_RED, GL_UNSIGNED_BYTE);
 
   for (int i = 0; i < width; ++i) {
     for (int j = 0; j < height; ++j) {
-      float acc = height_map_data[i][j];
-      height_map_data_updated[i * width + j] = static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
+      float acc = height_map_data_[i][j];
+      height_map_data_updated[i * width + j] =
+          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
-
-  stbi_write_png("height_map_weathered.png", width, height, 1, height_map_data_updated.data(), width);
-  Texture height_map_weathered("height_map_weathered.png", GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
-  return height_map_weathered;
+  tex_hmap_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8, GL_LINEAR,
+                      GL_CLAMP_TO_EDGE);
+  tex_hmap_.Bind();
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED,
+               GL_UNSIGNED_BYTE, height_map_data_updated.data());
+  tex_hmap_.Store("height_map_weathered.png", 1, GL_RED, GL_UNSIGNED_BYTE);
 }
 
-Texture UiTerrainGenerator::GenerateSplatmap();
+void UiTerrainGenerator::GenerateSplatmap() {}
 
-Texture UiTerrainGenerator::GenerateNmap(
-    const Shader& shader_gen_nmap,
-    const Texture& tex_hmap) {
-  Texture nmap(1024, 1024, GL_RG8);
-  shader_gen_nmap.Bind();
+void UiTerrainGenerator::GenerateNmap() {
+  shader_gen_nmap_.Bind();
   glBindImageTexture(
-      0, tex_hmap.GetId(), 0,
-      GL_FALSE, 0, GL_READ_ONLY, tex_hmap.GetFormat());
+      0, tex_hmap_.GetId(), 0,
+      GL_FALSE, 0, GL_READ_ONLY, tex_hmap_.GetFormat());
   glBindImageTexture(
-      1, nmap.GetId(), 0,
-      GL_FALSE, 0, GL_WRITE_ONLY, nmap.GetFormat());
-  glDispatchCompute(1024 / 8, 1024 / 8, 1);
+      1, tex_nmap_.GetId(), 0,
+      GL_FALSE, 0, GL_WRITE_ONLY, tex_nmap_.GetFormat());
+  glDispatchCompute(gTerrainWidth / 8, gTerrainHeight / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  nmap.Store("normal_map.png", 2, GL_RG, GL_UNSIGNED_BYTE);
-  return nmap;
+  tex_nmap_.Store("normal_map.png", 2, GL_RG, GL_UNSIGNED_BYTE);
 }
 
-Texture UiTerrainGenerator::GenerateSlope(
-    const Shader& shader_gen_slope_map,
-    const Texture& tex_hmap) {
-  Texture slope_map(1024, 1024, GL_R8);
-  shader_gen_slope_map.Bind();
+void UiTerrainGenerator::GenerateSlope() {
+  shader_gen_slope_map_.Bind();
   glBindImageTexture(
-      0, tex_hmap.GetId(), 0,
-      GL_FALSE, 0, GL_READ_ONLY, tex_hmap.GetFormat());
+      0, tex_hmap_.GetId(), 0,
+      GL_FALSE, 0, GL_READ_ONLY, tex_hmap_.GetFormat());
   glBindImageTexture(
-      1, slope_map.GetId(), 0,
-      GL_FALSE, 0, GL_WRITE_ONLY, slope_map.GetFormat());
-  glDispatchCompute(1024 / 8, 1024 / 8, 1);
+      1, tex_slope_map_.GetId(), 0,
+      GL_FALSE, 0, GL_WRITE_ONLY, tex_slope_map_.GetFormat());
+  glDispatchCompute(gTerrainWidth / 8, gTerrainHeight / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  slope_map.Store("slope_map.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-  return slope_map;
+  tex_slope_map_.Store("slope_map.png", 1, GL_RED, GL_UNSIGNED_BYTE);
 }
 
-Texture UiTerrainGenerator::GenerateAo(
-    const Shader& shader_gen_ao_map,
-    const Texture& tex_hmap) {
-  Texture ao_map(1024, 1024, GL_R8);
-  shader_gen_ao_map.Bind();
+void UiTerrainGenerator::GenerateAo() {
+  shader_gen_ao_map_.Bind();
   glBindImageTexture(
-      0, tex_hmap.GetId(), 0,
-      GL_FALSE, 0, GL_READ_ONLY, tex_hmap.GetFormat());
+      0, tex_hmap_.GetId(), 0,
+      GL_FALSE, 0, GL_READ_ONLY, tex_hmap_.GetFormat());
   glBindImageTexture(
-      1, ao_map.GetId(), 0,
-      GL_FALSE, 0, GL_WRITE_ONLY, ao_map.GetFormat());
-  glDispatchCompute(1024 / 8, 1024 / 8, 1);
+      1, tex_ao_map_.GetId(), 0,
+      GL_FALSE, 0, GL_WRITE_ONLY, tex_ao_map_.GetFormat());
+  glDispatchCompute(gTerrainWidth / 8, gTerrainHeight / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  ao_map.Store("ao_map.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-  return ao_map;
+  tex_ao_map_.Store("ao_map.png", 1, GL_RED, GL_UNSIGNED_BYTE);
 }
 
-Texture UiTerrainGenerator::Perturbate(
-    const Shader& shader_perturbate,
-    const Texture& tex_hmap) {
-  Texture tex_new_hmap(1024, 1024, GL_R8);
-  shader_perturbate.Bind();
+void UiTerrainGenerator::Perturbate() {
+  Texture tex_hmap_new(gTerrainWidth, gTerrainHeight, GL_R8);
+  shader_perturbate_.Bind();
   glBindImageTexture(
-      0, tex_hmap.GetId(), 0,
-      GL_FALSE, 0, GL_READ_ONLY, tex_hmap.GetFormat());
+      0, tex_hmap_.GetId(), 0,
+      GL_FALSE, 0, GL_READ_ONLY, tex_hmap_.GetFormat());
   glBindImageTexture(
-      1, tex_new_hmap.GetId(), 0,
-      GL_FALSE, 0, GL_WRITE_ONLY, tex_new_hmap.GetFormat());
-  glDispatchCompute(1024 / 8, 1024 / 8, 1);
+      1, tex_hmap_new.GetId(), 0,
+      GL_FALSE, 0, GL_WRITE_ONLY, tex_hmap_new.GetFormat());
+  glDispatchCompute(gTerrainWidth / 8, gTerrainHeight / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  tex_new_hmap.Store("tex_new_hmap.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-  return tex_new_hmap;
+  tex_hmap_ = std::move(tex_hmap_new);
+  tex_hmap_.Store("tex_hmap_perturbated.png", 1, GL_RED, GL_UNSIGNED_BYTE);
 }
 
 void UiTerrainGenerator::ComputeFlowMaps(
-    std::vector<std::vector<float>> height_map_data,
-    std::vector<std::vector<Vec2>>& flow_dir,
+    std::vector<std::vector<glm::vec2>>& flow_dir,
     std::vector<std::vector<float>>& flow_accum) {
-  int height = height_map_data.size();
-  int width = height_map_data[0].size();
+  int height = height_map_data_.size();
+  int width = height_map_data_[0].size();
 
-  flow_dir.assign(height, std::vector<Vec2>(width, {0.0f, 0.0f}));
-  flow_accum.assign(height, std::vector<float>(width, 1.0f)); // Start with 1 unit of water
+  flow_dir.assign(height, std::vector<glm::vec2>(width, {0.0f, 0.0f}));
+  // Start with 1 unit of water
+  flow_accum.assign(height, std::vector<float>(width, 1.0f));
 
   // Step 1: Flow direction
   for (int y = 1; y < height - 1; ++y) {
     for (int x = 1; x < width - 1; ++x) {
-      float h0 = height_map_data[y][x];
+      float h0 = height_map_data_[y][x];
       float maxSlope = 0.0f;
-      Vec2 best = {0.0f, 0.0f};
+      glm::vec2 best = {0.0f, 0.0f};
 
       for (int dy = -1; dy <= 1; ++dy) {
         for (int dx = -1; dx <= 1; ++dx) {
           if (dx == 0 && dy == 0) continue;
 
-          float h1 = height_map_data[y + dy][x + dx];
+          float h1 = height_map_data_[y + dy][x + dx];
           float drop = h0 - h1;
           float dist = std::sqrt(dx * dx + dy * dy);
           float slope = drop / dist;
@@ -331,7 +413,7 @@ void UiTerrainGenerator::ComputeFlowMaps(
   std::vector<Cell> cells;
   for (int y = 0; y < height; ++y)
     for (int x = 0; x < width; ++x)
-      cells.push_back({x, y, height_map_data[y][x]});
+      cells.push_back({x, y, height_map_data_[y][x]});
 
   std::sort(cells.begin(), cells.end(), [](const Cell& a, const Cell& b) {
     return a.height > b.height;
@@ -348,12 +430,12 @@ void UiTerrainGenerator::ComputeFlowMaps(
   }
 }
 
-Texture UiTerrainGenerator::GenerateFlowMap(std::vector<std::vector<float>>& height_map_data,
-                        std::vector<std::vector<Vec2>>& flow_dir,
-                        std::vector<std::vector<float>>& flow_accum) {
-  int height = height_map_data.size();
-  int width = height_map_data[0].size();
-  ComputeFlowMaps(height_map_data, flow_dir, flow_accum);
+void UiTerrainGenerator::GenerateFlowMap(
+    std::vector<std::vector<glm::vec2>>& flow_dir,
+    std::vector<std::vector<float>>& flow_accum) {
+  int height = height_map_data_.size();
+  int width = height_map_data_[0].size();
+  ComputeFlowMaps(flow_dir, flow_accum);
 
   //  int width = flow_accum[0].size();
   //  int height = flow_accum.size();
@@ -370,16 +452,21 @@ Texture UiTerrainGenerator::GenerateFlowMap(std::vector<std::vector<float>>& hei
 
   // flow_accum: single channel
   std::vector<float> flow_accum_data(width * height);
-  for (int y = 0; y < height; ++y)
-    for (int x = 0; x < width; ++x)
-      flow_accum_data[y * width + x] = std::log(1.0f + flow_accum[y][x]);  // tone-mapped
+  for (int y = 0; y < height; ++y) {
+    for (int x = 0; x < width; ++x) {
+      // tone-mapped
+
+      flow_accum_data[y * width + x] = std::log(1.0f + flow_accum[y][x]);
+    }
+  }
 
   GLuint flowDirTex, flowAccumTex;
 
   // Upload flowDirTex (RGB)
   glGenTextures(1, &flowDirTex);
   glBindTexture(GL_TEXTURE_2D, flowDirTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, flow_dir_data.data());
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB,
+               GL_FLOAT, flow_dir_data.data());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -387,7 +474,8 @@ Texture UiTerrainGenerator::GenerateFlowMap(std::vector<std::vector<float>>& hei
   // Upload flowAccumTex (R)
   glGenTextures(1, &flowAccumTex);
   glBindTexture(GL_TEXTURE_2D, flowAccumTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, flow_accum_data.data());
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED,
+               GL_FLOAT, flow_accum_data.data());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -407,41 +495,186 @@ Texture UiTerrainGenerator::GenerateFlowMap(std::vector<std::vector<float>>& hei
     flowAccumData_u8[i] = static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
   }
 
-  stbi_write_png("flowDirTex.png", width, height, 3, flowDirData_u8.data(), width * 3);
-  stbi_write_png("flowAccumTex.png", width, height, 1, flowAccumData_u8.data(), width);
-  return Texture{};
+
+  tex_water_flow_ = Texture(gTerrainWidth, gTerrainHeight, GL_RGB8,
+                            GL_LINEAR, GL_CLAMP_TO_EDGE);
+  tex_water_flow_.Bind();
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0,
+               GL_RGB, GL_UNSIGNED_BYTE, flowDirData_u8.data());
+  tex_water_flow_.Store("water_flow.png", 3, GL_RGB, GL_UNSIGNED_BYTE);
+
+  tex_water_accum_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8,
+                             GL_LINEAR, GL_CLAMP_TO_EDGE);
+  tex_water_accum_.Bind();
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0,
+               GL_RED, GL_UNSIGNED_BYTE, flowAccumData_u8.data());
+  tex_water_accum_.Store("water_accum.png", 1, GL_RED, GL_UNSIGNED_BYTE);
 }
 
-void UiTerrainGenerator::Bake(std::vector<unsigned char>& height_map_data,
-          int width, int height, Texture& height_map) {
-  std::vector<std::vector<float>> height_map_data_f(height, std::vector<float>(width));
-  for (int y = 0; y < height; ++y)
-    for (int x = 0; x < width; ++x)
-      height_map_data_f[y][x] = height_map_data[y * width + x] / 255.0f;
+void UiTerrainGenerator::GenerateHmap() {
+  int width = tex_hmap_.GetWidth();
+  int height = tex_hmap_.GetHeight();
 
-  std::vector<std::vector<Vec2>> flow_dir;
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_id_);
+  glViewport(0, 0, width, height);
+  glBindVertexArray(vao_id_);
+
+  std::vector<unsigned char> buffer(width * height);
+  std::cout << "CH0 (start)" << std::endl;
+  Texture tex_cellular = HmapFromNoise(shader_terrain_cellular_,
+                                       buffer, "hmap_cellular.png");
+//  tex_hmap_ = HmapFromNoise(
+//      shader_terrain_cellular_, buffer, "hmap_cellular.png");
+  Texture tex_fbmd_perlin = HmapFromNoise(
+      shader_terrain_fbmd_perlin_, buffer, "hmap_fbmd_perlin.png");
+  Texture tex_fbm_grid = HmapFromNoise(
+      shader_terrain_fbm_grid_, buffer, "hmap_fbm_grid.png");
+  Texture tex_fbm_multi = HmapFromNoise(
+      shader_terrain_fbm_multi_, buffer, "hmap_fbm_multi.png");
+  Texture tex_fbm_perlin_warp = HmapFromNoise(
+      shader_terrain_fbm_perlin_warp_, buffer, "hmap_fbm_perlin_warp.png");
+  tex_hmap_ = HmapFromNoise(
+      shader_terrain_fbm_perlin_warp_, buffer, "hmap_fbm_perlin_warp.png");
+  Texture tex_fbm_warp = HmapFromNoise(
+      shader_terrain_fbm_warp_, buffer, "hmap_fbm_warp.png");
+  Texture tex_metaballs = HmapFromNoise(
+      shader_terrain_metaballs_, buffer, "hmap_metaballs.png");
+  Texture tex_perlin = HmapFromNoise(
+      shader_terrain_perlin_, buffer, "hmap_perlin.png");
+  tex_hmap_.Store("hmap_start.png", 1, GL_RED, GL_UNSIGNED_BYTE);
+  std::cout << "CH1" << std::endl;
+}
+
+Texture UiTerrainGenerator::HmapFromNoise(
+    const Shader& shader,
+    std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  shader.Bind();
+  glUniform2f(1, static_cast<float>(gTerrainWidth),
+              static_cast<float>(gTerrainHeight));
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+  glReadPixels(0, 0, gTerrainWidth, gTerrainHeight, GL_RED, GL_UNSIGNED_BYTE,
+               buffer.data());
+
+  Texture height_map(gTerrainWidth, gTerrainHeight, GL_R8, GL_LINEAR,
+                     GL_CLAMP_TO_EDGE);
+  height_map.Bind();
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, gTerrainWidth, gTerrainHeight,
+               0, GL_RED, GL_UNSIGNED_BYTE, buffer.data());
+  height_map.Store(tex_name, 1, GL_RED, GL_UNSIGNED_BYTE);
+  return std::move(height_map);
+}
+
+void UiTerrainGenerator::Init() {
+  height_map_data_.resize(gTerrainHeight);
+  for (auto& row : height_map_data_) {
+    row.resize(gTerrainWidth);
+  }
+
+  tex_hmap_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8);
+  tex_nmap_ = Texture(gTerrainWidth, gTerrainHeight, GL_RG8);
+  tex_slope_map_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8);
+  tex_ao_map_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8);
+  tex_splat_map_ = Texture(gTerrainWidth, gTerrainHeight, GL_RGBA);
+
+  tex_erosion_thermal_map_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8);
+  tex_erosion_hydraulic_map_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8);
+
+  tex_water_accum_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8);
+  tex_water_flow_ = Texture(gTerrainWidth, gTerrainHeight, GL_RG8);
+
+  float vertices[] = {
+      1.0f,  1.0f, 0.0f,
+      1.0f, -1.0f, 0.0f,
+      -1.0f, -1.0f, 0.0f,
+      -1.0f,  1.0f, 0.0f,
+  };
+  unsigned int indices[] = {
+      0, 1, 3,
+      1, 2, 3
+  };
+  glGenVertexArrays(1, &vao_id_);
+  glGenBuffers(1, &vbo_id_);
+  glGenBuffers(1, &ebo_id_);
+
+  glBindVertexArray(vao_id_);
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_id_);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_id_);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices),
+               indices, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
+
+  glGenTextures(1, &fbo_tex_id_);
+  glBindTexture(GL_TEXTURE_2D, fbo_tex_id_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, gTerrainWidth, gTerrainHeight,
+               0, GL_RED, GL_FLOAT, nullptr);
+
+  glGenFramebuffers(1, &fbo_id_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_id_);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                         GL_TEXTURE_2D, fbo_tex_id_, 0);
+}
+
+void UiTerrainGenerator::DeInit() {
+  glDeleteBuffers(1, &vbo_id_);
+  glDeleteBuffers(1, &ebo_id_);
+  glDeleteTextures(1, &fbo_tex_id_);
+  glDeleteFramebuffers(1, &fbo_id_);
+  glDeleteVertexArrays(1, &vao_id_);
+}
+
+void UiTerrainGenerator::UpdateCpuData() {
+  tex_hmap_.Bind();
+  std::vector<unsigned char> height_map_data_ui(gTerrainWidth * gTerrainHeight);
+  glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE,
+                height_map_data_ui.data());
+  for (int y = 0; y < gTerrainHeight; ++y) {
+    for (int x = 0; x < gTerrainWidth; ++x) {
+      height_map_data_[y][x] =
+          height_map_data_ui[y * gTerrainWidth + x] / 255.0f;
+    }
+  }
+}
+
+void UiTerrainGenerator::Bake() {
+  GenerateHmap();
+  std::cout << "CH2" << std::endl;
+  UpdateCpuData();
+
+  Perturbate();
+  std::cout << "CH3" << std::endl;
+  UpdateCpuData();
+
+  std::vector<std::vector<glm::vec2>> flow_dir;
   std::vector<std::vector<float>> flow_accum;
-  auto water_flow_map = GenerateFlowMap(height_map_data_f, flow_dir, flow_accum);
+  GenerateFlowMap(flow_dir, flow_accum);
+  std::cout << "CH4" << std::endl;
 
   /// erosion & thermal weathering
-  auto hmap_map_erosed = ProcessErosion(
-      height_map_data_f, flow_dir, flow_accum, 100000);
-  auto hmap_map_weathered = ProcessThermalWeathering(
-      height_map_data_f, 100000, 0.1f);
+  ProcessErosion(flow_dir, flow_accum, 10000);
+  std::cout << "CH5" << std::endl;
+  UpdateCpuData();
 
-  for (int y = 0; y < height; ++y)
-    for (int x = 0; x < width; ++x)
-      height_map_data[y * width + x] = static_cast<uint8_t>(height_map_data_f[y][x] * 255.0f);
+  ProcessThermalWeathering(10000, 0.1f);
+  std::cout << "CH6" << std::endl;
+  UpdateCpuData();
 
-  stbi_write_png("height_map_updated.png", width, height, 1, height_map_data.data(), width);
-  height_map = Texture("height_map_updated.png", GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+  GenerateNmap();
+  std::cout << "CH7" << std::endl;
+  GenerateSlope();
+  std::cout << "CH8" << std::endl;
+  GenerateAo();
+  std::cout << "CH9 (final)" << std::endl;
 
-  Shader shader_gen_nmap("../generate_shaders/NormalMap.comp");
-  auto nmap = GenerateNmap(shader_gen_nmap, height_map);
+  tex_hmap_.Store("hmap_end.png", 1, GL_RED, GL_UNSIGNED_BYTE);
 
-  Shader shader_gen_slope_map("../generate_shaders/SlopeMap.comp");
-  auto slope_map = GenerateSlope(shader_gen_slope_map, height_map);
-
-  Shader shader_gen_ao_map("../generate_shaders/AoMap.comp");
-  auto ao_map = GenerateAo(shader_gen_ao_map, height_map);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, gWindowWidth, gWindowHeight);
+  glBindVertexArray(0);
 }
