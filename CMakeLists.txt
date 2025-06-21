@@ -76,6 +76,13 @@ add_executable(WireboundWorldCreator
         src/modes/UiSharedResources.cpp
         src/modes/UiSharedResources.h
         src/modes/AllUiModes.h
+        src/core/UiComplex.cpp
+        src/core/UiComplex.h
+        src/modes/UiTerrainConfig.cpp
+        src/modes/UiTerrainConfig.h
+        src/common/TerrainGrid.cpp
+        src/common/TerrainGrid.h
+        src/common/IGraph.h
 
 )
 

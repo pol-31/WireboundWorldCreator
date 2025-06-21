@@ -12,13 +12,14 @@ class UiFencesMode final : public IUiMode {
 
   void Render() override;
   void RenderPicking() override;
-  int Hover(std::uint32_t global_id) override;
+  data::TextId Hover(std::uint32_t global_id) override;
 
   void BindCallbacks() override;
 
-  void Remove();
   void BakePicket();
+
   void BakeChainLinked();
+
   void BakeWooden();
 
  protected:
@@ -36,12 +37,11 @@ class UiFencesMode final : public IUiMode {
   UiStaticSprite btn_bake_wooden_;
   UiStaticSprite btn_remove_;
 
-  ArbitraryGraph graphs_;
   UiSlots slots_;
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kFencesSlotsFlipSelectEdit) -
-      static_cast<int>(data::VboIdMain::kFencesUiFencesMode) + 1
+      static_cast<int>(data::VboIdMain::kFencesFencesMode) + 1
       > ui_event_handler_;
 };
 

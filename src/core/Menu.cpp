@@ -67,7 +67,7 @@ Menu::Menu(
               {data::VboIdMain::kMenuTerrainOff, data::TextId::kNone,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_terrain_;
-                 state = !state;
+                 this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_terrain_ = !state;
                }},
               {data::VboIdMain::kMenuTerrainOn1, data::TextId::kNone},
               {data::VboIdMain::kMenuTerrainOn2, data::TextId::kNone},
@@ -77,7 +77,7 @@ Menu::Menu(
               {data::VboIdMain::kMenuWaterOff, data::TextId::kNone,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_water_;
-                 state = !state;
+                 this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_water_ = !state;
                }},
               {data::VboIdMain::kMenuWaterOn1, data::TextId::kNone},
               {data::VboIdMain::kMenuWaterOn2, data::TextId::kNone},
@@ -87,7 +87,7 @@ Menu::Menu(
               {data::VboIdMain::kMenuRoadsOff, data::TextId::kNone,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_roads_;
-                 state = !state;
+                 this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_roads_ = !state;
                }},
               {data::VboIdMain::kMenuRoadsOn1, data::TextId::kNone},
               {data::VboIdMain::kMenuRoadsOn2, data::TextId::kNone},
@@ -97,7 +97,7 @@ Menu::Menu(
               {data::VboIdMain::kMenuFencesOff, data::TextId::kNone,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_fences_;
-                 state = !state;
+                 this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_fences_ = !state;
                }},
               {data::VboIdMain::kMenuFencesOn1, data::TextId::kNone},
               {data::VboIdMain::kMenuFencesOn2, data::TextId::kNone},
@@ -107,7 +107,7 @@ Menu::Menu(
               {data::VboIdMain::kMenuPlacementOff, data::TextId::kNone,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_placement_;
-                 state = !state;
+                 this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_placement_ = !state;
                }},
               {data::VboIdMain::kMenuPlacementOn1, data::TextId::kNone},
               {data::VboIdMain::kMenuPlacementOn2, data::TextId::kNone},
@@ -117,7 +117,7 @@ Menu::Menu(
               {data::VboIdMain::kMenuObjectsOff, data::TextId::kNone,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_objects_;
-                 state = !state;
+                 this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_objects_ = !state;
                }},
               {data::VboIdMain::kMenuObjectsOn1, data::TextId::kNone},
               {data::VboIdMain::kMenuObjectsOn2, data::TextId::kNone},
@@ -127,7 +127,7 @@ Menu::Menu(
               {data::VboIdMain::kMenuBiomesOff, data::TextId::kNone,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_biomes_;
-                 state = !state;
+                 this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_biomes_ = !state;
                }},
               {data::VboIdMain::kMenuBiomesOn1, data::TextId::kNone},
               {data::VboIdMain::kMenuBiomesOn2, data::TextId::kNone},
@@ -137,7 +137,7 @@ Menu::Menu(
               {data::VboIdMain::kMenuTilesOff, data::TextId::kNone,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_tiles_;
-                 state = !state;
+                 this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_tiles_ = !state;
                }},
               {data::VboIdMain::kMenuTilesOn1, data::TextId::kNone},
               {data::VboIdMain::kMenuTilesOn2, data::TextId::kNone},
@@ -219,12 +219,13 @@ void Menu::Render(bool show) {
 
   ui_shared_resources_.tex_ui_.Bind();
 
+  if (!show) {
+    Release();
+    show_settings_ = false;
+  }
+
   if (show_settings_) {
     ui_settings_.Render(show);
-    if (!show) {
-      show_settings_ = false;
-    }
-    return;
   } else {
     ui_tab_menu_.Render(show);
   }
@@ -240,7 +241,7 @@ void Menu::RenderPicking() {
   }
 }
 
-int Menu::Hover(uint32_t global_id) {
+data::TextId Menu::Hover(uint32_t global_id) {
   if (!show_settings_) {
     return ui_tab_menu_.Hover(global_id);
   } else {

@@ -7,7 +7,7 @@
 #include "Details.h"
 #include "Text.h"
 
-class UiTransformDbg;
+class UiBase;
 
 namespace data {
 
@@ -20,7 +20,7 @@ struct UiData {
   std::size_t parent_id_{0};
 
   // useful for e.g. slider to update centre/length of interactive area
-  UiTransformDbg* ui{nullptr};
+  UiBase* ui{nullptr};
 };
 
 /// related to kUiVboDataMain
@@ -221,7 +221,7 @@ enum class VboIdMain {
 
   kTerrainEditNoise2Config,
   kTerrainEditNoise2Name,
-  kTerrainEditNoise2InvertOff,
+   kTerrainEditNoise2InvertOff,
   kTerrainEditNoise2InvertOn1,
   kTerrainEditNoise2InvertOn2,
   kTerrainEditNoise2InvertOn3,

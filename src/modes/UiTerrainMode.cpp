@@ -56,39 +56,16 @@ void UiTerrainMode::KeyCallback(
 
 UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
                              Tile& cur_tile)
-    : IUiMode(ui_shared_resources,
-              UiStaticSprite{data::VboIdMain::kTerrainUiTerrainMode,
-                             data::TextId::kNone}),
-      sprite_flatten_(data::VboIdMain::kTerrainFlatten, data::TextId::kNone),
+    : IUiMode(
+          ui_shared_resources,
+          UiStaticSprite{data::VboIdMain::kTerrainTerrainMode,
+                         data::TextId::kNone}),
       btn_update_(data::VboIdMain::kTerrainUpdate, data::TextId::kMenuPlacement,
           [this]() {
                     std::cout << "btn_update" << std::endl;
                     ui_terrain_generator_.Bake();
           }),
-      btn_regenerate_(data::VboIdMain::kTerrainRegenerate, data::TextId::kNone,
-          [this]() {
-                        std::cout << "btn_regenerate" << std::endl;
-                        struct TerrainParams {
-                          struct Noise {
-                            float resolution;           // slider
-                            glm::vec2 tex_offset; // slider
-                            Texture texture;
-                          };
-
-                        };
-                        TerrainParams params;
-          }),
-      slider_size_(
-          UiStaticSprite{data::VboIdMain::kTerrainSizeFill, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kTerrainSizeBack, data::TextId::kNone},
-          UiDynamicSprite{data::VboIdMain::kTerrainSizeIcon, data::TextId::kNone}
-          ),
-      slider_falloff_(
-          UiStaticSprite{data::VboIdMain::kTerrainFalloffFill, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kTerrainFalloffBack, data::TextId::kNone},
-          UiDynamicSprite{data::VboIdMain::kTerrainFalloffIcon,
-                          data::TextId::kNone}
-          ),
+      sprite_flatten_(data::VboIdMain::kTerrainFlatten, data::TextId::kNone),
       toggle_flatten_(
           UiStaticSprite{data::VboIdMain::kTerrainFlattenOff, data::TextId::kNone,
                          [this]() {
@@ -97,6 +74,17 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
           UiStaticSprite{data::VboIdMain::kTerrainFlattenOn1, data::TextId::kNone},
           UiStaticSprite{data::VboIdMain::kTerrainFlattenOn2, data::TextId::kNone},
           UiStaticSprite{data::VboIdMain::kTerrainFlattenOn3, data::TextId::kNone}
+          ),
+      slider_size_(
+          {data::VboIdMain::kTerrainSizeFill, data::TextId::kNone},
+          {data::VboIdMain::kTerrainSizeBack, data::TextId::kNone},
+          {data::VboIdMain::kTerrainSizeIcon, data::TextId::kNone}
+          ),
+      slider_falloff_(
+          UiStaticSprite{data::VboIdMain::kTerrainFalloffFill, data::TextId::kNone},
+          UiStaticSprite{data::VboIdMain::kTerrainFalloffBack, data::TextId::kNone},
+          UiDynamicSprite{data::VboIdMain::kTerrainFalloffIcon,
+                          data::TextId::kNone}
           ),
       ui_event_handler_({
           &btn_update_, &btn_regenerate_, &slider_size_,
@@ -129,7 +117,6 @@ void UiTerrainMode::Render() {
   sprite_mode_.Render();
 
   btn_update_.Render();
-  btn_regenerate_.Render();
 
   slider_size_.Render(
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
@@ -142,7 +129,15 @@ void UiTerrainMode::Render() {
   slider_size_.RenderIcon();
   slider_falloff_.RenderIcon();
 
+  // Bake / Slots::Edit / NoiseEdit
+  if (render_slots_config_) {
+    config_.Render();
+  } else if (render_bake_config_) {
+    bake_config_.Render();
+  }
 }
+
+
 
 void UiTerrainMode::RenderPicking() {
   glActiveTexture(GL_TEXTURE0);

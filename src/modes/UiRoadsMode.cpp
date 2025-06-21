@@ -158,6 +158,6 @@ void UiRoadsMode::BindCallbacks() {
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
 }
 
-int UiRoadsMode::Hover(std::uint32_t global_id) {
-  return -1;
+data::TextId UiRoadsMode::Hover(std::uint32_t global_id) {
+  return data::TextId::kNone;
 }

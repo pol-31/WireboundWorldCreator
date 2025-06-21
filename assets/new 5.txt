@@ -1,0 +1,17 @@
+noise TEXT for negative (1/3)
+typo in kTerrainBakeErosinoStepInput,
+UiSlots add edge-vertex & select-edit modes
+UiSlots::Remove() sprite (to remove/reset selected vertex/edge)
+UiSlots::Add and flip_add-select for terrain
+bool terrain_edit_noise_tiling
+
+class UiTextLabel;
+class UiTextInput;
+class UiNumberInput;
+class UiPalette;
+class UiColorIndicator;
+class UiHeightmapSprite;
+
+How to represent terrain in 3d? correct:layers, BUT how to be with mountain climbing?
+okay, NO abcose angles - ONLY heightmap, but layered on Y.
+SO: ArbitraryGraph.h

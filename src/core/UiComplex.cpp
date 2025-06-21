@@ -15,7 +15,7 @@ UiLoading::UiLoading(
     UiStaticSprite&& sprite80,
     UiStaticSprite&& sprite90,
     UiStaticSprite&& sprite100)
-    : UiCallable(sprite0.GetId(), {}),
+    : UiBase(sprite0.GetId(), {}),
       sprites_{
           {std::move(sprite0), std::move(sprite10), std::move(sprite20),
            std::move(sprite30), std::move(sprite40), std::move(sprite50),
@@ -33,7 +33,7 @@ UiLoading::UiLoading(
 }
 
 UiLoading::UiLoading(UiLoading&& other) noexcept
-    : UiCallable(std::move(other)),
+    : UiBase(std::move(other)),
       sprites_(std::move(other.sprites_)) {
   gUiComponents[sprites_[0].GetId() - details::kIdOffsetUi].ui
       = static_cast<UiTransformDbg*>(this);
@@ -68,7 +68,7 @@ void UiLoading::UpdateTransform() {
 UiWindowBase::UiWindowBase(
     UiDynamicSprite&& sprite,
     float size_scale, UiSharedResources& ui_shared_resources)
-    : UiCallable(sprite.GetId(), {}),
+    : UiBase(sprite.GetId(), {}),
       sprite_(std::move(sprite)),
       ui_shared_resources_(ui_shared_resources),
       speed_(4.0f),
@@ -77,7 +77,7 @@ UiWindowBase::UiWindowBase(
 }
 
 UiWindowBase::UiWindowBase(UiWindowBase&& other) noexcept
-    : UiCallable(std::move(other)),
+    : UiBase(std::move(other)),
       sprite_(std::move(other.sprite_)),
       speed_(other.speed_),
       progress_(other.progress_),
@@ -633,7 +633,7 @@ UiPopUpBase::UiPopUpBase(
     UiSharedResources& ui_shared_resources,
     LocalTransform start_transform,
     LocalTransform end_transform)
-    : UiCallable(sprite.GetId(), {}),
+    : UiBase(sprite.GetId(), {}),
       sprite_(std::move(sprite)),
       start_transform_(start_transform),
       end_transform_(end_transform),
@@ -644,7 +644,7 @@ UiPopUpBase::UiPopUpBase(
 }
 
 UiPopUpBase::UiPopUpBase(UiPopUpBase&& other) noexcept
-    : UiCallable(std::move(other)),
+    : UiBase(std::move(other)),
       sprite_(std::move(other.sprite_)),
       cur_transform_(other.cur_transform_),
       start_transform_(other.start_transform_),

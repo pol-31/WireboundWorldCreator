@@ -35,20 +35,20 @@ LocalTransformLinear GetParentDbgTransform(size_t id);
 
 extern std::array<data::UiData, data::gVboIdSize> gUiComponents;
 
-class UiCallable {
+class UiBase {
  public:
   using CallableType = std::function<void()>;
 
-  UiCallable(data::VboIdMain vbo_texture, data::TextId text_id,
+  UiBase(data::VboIdMain vbo_texture, data::TextId text_id,
              CallableType action);
 
-  UiCallable(size_t ui_data_id, CallableType&& action);
+  UiBase(size_t ui_data_id, CallableType&& action);
 
-  UiCallable(UiCallable&& other) noexcept = default;
-  UiCallable(const UiCallable& other) = delete;
+  UiBase(UiBase&& other) noexcept = default;
+  UiBase(const UiBase& other) = delete;
 
-  UiCallable& operator=(UiCallable&& other) = delete;
-  UiCallable& operator=(const UiCallable& other) = delete;
+  UiBase& operator=(UiBase&& other) = delete;
+  UiBase& operator=(const UiBase& other) = delete;
 
   /// different components have different params and shaders for Render()
   /// and RenderPicking(), therefore now we can't provide enough support
@@ -65,6 +65,11 @@ class UiCallable {
   /// non-virtual - one for all
   virtual data::TextId Hover();
 
+  virtual void UpdateTransform(
+      float x_translate, float y_translate, float scale) = 0;
+
+  virtual void UpdateTransform() = 0;
+
   [[nodiscard]] std::uint32_t GetId() const;
 
   [[nodiscard]] std::size_t GetVboOffset() const;
@@ -72,34 +77,40 @@ class UiCallable {
   [[nodiscard]] data::TextId GetTextId() const;
 
  private:
-  UiCallable(data::UiData ui_data, CallableType&& action);
+  UiBase(data::UiData ui_data, CallableType&& action);
 
   size_t ui_data_id_;
   std::function<void()> action_;
 };
 
-class UiCallablePad final : public UiCallable {
+class UiBasePad final : public UiBase {
  public:
-  UiCallablePad() : UiCallable(data::VboIdMain::kMenuTerrain, data::TextId::kNone, {}) {}
-
+  UiBasePad()
+      : UiBase(data::VboIdMain::kMenuTerrain, data::TextId::kNone, {}) {}
   void Press() override {
     std::cerr << "Pad was called, smt went wrong" << std::endl;
   }
+
+  void UpdateTransform(
+      float x_translate, float y_translate, float scale) override {}
+
+  void UpdateTransform() override {}
 };
 
 template<std::size_t MaxSize>
 class UiEventHandler {
  public:
-  UiEventHandler(std::initializer_list<UiCallable*> widgets) {
+  UiEventHandler() = default;
+
+  UiEventHandler(std::initializer_list<UiBase*> widgets) {
     Init(widgets);
   }
 
-  /// according to UiCallable as a member
-  UiEventHandler(UiEventHandler&& other) = delete;
-  UiEventHandler(const UiEventHandler& other) = delete;
+  UiEventHandler(UiEventHandler&& other) = default;
+  UiEventHandler(const UiEventHandler& other) = default;
 
-  UiEventHandler& operator=(UiEventHandler&& other) = delete;
-  UiEventHandler& operator=(const UiEventHandler& other) = delete;
+  UiEventHandler& operator=(UiEventHandler&& other) = default;
+  UiEventHandler& operator=(const UiEventHandler& other) = default;
 
   bool Press(int id) {
     if (id < start_ || id > end_) {
@@ -124,11 +135,11 @@ class UiEventHandler {
 
 
  private:
-  void Init(std::initializer_list<UiCallable*> widgets) {
+  void Init(std::initializer_list<UiBase*> widgets) {
     start_ = std::numeric_limits<int>::max();
     end_ = std::numeric_limits<int>::min();
 
-    for (UiCallable* widget : widgets) {
+    for (UiBase* widget : widgets) {
       int id = widget->GetId();
       start_ = std::min(start_, id);
       end_ = std::max(end_, id);
@@ -141,7 +152,7 @@ class UiEventHandler {
 
     widgets_.fill(&ui_callable_pad_);
 
-    for (UiCallable* widget : widgets) {
+    for (UiBase* widget : widgets) {
       int index = widget->GetId() - start_;
 #ifndef NDEBUG
       // if exception is here - indices aren't conseq... maybe
@@ -154,19 +165,11 @@ class UiEventHandler {
 
   int start_ = 0;
   int end_ = 0;
-  std::array<UiCallable*, MaxSize> widgets_;
-  inline static UiCallablePad ui_callable_pad_{};
+  std::array<UiBase*, MaxSize> widgets_;
+  inline static UiBasePad ui_callable_pad_{};
 };
 
-/// interface, all ctors default
-class UiTransformDbg {
- public:
-  virtual void UpdateTransform(
-      float x_translate, float y_translate, float scale) = 0;
-  virtual void UpdateTransform() = 0;
-};
-
-class UiDynamicSprite : public UiCallable, public UiTransformDbg {
+class UiDynamicSprite : public UiBase {
  public:
   UiDynamicSprite(data::VboIdMain vbo_texture, data::TextId text_id,
                   CallableType action = {});
@@ -246,7 +249,7 @@ class UiDynamicSprite : public UiCallable, public UiTransformDbg {
   float extra_scale_{1.0f};
 };
 
-class UiStaticSprite : public UiCallable, public UiTransformDbg {
+class UiStaticSprite : public UiBase {
  public:
   UiStaticSprite(data::VboIdMain vbo_texture, data::TextId text_id,
                  CallableType action = {});
@@ -337,7 +340,7 @@ class UiSpriteTransformation {
   bool looping_{false};
 };
 
-class UiSliderV final : public UiTransformDbg, public UiCallable {
+class UiSliderV final : public UiBase {
  public:
   UiSliderV(UiStaticSprite&& fill_sprite,
            UiStaticSprite&& back_sprite,
@@ -393,7 +396,7 @@ class UiSliderV final : public UiTransformDbg, public UiCallable {
   static const float kTrackLengthFactor;
 };
 
-class UiSliderH final : public UiTransformDbg, public UiCallable {
+class UiSliderH final : public UiBase {
  public:
   UiSliderH(UiDynamicSprite&& fill_sprite,
             UiDynamicSprite&& back_sprite,
@@ -469,7 +472,7 @@ class UiSliderH final : public UiTransformDbg, public UiCallable {
   static const float kTrackLengthFactor;
 };
 
-class UiSliderH3 final : public UiTransformDbg, public UiCallable {
+class UiSliderH3 final : public UiBase {
  public:
   UiSliderH3(UiDynamicSprite&& fill_sprite,
              UiDynamicSprite&& back_sprite,
@@ -543,8 +546,73 @@ class UiSliderH3 final : public UiTransformDbg, public UiCallable {
   static const float kTrackLengthFactor;
 };
 
+class UiSliderH2 final : public UiBase {
+ public:
+  UiSliderH2(UiDynamicSprite&& back_sprite,
+             UiDynamicSprite&& icon_sprite,
+             float scale = 1.0f);
+
+  UiSliderH2(UiSliderH2&& other) noexcept;
+  UiSliderH2(const UiSliderH2& other) = delete;
+
+  UiSliderH2& operator=(UiSliderH2&& other) = delete;
+  UiSliderH2& operator=(const UiSliderH2& other) = delete;
+
+  void Render(glm::vec2 mouse_pos);
+
+  void RenderIcon();
+
+  void RenderPicking() const;
+
+  [[nodiscard]] data::TextId Hover(std::uint32_t id);
+
+  void Press() override {
+    pressed_ = true;
+  }
+
+  void Release() override {
+    pressed_ = false;
+  }
+
+  bool Scroll(GLuint id, float yoffset) override;
+
+  /// UiSlider has the same id as a track_, so it's like its wrapper.
+  /// We don't render UiSlider id, but
+  /// for comparison (e.g. in key callback) we directly slider.GetId()
+  [[nodiscard]] std::uint32_t GetTrackId() const {
+    return back_sprite_.GetId();
+  }
+
+  void SetParentTransform(LocalTransform transform);
+
+  [[nodiscard]] float GetProgress() const;
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+  void UpdateTransform() override;
+
+ private:
+  // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
+  void Set(glm::vec2 mouse_pos);
+
+  void Set(float progress);
+
+  void UnHover();
+
+  UiDynamicSprite back_sprite_;
+  UiDynamicSprite icon_sprite_;
+
+  float progress_{0.0f};
+  bool pressed_{false};
+  float centre_;
+  float length_;
+  float scale_{1.0f};
+  static const float kTrackLengthFactor;
+};
+
 /// You should pass action to off_ sprite (see Press());
-class UiToggle final : public UiTransformDbg, public UiCallable {
+class UiToggle final : public UiBase {
  public:
   UiToggle(UiStaticSprite&& off, UiStaticSprite&& on1,
            UiStaticSprite&& on2, UiStaticSprite&& on3);

@@ -140,7 +140,6 @@ void UiBiomesMode::BindCallbacks() {
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
 }
 
-int UiBiomesMode::Hover(std::uint32_t global_id) {
-  // NOT IMPLEMENTED
-  return -1;
+data::TextId UiBiomesMode::Hover(std::uint32_t global_id) {
+  return data::TextId::kNone;
 }

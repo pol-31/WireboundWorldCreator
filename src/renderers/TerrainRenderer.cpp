@@ -12,7 +12,7 @@ TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
               paths.shader_terrain_tese, paths.shader_terrain_frag),
       shader_picking_(paths.shader_height_map_picking_vert,
                       paths.shader_height_map_picking_frag),
-      nmap_(1024, 1024, GL_RG8) {
+      nmap_("../../ProvingGround\\cmake-build-debug\\normal_map.png", GL_RG8) {
   Init();
 }
 
@@ -31,12 +31,13 @@ void TerrainRenderer::Render() {
   }
   shader_.Bind();
   glActiveTexture(GL_TEXTURE0);
+
   tile_.map_terrain_height.Bind();
   glActiveTexture(GL_TEXTURE1);
   tile_.map_erosion_deposition.Bind();
 
   glActiveTexture(GL_TEXTURE2);
-  nmap_.Bind();
+  tile_.map_terrain_normal.Bind();
   glActiveTexture(GL_TEXTURE3);
   tile_.map_terrain_occlusion.Bind();
 
@@ -51,14 +52,7 @@ void TerrainRenderer::Render() {
 
 //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
 void TerrainRenderer::RenderPicking() const {
-  shader_picking_.Bind();
-  glActiveTexture(GL_TEXTURE0);
-  tile_.map_terrain_height.Bind();
-  // TODO: 0 as an offset from Details.h
-  glUniform1ui(shader::kHeightMapPickingIdOffset, static_cast<unsigned int>(0));
-  glBindVertexArray(vao_);
-  glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1024 * 1024);
-  glBindVertexArray(0);
+  //TODO: remove
 }
 
 glm::vec3 TerrainRenderer::GetYPosition(int vertex_id) const {

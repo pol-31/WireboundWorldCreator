@@ -63,8 +63,8 @@ std::vector<Grass::Blade> Grass::GenerateBlades(
 
 
 Grass::Grass(const Paths& paths)
-    : grass_shader_(paths.shader_grass_vert, paths.shader_grass_tesc,
-                    paths.shader_grass_tese, paths.shader_grass_frag),
+    : grass_shader_(/*paths.shader_grass_vert, paths.shader_grass_tesc,
+                    paths.shader_grass_tese, paths.shader_grass_frag*/),
       grass_compute_shader_(paths.shader_grass_comp) {
   Init();
 }

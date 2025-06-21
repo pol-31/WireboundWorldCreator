@@ -51,13 +51,13 @@ void TextRenderer::DeInit() {
   glDeleteFramebuffers(2, fbos);
 }
 
-void TextRenderer::RenderMenuText(int id) {
+void TextRenderer::RenderMenuText(data::TextId id) {
   glActiveTexture(GL_TEXTURE0);
   tex_menu_.Bind();
   render_shader_.Bind();
   glUniform3f(4, 0.2118f, 0.1647f, 0.0745f);
 
-  Aabb coords = coords_menu_[id];
+  Aabb coords = coords_menu_[static_cast<int>(id)];
   auto coords_transform = CoordsToTransformMatrix(coords);
   glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
   int width = coords.right - coords.left;
@@ -71,12 +71,13 @@ void TextRenderer::RenderMenuText(int id) {
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderMenuTextPicking(int id) {
+void TextRenderer::RenderMenuTextPicking(data::TextId id) {
   glActiveTexture(GL_TEXTURE0);
   tex_menu_.Bind();
   render_shader_picking_.Bind();
 
-  auto coords_transform = CoordsToTransformMatrix(coords_menu_[id]);
+  auto coords_transform = CoordsToTransformMatrix(
+      coords_menu_[static_cast<int>(id)]);
   glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
   text_slot_.RenderPicking();
 
@@ -84,13 +85,13 @@ void TextRenderer::RenderMenuTextPicking(int id) {
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderModeText(int id) {
+void TextRenderer::RenderModeText(data::TextId id) {
   glActiveTexture(GL_TEXTURE0);
   tex_mode_.Bind();
   render_shader_.Bind();
   glUniform3f(4, 0.2118f, 0.1647f, 0.0745f);
 
-  Aabb coords = coords_mode_[id];
+  Aabb coords = coords_mode_[static_cast<int>(id)];
   auto coords_transform = CoordsToTransformMatrix(coords);
   glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
   int width = coords.right - coords.left;
@@ -104,12 +105,13 @@ void TextRenderer::RenderModeText(int id) {
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderModeTextPicking(int id) {
+void TextRenderer::RenderModeTextPicking(data::TextId id) {
   glActiveTexture(GL_TEXTURE0);
   tex_mode_.Bind();
   render_shader_picking_.Bind();
 
-  auto coords_transform = CoordsToTransformMatrix(coords_mode_[id]);
+  auto coords_transform = CoordsToTransformMatrix(
+      coords_mode_[static_cast<int>(id)]);
   glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
   text_slot_.RenderPicking();
 

@@ -4,7 +4,7 @@
 #include "Ui.h"
 
 /// loading only on the bottom of the screen (so use UiStaticSprite)
-class UiLoading final : public UiTransformDbg, public UiCallable {
+class UiLoading final : public UiBase {
  public:
   UiLoading(UiStaticSprite&& sprite0,
             UiStaticSprite&& sprite10,
@@ -37,9 +37,9 @@ class UiLoading final : public UiTransformDbg, public UiCallable {
   std::array<UiStaticSprite, 11> sprites_;
 };
 
-class UiWindowBase : public UiTransformDbg, public UiCallable {
+class UiWindowBase : public UiBase {
  public:
-  using UiTransformDbg::UpdateTransform;
+  using UiBase::UpdateTransform;
 
   UiWindowBase(UiDynamicSprite&& sprite,
                float size_scale,
@@ -285,9 +285,9 @@ class UiConfirmation final : public UiWindowBase {
 };
 
 /// only one scale allowed (no x or y scale)
-class UiPopUpBase : public UiTransformDbg, public UiCallable {
+class UiPopUpBase : public UiBase {
  public:
-  using UiTransformDbg::UpdateTransform;
+  using UiBase::UpdateTransform;
 
   UiPopUpBase(UiDynamicSprite&& sprite,
               float size_scale,

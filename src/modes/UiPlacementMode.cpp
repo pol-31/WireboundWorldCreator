@@ -237,8 +237,8 @@ void UiPlacementMode::BindCallbacks() {
   BtnTrees();
 }
 
-int UiPlacementMode::Hover(std::uint32_t global_id) {
-  return -1;
+data::TextId UiPlacementMode::Hover(std::uint32_t global_id) {
+  return data::TextId::kNone;
 }
 
 void UiPlacementMode::InitHeightMap(std::string_view path, Texture& texture) {

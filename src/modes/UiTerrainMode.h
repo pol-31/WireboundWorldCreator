@@ -34,22 +34,28 @@ class UiTerrainMode final : public IUiMode {
   static void KeyCallback(
       GLFWwindow* window, int key, int scancode, int action, int mods);
 
-  UiStaticSprite sprite_flatten_;
-
   UiStaticSprite btn_update_;
-  UiStaticSprite btn_regenerate_;
+  UiStaticSprite sprite_flatten_;
+  UiToggle toggle_flatten_;
 
   UiSliderV slider_size_;
   UiSliderV slider_falloff_;
 
-  UiToggle toggle_flatten_;
+  UiStaticSprite btn_bake_;
 
+  GridGraph graph_; // like ArbitraryGraph
+  UiSlots slots_;
+
+  UiTerrainEditConfig slots_edit_;
+  UiTerrainBakeConfig terrain_heights_;
+
+  //TODO: refactor naming convention (texture_, shader_, slider_, etc...)
+
+  //TODO: too much for UiEventHandler
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kTerrainFalloffIcon) -
       static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1
       > ui_event_handler_;
-
-  bool smooth_mode_{false};
 
   UiTerrainGenerator ui_terrain_generator_;
 };

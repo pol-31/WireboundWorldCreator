@@ -31,14 +31,11 @@ void main(void) {
     int y = gl_InstanceID >> 10;
 //    vs_out.id = float(gl_InstanceID);
     vec2 offs = vec2(x, y);
-    vec2 tex_coords = (vertices[gl_VertexID].xz + offs + vec2(0.5)) / 1024.0;
+    vec2 tex_coords = (vertices[gl_VertexID].xz + vec2(0.5)) / 64.0 + offs / 1024.0;
     vec4 p = vertices[gl_VertexID] + vec4(float(x - 512), 0.0,
-    float(y - 512), 0.0) / 16.0f;
+    float(y - 512), 0.0) / 16.0f/** - vec4(0.5f, 0.0f, 0.5f, 0.0f)*/;
     p.y = texture(tex_displacement, tex_coords).r * dmap_depth;
     gl_Position = camera.proj * camera.view * transform * p;
 
-    // Provoking Vertex's id (we draw triangle strip here)
-    vert_id = uint(gl_InstanceID) + id_offset; // TODO: incorrect id due to 64/64 draw,
-    // TODO: we need 1024 by 1024 call !!!
-//    return intentional_mistake_see_above;
+    vert_id = uint(gl_InstanceID) + id_offset;
 }

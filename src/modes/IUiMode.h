@@ -14,7 +14,7 @@ class IUiMode {
 
   virtual void Render() = 0;
   virtual void RenderPicking()= 0;
-  virtual int Hover(std::uint32_t global_id) = 0;
+  virtual data::TextId Hover(std::uint32_t global_id) = 0;
 
 #ifndef NDEBUG
   virtual glm::uvec2 GetPrerenderTextIds() const noexcept {

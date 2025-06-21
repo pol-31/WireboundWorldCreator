@@ -148,7 +148,7 @@ void UiObjectsMode::BindCallbacks() {
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
 }
 
-int UiObjectsMode::Hover(std::uint32_t global_id) {
+data::TextId UiObjectsMode::Hover(std::uint32_t global_id) {
   // NOT IMPLEMENTED
-  return -1;
+  return data::TextId::kNone;
 }

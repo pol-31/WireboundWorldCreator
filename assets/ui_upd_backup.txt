@@ -1,0 +1,166 @@
+--- vert shader ---
+// in_Position was bound to attribute index 0 and in_Color was bound to attribute index 1
+in vec3 in_Position;
+in vec3 in_Normal;
+
+//Color Stuff
+uniform vec3 flatColor;
+uniform vec3 steepColor;
+uniform float steepness;
+
+//Uniforms
+uniform mat4 model;
+uniform mat4 projectionCamera;
+uniform mat4 dbmvp;
+
+--- frag shader ---
+//Lighting Settings
+uniform vec3 lightCol;
+uniform vec3 lightPos;
+uniform vec3 lookDir;
+uniform float lightStrength;
+
+//Sampler for the ShadowMap
+uniform sampler2D shadowMap;
+
+
+- to discard shadow from terrain, I need to render terrain as a mesh...
+- terrain picking:
+glm::vec3 rayOrigin, rayDir = screenToWorldRay(mouseX, mouseY, projMatrix, viewMatrix);
+
+float gridSize = 1.0f;
+for (float t = 0.0f; t < maxDistance; t += gridSize * 0.5f) {
+    glm::vec3 p = rayOrigin + rayDir * t;
+    int x = floor(p.x + halfMapSize);
+    int z = floor(p.z + halfMapSize);
+
+    if (x < 0 || x >= mapWidth || z < 0 || z >= mapHeight) continue;
+
+    float height = heightmap[z * mapWidth + x]; // read CPU-side heightmap
+    if (p.y <= height) {
+        // Hit terrain
+        return glm::vec3(p.x, height, p.z);
+    }
+}
+- terrain fragment shader
+- неприємно натискать на button...
+
+
+
+
+--- mode terrain
+ui_slots with create,remove,edit,visible_toggle,text_slot
+desk_slots_edit
+btn close, accept
+heightmap_show sprite
+8 slider mix_factor, 1 toggle_(visible/not), 1 btn_settings, 8 text slots
+3 number text input (T), 1 text slot
+3 number text input (S), 1 text slot
+3 number text input (R), 1 text slot
+1 text field (rename)
+1 sprite for "random generation"
+color palette & brightness level & embroidery indicator
+
++ invert button for each !!!
+_____________________
+perlinNoise			|	2  sliders + texts: scale, seed + invert toggle
+cellularNoise(F1)	|	3  sliders + texts: scale, jitter, seed + invert toggle
+metaballs			|	4  sliders + texts: scale, jitter, phase, seed + invert toggle
+fbmGrid				|	10 sliders + texts: scale, octaves, shift, timeShift, gain, lacunarity, translate, warpStrength, octaveFactor, seed + invert toggle
+fbmMulti			|	5  sliders + texts: scale, lacunarity, octaves, phase, seed + invert toggle
+fbmdPerlin			|	10 sliders + texts: scale, octaves, shift, transform, gain, lacunarity, slopeness, octaveFactor, negative, seed + invert toggle
+fbmWarp				|	13 sliders + texts: scale, factors, octaves, shifts, timeShift, gain, lacunarity, slopeness, octaveFactor, negative, seed, q, r + invert toggle
+fbmPerlinWarp		|	13 sliders + texts: scale, factors, octaves, shifts, timeShift, gain, lacunarity, slopeness, octaveFactor, negative, seed, q, r + invert toggle
+____________________|
+
+desk_bake
+btn close, accept,
+2 number text input (erosion w/t steps), 2 text slots
+heightmap_show sprite (after each 1000 steps)
+// --- no details config by now ---
+
+--- mode water (reorder layer with layer sliders)
++ 3 text slots (merge text with \n)
+ui_slots + text_slot + toggle visible, btn_config
+3 toggles show/hide layer
+
+desk_slot_edit
+accept, close
+1 text field (rename)
+color palette & brightness level & embroidery indicator
+type-drow-down text_slot, left, right
+
+
+--- mode roads
+ui_slots + text_slot + toggle visible, btn_config
+
+desk_slot_edit
+accept, close
+1 text field (rename)
+color palette & brightness level & embroidery indicator
+type-drow-down text_slot, left, right
+
+--- mode fences
+ui_slots + text_slot + toggle visible, btn_config
+
+desk_slot_edit
+accept, close
+1 text field (rename)
+color palette & brightness level & embroidery indicator
+type-drow-down text_slot, left, right
+
+--- mode placement
+4 toggles (for each placement type)
+
+--- mode objects (nothing)
+
+--- mode biomes
+ui_slots + text_slot + toggle visible, btn_config
+3 UiSliderDirection(360 deg) (wind/sun dir, time) + 3 text slots
+
+desk_slot_edit
+accept, close
+1 text field (rename)
+color palette & brightness level & embroidery indicator
+6 sliders (temperature, precipitations, clouds,
+wind/sun strength, time speeed) + 6 text slots
+
+--- mode tiles (nothing)
+
+--- extra sprites: tomb, flowers for map
+
+
+ui_load/save desk
+btn close/accept
+text_slot
+text_input_slot
+
+ui_tip_info desk
+text_slot
+
+--- menu
+btn load, save
+pointing_arrow
+
+settings_desk_left_appearing
+
+
+--- settings
+show tip info toggle + text_slot
+type-drow-down resolution text_slot, left, right
+
+
+spare_text_slot#1
+spare_text_slot#2
+spare_text_slot#3
+spare_text_slot#4
+spare_text_slot#5
+spare_text_slot#6
+spare_text_slot#7
+spare_text_slot#8
+spare_text_slot#9
+spare_text_slot#10
+
+text slot for ui_confirmation_menu
+
+compass

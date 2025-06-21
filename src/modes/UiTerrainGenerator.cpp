@@ -93,8 +93,9 @@ void UiTerrainGenerator::ErodeWithFlow(
 
     while(drop.volume > minVol) {
       glm::ivec2 ipos{static_cast<int>(drop.pos.x), static_cast<int>(drop.pos.y)};
-      if (ipos.x < 0 || ipos.x >= (int)dim.x || ipos.y < 0 || ipos.y >= (int)dim.y)
+      if (ipos.x < 0 || ipos.x >= (int)dim.x || ipos.y < 0 || ipos.y >= (int)dim.y) {
         break;
+      }
 
       // Instead of updating speed by surface normal, move drop along flow_dir vector at current position
       glm::vec2 dir = flow_dir[ipos.y][ipos.x];  // assuming [row][col] access
@@ -111,8 +112,9 @@ void UiTerrainGenerator::ErodeWithFlow(
       int x2 = (int)drop.pos.x;
       int y2 = (int)drop.pos.y;
 
-      if (x2 < 0 || x2 >= (int)dim.x || y2 < 0 || y2 >= (int)dim.y)
+      if (x2 < 0 || x2 >= (int)dim.x || y2 < 0 || y2 >= (int)dim.y) {
         break;
+      }
 
       float heightDiff = height_map_data_[y1][x1] - height_map_data_[y2][x2];
       float maxSediment = drop.volume * glm::length(drop.speed) * std::max(0.0f, heightDiff);

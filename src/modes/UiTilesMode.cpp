@@ -103,7 +103,6 @@ void UiTilesMode::BindCallbacks() {
   global_data->camera->SetMapCamera();
 }
 
-int UiTilesMode::Hover(std::uint32_t global_id) {
-  // NOT IMPLEMENTED
-  return -1;
+data::TextId UiTilesMode::Hover(std::uint32_t global_id) {
+  return data::TextId::kNone;
 }

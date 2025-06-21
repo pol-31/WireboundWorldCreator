@@ -23,9 +23,8 @@ UiSlots::UiSlots(
     UiDynamicSprite&& flip_point_edge_sprite,
     UiDynamicSprite&& slot_back,
     UiDynamicSprite&& slot_remove,
-    UiDynamicSprite&& slot_selected,
-    ArbitraryGraph& graph)
-    : UiCallable(slider.GetId(), {}),
+    UiDynamicSprite&& slot_selected)
+    : UiBase(slider.GetId(), {}),
       handler_(std::move(handler)),
       slider_(std::move(slider)),
       back_(std::move(back)),
@@ -62,7 +61,7 @@ UiSlots::UiSlots(
       ui_event_handler_({&create_, &flip_select_edit_back_,
                          &flip_point_edge_back_}),
       ui_shared_resources_(ui_shared_resources),
-      graph_(graph) {
+      graph_(ui_shared_resources) {
   gUiComponents[handler_.GetId() - details::kIdOffsetUi].parent_id_
       = back_.GetId();
   gUiComponents[slider_.GetId() - details::kIdOffsetUi].parent_id_
@@ -84,14 +83,14 @@ UiSlots::UiSlots(
   gUiComponents[slot_selected_.GetId() - details::kIdOffsetUi].parent_id_
       = slot_back_.GetId();
   gUiComponents[back_.GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
   gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
   UpdateTransform();
 }
 
 UiSlots::UiSlots(UiSlots&& other) noexcept
-    : UiCallable(std::move(other)),
+    : UiBase(std::move(other)),
       handler_(std::move(other.handler_)),
       slider_(std::move(other.slider_)),
       back_(std::move(other.back_)),
@@ -121,13 +120,13 @@ UiSlots::UiSlots(UiSlots&& other) noexcept
   length_ = other.length_;
   length_slots_ = other.length_slots_;
   gUiComponents[back_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiTransformDbg*>(this);
-  gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      = static_cast<UiBase*>(this);
+  gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
 }
 
 void UiSlots::UpdateRenderData() {
-  auto graphs_num = graph_.GetGraphNum();
+  auto graphs_num = graph_.GetSize();
   // total 6, visible 5
   slot_height_ = kSlotsLengthFactor * (slot_back_.GetTopBorder() - slot_back_.GetBottomBorder());
   auto scrollable_slots = static_cast<float>(std::max(graphs_num - 5, 0));
@@ -158,7 +157,7 @@ void UiSlots::Render(glm::vec2 mouse_pos) {
   bool show_selected = false;
   glm::vec2 selected_offset{0.0f};
   auto selected_slot_id = graph_.GetSlotId();
-  auto graphs_num = graph_.GetGraphNum();
+  auto graphs_num = graph_.GetSize();
   glm::vec2 next_offset = start_slot_translate_;
   for (int i = 0; i < std::min(kSlotsNum, graphs_num); ++i) {
     slot_back_.SetTranslate(next_offset);
@@ -173,7 +172,7 @@ void UiSlots::Render(glm::vec2 mouse_pos) {
   }
   next_offset = start_slot_translate_;
   for (int i = 0; i < std::min(kSlotsNum, graphs_num - cur_slots_offset_); ++i) {
-    auto graph_name = graph_.GetNamePtr(i + cur_slots_offset_);
+    auto graph_name = GetNamePtr(i + cur_slots_offset_);
     ui_shared_resources_.global_glfw_callback_data_.text_renderer->
         RenderText(graph_name, 1.0f, next_offset);
     next_offset.y -= slot_height_;
@@ -204,7 +203,7 @@ void UiSlots::RenderPicking() {
   bool show_selected = false;
   glm::vec2 selected_offset{0.0f};
   auto selected_slot_id = graph_.GetSlotId();
-  auto graphs_num = graph_.GetGraphNum();
+  auto graphs_num = graph_.GetSize();
   glm::vec2 next_offset = start_slot_translate_;
   for (int i = 0; i < std::min(kSlotsNum, graphs_num); ++i) {
     slot_back_.SetTranslate(next_offset);
@@ -220,7 +219,7 @@ void UiSlots::RenderPicking() {
 
   next_offset = start_slot_translate_;
   for (int i = 0; i < std::min(kSlotsNum, graphs_num - cur_slots_offset_); ++i) {
-    auto graph_name = graph_.GetNamePtr(i + cur_slots_offset_);
+    auto graph_name = GetNamePtr(i + cur_slots_offset_);
     ui_shared_resources_.global_glfw_callback_data_.text_renderer->
         RenderTextPicking(graph_name, 1.0f, next_offset);
     next_offset.y -= slot_height_;
@@ -280,16 +279,12 @@ void UiSlots::Set(float progress) {
   UpdateRenderData();
 }
 
-size_t UiSlots::Hover(std::uint32_t id) {
-  return slider_.Hover();
-}
-
 void UiSlots::Press() {
   pressed_ = true;
 }
 
 void UiSlots::FocusOnSelected(int slot_id) {
-  if (slot_id == -1 || graph_.GetGraphNum() < kSlotsNum) {
+  if (slot_id == -1 || graph_.GetSize() < kSlotsNum) {
     return;
   }
   float fractional_part;
@@ -301,7 +296,7 @@ void UiSlots::FocusOnSelected(int slot_id) {
     return;
   }
   float float_index = fractional_part + cur_slots_offset_;
-  auto graphs_num = graph_.GetGraphNum();
+  auto graphs_num = graph_.GetSize();
   auto scrollable_slots = static_cast<float>(std::max(graphs_num - 5, 0));
   std::cout << "was " << progress_;
   progress_ = float_index / scrollable_slots;
@@ -316,7 +311,7 @@ bool UiSlots::Press(int id) {
     FocusOnSelected(slot_id);
   } else if (id == slot_remove_.GetId()) {
     auto removed_id = GetSlotId();
-    if (graph_.GetGraphNum() > 0) {
+    if (graph_.GetSize() > 0) {
       std::cout << "graph removed " << removed_id << std::endl;
       graph_.RemoveGraph(removed_id);
       UpdateRenderData();
@@ -343,7 +338,7 @@ bool UiSlots::Scroll(GLuint id, float yoffset) {
     return false;
   }
   float normalized_yoffset = 0.2f * yoffset;
-  float factor = 1.0f / std::max(graph_.GetGraphNum() - kSlotsNum, 1);
+  float factor = 1.0f / std::max(graph_.GetSize() - kSlotsNum, 1);
   float progress = std::clamp(progress_ - normalized_yoffset * factor, 0.0f, 1.0f);
   Set(progress);
   return true;
@@ -411,4 +406,30 @@ void UiSlots::FlipPointEdge() {
         {glm::vec2{0.0f}, 1.0f, glm::two_pi<float>()});
   }
   flip_point_edge_.RunAnimation();
+}
+
+/// as a decorator for graph_
+
+void UiSlots::CreateGraph() {
+  graph_.CreateGraph();
+}
+
+void UiSlots::RemoveGraph() {
+  graph_.Remove();
+}
+
+void UiSlots::RenderGraph() {
+  graph_.Render();
+}
+
+void UiSlots::PressGraph(GLuint id) {
+  graph_.Press(id);
+}
+
+FixedSizeQueue<char, 64>* UiSlots::GetNamePtr(int id) {
+  return &graph_.GetBaseInstanceData(id)->name;
+}
+
+int UiSlots::GetSize() const noexcept {
+  return graph_.GetSize();
 }

@@ -43,7 +43,7 @@ void UiFencesMode::MouseButtonCallback(
         std::cout << "Coordinates are: " << (pressed_id & 1023)
                   << " and " << (pressed_id >> 10) << std::endl;
         //TODO: if water/other subtract maybe...
-        fences->graphs_.Press(pressed_id);
+        fences->slots_.Press(pressed_id);
       }
       fences->ui_event_handler_.Press(pressed_id);
       fences->slots_.Press(pressed_id);
@@ -87,14 +87,13 @@ void UiFencesMode::KeyCallback(
 UiFencesMode::UiFencesMode(
     UiSharedResources& ui_shared_resources)
     : IUiMode(ui_shared_resources,
-              UiStaticSprite{data::VboIdMain::kFencesUiFencesMode,
+              UiStaticSprite{data::VboIdMain::kFencesFencesMode,
                              data::TextId::kNone}),
       btn_bake_picket_(data::VboIdMain::kFencesPicket, data::TextId::kNone),
       btn_bake_chain_linked_(data::VboIdMain::kFencesChainLink,
                              data::TextId::kNone),
       btn_bake_wooden_(data::VboIdMain::kFencesWooden, data::TextId::kNone),
-      btn_remove_(data::VboIdMain::kFencesRemove, data::TextId::kNone),
-      graphs_(ui_shared_resources_),
+      btn_remove_(data::VboIdMain::kFencesFencesMode, data::TextId::kNone),
       slots_(
           ui_shared_resources_,
           {data::VboIdMain::kFencesSlotsHandler, data::TextId::kNone},
@@ -102,9 +101,9 @@ UiFencesMode::UiFencesMode(
           {data::VboIdMain::kFencesSlotsBack, data::TextId::kNone},
           {data::VboIdMain::kFencesSlotsCreate, data::TextId::kNone,
            [this]() {
-             this->graphs_.CreateGraph();
+             this->slots_.CreateGraph();
              ui_shared_resources_.global_glfw_callback_data_.StartCharInput(
-                 graphs_.GetNamePtr(graphs_.GetSize() - 1));
+                 slots_.GetNamePtr(slots_.GetSize() - 1));
            }},
           data::VboIdMain::kFencesSlotsFlipSelectEdit_Back, data::TextId::kNone,
           data::VboIdMain::kFencesSlotsFlipPointEdge_Back, data::TextId::kNone,
@@ -112,8 +111,7 @@ UiFencesMode::UiFencesMode(
           {data::VboIdMain::kFencesSlotsFlipPointEdge, data::TextId::kNone},
           {data::VboIdMain::kFencesSlotsSlot, data::TextId::kNone},
           {data::VboIdMain::kFencesSlotsRemove, data::TextId::kNone},
-          {data::VboIdMain::kFencesSlotsSelected, data::TextId::kNone},
-          graphs_),
+          {data::VboIdMain::kFencesSlotsSelected, data::TextId::kNone}),
       ui_event_handler_({
           &btn_bake_picket_, &btn_bake_chain_linked_,
           &btn_bake_wooden_, &btn_remove_, &slots_}) {}
@@ -136,7 +134,7 @@ void UiFencesMode::Render() {
       = ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
   slots_.Render(mouse_pos);
 
-  graphs_.Render();
+  slots_.RenderGraph();
 }
 
 void UiFencesMode::RenderPicking() {
@@ -154,10 +152,6 @@ void UiFencesMode::RenderPicking() {
 
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   slots_.RenderPicking();
-}
-
-void UiFencesMode::Remove() {
-  graphs_.Remove();
 }
 
 // auto insidePoints = GenHeightMap();
@@ -185,6 +179,6 @@ void UiFencesMode::BindCallbacks() {
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
 }
 
-int UiFencesMode::Hover(std::uint32_t global_id) {
-  return -1;
+data::TextId UiFencesMode::Hover(std::uint32_t global_id) {
+  return data::TextId::kNone;
 }

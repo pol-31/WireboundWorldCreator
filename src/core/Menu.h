@@ -3,6 +3,7 @@
 
 #include "../modes/IUiMode.h"
 #include "Ui.h"
+#include "UiComplex.h"
 #include "../common/TextRenderer.h"
 
 class UiSharedResources;
@@ -31,7 +32,7 @@ class Menu {
 
   void RenderPicking();
 
-  int Hover(uint32_t global_id);
+  data::TextId Hover(uint32_t global_id);
 
   bool Press(uint32_t global_id);
 

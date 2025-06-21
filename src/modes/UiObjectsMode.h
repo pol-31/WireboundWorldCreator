@@ -10,7 +10,7 @@ class UiObjectsMode final : public IUiMode {
 
   void Render() override;
   void RenderPicking() override;
-  int Hover(std::uint32_t global_id) override;
+  data::TextId Hover(std::uint32_t global_id) override;
 
   void BindCallbacks() override;
 

@@ -59,13 +59,13 @@ class TextRenderer {
                          float scale, glm::vec2 position,
                          Alignment alignment = Alignment::kCentre);
 
-  void RenderMenuText(int id);
+  void RenderMenuText(data::TextId id);
 
-  void RenderMenuTextPicking(int id);
+  void RenderMenuTextPicking(data::TextId id);
 
-  void RenderModeText(int id);
+  void RenderModeText(data::TextId id);
 
-  void RenderModeTextPicking(int id);
+  void RenderModeTextPicking(data::TextId id);
 
   void PrerenderMenuText(int start, int end);
 
