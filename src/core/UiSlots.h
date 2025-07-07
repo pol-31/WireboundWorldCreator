@@ -2,93 +2,14 @@
 #define WIREBOUNDWORLDCREATOR_SRC_CORE_UISLOTS_H_
 
 #include "Ui.h"
+#include "UiComplex.h"
 
-//TODO: interface?
-class IUiSlots final : public UiBase {}
-class UiSlotsBase final : public UiBase {
- public:
-  UiSlotsBase(UiSharedResources& ui_shared_resources,
-           UiDynamicSprite&& handler,
-           UiDynamicSprite&& slider,
-           UiDynamicSprite&& back,
-           UiDynamicSprite&& create,
-           UiDynamicSprite&& slot_back,
-           UiDynamicSprite&& slot_remove,
-           UiDynamicSprite&& slot_selected);
-
-  UiSlotsBase(UiSlotsBase&& other) noexcept;
-  UiSlotsBase(const UiSlotsBase& other) = delete;
-
-  UiSlotsBase& operator=(UiSlotsBase&& other) = delete;
-  UiSlotsBase& operator=(const UiSlotsBase& other) = delete;
-
-  void Render(glm::vec2 mouse_pos);
-
-  void RenderPicking();
-
-  void Press() override;
-
-  bool Press(int id);
-
-  data::TextId Hover(int id) {
-    return ui_event_handler_.Hover(id);
-  }
-
-  void Release() override;
-
-  bool Scroll(GLuint id, float yoffset) override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
-  void UpdateTransform() override;
-
-  void FlipSelectEdit();
-
-  void FlipPointEdge();
-
-  /// as a decorator for graph_
-
-  void CreateGraph();
-
-  void RemoveGraph();
-
-  void RenderGraph();
-
-  void PressGraph(GLuint id);
-
-  [[nodiscard]] FixedSizeQueue<char, 64>* GetNamePtr(int id);
-
-  [[nodiscard]] int GetSize() const noexcept;
-
- private:
-  int GetSlotId();
-
-  /// --- as a slider ---
-  void Set(glm::vec2 mouse_pos);
-
-  void Set(float progress);
-
-  void UpdateRenderData();
-
-  void FocusOnSelected(int slot_id);
-
-  UiDynamicSprite handler_;
-  UiDynamicSprite slider_;
-  UiDynamicSprite back_;
-  UiDynamicSprite create_;
-
-  UiDynamicSprite slot_back_;
-  UiDynamicSprite slot_remove_;
-  UiDynamicSprite slot_selected_;
-
-  /// --- as a slider ---
-
+struct UiSlotsSliderData {
   float progress_{0.0f};
   bool pressed_{false};
-  float centre_;
-  float length_;
-  float length_slots_;
+  float centre_{0.0f};
+  float length_{0.0f};
+  float length_slots_{0.0f};
   static const float kTrackLengthFactor;
   static const float kSlotsLengthFactor;
   static const int kSlotsNum;
@@ -100,132 +21,191 @@ class UiSlotsBase final : public UiBase {
   /// so we could get id related to slots (0-5)
   int cur_slots_offset_{0};
   glm::vec2 start_slot_translate_{0.0f};
+
+  void UpdateRenderData(float track_length, int graphs_num);
+
+  int GetSlotId(glm::vec2 mouse_pos);
+
+  void Set(glm::vec2 mouse_pos, UiDynamicSprite& handler_sprite,
+           float track_length, int graphs_num);
+
+  void Set(float progress, UiDynamicSprite& handler_sprite,
+           float track_length, int graphs_num);
+
+  void FocusOnSelected(int slot_id, int graphs_num,
+                       UiDynamicSprite& handler_sprite,
+                       const UiDynamicSprite& back_sprite);
+};
+
+class IUiSlots : public UiBase {
+ public:
+  IUiSlots(size_t vbo_texture_id, UiSharedResources& ui_shared_resources);
+
+  /// other ctors default
+
+  /// UiBase methods
+  void Press() override;
+
+  void Release() override;
+
+
+  void UpdateTransform() override;
+
+  /// --- end UiBase methods
+
+  virtual void Render(glm::vec2 mouse_pos) = 0;
+  virtual void RenderPicking() = 0;
+  virtual bool Press(int id) = 0;
+  virtual void UpdateTransform(
+      float x_translate, float y_translate, float scale) = 0;
+  virtual bool Scroll(GLuint id, float yoffset) = 0;
+
+  /// as a decorator for graph_
+
+  void CreateGraph();
+
+  void SelectGraph(GLuint id);
+
+  void RemoveGraph(GLuint id);
+
+  void RenderGraph();
+
+  [[nodiscard]] int GetSize() const noexcept;
+
+  FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) {
+    return graph_->GetNamePtr(instance_id);
+  }
+
+  virtual void PressGraph(GLuint id) = 0;
+
+ protected:
+  /// slider
+  UiSlotsSliderData sl_data_;
+
+  /// event handler (hover / press / release)
+  IUiEventHandler* ui_event_handler_ = nullptr;
+
+  /// graph data + edit window
+  IGraph* graph_ = nullptr;// -- no interface, sry;(
+
+  /// Render custom, but states show/hide pop-up edit window related to *this
+  IUiEdit* ui_edit_ = nullptr;
 
   // for shader bindings & mouse pos
   UiSharedResources& ui_shared_resources_;
 };
-class UiSlots final : public UiBase {
+
+enum class EditState {
+  kVertices,
+  kEdges,
+  kFaces
+};
+
+enum class PressState {
+  kSelect,
+  kModify
+};
+
+class UiSlotsTerrain final : public IUiSlots {
+ private:
+  EditState edit_state_;
+};
+
+class UiSlotsWater final : public IUiSlots {
+ private:
+  EditState edit_state_;
+  PressState press_state_;
+};
+
+/// related to roads, fences, biomes
+class UiSlotsModels final : public IUiSlots {
  public:
-  UiSlots(UiSharedResources& ui_shared_resources,
-          UiDynamicSprite&& handler,
-          UiDynamicSprite&& slider,
-          UiDynamicSprite&& back,
-          UiDynamicSprite&& create,
-          data::VboIdMain flip_select_edit_back_vbo_texture,
-          data::TextId flip_select_edit_back_text_id,
-          data::VboIdMain flip_point_edge_back_vbo_texture,
-          data::TextId flip_point_edge_back_text_id,
-          UiDynamicSprite&& flip_select_edit_sprite,
-          UiDynamicSprite&& flip_point_edge_sprite,
-          UiDynamicSprite&& slot_back,
-          UiDynamicSprite&& slot_remove,
-          UiDynamicSprite&& slot_selected);
+  UiSlotsModels(
+      UiSharedResources& ui_shared_resources,
+      UiDynamicSprite&& handler,
+      UiDynamicSprite&& slider,
+      UiDynamicSprite&& back,
+      UiDynamicSprite&& create,
+      data::VboIdMain flip_select_edit_back_vbo_texture,
+      data::TextId flip_select_edit_back_text_id,
+      data::VboIdMain flip_point_edge_back_vbo_texture,
+      data::TextId flip_point_edge_back_text_id,
+      UiDynamicSprite&& flip_select_edit_sprite,
+      UiDynamicSprite&& flip_point_edge_sprite,
+      UiDynamicSprite&& slot_name,
+      UiDynamicSprite&& slot_config,
+      UiToggle&& toggle_slot_visible,
+      UiDynamicSprite&& slot_back,
+      UiDynamicSprite&& slot_color,
+      UiDynamicSprite&& slot_remove,
+      UiDynamicSprite&& slot_selected);
 
-  UiSlots(UiSlots&& other) noexcept;
-  UiSlots(const UiSlots& other) = delete;
+  UiSlotsModels(UiSlotsModels&& other) noexcept;
+  UiSlotsModels(const UiSlotsModels& other) = delete;
 
-  UiSlots& operator=(UiSlots&& other) = delete;
-  UiSlots& operator=(const UiSlots& other) = delete;
+  UiSlotsModels& operator=(UiSlotsModels&& other) = delete;
+  UiSlotsModels& operator=(const UiSlotsModels& other) = delete;
 
-  void Render(glm::vec2 mouse_pos);
-
-  void RenderPicking();
-
-  void Press() override;
-
-  bool Press(int id);
-
-  data::TextId Hover(int id) {
-    return ui_event_handler_.Hover(id);
-  }
-
-  void Release() override;
+  void Render(glm::vec2 mouse_pos) override;
+  void RenderPicking() override;
 
   bool Scroll(GLuint id, float yoffset) override;
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
+  bool Press(int id) override;
+  void UpdateTransform(
+      float x_translate, float y_translate, float scale) override;
 
-  void UpdateTransform() override;
+  void NextSelectMode();
 
-  void FlipSelectEdit();
+  void NextClickMode();
 
-  void FlipPointEdge();
 
-  /// as a decorator for graph_
-
-  void CreateGraph();
-
-  void RemoveGraph();
-
-  void RenderGraph();
-
-  void PressGraph(GLuint id);
-
-  [[nodiscard]] FixedSizeQueue<char, 64>* GetNamePtr(int id);
-
-  [[nodiscard]] int GetSize() const noexcept;
+  void PressGraph(GLuint id) override;
 
  private:
-  int GetSlotId();
-
-  /// --- as a slider ---
-  void Set(glm::vec2 mouse_pos);
-
-  void Set(float progress);
-
-  void UpdateRenderData();
-
-  void FocusOnSelected(int slot_id);
-
   UiDynamicSprite handler_;
   UiDynamicSprite slider_;
   UiDynamicSprite back_;
   UiDynamicSprite create_;
-//  UiDynamicSprite flip_select_edit_back_;
-//  UiDynamicSprite flip_point_edge_back_;
+  UiDynamicSprite flip_select_edit_back_;
+  UiDynamicSprite flip_point_edge_back_;
 
-//  UiDynamicSprite flip_select_edit_sprite_;
-//  UiDynamicSprite flip_point_edge_sprite_;
-//  UiSpriteTransformation flip_select_edit_;
-//  UiSpriteTransformation flip_point_edge_;
+  UiDynamicSprite flip_select_edit_sprite_;
+  UiDynamicSprite flip_point_edge_sprite_;
+  UiSpriteTransformation flip_select_edit_;
+  UiSpriteTransformation flip_point_edge_;
+
+  UiDynamicSprite slot_name_;
+  UiDynamicSprite slot_config_;
+  UiToggle toggle_slot_visible_;
 
   UiDynamicSprite slot_back_;
+  UiDynamicSprite slot_color_; //todo; *color in shader
   UiDynamicSprite slot_remove_;
   UiDynamicSprite slot_selected_;
 
-  /// --- as a slider ---
-
-  float progress_{0.0f};
-  bool pressed_{false};
-  float centre_;
-  float length_;
-  float length_slots_;
-  static const float kTrackLengthFactor;
-  static const float kSlotsLengthFactor;
-  static const int kSlotsNum;
-
-  float slot_height_{0.0f};
-  int scissors_start_{0};
-  int scissors_length_{0};
-
-  /// so we could get id related to slots (0-5)
-  int cur_slots_offset_{0};
-  glm::vec2 start_slot_translate_{0.0f};
-
-  // for shader bindings & mouse pos
-  UiSharedResources& ui_shared_resources_;
-
-  /// --- as a complex component ---
+  /// store here, pointers to base class, see explanation at base class
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kFencesSlotsFlipSelectEdit) -
-      static_cast<int>(data::VboIdMain::kFencesSlotsSlot) + 1
-      > ui_event_handler_;
+      static_cast<int>(data::VboIdMain::kFencesSlotsName) + 1
+      > ui_event_handler_; // IUiEventHandler for base
 
-  /// --- graph - related ---
+  ArbitraryGraph graph_; // IGraph* for base
 
-  ArbitraryGraph graph_;
+  UiEditStub ui_edit_; // IUiEdit* for base
+
+  UiSharedResources& ui_shared_resources_;
+
+  // --- new
+  // --- new
+  // --- new
+  // --- new
+  // --- new
+
+ private:
+  EditState edit_state_;
+  PressState press_state_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UISLOTS_H_

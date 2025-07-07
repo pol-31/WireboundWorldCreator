@@ -1,9 +1,29 @@
-noise TEXT for negative (1/3)
-typo in kTerrainBakeErosinoStepInput,
-UiSlots add edge-vertex & select-edit modes
-UiSlots::Remove() sprite (to remove/reset selected vertex/edge)
-UiSlots::Add and flip_add-select for terrain
-bool terrain_edit_noise_tiling
++ noise TEXT for negative (1/3)
++ typo in kTerrainBakeErosinoStepInput,
+? UiSlots add edge-vertex & select-edit modes
+- UiSlots::Remove() sprite (to remove/reset selected vertex/edge)
++ UiSlots::Add and flip_add-select for terrain
++ bool terrain_edit_noise_tiling
+
++ all text labels - wrong tex coors (not full screen)
+
++ kFullSCreen typo
++ separate Hue/Saturation and Brightness palette
++ kMenuCross, remove?
++ "Pin" for each pop-up (so we could setup sprite positions)
++ TabMenu - merge toggle with mode sprite
++ TabMenu arrows - center, so we could simply rotate the sprite with transform mat
+
++ no "close button" - just press outside the window
+
+
++ fix settings: resolution drop down; AND UiSliderH2 icon + handler fix
++ remove UiSliderH with 4 components, replaced by 3 components + extra text
++ water icons to text
+
+
+UiToggle2 (UiPin)
+UiSlider2D (UiPalette)
 
 class UiTextLabel;
 class UiTextInput;
@@ -15,3 +35,6 @@ class UiHeightmapSprite;
 How to represent terrain in 3d? correct:layers, BUT how to be with mountain climbing?
 okay, NO abcose angles - ONLY heightmap, but layered on Y.
 SO: ArbitraryGraph.h
+
+Update - God hand load/save
+Keyboard in style of stones in position raisen or not

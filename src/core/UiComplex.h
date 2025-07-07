@@ -36,6 +36,81 @@ class UiLoading final : public UiBase {
  private:
   std::array<UiStaticSprite, 11> sprites_;
 };
+/*
+class UiColorPalette final : public UiBase {
+ public:
+  UiColorPalette(UiDynamicSprite&& palette,
+                 UiDynamicSprite&& cursor_color,
+                 UiDynamicSprite&& cursor_brightness);
+
+  UiColorPalette(UiColorPalette&& other) noexcept;
+  UiColorPalette(const UiColorPalette& other) = delete;
+
+  UiColorPalette& operator=(UiColorPalette&& other) = delete;
+  UiColorPalette& operator=(const UiColorPalette& other) = delete;
+
+  void Render(glm::vec2 mouse_pos);
+
+  void RenderPicking() const;
+
+  [[nodiscard]] data::TextId Hover(std::uint32_t id);
+
+  void Press() override;
+
+  void Release() override;
+
+  bool Scroll(GLuint id, float yoffset) override;
+
+  void SetParentTransform(LocalTransform transform);
+
+  [[nodiscard]] float GetHue() const {
+    return hue_;
+  }
+
+  [[nodiscard]] float GetSaturation() const {
+    return saturation_;
+  }
+
+  [[nodiscard]] float GetBrightness() const {
+    return brightness_;
+  }
+
+  [[nodiscard]] glm::vec3 GetRbgColor() const;
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+  void UpdateTransform() override;
+
+ private:
+  void Set(glm::vec2 mouse_pos);
+
+  void Set(float progress);
+
+  UiDynamicSprite palette_;
+  UiDynamicSprite cursor_color_;
+  UiDynamicSprite cursor_brightness_;
+
+  float hue_ = 0.0f;
+  float saturation_ = 0.0f;
+  float brightness_ = 0.0f;
+
+  bool pressed_color_ = 0.0f;
+  bool pressed_brightness_ = 0.0f;
+
+  float hue_centre_;
+  float saturation_centre_;
+  float brightness_centre_;
+
+  float hue_length_;
+  float saturation_length_;
+  float brightness_length_;
+
+  static const float kTrackWidthFactor;
+  static const float kTrackHeightFactor;
+  // separate hue+saturation from brightness
+  static const float kSeparatorFactor;
+};*/
 
 class UiWindowBase : public UiBase {
  public:
@@ -82,7 +157,7 @@ class UiTabMenu final : public UiWindowBase {
   using Base = UiWindowBase;
 
   UiTabMenu(
-      UiDynamicSprite&& sprite,
+      UiDynamicSprite&& back_desk,
       float size_scale,
       UiSharedResources& ui_shared_resources,
 
@@ -104,12 +179,13 @@ class UiTabMenu final : public UiWindowBase {
       UiToggle&& toggle_biomes,
       UiToggle&& toggle_tiles,
 
-      UiStaticSprite&& btn_settings,
       UiStaticSprite&& btn_shader_wirebound,
-
       UiToggle&& toggle_shaders,
 
-      UiDynamicSprite&& cross);
+      UiDynamicSprite&& arrow_select,
+      UiDynamicSprite&& arrow_selected,
+      UiDynamicSprite&& save_data,
+      UiDynamicSprite&& load_data);
 
   UiTabMenu(UiTabMenu&& other) noexcept;
   UiTabMenu(const UiTabMenu& other) = delete;
@@ -118,7 +194,7 @@ class UiTabMenu final : public UiWindowBase {
   UiTabMenu& operator=(const UiTabMenu& other) = delete;
 
   // returns "stop render"
-  bool Render(bool show);
+  bool Render(bool show, float angle_select, float angle_selected);
 
   void RenderPicking();
 
@@ -156,80 +232,18 @@ class UiTabMenu final : public UiWindowBase {
   UiToggle toggle_biomes_;
   UiToggle toggle_tiles_;
 
-  UiStaticSprite btn_settings_;
   UiStaticSprite btn_shader_wirebound_;
-
   UiToggle toggle_shaders_;
 
+  UiDynamicSprite arrow_select_;
+  UiDynamicSprite arrow_selected_;
+  UiDynamicSprite save_data_;
+  UiDynamicSprite load_data_;
+
   UiEventHandler<
-      static_cast<int>(data::VboIdMain::kMenuSettings) -
+      static_cast<int>(data::VboIdMain::kMenuLoad) -
       static_cast<int>(data::VboIdMain::kMenuTerrain) + 1
       > ui_event_handler_;
-
-  UiDynamicSprite cross_;
-};
-
-class UiSettings final : public UiWindowBase {
- public:
-  using Base = UiWindowBase;
-
-  UiSettings(
-      UiDynamicSprite&& sprite,
-      float size_scale,
-      UiSharedResources& ui_shared_resources,
-      UiSliderH3&& resolution,
-      UiSliderH3&& music,
-      UiSliderH3&& sound,
-      UiSliderH3&& sensitivity,
-      UiStaticSprite&& keyboard,
-      UiToggle&& toggle_music,
-      UiToggle&& toggle_sound,
-      UiDynamicSprite&& cross);
-
-  UiSettings(UiSettings&& other) noexcept;
-  UiSettings(const UiSettings& other) = delete;
-
-  UiSettings& operator=(UiSettings&& other) = delete;
-  UiSettings& operator=(const UiSettings& other) = delete;
-
-  // returns "stop render"
-  bool Render(bool show);
-
-  void RenderPicking();
-
-  void Press(int id) {
-    ui_event_handler_.Press(id);
-  }
-
-  void Release() {
-    ui_event_handler_.Release();
-  }
-
-  data::TextId Hover(int id) {
-    return ui_event_handler_.Hover(id);
-  }
-
-  bool Scroll(GLuint id, float yoffset) override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
- private:
-  UiSliderH3 resolution_;
-  UiSliderH3 music_;
-  UiSliderH3 sound_;
-  UiSliderH3 sensitivity_;
-  UiStaticSprite keyboard_;
-
-  UiToggle toggle_music_;
-  UiToggle toggle_sound_;
-
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kSettingsMusicOn3) -
-      static_cast<int>(data::VboIdMain::kSettingsResolutionFill) + 1
-      > ui_event_handler_;
-
-  UiDynamicSprite cross_;
 };
 
 class UiConfirmation final : public UiWindowBase {
@@ -240,12 +254,8 @@ class UiConfirmation final : public UiWindowBase {
       UiDynamicSprite&& sprite,
       float size_scale,
       UiSharedResources& ui_shared_resources,
-
-      UiStaticSprite&& btn_close,
       UiStaticSprite&& btn_accept,
-      UiStaticSprite&& btn_decline,
-
-      UiDynamicSprite&& cross);
+      UiStaticSprite&& btn_decline);
 
   UiConfirmation(UiConfirmation&& other) noexcept;
   UiConfirmation(const UiConfirmation& other) = delete;
@@ -274,14 +284,11 @@ class UiConfirmation final : public UiWindowBase {
                        float scale) override;
 
  private:
-  UiStaticSprite btn_close_;
   UiStaticSprite btn_accept_;
   UiStaticSprite btn_decline_;
 
   // 3 buttons
   UiEventHandler<3> ui_event_handler_;
-
-  UiDynamicSprite cross_;
 };
 
 /// only one scale allowed (no x or y scale)
@@ -293,7 +300,8 @@ class UiPopUpBase : public UiBase {
               float size_scale,
               UiSharedResources& ui_shared_resources,
               LocalTransform start_transform,
-              LocalTransform end_transform);
+              LocalTransform end_transform,
+              UiToggle2&& pin);
 
   UiPopUpBase(UiPopUpBase&& other) noexcept;
   UiPopUpBase(const UiPopUpBase& other) = delete;
@@ -318,6 +326,8 @@ class UiPopUpBase : public UiBase {
   LocalTransform cur_transform_;
   UiDynamicSprite sprite_; // dynamic to set scale
 
+  UiToggle2 pin_;
+
   // for shader bindings, mask texture
   UiSharedResources& ui_shared_resources_;
 
@@ -335,7 +345,96 @@ class UiPopUpBase : public UiBase {
   const float speed_{0.5f};
   float progress_{0.0f};
 
-  bool back_ready_{false};
+  bool back_ready_ = false;
+};
+
+
+class UiSettings final : public UiPopUpBase {
+ public:
+  using Base = UiPopUpBase;
+
+  UiSettings(
+      UiDynamicSprite&& sprite,
+      float size_scale,
+      UiSharedResources& ui_shared_resources,
+      LocalTransform start_transform,
+      LocalTransform end_transform,
+      UiToggle2&& pin,
+      UiDynamicSprite&& resolution_label,
+      UiDynamicSprite&& resolution_left,
+      UiDynamicSprite&& resolution_right,
+      UiDynamicSprite&& resolution_slot,
+      UiDynamicSprite&& resolution,
+      UiToggle&& toggle_fullscreen,
+      UiDynamicSprite sensitivity_icon,
+      UiSliderH2 sensitivity,
+      UiDynamicSprite keyboard,
+      UiDynamicSprite&& sound_icon,
+      UiSliderH2&& sound,
+      UiToggle&& toggle_sound,
+      UiDynamicSprite&& music_icon,
+      UiSliderH2&& music,
+      UiToggle&& toggle_music,
+      UiDynamicSprite&& tip_info_label,
+      UiDynamicSprite&& tip_info,
+      UiToggle&& toggle_tip_info);
+
+  UiSettings(UiSettings&& other) noexcept;
+  UiSettings(const UiSettings& other) = delete;
+
+  UiSettings& operator=(UiSettings&& other) = delete;
+  UiSettings& operator=(const UiSettings& other) = delete;
+
+  // returns "stop render"
+  bool Render();
+
+  void RenderPicking();
+
+  void Press(int id);
+
+  void Release();
+
+  data::TextId Hover(int id);
+
+  bool Scroll(GLuint id, float yoffset) override;
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+ private:
+  //todo; replace by component
+  UiDynamicSprite resolution_label_;
+  UiDynamicSprite resolution_left_;
+  UiDynamicSprite resolution_right_;
+  UiDynamicSprite resolution_slot_;
+
+  UiDynamicSprite resolution_;
+  UiToggle toggle_fullscreen_;
+
+  UiDynamicSprite sensitivity_icon_;
+  UiSliderH2 sensitivity_;
+
+  UiDynamicSprite keyboard_;
+
+  UiDynamicSprite sound_icon_;
+  UiSliderH2 sound_;
+  UiToggle toggle_sound_;
+
+  UiDynamicSprite music_icon_;
+  UiSliderH2 music_;
+  UiToggle toggle_music_;
+
+  UiDynamicSprite tip_info_label_;
+  UiDynamicSprite tip_info_;
+  UiToggle toggle_tip_info_;
+
+
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kSettingsTipInfoOn3) -
+      static_cast<int>(data::VboIdMain::kSettingsDesk) + 1
+      > ui_event_handler_;
+
+  bool hovered_ = false;
 };
 
 class UiWaterLayerConfig final : public UiPopUpBase {
@@ -348,6 +447,7 @@ class UiWaterLayerConfig final : public UiPopUpBase {
       UiSharedResources& ui_shared_resources,
       LocalTransform start_transform,
       LocalTransform end_transform,
+      UiToggle2&& pin,
       UiDynamicSprite&& sprite_layer,
       UiSliderH&& scale,
       UiSliderH&& fetch,
@@ -400,6 +500,50 @@ class UiWaterLayerConfig final : public UiPopUpBase {
   bool hovered_{false};
 
   UiEventHandler<28> ui_event_handler_;
+};
+
+// ---
+
+class IUiEdit : public UiBase {
+ public:
+  IUiEdit();
+};
+
+class UiEditStub final : public IUiEdit {
+ public:
+  UiEditStub();
+
+  UiEditStub(UiEditStub&& other) noexcept;
+  UiEditStub(const UiEditStub& other) = delete;
+
+  UiEditStub& operator=(UiEditStub&& other) = delete;
+  UiEditStub& operator=(const UiEditStub& other) = delete;
+
+  void Render();
+
+  void RenderPicking() const;
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+  void UpdateTransform() override;
+
+ private:/*
+  UiDynamicSprite desk_;
+  UiDynamicSprite accept_;
+  UiDynamicSprite close_;
+  UiDynamicSprite name_;
+  UiDynamicSprite name_back_;
+  UiDynamicSprite color_;
+
+//  UiColorPalette palette_;
+  UiDynamicSprite color_cursor_;
+  UiDynamicSprite brightness_cursor_;
+
+  UiDynamicSprite type_back_;
+  UiDynamicSprite type_text_;
+  UiDynamicSprite type_prev_;
+  UiDynamicSprite type_next_;*/
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_

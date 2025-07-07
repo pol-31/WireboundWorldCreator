@@ -75,7 +75,7 @@ UiDynamicSprite::UiDynamicSprite(data::VboIdMain vbo_texture, data::TextId text_
     : UiBase(vbo_texture, text_id, std::move(action)) {
   UpdateTransform();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
 }
 
 UiDynamicSprite::UiDynamicSprite(UiDynamicSprite&& other) noexcept
@@ -84,7 +84,7 @@ UiDynamicSprite::UiDynamicSprite(UiDynamicSprite&& other) noexcept
       parent_transform_(other.parent_transform_),
       final_dbg_transform_(other.final_dbg_transform_) {
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
 }
 
 void UiDynamicSprite::UpdateTransform(
@@ -165,11 +165,13 @@ void UiDynamicSprite::Render() {
 void UiDynamicSprite::RenderPicking() const {
   glm::mat3 transform{1.0f};
   transform = glm::translate(
-      transform, final_dbg_transform_.translate + local_transform_.translate);
+      transform, final_dbg_transform_.translate + local_transform_.translate
+                     + parent_transform_.translate);
   transform = glm::rotate(
-      transform, local_transform_.rotate);
+      transform, local_transform_.rotate + parent_transform_.rotate);
   transform = glm::scale(
       transform, final_dbg_transform_.scale * local_transform_.scale
+                     * parent_transform_.scale
                      * glm::vec2{gResFactor * extra_scale_, 1.0f});
   glUniformMatrix3fv(3, 1, false, glm::value_ptr(transform));
   glUniform1ui(shader::kSpriteId, static_cast<uint32_t>(GetId()));
@@ -183,14 +185,14 @@ UiStaticSprite::UiStaticSprite(data::VboIdMain vbo_texture, data::TextId text_id
     : UiBase(vbo_texture, text_id, std::move(action)) {
   UpdateTransform();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
 }
 
 UiStaticSprite::UiStaticSprite(UiStaticSprite&& other) noexcept
     : UiBase(std::move(other)),
       final_transform_(other.final_transform_) {
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
 }
 
 void UiStaticSprite::UpdateTransform(
@@ -342,8 +344,8 @@ void UiSpriteTransformation::UpdateAnimation() {
 const float UiSliderV::kTrackLengthFactor = 0.8f;
 
 UiSliderV::UiSliderV(
-    UiStaticSprite&& fill_sprite,
-    UiStaticSprite&& back_sprite,
+    UiDynamicSprite&& fill_sprite,
+    UiDynamicSprite&& back_sprite,
     UiDynamicSprite&& icon_sprite,
     float scale)
     : UiBase(back_sprite.GetId(), {}),
@@ -361,7 +363,7 @@ UiSliderV::UiSliderV(
   gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_id_
       = back_sprite_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
   UpdateTransform();
 }
 
@@ -381,7 +383,7 @@ UiSliderV::UiSliderV(UiSliderV&& other) noexcept
   length_ = other.length_;
   scale_ = other.scale_;
   gUiComponents[back_sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiTransformDbg*>(this);
+      = static_cast<UiBase*>(this);
 }
 
 /// we need this only in DEBUG, but in DEBUG we use only UiDynamicSprite,
@@ -483,6 +485,12 @@ void UiSliderV::UpdateTransform() {
                   transform.scale);
 }
 
+void UiSliderV::SetParentTransform(LocalTransform transform) {
+  back_sprite_.SetParentTransform(transform);
+  fill_sprite_.SetParentTransform(transform);
+  icon_sprite_.SetParentTransform(transform);
+}
+
 
 const float UiSliderH::kTrackLengthFactor = 0.8f;
 
@@ -490,12 +498,10 @@ UiSliderH::UiSliderH(
     UiDynamicSprite&& fill_sprite,
     UiDynamicSprite&& back_sprite,
     UiDynamicSprite&& handler_sprite,
-    UiDynamicSprite&& icon_sprite,
     float scale)
     : UiBase(back_sprite.GetId(), {}),
       fill_sprite_(std::move(fill_sprite)),
       back_sprite_(std::move(back_sprite)),
-      icon_sprite_(std::move(icon_sprite)),
       handler_sprite_(std::move(handler_sprite)),
       length_(kTrackLengthFactor * (back_sprite_.GetRightBorder()
               - back_sprite_.GetLeftBorder())),
@@ -504,12 +510,10 @@ UiSliderH::UiSliderH(
       scale_(scale) {
   gUiComponents[fill_sprite_.GetId() - details::kIdOffsetUi].parent_id_
       = back_sprite_.GetId();
-  gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_sprite_.GetId();
   gUiComponents[handler_sprite_.GetId() - details::kIdOffsetUi].parent_id_
       = back_sprite_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
   UpdateTransform();
 }
 
@@ -517,7 +521,6 @@ UiSliderH::UiSliderH(UiSliderH&& other) noexcept
     : UiBase(std::move(other)),
       fill_sprite_(std::move(other.fill_sprite_)),
       back_sprite_(std::move(other.back_sprite_)),
-      icon_sprite_(std::move(other.icon_sprite_)),
       handler_sprite_(std::move(other.handler_sprite_)) {
   progress_ = other.progress_;
   pressed_ = other.pressed_;
@@ -525,13 +528,12 @@ UiSliderH::UiSliderH(UiSliderH&& other) noexcept
   length_ = other.length_;
   scale_ = other.scale_;
   gUiComponents[back_sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiTransformDbg*>(this);
+      = static_cast<UiBase*>(this);
 }
 
 void UiSliderH::SetParentTransform(LocalTransform transform) {
   back_sprite_.SetParentTransform(transform);
   fill_sprite_.SetParentTransform(transform);
-  icon_sprite_.SetParentTransform(transform);
   handler_sprite_.SetParentTransform(transform);
 }
 
@@ -550,8 +552,6 @@ void UiSliderH::Render(glm::vec2 mouse_pos) {
 
   fill_sprite_.Render();
   glDisable(GL_SCISSOR_TEST);
-
-  icon_sprite_.Render();
 }
 
 void UiSliderH::RenderIcon() {
@@ -569,7 +569,6 @@ void UiSliderH::RenderPicking() const {
     glScissor(x_px, 0, width_px, 4000);
     fill_sprite_.RenderPicking();
     glDisable(GL_SCISSOR_TEST);
-    icon_sprite_.RenderPicking();
     handler_sprite_.RenderPicking();
   }
 }
@@ -600,7 +599,7 @@ void UiSliderH::UnHover() {
 }
 
 bool UiSliderH::Scroll(GLuint id, float yoffset) {
-  if (id > icon_sprite_.GetId() || id < fill_sprite_.GetId()) {
+  if (id > handler_sprite_.GetId() || id < fill_sprite_.GetId()) {
     return false;
   }
   float factor = 0.01f * yoffset;
@@ -618,7 +617,6 @@ void UiSliderH::UpdateTransform(
     float x_translate, float y_translate, float scale) {
   back_sprite_.UpdateTransform();
   fill_sprite_.UpdateTransform();
-  icon_sprite_.UpdateTransform();
   handler_sprite_.UpdateTransform();
   length_ = kTrackLengthFactor * scale *
             (back_sprite_.GetRightBorder() - back_sprite_.GetLeftBorder());
@@ -658,7 +656,7 @@ UiSliderH3::UiSliderH3(
   gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_id_
       = back_sprite_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
   UpdateTransform();
 }
 
@@ -673,7 +671,7 @@ UiSliderH3::UiSliderH3(UiSliderH3&& other) noexcept
   length_ = other.length_;
   scale_ = other.scale_;
   gUiComponents[back_sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiTransformDbg*>(this);
+      = static_cast<UiBase*>(this);
 }
 
 void UiSliderH3::SetParentTransform(LocalTransform transform) {
@@ -797,7 +795,7 @@ UiSliderH2::UiSliderH2(
   gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_id_
       = back_sprite_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
   UpdateTransform();
 }
 
@@ -811,7 +809,7 @@ UiSliderH2::UiSliderH2(UiSliderH2&& other) noexcept
   length_ = other.length_;
   scale_ = other.scale_;
   gUiComponents[back_sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiTransformDbg*>(this);
+      = static_cast<UiBase*>(this);
 }
 
 void UiSliderH2::SetParentTransform(LocalTransform transform) {
@@ -912,8 +910,8 @@ void UiSliderH2::UpdateTransform() {
 }
 
 UiToggle::UiToggle(
-    UiStaticSprite&& off, UiStaticSprite&& on1,
-    UiStaticSprite&& on2, UiStaticSprite&& on3)
+    UiDynamicSprite&& off, UiDynamicSprite&& on1,
+    UiDynamicSprite&& on2, UiDynamicSprite&& on3)
     : UiBase(off.GetId(), {}),
       off_(std::move(off)),
       on1_(std::move(on1)),
@@ -928,7 +926,7 @@ UiToggle::UiToggle(
   gUiComponents[on3_.GetId() - details::kIdOffsetUi].parent_id_
       = off_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiTransformDbg*>(this);
+      static_cast<UiBase*>(this);
   UpdateTransform();
 }
 
@@ -944,7 +942,7 @@ UiToggle::UiToggle(UiToggle&& other) noexcept
   speed_ = other.speed_;
   progress_ = other.progress_;
   gUiComponents[off_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiTransformDbg*>(this);
+      = static_cast<UiBase*>(this);
 }
 
 void UiToggle::Render() {
@@ -993,4 +991,82 @@ void UiToggle::UpdateState() {
       state_ = &on3_;
     }
   }
+}
+
+void UiToggle::SetParentTransform(LocalTransform transform) {
+  off_.SetParentTransform(transform);
+  on1_.SetParentTransform(transform);
+  on2_.SetParentTransform(transform);
+  on3_.SetParentTransform(transform);
+}
+
+void UiToggle::SetTranslate(glm::vec2 translate) {
+  off_.SetTranslate(translate);
+  on1_.SetTranslate(translate);
+  on2_.SetTranslate(translate);
+  on3_.SetTranslate(translate);
+}
+
+UiToggle2::UiToggle2(
+    UiDynamicSprite&& off, UiDynamicSprite&& on)
+    : UiBase(off.GetId(), {}),
+      off_(std::move(off)),
+      on_(std::move(on))  {
+  gUiComponents[on_.GetId() - details::kIdOffsetUi].parent_id_
+      = off_.GetId();
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+  UpdateTransform();
+}
+
+UiToggle2::UiToggle2(UiToggle2&& other) noexcept
+    : UiBase(std::move(other)),
+      off_(std::move(other.off_)),
+      on_(std::move(other.on_)),
+      turned_off_(other.turned_off_) {
+  gUiComponents[off_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+void UiToggle2::Render() {
+  off_.Render();
+  if (!turned_off_) {
+    on_.Render();
+  }
+}
+
+void UiToggle2::RenderPicking() const {
+  off_.RenderPicking();
+  if (debug::gCtrlMode) {
+    on_.RenderPicking();
+  }
+}
+
+void UiToggle2::Press() {
+  turned_off_ = !turned_off_;
+  off_.Press();
+}
+
+void UiToggle2::UpdateTransform(
+    float x_translate, float y_translate, float scale) {
+  off_.UpdateTransform();
+  on_.UpdateTransform();
+}
+
+void UiToggle2::UpdateTransform() {
+  auto transform = debug::gUiTransforms[
+      4 * (GetId() - details::kIdOffsetUi)
+  ];
+  UpdateTransform(
+      transform.translate.x, transform.translate.y, transform.scale);
+}
+
+void UiToggle2::SetParentTransform(LocalTransform transform) {
+  off_.SetParentTransform(transform);
+  on_.SetParentTransform(transform);
+}
+
+void UiToggle2::SetTranslate(glm::vec2 translate) {
+  off_.SetTranslate(translate);
+  on_.SetTranslate(translate);
 }

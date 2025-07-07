@@ -52,9 +52,10 @@ class Menu {
   UiTabMenu ui_tab_menu_;
   UiSettings ui_settings_;
 
-  bool show_settings_{false};
-
   IUiMode*& cur_mode_;
+  // radians
+  float arrow_select_angle_ = 0;
+  float arrow_selected_angle_ = 0;
 
   std::array<IUiMode*, 8> modes_;
 };

@@ -40,7 +40,7 @@ class UiBase {
   using CallableType = std::function<void()>;
 
   UiBase(data::VboIdMain vbo_texture, data::TextId text_id,
-             CallableType action);
+         CallableType action);
 
   UiBase(size_t ui_data_id, CallableType&& action);
 
@@ -63,7 +63,7 @@ class UiBase {
   virtual bool Scroll(GLuint id, float yoffset);
 
   /// non-virtual - one for all
-  virtual data::TextId Hover();
+  data::TextId Hover();
 
   virtual void UpdateTransform(
       float x_translate, float y_translate, float scale) = 0;
@@ -86,7 +86,7 @@ class UiBase {
 class UiBasePad final : public UiBase {
  public:
   UiBasePad()
-      : UiBase(data::VboIdMain::kMenuTerrain, data::TextId::kNone, {}) {}
+      : UiBase(data::VboIdMain::kMenuTerrain, data::TextId::kNotYet, {}) {}
   void Press() override {
     std::cerr << "Pad was called, smt went wrong" << std::endl;
   }
@@ -97,8 +97,19 @@ class UiBasePad final : public UiBase {
   void UpdateTransform() override {}
 };
 
+class IUiEventHandler {
+ public:
+  virtual bool Press(int id) = 0;
+
+  virtual void Release() = 0;
+
+  virtual data::TextId Hover(int id) = 0;
+
+  virtual bool IsInRange(int id) = 0;
+};
+
 template<std::size_t MaxSize>
-class UiEventHandler {
+class UiEventHandler final : public IUiEventHandler {
  public:
   UiEventHandler() = default;
 
@@ -112,7 +123,7 @@ class UiEventHandler {
   UiEventHandler& operator=(UiEventHandler&& other) = default;
   UiEventHandler& operator=(const UiEventHandler& other) = default;
 
-  bool Press(int id) {
+  bool Press(int id) override {
     if (id < start_ || id > end_) {
       return false;
     }
@@ -120,19 +131,22 @@ class UiEventHandler {
     return true;
   }
 
-  void Release() {
+  void Release() override {
     for (auto widget : widgets_) {
       widget->Release();
     }
   }
 
-  data::TextId Hover(int id) {
+  data::TextId Hover(int id) override {
     if (id < start_ || id > end_) {
       return data::TextId::kNone;
     }
     return widgets_[id - start_]->Hover();
   }
 
+  bool IsInRange(int id) override {
+    return id >= start_ && id <= end_;
+  }
 
  private:
   void Init(std::initializer_list<UiBase*> widgets) {
@@ -342,8 +356,8 @@ class UiSpriteTransformation {
 
 class UiSliderV final : public UiBase {
  public:
-  UiSliderV(UiStaticSprite&& fill_sprite,
-           UiStaticSprite&& back_sprite,
+  UiSliderV(UiDynamicSprite&& fill_sprite,
+            UiDynamicSprite&& back_sprite,
            UiDynamicSprite&& icon_sprite,
             float scale = 1.0f);
 
@@ -377,6 +391,8 @@ class UiSliderV final : public UiBase {
 
   void UpdateTransform() override;
 
+  void SetParentTransform(LocalTransform transform);
+
  private:
   void Set(glm::vec2 mouse_pos);
 
@@ -384,8 +400,8 @@ class UiSliderV final : public UiBase {
 
   void UnHover();
 
-  UiStaticSprite fill_sprite_;
-  UiStaticSprite back_sprite_;
+  UiDynamicSprite fill_sprite_;
+  UiDynamicSprite back_sprite_;
   UiDynamicSprite icon_sprite_;
 
   float progress_{0.0f};
@@ -401,7 +417,6 @@ class UiSliderH final : public UiBase {
   UiSliderH(UiDynamicSprite&& fill_sprite,
             UiDynamicSprite&& back_sprite,
             UiDynamicSprite&& handler_sprite,
-            UiDynamicSprite&& icon_sprite,
             float scale = 1.0f);
 
   UiSliderH(UiSliderH&& other) noexcept;
@@ -461,7 +476,6 @@ class UiSliderH final : public UiBase {
 
   UiDynamicSprite fill_sprite_;
   UiDynamicSprite back_sprite_;
-  UiDynamicSprite icon_sprite_;
   UiDynamicSprite handler_sprite_;
 
   float progress_{0.0f};
@@ -614,8 +628,8 @@ class UiSliderH2 final : public UiBase {
 /// You should pass action to off_ sprite (see Press());
 class UiToggle final : public UiBase {
  public:
-  UiToggle(UiStaticSprite&& off, UiStaticSprite&& on1,
-           UiStaticSprite&& on2, UiStaticSprite&& on3);
+  UiToggle(UiDynamicSprite&& off, UiDynamicSprite&& on1,
+           UiDynamicSprite&& on2, UiDynamicSprite&& on3);
 
   UiToggle(UiToggle&& other) noexcept;
   UiToggle(const UiToggle& other) = delete;
@@ -640,18 +654,61 @@ class UiToggle final : public UiBase {
 
   void UpdateState();
 
- private:
-  UiStaticSprite off_;
-  UiStaticSprite on1_;
-  UiStaticSprite on2_;
-  UiStaticSprite on3_;
+  void SetParentTransform(LocalTransform transform);
 
-  UiStaticSprite* state_{nullptr};
+  void SetTranslate(glm::vec2 translate);
+
+ private:
+  UiDynamicSprite off_;
+  UiDynamicSprite on1_;
+  UiDynamicSprite on2_;
+  UiDynamicSprite on3_;
+
+  UiDynamicSprite* state_{nullptr};
 
   bool turned_off_{true};
 
   float speed_{0.2f};
   float progress_{0.0f};
+};
+
+class UiToggle2 final : public UiBase {
+ public:
+  UiToggle2(UiDynamicSprite&& off, UiDynamicSprite&& on);
+
+  UiToggle2(UiToggle2&& other) noexcept;
+  UiToggle2(const UiToggle2& other) = delete;
+
+  UiToggle2& operator=(UiToggle2&& other) = delete;
+  UiToggle2& operator=(const UiToggle2& other) = delete;
+
+  void Render();
+
+  void RenderPicking() const;
+
+  void Press() override;
+
+  data::TextId Hover(std::uint32_t id) {
+    return off_.Hover();
+  }
+
+  void UpdateTransform(
+      float x_translate, float y_translate, float scale) override;
+
+  void UpdateTransform() override;
+
+  void SetParentTransform(LocalTransform transform);
+
+  void SetTranslate(glm::vec2 translate);
+
+  [[nodiscard]] bool TurnedOn() const noexcept {
+    return !turned_off_;
+  }
+
+ private:
+  UiDynamicSprite off_;
+  UiDynamicSprite on_;
+  bool turned_off_{true};
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_UI_H_

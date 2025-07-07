@@ -94,4 +94,4 @@ texture_skybox2_front=../assets/skybox/hills_front.tga
 texture_skybox2_back=../assets/skybox/hills_back.tga
 
 config_vbo_sprites=../assets/TexCoordsInfo.txt
-config_vbo_transform=../assets/UiVboTransform.txt
+config_vbo_transform=test.txt

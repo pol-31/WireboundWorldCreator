@@ -28,7 +28,7 @@ Menu::Menu(
       /// TODO; more description
       /// first three are text, so not used as simple rendering, but only for text
       ui_tab_menu_(
-          UiDynamicSprite{data::VboIdMain::kTabDesk, data::TextId::kNone},
+          UiDynamicSprite{data::VboIdMain::kMenuDesk, data::TextId::kNotYet},
           1.0f,
           ui_shared_resources_,
           UiStaticSprite{data::VboIdMain::kMenuTerrain, data::TextId::kMenuTerrain,
@@ -64,91 +64,87 @@ Menu::Menu(
                            this->SetMode(7);
                          }},
           UiToggle{
-              {data::VboIdMain::kMenuTerrainOff, data::TextId::kNone,
+              {data::VboIdMain::kMenuTerrainOff, data::TextId::kNotYet,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_terrain_;
                  this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_terrain_ = !state;
                }},
-              {data::VboIdMain::kMenuTerrainOn1, data::TextId::kNone},
-              {data::VboIdMain::kMenuTerrainOn2, data::TextId::kNone},
-              {data::VboIdMain::kMenuTerrainOn3, data::TextId::kNone}
+              {data::VboIdMain::kMenuTerrainOn1, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuTerrainOn2, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuTerrainOn3, data::TextId::kNotYet}
           },
           UiToggle{
-              {data::VboIdMain::kMenuWaterOff, data::TextId::kNone,
+              {data::VboIdMain::kMenuWaterOff, data::TextId::kNotYet,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_water_;
                  this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_water_ = !state;
                }},
-              {data::VboIdMain::kMenuWaterOn1, data::TextId::kNone},
-              {data::VboIdMain::kMenuWaterOn2, data::TextId::kNone},
-              {data::VboIdMain::kMenuWaterOn3, data::TextId::kNone}
+              {data::VboIdMain::kMenuWaterOn1, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuWaterOn2, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuWaterOn3, data::TextId::kNotYet}
           },
           UiToggle{
-              {data::VboIdMain::kMenuRoadsOff, data::TextId::kNone,
+              {data::VboIdMain::kMenuRoadsOff, data::TextId::kNotYet,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_roads_;
                  this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_roads_ = !state;
                }},
-              {data::VboIdMain::kMenuRoadsOn1, data::TextId::kNone},
-              {data::VboIdMain::kMenuRoadsOn2, data::TextId::kNone},
-              {data::VboIdMain::kMenuRoadsOn3, data::TextId::kNone}
+              {data::VboIdMain::kMenuRoadsOn1, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuRoadsOn2, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuRoadsOn3, data::TextId::kNotYet}
           },
           UiToggle{
-              {data::VboIdMain::kMenuFencesOff, data::TextId::kNone,
+              {data::VboIdMain::kMenuFencesOff, data::TextId::kNotYet,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_fences_;
                  this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_fences_ = !state;
                }},
-              {data::VboIdMain::kMenuFencesOn1, data::TextId::kNone},
-              {data::VboIdMain::kMenuFencesOn2, data::TextId::kNone},
-              {data::VboIdMain::kMenuFencesOn3, data::TextId::kNone}
+              {data::VboIdMain::kMenuFencesOn1, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuFencesOn2, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuFencesOn3, data::TextId::kNotYet}
           },
           UiToggle{
-              {data::VboIdMain::kMenuPlacementOff, data::TextId::kNone,
+              {data::VboIdMain::kMenuPlacementOff, data::TextId::kNotYet,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_placement_;
                  this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_placement_ = !state;
                }},
-              {data::VboIdMain::kMenuPlacementOn1, data::TextId::kNone},
-              {data::VboIdMain::kMenuPlacementOn2, data::TextId::kNone},
-              {data::VboIdMain::kMenuPlacementOn3, data::TextId::kNone}
+              {data::VboIdMain::kMenuPlacementOn1, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuPlacementOn2, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuPlacementOn3, data::TextId::kNotYet}
           },
           UiToggle{
-              {data::VboIdMain::kMenuObjectsOff, data::TextId::kNone,
+              {data::VboIdMain::kMenuObjectsOff, data::TextId::kNotYet,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_objects_;
                  this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_objects_ = !state;
                }},
-              {data::VboIdMain::kMenuObjectsOn1, data::TextId::kNone},
-              {data::VboIdMain::kMenuObjectsOn2, data::TextId::kNone},
-              {data::VboIdMain::kMenuObjectsOn3, data::TextId::kNone}
+              {data::VboIdMain::kMenuObjectsOn1, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuObjectsOn2, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuObjectsOn3, data::TextId::kNotYet}
           },
           UiToggle{
-              {data::VboIdMain::kMenuBiomesOff, data::TextId::kNone,
+              {data::VboIdMain::kMenuBiomesOff, data::TextId::kNotYet,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_biomes_;
                  this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_biomes_ = !state;
                }},
-              {data::VboIdMain::kMenuBiomesOn1, data::TextId::kNone},
-              {data::VboIdMain::kMenuBiomesOn2, data::TextId::kNone},
-              {data::VboIdMain::kMenuBiomesOn3, data::TextId::kNone}
+              {data::VboIdMain::kMenuBiomesOn1, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuBiomesOn2, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuBiomesOn3, data::TextId::kNotYet}
           },
           UiToggle{
-              {data::VboIdMain::kMenuTilesOff, data::TextId::kNone,
+              {data::VboIdMain::kMenuTilesOff, data::TextId::kNotYet,
                [this]() {
                  bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_tiles_;
                  this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_tiles_ = !state;
                }},
-              {data::VboIdMain::kMenuTilesOn1, data::TextId::kNone},
-              {data::VboIdMain::kMenuTilesOn2, data::TextId::kNone},
-              {data::VboIdMain::kMenuTilesOn3, data::TextId::kNone}
+              {data::VboIdMain::kMenuTilesOn1, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuTilesOn2, data::TextId::kNotYet},
+              {data::VboIdMain::kMenuTilesOn3, data::TextId::kNotYet}
           },
-          UiStaticSprite{data::VboIdMain::kMenuSettings, data::TextId::kNone,
-                         [this]() {
-                           this->show_settings_ = true;
-                         }},
           UiStaticSprite{data::VboIdMain::kMenuShaderWirebound,
-                         data::TextId::kNone},
+                         data::TextId::kNotYet},
           UiToggle{
               {data::VboIdMain::kMenuShadersOff, data::TextId::kMenuTerrain,
                [this]() {
@@ -158,55 +154,65 @@ Menu::Menu(
               {data::VboIdMain::kMenuShadersOn2, data::TextId::kMenuTerrain},
               {data::VboIdMain::kMenuShadersOn3, data::TextId::kMenuTerrain}
           },
-          UiDynamicSprite{data::VboIdMain::kMenuCross, data::TextId::kNone}),
+          {data::VboIdMain::kMenuArrowSelect, data::TextId::kNotYet},
+          {data::VboIdMain::kMenuArrowSelected, data::TextId::kNotYet},
+          {data::VboIdMain::kMenuSave, data::TextId::kNotYet},
+          {data::VboIdMain::kMenuLoad, data::TextId::kNotYet}),
       ui_settings_(
-          UiDynamicSprite{data::VboIdMain::kConfigDesk, data::TextId::kNone},
+          UiDynamicSprite{data::VboIdMain::kSettingsDesk, data::TextId::kNotYet},
           4.0f,
           ui_shared_resources_,
-          UiSliderH3{
-              {data::VboIdMain::kSettingsResolutionFill, data::TextId::kNone},
-              {data::VboIdMain::kSettingsResolutionBack, data::TextId::kNone},
-              {data::VboIdMain::kSettingsResolutionIcon, data::TextId::kNone},
+          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
+          LocalTransform{glm::vec2{0.2f, 0.0f}, 1.0f, 0.0f},
+          {
+              {data::VboIdMain::kSettingsDeskPinBack, data::TextId::kNotYet, [](){}},
+              {data::VboIdMain::kSettingsDeskPinPoint, data::TextId::kNotYet}},
+          {data::VboIdMain::kSettingsResolutionLabel, data::TextId::kNotYet},
+          {data::VboIdMain::kSettingsResolutionLeft, data::TextId::kNotYet},
+          {data::VboIdMain::kSettingsResolutionRight, data::TextId::kNotYet},
+          {data::VboIdMain::kSettingsResolutionSlot, data::TextId::kNotYet},
+          {data::VboIdMain::kSettingsResolution, data::TextId::kNotYet},
+          {{data::VboIdMain::kSettingsFullScreenOff, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsFullScreenOn1, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsFullScreenOn2, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsFullScreenOn3, data::TextId::kNotYet}},
+          {data::VboIdMain::kSettingsSensitivityIcon, data::TextId::kNotYet},
+          UiSliderH2{
+              {data::VboIdMain::kSettingsSensitivityArea, data::TextId::kNotYet},
+              {data::VboIdMain::kSettingsSensitivityHandle, data::TextId::kNotYet},
           },
-          UiSliderH3{
-              {data::VboIdMain::kSettingsSoundFill, data::TextId::kNone},
-              {data::VboIdMain::kSettingsSoundBack, data::TextId::kNone},
-              {data::VboIdMain::kSettingsSoundIcon, data::TextId::kNone},
+          {data::VboIdMain::kSettingsKeyboard, data::TextId::kNotYet},
+          {data::VboIdMain::kSettingsSoundIcon, data::TextId::kNotYet},
+          UiSliderH2{
+              {data::VboIdMain::kSettingsSoundArea, data::TextId::kNotYet},
+              {data::VboIdMain::kSettingsSoundHandle, data::TextId::kNotYet},
           },
-          UiSliderH3{
-              {data::VboIdMain::kSettingsMusicFill, data::TextId::kNone},
-              {data::VboIdMain::kSettingsMusicBack, data::TextId::kNone},
-              {data::VboIdMain::kSettingsMusicIcon, data::TextId::kNone},
+          {{data::VboIdMain::kSettingsSoundOff, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsSoundOn1, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsSoundOn2, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsSoundOn3, data::TextId::kNotYet}},
+          {data::VboIdMain::kSettingsMusicIcon, data::TextId::kNotYet},
+          UiSliderH2{
+              {data::VboIdMain::kSettingsMusicArea, data::TextId::kNotYet},
+              {data::VboIdMain::kSettingsMusicHandle, data::TextId::kNotYet},
           },
-          UiSliderH3{
-              {data::VboIdMain::kSettingsSensitivityFill, data::TextId::kNone},
-              {data::VboIdMain::kSettingsSensitivityBack, data::TextId::kNone},
-              {data::VboIdMain::kSettingsSensitivityIcon, data::TextId::kNone},
-          },
-          UiStaticSprite{data::VboIdMain::kSettingsKeyboard, data::TextId::kNone},
-          UiToggle{
-              {data::VboIdMain::kSettingsMusicOff, data::TextId::kNone,
-               [this]() {
-                 std::cout << "toggle music" << std::endl;
-               }},
-              {data::VboIdMain::kSettingsMusicOn1, data::TextId::kNone},
-              {data::VboIdMain::kSettingsMusicOn2, data::TextId::kNone},
-              {data::VboIdMain::kSettingsMusicOn3, data::TextId::kNone}
-          },
-          UiToggle{
-              {data::VboIdMain::kSettingsSoundOff, data::TextId::kNone,
-               [this]() {
-                 std::cout << "toggle sound" << std::endl;
-               }},
-              {data::VboIdMain::kSettingsSoundOn1, data::TextId::kNone},
-              {data::VboIdMain::kSettingsSoundOn2, data::TextId::kNone},
-              {data::VboIdMain::kSettingsSoundOn3, data::TextId::kNone}
-          },
-          UiDynamicSprite{data::VboIdMain::kSettingsCross, data::TextId::kNone}) {}
+          {{data::VboIdMain::kSettingsMusicOff, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsMusicOn1, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsMusicOn2, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsMusicOn3, data::TextId::kNotYet}},
+          {data::VboIdMain::kSettingsTipInfoLabel, data::TextId::kNotYet},
+          {data::VboIdMain::kSettingsTipInfo, data::TextId::kNotYet},
+           {{data::VboIdMain::kSettingsTipInfoOff, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsTipInfoOn1, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsTipInfoOn2, data::TextId::kNotYet},
+           {data::VboIdMain::kSettingsTipInfoOn3, data::TextId::kNotYet}}
+          ) {}
 
 
 void Menu::SetMode(int id) {
   cur_mode_ = modes_[id];
+  arrow_selected_angle_ =
+      static_cast<float>(id) * 2.0f * glm::pi<float>() / 8.0f;
   cur_mode_->BindCallbacks();
   auto text_ids = cur_mode_->GetPrerenderTextIds();
   text_renderer_.PrerenderModeText(text_ids.x, text_ids.y);
@@ -216,18 +222,16 @@ void Menu::Render(bool show) {
   glBindVertexArray(ui_shared_resources_.vao_ui_);
 
   ui_shared_resources_.static_sprite_shader_.Bind();
-
   ui_shared_resources_.tex_ui_.Bind();
 
-  if (!show) {
-    Release();
-    show_settings_ = false;
-  }
+  auto mouse_pos = ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
 
-  if (show_settings_) {
-    ui_settings_.Render(show);
+  if (show) {
+    float angle = std::atan2(mouse_pos.y, mouse_pos.x) - glm::pi<float>() / 2.0f;
+    ui_tab_menu_.Render(show, angle, arrow_selected_angle_);
+    ui_settings_.Render();
   } else {
-    ui_tab_menu_.Render(show);
+    Release();
   }
 }
 
@@ -236,34 +240,29 @@ void Menu::RenderPicking() {
   glBindVertexArray(ui_shared_resources_.vao_ui_);
   /// first three for text (we don;t need picking for it)
   ui_tab_menu_.RenderPicking();
-  if (show_settings_) {
-    ui_settings_.RenderPicking();
-  }
+  ui_settings_.RenderPicking();
 }
 
 data::TextId Menu::Hover(uint32_t global_id) {
-  if (!show_settings_) {
-    return ui_tab_menu_.Hover(global_id);
-  } else {
-    return ui_settings_.Hover(global_id);
+  auto hovered = ui_tab_menu_.Hover(global_id);
+  if (hovered != data::TextId::kNone) {
+    return hovered;
   }
+
+  // TODO: arrow SELECT
+
+  return ui_settings_.Hover(global_id);
 }
 
 bool Menu::Press(uint32_t global_id) {
-  if (!show_settings_) {
-    ui_tab_menu_.Press(global_id);
-  } else {
-    ui_settings_.Press(global_id);
-  }
+  ui_tab_menu_.Press(global_id);
+  ui_settings_.Press(global_id);
   return true;
 }
 
 void Menu::Release() {
-  if (!show_settings_) {
-    ui_tab_menu_.Release();
-  } else {
-    ui_settings_.Release();
-  }
+  ui_tab_menu_.Release();
+  ui_settings_.Release();
 }
 
 void Menu::Parse() {}
