@@ -22,9 +22,6 @@
 + water icons to text
 
 
-UiToggle2 (UiPin)
-UiSlider2D (UiPalette)
-
 class UiTextLabel;
 class UiTextInput;
 class UiNumberInput;
@@ -38,3 +35,27 @@ SO: ArbitraryGraph.h
 
 Update - God hand load/save
 Keyboard in style of stones in position raisen or not
+
+
+
+NEW ISSUES:
+text_back make stick lower than actual sprite, so area above the stick was clickable
+kFencesTypeBack replace with stick below
+kFencesEditNameBack replace with idk... slot sprite?
+UiToggle2 - replace on_ sprite
+terrain: Bake place after slots, so UiTerrainMode::ui_event_handler include slots
+label field for each: kTerrainEditScaleXText
+
+---------------------------------------
+--- FIRST YOU DO (the whole window infrastructure + text input):
+desk: tip info, confirmation, file
+WindowBase class with __Pin__
+text input (text / number)
+--- THEN YOU DO (generate terrain):
+Terrain Generation
+--- AND ONLY THEN YOU DO (graph draw: UiSlots + Grid/Graph):
+map edge/face/vertex visualization
+biome round slider (wind, sun, time)
+---------------------------------------
+
+TODO: not owns, BUT: add UiWindowBase to UiRenderer::opened_windows_ std::vector/array

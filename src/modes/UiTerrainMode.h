@@ -10,6 +10,8 @@
 #include "UiTerrainGenerator.h"
 
 #include "../core/Tile.h"
+#include "../core/UiSlots.h"
+#include "../core/UiComplex.h"
 
 class UiTerrainMode final : public IUiMode {
  public:
@@ -42,18 +44,12 @@ class UiTerrainMode final : public IUiMode {
   UiSliderV slider_falloff_;
 
   UiStaticSprite btn_bake_;
+  UiTerrainBake ui_bake_;
 
-  GridGraph graph_; // like ArbitraryGraph
-  UiSlots slots_;
+  UiSlotsTerrain slots_;
 
-  UiTerrainEditConfig slots_edit_;
-  UiTerrainBakeConfig terrain_heights_;
-
-  //TODO: refactor naming convention (texture_, shader_, slider_, etc...)
-
-  //TODO: too much for UiEventHandler
   UiEventHandler<
-      static_cast<int>(data::VboIdMain::kTerrainFalloffIcon) -
+      static_cast<int>(data::VboIdMain::kTerrainSlotsFlipPointEdgeFace) -
       static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1
       > ui_event_handler_;
 

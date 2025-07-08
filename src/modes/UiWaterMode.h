@@ -63,8 +63,6 @@ class UiWaterMode final : public IUiMode {
   UiStaticSprite btn_bake_lake_;
   UiStaticSprite btn_bake_river_;
   UiStaticSprite btn_bake_waterfall_;
-  UiStaticSprite btn_create_;
-  UiStaticSprite btn_remove_;
   UiStaticSprite btn_update_;
   //UiSlots slots_;
 

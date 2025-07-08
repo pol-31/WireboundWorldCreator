@@ -43,19 +43,21 @@ class TextRenderer {
 
   /// runtime text, no prerender:  each symbol rendered as a separate sprite
   /// (todo; prerender to some point is still possible)
-  void RenderText(/*UiDynamicSprite& text_slot, */std::string_view text,
+  void RenderText(UiDynamicSprite& text_slot, std::string_view text,
                   float scale, glm::vec2 position,
                   Alignment alignment = Alignment::kCentre);
 
-  void RenderText(const FixedSizeQueue<char, 64>* text,
+  void RenderText(UiDynamicSprite& text_slot,
+                  const FixedSizeQueue<char, 64>* text,
                   float scale, glm::vec2 position,
                   Alignment alignment = Alignment::kCentre);
 
-  void RenderTextPicking(/*UiDynamicSprite& text_slot, */std::string_view text,
+  void RenderTextPicking(UiDynamicSprite& text_slot, std::string_view text,
                          float scale, glm::vec2 position,
                          Alignment alignment = Alignment::kCentre);
 
-  void RenderTextPicking(const FixedSizeQueue<char, 64>* text,
+  void RenderTextPicking(UiDynamicSprite& text_slot,
+                         const FixedSizeQueue<char, 64>* text,
                          float scale, glm::vec2 position,
                          Alignment alignment = Alignment::kCentre);
 
@@ -95,7 +97,8 @@ class TextRenderer {
 
   Aabb RenderPhrase(std::string_view);
 
-  int CalculateLineLength(std::string_view text);
+  int CalculateLineLength(
+      std::string_view text, const UiDynamicSprite& text_slot);
 
   void PrerenderImpl(
       int start, int end, Texture& texture,

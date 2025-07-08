@@ -37,10 +37,10 @@ class UiFencesMode final : public IUiMode {
   UiStaticSprite btn_bake_wooden_;
   UiStaticSprite btn_remove_;
 
-  UiSlots slots_;
+  UiSlotsModels slots_;
 
   UiEventHandler<
-      static_cast<int>(data::VboIdMain::kFencesSlotsFlipSelectEdit) -
+      static_cast<int>(data::VboIdMain::kFencesTypeNext) -
       static_cast<int>(data::VboIdMain::kFencesFencesMode) + 1
       > ui_event_handler_;
 };

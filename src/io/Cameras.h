@@ -78,6 +78,14 @@ class ICamera {
     position_ = position;
   }
 
+  [[nodiscard]] float GetYaw() const noexcept {
+    return yaw_;
+  }
+
+  [[nodiscard]] float GetPitch() const noexcept {
+    return pitch_;
+  }
+
   void UpdateFrame();
 
   void UpdateConfig();
@@ -223,6 +231,14 @@ class CameraHandler {
 
   void SetPosition(glm::vec3 position) {
     cameras_[cur_id_]->SetPosition(position);
+  }
+
+  [[nodiscard]] float GetYaw() const noexcept {
+    return cameras_[cur_id_]->GetYaw();
+  }
+
+  [[nodiscard]] float GetPitch() const noexcept {
+    return cameras_[cur_id_]->GetPitch();
   }
 
   static constexpr int gCamerasNum{3};

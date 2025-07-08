@@ -64,100 +64,140 @@ void UiLoading::UpdateTransform() {
   UpdateTransform(
       transform.translate.x, transform.translate.y, transform.scale);
 }
-/*
-UiColorPalette::UiColorPalette(
+
+const float UiSlider2D::kTrackWidthFactor = 0.9f;
+const float UiSlider2D::kTrackHeightFactor = 0.8f;
+
+UiSlider2D::UiSlider2D(
     UiDynamicSprite&& palette,
-    UiDynamicSprite&& cursor_color,
-    UiDynamicSprite&& cursor_brightness)
-    : UiBase(palette_.GetId(), {}),
+    UiDynamicSprite&& cursor,
+    glm::vec2 scale)
+    : UiBase(palette.GetId(), {}),
       palette_(std::move(palette)),
-      cursor_color_(std::move(cursor_color)),
-      cursor_brightness_(std::move(cursor_brightness)) {
-  gUiComponents[cursor_color_.GetId() - details::kIdOffsetUi].parent_id_
-      = palette_[0].GetId();
-  gUiComponents[cursor_brightness.GetId() - details::kIdOffsetUi].parent_id_
-      = palette_[0].GetId();
+      cursor_(std::move(cursor)),
+      length_({
+          kTrackWidthFactor *
+              (palette.GetRightBorder() - palette.GetLeftBorder()),
+          kTrackHeightFactor *
+              (palette.GetTopBorder() - palette.GetBottomBorder())}),
+      centre_({
+          (palette.GetRightBorder() + palette.GetLeftBorder()) / 2.0f,
+          (palette.GetTopBorder() + palette.GetBottomBorder()) / 2.0f}),
+      scale_(scale) {
+  gUiComponents[cursor_.GetId() - details::kIdOffsetUi].parent_id_
+      = palette_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
+  UpdateTransform();
 }
 
-UiColorPalette::UiColorPalette(UiColorPalette&& other) noexcept
+UiSlider2D::UiSlider2D(UiSlider2D&& other) noexcept
     : UiBase(std::move(other)),
       palette_(std::move(other.palette_)),
-      cursor_color_(std::move(other.cursor_color_)),
-      cursor_brightness_(std::move(other.cursor_brightness_)) {
+      cursor_(std::move(other.cursor_)) {
+  progress_ = other.progress_;
+  pressed_ = other.pressed_;
+  centre_ = other.centre_;
+  length_ = other.length_;
+  scale_ = other.scale_;
   gUiComponents[palette_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
 }
 
-void UiColorPalette::Render(glm::vec2 mouse_pos) {
-  palette_.Render();
-  cursor_color_.Render();
-  cursor_brightness_.Render();
-}
-
-void UiColorPalette::RenderPicking() const {
-  palette_.RenderPicking();
-}
-
-[[nodiscard]] data::TextId UiColorPalette::Hover(std::uint32_t id) {
-  //
-}
-
-void UiColorPalette::Press() {
-  pressed_ = true;
-}
-
-void UiColorPalette::Release() {
-  pressed_ = false;
-}
-
-bool UiColorPalette::Scroll(GLuint id, float yoffset) {
-  //
-}
-
-void UiColorPalette::SetParentTransform(LocalTransform transform) {
-  palette_.SetParentTransform(transform);
-  cursor_color_.SetParentTransform(transform);
-  cursor_brightness_.SetParentTransform(transform);
-}
-
-glm::vec3 UiColorPalette::GetRbgColor() const {
-  float r = 0, g = 0, b = 0;
-  float H = hue_ * 6.0f;
-  int i = static_cast<int>(H);
-  float f = H - i;
-
-  float p = brightness_ * (1.0f - saturation_);
-  float q = brightness_ * (1.0f - saturation_ * f);
-  float t = brightness_ * (1.0f - saturation_ * (1.0f - f));
-
-  switch (i % 6) {
-    case 0: r = brightness_; g = t; b = p; break;
-    case 1: r = q; g = brightness_; b = p; break;
-    case 2: r = p; g = brightness_; b = t; break;
-    case 3: r = p; g = q; b = brightness_; break;
-    case 4: r = t; g = p; b = brightness_; break;
-    case 5: r = brightness_; g = p; b = q; break;
+void UiSlider2D::Render(glm::vec2 mouse_pos) {
+  if (pressed_) {
+    SetMousePos(mouse_pos);
   }
-
-  return {r, g, b};
+  palette_.Render();
+  cursor_.Render();
 }
 
-void UiColorPalette::UpdateTransform(
+void UiSlider2D::RenderIcon() {
+  cursor_.Render();
+}
+
+void UiSlider2D::RenderPicking() const {
+  palette_.RenderPicking();
+  if (debug::gCtrlMode) {
+    cursor_.RenderPicking();
+  }
+}
+
+void UiSlider2D::SetMousePos(glm::vec2 mouse_pos) {
+  glm::vec2 half_length_ = length_ / 2.0f;
+  glm::vec2 offset = glm::clamp(
+      mouse_pos - centre_, -half_length_, +half_length_);
+  progress_ = (offset + half_length_) / length_;
+  cursor_.SetTranslate(offset);
+}
+
+void UiSlider2D::SetProgress(glm::vec2 progress) {
+  progress_ = progress;
+  glm::vec2 half_length_ = length_ / 2.0f;
+  glm::vec2 offset = progress_ * length_ - half_length_;
+  cursor_.SetTranslate(offset);
+}
+
+data::TextId UiSlider2D::Hover(std::uint32_t id) {
+  return palette_.Hover();
+}
+
+bool UiSlider2D::Scroll(GLuint id, float yoffset) {
+  if (id != palette_.GetId() || id != cursor_.GetId()) {
+    return false;
+  }
+  glm::vec2 dir = centre_; // unf we can't, we don't have quick mouse pos
+  float factor = 0.01f * yoffset;
+  glm::vec2 progress = progress_;
+  if (glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+    progress.x = std::clamp(progress_.x + factor, 0.0f, 1.0f);
+  } else {
+    progress.y = std::clamp(progress_.y + factor, 0.0f, 1.0f);
+  }
+  SetProgress(progress);
+  return true;
+}
+
+glm::vec2 UiSlider2D::GetProgress() const {
+  return (glm::vec2{1.0f} - progress_) * scale_;
+}
+
+float UiSlider2D::GetProgressX() const {
+  return (1.0f - progress_.x) * scale_.x;
+}
+
+float UiSlider2D::GetProgressY() const {
+  return (1.0f - progress_.y) * scale_.y;
+}
+
+void UiSlider2D::UpdateTransform(
     float x_translate, float y_translate, float scale) {
   palette_.UpdateTransform();
-  cursor_color_.UpdateTransform();
-  cursor_brightness_.UpdateTransform();
+  cursor_.UpdateTransform();
+  length_ =
+      {kTrackWidthFactor *
+           (palette_.GetRightBorder() - palette_.GetLeftBorder()),
+       kTrackHeightFactor *
+           (palette_.GetTopBorder() - palette_.GetBottomBorder())};
+  centre_ =
+      {(palette_.GetRightBorder() + palette_.GetLeftBorder()) / 2.0f,
+       (palette_.GetTopBorder() + palette_.GetBottomBorder()) / 2.0f};
+  glm::vec2 related_pos = progress_ * length_ - length_ / 2.0f + centre_;
+  SetMousePos(related_pos);
 }
 
-void UiColorPalette::UpdateTransform() {
+void UiSlider2D::UpdateTransform() {
   auto transform = debug::gUiTransforms[
       4 * (GetId() - details::kIdOffsetUi)
   ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
-}*/
+  UpdateTransform(transform.translate.x, transform.translate.y,
+                  transform.scale);
+}
+
+void UiSlider2D::SetParentTransform(LocalTransform transform) {
+  palette_.SetParentTransform(transform);
+  cursor_.SetParentTransform(transform);
+}
 
 UiWindowBase::UiWindowBase(
     UiDynamicSprite&& sprite,
@@ -675,7 +715,6 @@ bool UiSettings::Render() {
   auto mouse_pos =
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
 
-  resolution_label_.Render();
   resolution_left_.Render();
   resolution_right_.Render();
   resolution_slot_.Render();
@@ -690,7 +729,6 @@ bool UiSettings::Render() {
   music_icon_.Render();
   music_.Render(mouse_pos);
   toggle_music_.Render();
-  tip_info_label_.Render();
   tip_info_.Render();
   toggle_tip_info_.Render();
 
@@ -712,7 +750,6 @@ void UiSettings::RenderPicking() {
   Base::RenderPickingBack();
   ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
-  resolution_label_.RenderPicking();
   resolution_left_.RenderPicking();
   resolution_right_.RenderPicking();
   resolution_slot_.RenderPicking();
@@ -727,7 +764,6 @@ void UiSettings::RenderPicking() {
   music_icon_.RenderPicking();
   music_.RenderPicking();
   toggle_music_.RenderPicking();
-  tip_info_label_.RenderPicking();
   tip_info_.RenderPicking();
   toggle_tip_info_.RenderPicking();
 
@@ -746,10 +782,6 @@ data::TextId UiSettings::Hover(int id) {
   } else {
     hovered_ = false;
   }
-
-//  hovered_ = hovered_id != data::TextId::kNotYet;
-//  hovered_ = id == Base::GetId();
-  //  hovered_ = id >= scale_.GetFillId() && id <= back_.GetId();
   return hovered_id;
 }
 
@@ -970,42 +1002,78 @@ UiWaterLayerConfig::UiWaterLayerConfig(
     LocalTransform end_transform,
     UiToggle2&& pin,
     UiDynamicSprite&& sprite_layer,
+    UiDynamicSprite&& text_layer,
+    UiToggle&& toggle_layer,
+    UiDynamicSprite&& scale_text,
     UiSliderH&& scale,
+    UiDynamicSprite&& fetch_text,
     UiSliderH&& fetch,
+    UiDynamicSprite&& spread_blend_text,
     UiSliderH&& spread_blend,
+    UiDynamicSprite&& swell_text,
     UiSliderH&& swell,
+    UiDynamicSprite&& peak_enhancement_text,
     UiSliderH&& peak_enhancement,
+    UiDynamicSprite&& short_waves_fade_text,
     UiSliderH&& short_waves_fade,
+    UiDynamicSprite&& lambda_text,
     UiSliderH&& lambda)
     : Base(std::move(sprite), size_scale, ui_shared_resources,
            start_transform, end_transform, std::move(pin)),
       sprite_layer_(std::move(sprite_layer)),
+      text_layer_(std::move(text_layer)),
+      toggle_layer_(std::move(toggle_layer)),
       scale_(std::move(scale)),
+      scale_text_(std::move(scale_text)),
       fetch_(std::move(fetch)),
+      fetch_text_(std::move(fetch_text)),
       spread_blend_(std::move(spread_blend)),
+      spread_blend_text_(std::move(spread_blend_text)),
       swell_(std::move(swell)),
+      swell_text_(std::move(swell_text)),
       peak_enhancement_(std::move(peak_enhancement)),
+      peak_enhancement_text_(std::move(peak_enhancement_text)),
       short_waves_fade_(std::move(short_waves_fade)),
+      short_waves_fade_text_(std::move(short_waves_fade_text)),
       lambda_(std::move(lambda)),
+      lambda_text_(std::move(lambda_text)),
       ui_event_handler_({
-          &scale_, &fetch_, &spread_blend_, &swell_,
+          &pin_, &toggle_layer_, &scale_, &fetch_, &spread_blend_, &swell_,
           &peak_enhancement_, &short_waves_fade_, &lambda_
       }) {
   gUiComponents[sprite_layer_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
+  gUiComponents[text_layer_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+  gUiComponents[toggle_layer_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
   gUiComponents[scale_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+  gUiComponents[scale_text_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
   gUiComponents[fetch_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
+  gUiComponents[fetch_text_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
   gUiComponents[spread_blend_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+  gUiComponents[spread_blend_text_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
   gUiComponents[swell_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
+  gUiComponents[swell_text_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
   gUiComponents[peak_enhancement_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+  gUiComponents[peak_enhancement_text_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
   gUiComponents[short_waves_fade_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
+  gUiComponents[short_waves_fade_text_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
   gUiComponents[lambda_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+  gUiComponents[lambda_text_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
@@ -1015,16 +1083,25 @@ UiWaterLayerConfig::UiWaterLayerConfig(
 UiWaterLayerConfig::UiWaterLayerConfig(UiWaterLayerConfig&& other) noexcept
     : Base(std::move(other)),
       sprite_layer_(std::move(other.sprite_layer_)),
+      text_layer_(std::move(other.text_layer_)),
+      toggle_layer_(std::move(other.toggle_layer_)),
       scale_(std::move(other.scale_)),
+      scale_text_(std::move(other.scale_text_)),
       fetch_(std::move(other.fetch_)),
+      fetch_text_(std::move(other.fetch_text_)),
       spread_blend_(std::move(other.spread_blend_)),
+      spread_blend_text_(std::move(other.spread_blend_text_)),
       swell_(std::move(other.swell_)),
+      swell_text_(std::move(other.swell_text_)),
       peak_enhancement_(std::move(other.peak_enhancement_)),
+      peak_enhancement_text_(std::move(other.peak_enhancement_text_)),
       short_waves_fade_(std::move(other.short_waves_fade_)),
+      short_waves_fade_text_(std::move(other.short_waves_fade_text_)),
       lambda_(std::move(other.lambda_)),
+      lambda_text_(std::move(other.lambda_text_)),
       modified_(other.modified_),
       ui_event_handler_({
-          &scale_, &fetch_, &spread_blend_, &swell_,
+          &pin_, &toggle_layer_, &scale_, &fetch_, &spread_blend_, &swell_,
           &peak_enhancement_, &short_waves_fade_, &lambda_
       }) {
   gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
@@ -1040,18 +1117,29 @@ bool UiWaterLayerConfig::Render() {
 
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
+  sprite_layer_.SetParentTransform(Base::cur_transform_);
+  text_layer_.SetParentTransform(Base::cur_transform_);
+  toggle_layer_.SetParentTransform(Base::cur_transform_);
   scale_.SetParentTransform(Base::cur_transform_);
+  scale_text_.SetParentTransform(Base::cur_transform_);
   fetch_.SetParentTransform(Base::cur_transform_);
+  fetch_text_.SetParentTransform(Base::cur_transform_);
   spread_blend_.SetParentTransform(Base::cur_transform_);
+  spread_blend_text_.SetParentTransform(Base::cur_transform_);
   swell_.SetParentTransform(Base::cur_transform_);
+  swell_text_.SetParentTransform(Base::cur_transform_);
   peak_enhancement_.SetParentTransform(Base::cur_transform_);
+  peak_enhancement_text_.SetParentTransform(Base::cur_transform_);
   short_waves_fade_.SetParentTransform(Base::cur_transform_);
+  short_waves_fade_text_.SetParentTransform(Base::cur_transform_);
   lambda_.SetParentTransform(Base::cur_transform_);
+  lambda_text_.SetParentTransform(Base::cur_transform_);
 
   /// shader & transform matrix already bind by Base class
   auto mouse_pos =
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
   sprite_layer_.Render();
+  toggle_layer_.Render();
   scale_.Render(mouse_pos);
   fetch_.Render(mouse_pos);
   spread_blend_.Render(mouse_pos);
@@ -1068,6 +1156,25 @@ bool UiWaterLayerConfig::Render() {
   short_waves_fade_.RenderIcon();
   lambda_.RenderIcon();
 
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(text_layer_, "layer name", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(scale_text_, "scale", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(fetch_text_, "fetch", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(spread_blend_text_, "spread blend", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(swell_text_, "swell", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(peak_enhancement_text_, "peak enhancement", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(short_waves_fade_text_, "short waves fade", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(lambda_text_, "lambda", 0.1f, glm::vec2{0.0f});
+
   return stop_show;
 }
 
@@ -1075,6 +1182,7 @@ void UiWaterLayerConfig::RenderPicking() {
   Base::RenderPickingBack();
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   sprite_layer_.RenderPicking();
+  toggle_layer_.RenderPicking();
   scale_.RenderPicking();
   fetch_.RenderPicking();
   spread_blend_.RenderPicking();
@@ -1082,22 +1190,38 @@ void UiWaterLayerConfig::RenderPicking() {
   peak_enhancement_.RenderPicking();
   short_waves_fade_.RenderPicking();
   lambda_.RenderPicking();
+
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(text_layer_, "layer name", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(scale_text_, "scale", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(fetch_text_, "fetch", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(spread_blend_text_, "spread blend", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(swell_text_, "swell", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(peak_enhancement_text_, "peak enhancement", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(short_waves_fade_text_, "short waves fade", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(lambda_text_, "lambda", 0.1f, glm::vec2{0.0f});
 }
 
 void UiWaterLayerConfig::Release() {
-  scale_.Release();
-  fetch_.Release();
-  spread_blend_.Release();
-  swell_.Release();
-  peak_enhancement_.Release();
-  short_waves_fade_.Release();
-  lambda_.Release();
+  ui_event_handler_.Release();
 }
 
 data::TextId UiWaterLayerConfig::Hover(int id) {
   data::TextId hovered_id = ui_event_handler_.Hover(id);
-  hovered_ = id == Base::GetId();
-  //  hovered_ = id >= scale_.GetFillId() && id <= back_.GetId();
+  if (hovered_id != data::TextId::kNone || id == Base::GetId()) {
+    hovered_ = true;
+  } else {
+    hovered_ = false;
+  }
   return hovered_id;
 }
 
@@ -1133,44 +1257,500 @@ OceanLayerTraits UiWaterLayerConfig::GetOceanLayerTraits() const {
 
 void UiWaterLayerConfig::UpdateTransform(
     float x_translate, float y_translate, float scale) {
+  sprite_layer_.SetParentTransform(Base::cur_transform_);
+  text_layer_.SetParentTransform(Base::cur_transform_);
+  toggle_layer_.SetParentTransform(Base::cur_transform_);
   scale_.SetParentTransform(Base::cur_transform_);
+  scale_text_.SetParentTransform(Base::cur_transform_);
   fetch_.SetParentTransform(Base::cur_transform_);
+  fetch_text_.SetParentTransform(Base::cur_transform_);
   spread_blend_.SetParentTransform(Base::cur_transform_);
+  spread_blend_text_.SetParentTransform(Base::cur_transform_);
   swell_.SetParentTransform(Base::cur_transform_);
+  swell_text_.SetParentTransform(Base::cur_transform_);
   peak_enhancement_.SetParentTransform(Base::cur_transform_);
+  peak_enhancement_text_.SetParentTransform(Base::cur_transform_);
   short_waves_fade_.SetParentTransform(Base::cur_transform_);
+  short_waves_fade_text_.SetParentTransform(Base::cur_transform_);
   lambda_.SetParentTransform(Base::cur_transform_);
+  lambda_text_.SetParentTransform(Base::cur_transform_);
 
   /// back
   sprite_.UpdateTransform();
+  pin_.UpdateTransform();
 
   /// children
   sprite_layer_.UpdateTransform();
+  text_layer_.UpdateTransform();
+  toggle_layer_.UpdateTransform();
   scale_.UpdateTransform();
+  scale_text_.UpdateTransform();
   fetch_.UpdateTransform();
+  fetch_text_.UpdateTransform();
   spread_blend_.UpdateTransform();
+  spread_blend_text_.UpdateTransform();
   swell_.UpdateTransform();
+  swell_text_.UpdateTransform();
   peak_enhancement_.UpdateTransform();
+  peak_enhancement_text_.UpdateTransform();
   short_waves_fade_.UpdateTransform();
+  short_waves_fade_text_.UpdateTransform();
   lambda_.UpdateTransform();
+  lambda_text_.UpdateTransform();
 }
 
-IUiEdit::IUiEdit()
-    : UiBase(data::VboIdMain::kSpareText2, {}, {}) {}
+//IUiEdit::IUiEdit()
+//    : UiBase(data::VboIdMain::kSpareText2, {}, {}) {}
 
-UiEditStub::UiEditStub() {}
 
-UiEditStub::UiEditStub(UiEditStub&& other) noexcept
-    : IUiEdit(std::move(other)) {}
+UiEditFences::UiEditFences(
+    UiSharedResources& ui_shared_resources,
+    UiDynamicSprite&& desk,
+    UiDynamicSprite&& accept,
+    UiDynamicSprite&& name,
+    UiDynamicSprite&& name_back,
+    UiSlider2D&& color_palette,
+    UiSliderH2&& color_brightness,
+    UiDynamicSprite&& color_indicator,
+    UiDynamicSprite&& type_back,
+    UiDynamicSprite&& type_text,
+    UiDynamicSprite&& type_prev,
+    UiDynamicSprite&& type_next)
+    : UiBase(desk.GetId(), {}),
+      desk_(std::move(desk)),
+      accept_(std::move(accept)),
+      name_(std::move(name)),
+      name_back_(std::move(name_back)),
+      color_palette_(std::move(color_palette)),
+      color_brightness_(std::move(color_brightness)),
+      color_indicator_(std::move(color_indicator)),
+      type_back_(std::move(type_back)),
+      type_text_(std::move(type_text)),
+      type_prev_(std::move(type_prev)),
+      type_next_(std::move(type_next)),
+      ui_event_handler_({
+          &accept_, &name_back_, &color_palette_,
+          &color_brightness_, &type_prev_, &type_next_
+      }),
+      ui_shared_resources_(ui_shared_resources) {
+  gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[name_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[name_back_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[color_palette_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[color_brightness_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[color_indicator_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[type_back_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[type_text_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[type_prev_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[type_next_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+}
 
-void UiEditStub::Render() {
+UiEditFences::UiEditFences(UiEditFences&& other) noexcept
+    : UiBase(std::move(other)),
+      desk_(std::move(other.desk_)),
+      accept_(std::move(other.accept_)),
+      name_(std::move(other.name_)),
+      name_back_(std::move(other.name_back_)),
+      color_palette_(std::move(other.color_palette_)),
+      color_brightness_(std::move(other.color_brightness_)),
+      color_indicator_(std::move(other.color_indicator_)),
+      type_back_(std::move(other.type_back_)),
+      type_text_(std::move(other.type_text_)),
+      type_prev_(std::move(other.type_prev_)),
+      type_next_(std::move(other.type_next_)),
+      ui_event_handler_({
+          &accept_, &name_back_, &color_palette_,
+          &color_brightness_, &type_prev_, &type_next_
+      }),
+      ui_shared_resources_(other.ui_shared_resources_) {
+  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+data::TextId UiEditFences::Hover(int id) {
+  return ui_event_handler_.Hover(id);
+}
+
+bool UiEditFences::Press(int id) {
+  return ui_event_handler_.Press(id);
+}
+
+void UiEditFences::Release() {
+  ui_event_handler_.Release();
+}
+
+bool UiEditFences::Scroll(GLuint id, float yoffset) {
+  return color_palette_.Scroll(id, yoffset) ||
+         color_brightness_.Scroll(id, yoffset);
+}
+
+void UiEditFences::Render() {
+  ui_shared_resources_.static_sprite_shader_.Bind();
+
+  auto mouse_pos =
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+
+  desk_.Render();
+  accept_.Render();
+  name_back_.Render();
+  color_palette_.Render(mouse_pos);
+  color_brightness_.Render(mouse_pos);
+  //TODO: set indicator color
+  color_indicator_.Render();
+  type_back_.Render();
+  type_prev_.Render();
+  type_next_.Render();
+
+  color_palette_.RenderIcon();
+  color_brightness_.RenderIcon();
+
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(name_, "name", 1.0f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(type_text_, "type", 1.0f, glm::vec2{0.0f});
 
 }
 
-void UiEditStub::RenderPicking() const {}
+void UiEditFences::RenderPicking() {
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
-void UiEditStub::UpdateTransform(
-    float x_translate, float y_translate, float scale) {}
+  desk_.RenderPicking();
+  accept_.RenderPicking();
+  name_back_.RenderPicking();
+  color_palette_.RenderPicking();
+  color_brightness_.RenderPicking();
+  //TODO: set indicator color
+  color_indicator_.RenderPicking();
+  type_back_.RenderPicking();
+  type_prev_.RenderPicking();
+  type_next_.RenderPicking();
 
-void UiEditStub::UpdateTransform() {}
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
 
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(name_, "name", 1.0f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(type_text_, "type", 1.0f, glm::vec2{0.0f});
+
+}
+
+void UiEditFences::UpdateTransform(
+    float x_translate, float y_translate, float scale) {
+  desk_.UpdateTransform();
+  accept_.UpdateTransform();
+  name_.UpdateTransform();
+  name_back_.UpdateTransform();
+  color_palette_.UpdateTransform();
+  color_brightness_.UpdateTransform();
+  color_indicator_.UpdateTransform();
+  type_back_.UpdateTransform();
+  type_text_.UpdateTransform();
+  type_prev_.UpdateTransform();
+  type_next_.UpdateTransform();
+}
+
+void UiEditFences::UpdateTransform() {
+  auto transform = debug::gUiTransforms[
+      4 * (GetId() - details::kIdOffsetUi)
+  ];
+  UpdateTransform(
+      transform.translate.x, transform.translate.y, transform.scale);
+}
+
+UiEditTerrain::UiEditTerrain(
+    UiSharedResources& ui_shared_resources,
+    UiDynamicSprite&& desk,
+    UiDynamicSprite&& accept,
+    UiDynamicSprite&& name,
+    UiDynamicSprite&& name_back,
+    UiSlider2D&& color_palette,
+    UiSliderH2&& color_brightness,
+    UiDynamicSprite&& color_indicator,
+    UiDynamicSprite&& heightmap,
+    UiDynamicSprite&& random_generate)
+    : UiBase(desk.GetId(), {}),
+      desk_(std::move(desk)),
+      accept_(std::move(accept)),
+      name_(std::move(name)),
+      name_back_(std::move(name_back)),
+      color_palette_(std::move(color_palette)),
+      color_brightness_(std::move(color_brightness)),
+      color_indicator_(std::move(color_indicator)),
+      tex_heightmap_("../assets/terrain/map_erosion_deposition.png", GL_RED),
+      heightmap_(std::move(heightmap)),
+      random_generate_(std::move(random_generate)),
+      ui_event_handler_({
+          &accept_, &name_back_, &color_palette_,
+          &color_brightness_, &random_generate_
+      }),
+      ui_shared_resources_(ui_shared_resources) {
+  gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[name_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[name_back_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[color_palette_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[color_brightness_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[color_indicator_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[heightmap_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[random_generate_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+}
+
+UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
+    : UiBase(std::move(other)),
+      desk_(std::move(other.desk_)),
+      accept_(std::move(other.accept_)),
+      name_(std::move(other.name_)),
+      name_back_(std::move(other.name_back_)),
+      color_palette_(std::move(other.color_palette_)),
+      color_brightness_(std::move(other.color_brightness_)),
+      color_indicator_(std::move(other.color_indicator_)),
+      tex_heightmap_(std::move(other.tex_heightmap_)),
+      heightmap_(std::move(other.heightmap_)),
+      random_generate_(std::move(other.random_generate_)),
+      ui_event_handler_({
+          &accept_, &name_back_, &color_palette_,
+          &color_brightness_, &random_generate_
+      }),
+      ui_shared_resources_(other.ui_shared_resources_) {
+  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+data::TextId UiEditTerrain::Hover(int id) {
+  return ui_event_handler_.Hover(id);
+}
+
+bool UiEditTerrain::Press(int id) {
+  return ui_event_handler_.Press(id);
+}
+
+void UiEditTerrain::Release() {
+  ui_event_handler_.Release();
+}
+
+bool UiEditTerrain::Scroll(GLuint id, float yoffset) {
+  return color_palette_.Scroll(id, yoffset) ||
+         color_brightness_.Scroll(id, yoffset);
+}
+
+void UiEditTerrain::Render() {
+  ui_shared_resources_.static_sprite_shader_.Bind();
+
+  auto mouse_pos =
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+
+  desk_.Render();
+  accept_.Render();
+  name_back_.Render();
+  color_palette_.Render(mouse_pos);
+  color_brightness_.Render(mouse_pos);
+  //TODO: set indicator color
+  color_indicator_.Render();
+  tex_heightmap_.Bind();
+  heightmap_.RenderPicking();
+  ui_shared_resources_.tex_ui_.Bind();
+  random_generate_.Render();
+
+  color_palette_.RenderIcon();
+  color_brightness_.RenderIcon();
+
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(name_, "name", 0.1f, glm::vec2{0.0f});
+
+}
+
+void UiEditTerrain::RenderPicking() {
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
+
+  desk_.RenderPicking();
+  accept_.RenderPicking();
+  name_back_.RenderPicking();
+  color_palette_.RenderPicking();
+  color_brightness_.RenderPicking();
+  //TODO: set indicator color
+  color_indicator_.RenderPicking();
+  heightmap_.RenderPicking();
+  random_generate_.RenderPicking();
+
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(name_, "name", 0.1f, glm::vec2{0.0f});
+
+}
+
+void UiEditTerrain::UpdateTransform(
+    float x_translate, float y_translate, float scale) {
+  desk_.UpdateTransform();
+  accept_.UpdateTransform();
+  name_.UpdateTransform();
+  name_back_.UpdateTransform();
+  color_palette_.UpdateTransform();
+  color_brightness_.UpdateTransform();
+  color_indicator_.UpdateTransform();
+  heightmap_.UpdateTransform();
+  random_generate_.UpdateTransform();
+}
+
+void UiEditTerrain::UpdateTransform() {
+  auto transform = debug::gUiTransforms[
+      4 * (GetId() - details::kIdOffsetUi)
+  ];
+  UpdateTransform(
+      transform.translate.x, transform.translate.y, transform.scale);
+}
+
+UiTerrainBake::UiTerrainBake(
+    UiSharedResources& ui_shared_resources,
+    UiDynamicSprite&& desk,
+    UiDynamicSprite&& accept,
+    UiDynamicSprite&& heightmap,
+    UiDynamicSprite&& erosion_label,
+    UiDynamicSprite&& erosion_input,
+    UiDynamicSprite&& weathering_label,
+    UiDynamicSprite&& weathering_input)
+    : UiBase(desk.GetId(), {}),
+      desk_(std::move(desk)),
+      accept_(std::move(accept)),
+      tex_heightmap_("../assets/terrain/map_erosion_wear.png", GL_RED),
+      heightmap_(std::move(heightmap)),
+      erosion_label_(std::move(erosion_label)),
+      erosion_input_(std::move(erosion_input)),
+      weathering_label_(std::move(weathering_label)),
+      weathering_input_(std::move(weathering_input)),
+      ui_event_handler_({
+          &accept_, &erosion_input_, &weathering_input_
+      }),
+      ui_shared_resources_(ui_shared_resources) {
+  gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[heightmap_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[erosion_label_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[erosion_input_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[weathering_label_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[weathering_input_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk.GetId();
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+}
+
+UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
+    : UiBase(std::move(other)),
+      desk_(std::move(other.desk_)),
+      accept_(std::move(other.accept_)),
+      tex_heightmap_(std::move(other.tex_heightmap_)),
+      heightmap_(std::move(other.heightmap_)),
+      erosion_label_(std::move(other.erosion_label_)),
+      erosion_input_(std::move(other.erosion_input_)),
+      weathering_label_(std::move(other.weathering_label_)),
+      weathering_input_(std::move(other.weathering_input_)),
+      ui_event_handler_({
+          &accept_, &erosion_input_, &weathering_input_
+      }),
+      ui_shared_resources_(other.ui_shared_resources_) {
+  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+data::TextId UiTerrainBake::Hover(int id) {
+  return ui_event_handler_.Hover(id);
+}
+
+bool UiTerrainBake::Press(int id) {
+  return ui_event_handler_.Press(id);
+}
+
+void UiTerrainBake::Release() {
+  ui_event_handler_.Release();
+}
+
+bool UiTerrainBake::Scroll(GLuint id, float yoffset) {
+  return false;
+}
+
+void UiTerrainBake::Render() {
+  ui_shared_resources_.static_sprite_shader_.Bind();
+
+  auto mouse_pos =
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+
+  desk_.Render();
+  accept_.Render();
+  tex_heightmap_.Bind();
+  heightmap_.Render();
+  ui_shared_resources_.tex_ui_.Bind();
+  erosion_input_.Render();
+  weathering_input_.Render();
+
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(erosion_label_, "erosion", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderText(weathering_label_, "weathering", 0.1f, glm::vec2{0.0f});
+}
+
+void UiTerrainBake::RenderPicking() {
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
+
+  desk_.RenderPicking();
+  accept_.RenderPicking();
+  heightmap_.RenderPicking();
+  erosion_input_.RenderPicking();
+  weathering_input_.RenderPicking();
+
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(erosion_label_, "erosion", 0.1f, glm::vec2{0.0f});
+  ui_shared_resources_.global_glfw_callback_data_.text_renderer
+      ->RenderTextPicking(weathering_label_, "weathering", 0.1f, glm::vec2{0.0f});
+}
+
+void UiTerrainBake::UpdateTransform(
+    float x_translate, float y_translate, float scale) {
+  desk_.UpdateTransform();
+  accept_.UpdateTransform();
+  heightmap_.UpdateTransform();
+  erosion_label_.UpdateTransform();
+  erosion_input_.UpdateTransform();
+  weathering_label_.UpdateTransform();
+  weathering_input_.UpdateTransform();
+}
+
+void UiTerrainBake::UpdateTransform() {
+  auto transform = debug::gUiTransforms[
+      4 * (GetId() - details::kIdOffsetUi)
+  ];
+  UpdateTransform(
+      transform.translate.x, transform.translate.y, transform.scale);
+}

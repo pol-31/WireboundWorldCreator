@@ -36,81 +36,67 @@ class UiLoading final : public UiBase {
  private:
   std::array<UiStaticSprite, 11> sprites_;
 };
-/*
-class UiColorPalette final : public UiBase {
+
+//used for UiPalette, so X-axis is Hue, Y-asix is Saturation
+class UiSlider2D final : public UiBase {
  public:
-  UiColorPalette(UiDynamicSprite&& palette,
-                 UiDynamicSprite&& cursor_color,
-                 UiDynamicSprite&& cursor_brightness);
+  UiSlider2D(UiDynamicSprite&& palette,
+             UiDynamicSprite&& cursor,
+             glm::vec2 scale = glm::vec2{1.0f});
 
-  UiColorPalette(UiColorPalette&& other) noexcept;
-  UiColorPalette(const UiColorPalette& other) = delete;
+  UiSlider2D(UiSlider2D&& other) noexcept;
+  UiSlider2D(const UiSlider2D& other) = delete;
 
-  UiColorPalette& operator=(UiColorPalette&& other) = delete;
-  UiColorPalette& operator=(const UiColorPalette& other) = delete;
+  UiSlider2D& operator=(UiSlider2D&& other) = delete;
+  UiSlider2D& operator=(const UiSlider2D& other) = delete;
 
   void Render(glm::vec2 mouse_pos);
+  void RenderIcon();
 
   void RenderPicking() const;
 
   [[nodiscard]] data::TextId Hover(std::uint32_t id);
 
-  void Press() override;
+  void Press() override {
+    pressed_ = true;
+  }
 
-  void Release() override;
+  void Release() override {
+    pressed_ = false;
+  }
 
   bool Scroll(GLuint id, float yoffset) override;
 
-  void SetParentTransform(LocalTransform transform);
+  [[nodiscard]] glm::vec2 GetProgress() const;
 
-  [[nodiscard]] float GetHue() const {
-    return hue_;
-  }
+  [[nodiscard]] float GetProgressX() const;
 
-  [[nodiscard]] float GetSaturation() const {
-    return saturation_;
-  }
-
-  [[nodiscard]] float GetBrightness() const {
-    return brightness_;
-  }
-
-  [[nodiscard]] glm::vec3 GetRbgColor() const;
+  [[nodiscard]] float GetProgressY() const;
 
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
 
   void UpdateTransform() override;
 
- private:
-  void Set(glm::vec2 mouse_pos);
+  void SetParentTransform(LocalTransform transform);
 
-  void Set(float progress);
+ private:
+  void SetMousePos(glm::vec2 mouse_pos);
+
+  void SetProgress(glm::vec2 progress);
 
   UiDynamicSprite palette_;
-  UiDynamicSprite cursor_color_;
-  UiDynamicSprite cursor_brightness_;
+  UiDynamicSprite cursor_;
 
-  float hue_ = 0.0f;
-  float saturation_ = 0.0f;
-  float brightness_ = 0.0f;
-
-  bool pressed_color_ = 0.0f;
-  bool pressed_brightness_ = 0.0f;
-
-  float hue_centre_;
-  float saturation_centre_;
-  float brightness_centre_;
-
-  float hue_length_;
-  float saturation_length_;
-  float brightness_length_;
+  glm::vec2 progress_ = glm::vec2{0.0f};
+  bool pressed_ = false;
+  glm::vec2 centre_;
+  glm::vec2 length_;
+  glm::vec2 scale_;
 
   static const float kTrackWidthFactor;
   static const float kTrackHeightFactor;
-  // separate hue+saturation from brightness
-  static const float kSeparatorFactor;
-};*/
+};
 
 class UiWindowBase : public UiBase {
  public:
@@ -449,12 +435,21 @@ class UiWaterLayerConfig final : public UiPopUpBase {
       LocalTransform end_transform,
       UiToggle2&& pin,
       UiDynamicSprite&& sprite_layer,
+      UiDynamicSprite&& text_layer,
+      UiToggle&& toggle_layer,
+      UiDynamicSprite&& scale_text,
       UiSliderH&& scale,
+      UiDynamicSprite&& fetch_text,
       UiSliderH&& fetch,
+      UiDynamicSprite&& spread_blend_text,
       UiSliderH&& spread_blend,
+      UiDynamicSprite&& swell_text,
       UiSliderH&& swell,
+      UiDynamicSprite&& peak_enhancement_text,
       UiSliderH&& peak_enhancement,
+      UiDynamicSprite&& short_waves_fade_text,
       UiSliderH&& short_waves_fade,
+      UiDynamicSprite&& lambda_text,
       UiSliderH&& lambda);
 
   UiWaterLayerConfig(UiWaterLayerConfig&& other) noexcept;
@@ -487,63 +482,216 @@ class UiWaterLayerConfig final : public UiPopUpBase {
 
  private:
   UiDynamicSprite sprite_layer_;
+  UiDynamicSprite text_layer_;
+  UiToggle toggle_layer_;
   UiSliderH scale_;
+  UiDynamicSprite scale_text_;
   UiSliderH fetch_;
+  UiDynamicSprite fetch_text_;
   UiSliderH spread_blend_;
+  UiDynamicSprite spread_blend_text_;
   UiSliderH swell_;
+  UiDynamicSprite swell_text_;
   UiSliderH peak_enhancement_;
+  UiDynamicSprite peak_enhancement_text_;
   UiSliderH short_waves_fade_;
+  UiDynamicSprite short_waves_fade_text_;
   UiSliderH lambda_;
+  UiDynamicSprite lambda_text_;
 
   bool modified_{false};
 
   bool hovered_{false};
 
-  UiEventHandler<28> ui_event_handler_;
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kWater1LambdaHandler) -
+      static_cast<int>(data::VboIdMain::kWaterLayer1) + 1
+      > ui_event_handler_;
 };
 
 // ---
 
-class IUiEdit : public UiBase {
+//class IUiEdit : public UiBase {
+// public:
+//  IUiEdit();
+//};
+
+class UiEditFences final : public UiBase {
  public:
-  IUiEdit();
-};
+  UiEditFences(
+      UiSharedResources& ui_shared_resources,
+      UiDynamicSprite&& desk,
+      UiDynamicSprite&& accept,
+      UiDynamicSprite&& name,
+      UiDynamicSprite&& name_back,
+      UiSlider2D&& color_palette,
+      UiSliderH2&& color_brightness,
+      UiDynamicSprite&& color_indicator,
+      UiDynamicSprite&& type_back,
+      UiDynamicSprite&& type_text,
+      UiDynamicSprite&& type_prev,
+      UiDynamicSprite&& type_next);
 
-class UiEditStub final : public IUiEdit {
- public:
-  UiEditStub();
+  UiEditFences(UiEditFences&& other) noexcept;
+  UiEditFences(const UiEditFences& other) = delete;
 
-  UiEditStub(UiEditStub&& other) noexcept;
-  UiEditStub(const UiEditStub& other) = delete;
+  UiEditFences& operator=(UiEditFences&& other) = delete;
+  UiEditFences& operator=(const UiEditFences& other) = delete;
 
-  UiEditStub& operator=(UiEditStub&& other) = delete;
-  UiEditStub& operator=(const UiEditStub& other) = delete;
+  data::TextId Hover(int id);
+
+  bool Press(int id);
+
+  void Release();
+
+  bool Scroll(GLuint id, float yoffset);
 
   void Render();
 
-  void RenderPicking() const;
+  void RenderPicking();
 
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
 
   void UpdateTransform() override;
 
- private:/*
+ private:
   UiDynamicSprite desk_;
   UiDynamicSprite accept_;
-  UiDynamicSprite close_;
   UiDynamicSprite name_;
   UiDynamicSprite name_back_;
-  UiDynamicSprite color_;
 
-//  UiColorPalette palette_;
-  UiDynamicSprite color_cursor_;
-  UiDynamicSprite brightness_cursor_;
+  UiSlider2D color_palette_;
+  UiSliderH2 color_brightness_;
+  UiDynamicSprite color_indicator_;
 
   UiDynamicSprite type_back_;
   UiDynamicSprite type_text_;
   UiDynamicSprite type_prev_;
-  UiDynamicSprite type_next_;*/
+  UiDynamicSprite type_next_;
+
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kFencesTypeNext) -
+      static_cast<int>(data::VboIdMain::kFencesEditDesk) + 1
+      > ui_event_handler_;
+
+  UiSharedResources& ui_shared_resources_;
+};
+
+class UiEditTerrain final : public UiBase {
+ public:
+  UiEditTerrain(
+      UiSharedResources& ui_shared_resources,
+      UiDynamicSprite&& desk,
+      UiDynamicSprite&& accept,
+      UiDynamicSprite&& name,
+      UiDynamicSprite&& name_back,
+      UiSlider2D&& color_palette,
+      UiSliderH2&& color_brightness,
+      UiDynamicSprite&& color_indicator,
+      UiDynamicSprite&& heightmap,
+      UiDynamicSprite&& random_generate);
+
+  UiEditTerrain(UiEditTerrain&& other) noexcept;
+  UiEditTerrain(const UiEditTerrain& other) = delete;
+
+  UiEditTerrain& operator=(UiEditTerrain&& other) = delete;
+  UiEditTerrain& operator=(const UiEditTerrain& other) = delete;
+
+  data::TextId Hover(int id);
+
+  bool Press(int id);
+
+  void Release();
+
+  bool Scroll(GLuint id, float yoffset);
+
+  void Render();
+
+  void RenderPicking();
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+  void UpdateTransform() override;
+
+ private:
+  UiDynamicSprite desk_;
+  UiDynamicSprite accept_;
+  UiDynamicSprite name_;
+  UiDynamicSprite name_back_;
+
+  UiSlider2D color_palette_;
+  UiSliderH2 color_brightness_;
+  UiDynamicSprite color_indicator_;
+
+  // vao, vbo the same (kTerrainEditHeightmap for fullscreen tx)
+  // we simply need Texture which bind to, AND update it somehow
+  Texture tex_heightmap_;
+  UiDynamicSprite heightmap_;
+  UiDynamicSprite random_generate_;
+
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kTerrainEditNoise8StrengthIcon) -
+      static_cast<int>(data::VboIdMain::kTerrainEditDesk) + 1
+      > ui_event_handler_;
+
+  UiSharedResources& ui_shared_resources_;
+};
+
+class UiTerrainBake final : public UiBase {
+ public:
+  UiTerrainBake(
+      UiSharedResources& ui_shared_resources,
+      UiDynamicSprite&& desk,
+      UiDynamicSprite&& accept,
+      UiDynamicSprite&& heightmap,
+      UiDynamicSprite&& erosion_label,
+      UiDynamicSprite&& erosion_input,
+      UiDynamicSprite&& weathering_label,
+      UiDynamicSprite&& weathering_input);
+
+  UiTerrainBake(UiTerrainBake&& other) noexcept;
+  UiTerrainBake(const UiTerrainBake& other) = delete;
+
+  UiTerrainBake& operator=(UiTerrainBake&& other) = delete;
+  UiTerrainBake& operator=(const UiTerrainBake& other) = delete;
+
+  data::TextId Hover(int id);
+
+  bool Press(int id);
+
+  void Release();
+
+  bool Scroll(GLuint id, float yoffset);
+
+  void Render();
+
+  void RenderPicking();
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+  void UpdateTransform() override;
+
+ private:
+  UiDynamicSprite desk_;
+  UiDynamicSprite accept_;
+
+  Texture tex_heightmap_;
+  UiDynamicSprite heightmap_;
+
+  UiDynamicSprite erosion_label_;
+  UiDynamicSprite erosion_input_;
+  UiDynamicSprite weathering_label_;
+  UiDynamicSprite weathering_input_;
+
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kTerrainBakeHeightmap) -
+      static_cast<int>(data::VboIdMain::kTerrainBakeDesk) + 1
+      > ui_event_handler_;
+
+  UiSharedResources& ui_shared_resources_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_

@@ -89,7 +89,7 @@ class IUiSlots : public UiBase {
   IGraph* graph_ = nullptr;// -- no interface, sry;(
 
   /// Render custom, but states show/hide pop-up edit window related to *this
-  IUiEdit* ui_edit_ = nullptr;
+//  IUiEdit* ui_edit_ = nullptr;
 
   // for shader bindings & mouse pos
   UiSharedResources& ui_shared_resources_;
@@ -107,8 +107,78 @@ enum class PressState {
 };
 
 class UiSlotsTerrain final : public IUiSlots {
+ public:
+  UiSlotsTerrain(
+      UiSharedResources& ui_shared_resources,
+      UiDynamicSprite&& handler,
+      UiDynamicSprite&& slider,
+      UiDynamicSprite&& back,
+      UiDynamicSprite&& create,
+      data::VboIdMain flip_point_edge_back_vbo_texture,
+      data::TextId flip_point_edge_back_text_id,
+      UiDynamicSprite&& flip_point_edge_sprite,
+      UiDynamicSprite&& slot_name,
+      UiDynamicSprite&& slot_config,
+      UiToggle&& toggle_slot_visible,
+      UiDynamicSprite&& slot_back,
+      UiDynamicSprite&& slot_color,
+      UiDynamicSprite&& slot_remove,
+      UiDynamicSprite&& slot_selected);
+
+  UiSlotsTerrain(UiSlotsTerrain&& other) noexcept;
+  UiSlotsTerrain(const UiSlotsTerrain& other) = delete;
+
+  UiSlotsTerrain& operator=(UiSlotsTerrain&& other) = delete;
+  UiSlotsTerrain& operator=(const UiSlotsTerrain& other) = delete;
+
+  void Render(glm::vec2 mouse_pos) override;
+  void RenderPicking() override;
+
+  bool Scroll(GLuint id, float yoffset) override;
+
+  bool Press(int id) override;
+  void UpdateTransform(
+      float x_translate, float y_translate, float scale) override;
+
+  void NextClickMode();
+
+
+  void PressGraph(GLuint id) override;
+
  private:
+  UiDynamicSprite handler_;
+  UiDynamicSprite slider_;
+  UiDynamicSprite back_;
+  UiDynamicSprite create_;
+  UiDynamicSprite flip_point_edge_back_;
+
+  UiDynamicSprite flip_point_edge_sprite_;
+  UiSpriteTransformation flip_point_edge_;
+
+  UiDynamicSprite slot_name_;
+  UiDynamicSprite slot_config_;
+  UiToggle toggle_slot_visible_;
+
+  UiDynamicSprite slot_back_;
+  UiDynamicSprite slot_color_; //todo; *color in shader
+  UiDynamicSprite slot_remove_;
+  UiDynamicSprite slot_selected_;
+
+  /// store here, pointers to base class, see explanation at base class
+
+  //TODO: TerrainGrid instead
+  ArbitraryGraph graph_; // IGraph* for base
+
+  UiEditTerrain ui_edit_; // IUiEdit* for base
+
   EditState edit_state_;
+
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kTerrainSlotsFlipPointEdgeFace) -
+      static_cast<int>(data::VboIdMain::kTerrainSlotsName) + 1
+      > ui_event_handler_; // IUiEventHandler for base
+
+  UiSharedResources& ui_shared_resources_;
 };
 
 class UiSlotsWater final : public IUiSlots {
@@ -186,26 +256,19 @@ class UiSlotsModels final : public IUiSlots {
 
   /// store here, pointers to base class, see explanation at base class
 
+  ArbitraryGraph graph_; // IGraph* for base
+
+  UiEditFences ui_edit_; // IUiEdit* for base
+
+  EditState edit_state_;
+  PressState press_state_;
+
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kFencesSlotsFlipSelectEdit) -
       static_cast<int>(data::VboIdMain::kFencesSlotsName) + 1
       > ui_event_handler_; // IUiEventHandler for base
 
-  ArbitraryGraph graph_; // IGraph* for base
-
-  UiEditStub ui_edit_; // IUiEdit* for base
-
   UiSharedResources& ui_shared_resources_;
-
-  // --- new
-  // --- new
-  // --- new
-  // --- new
-  // --- new
-
- private:
-  EditState edit_state_;
-  PressState press_state_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UISLOTS_H_

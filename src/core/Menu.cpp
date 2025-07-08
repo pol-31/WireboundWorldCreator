@@ -227,8 +227,7 @@ void Menu::Render(bool show) {
   auto mouse_pos = ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
 
   if (show) {
-    float angle = std::atan2(mouse_pos.y, mouse_pos.x) - glm::pi<float>() / 2.0f;
-    ui_tab_menu_.Render(show, angle, arrow_selected_angle_);
+    ui_tab_menu_.Render(show, arrow_select_angle_, arrow_selected_angle_);
     ui_settings_.Render();
   } else {
     Release();
@@ -246,11 +245,14 @@ void Menu::RenderPicking() {
 data::TextId Menu::Hover(uint32_t global_id) {
   auto hovered = ui_tab_menu_.Hover(global_id);
   if (hovered != data::TextId::kNone) {
+    auto local_id = global_id - details::kIdOffsetUi;
+    if (local_id < 40) {
+      // intentionally local_id as int
+      arrow_select_angle_ =
+          static_cast<float>(local_id / 5) * 2.0f * glm::pi<float>() / 8.0f;
+    }
     return hovered;
   }
-
-  // TODO: arrow SELECT
-
   return ui_settings_.Hover(global_id);
 }
 

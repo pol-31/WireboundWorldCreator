@@ -59,37 +59,70 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
     : IUiMode(
           ui_shared_resources,
           UiStaticSprite{data::VboIdMain::kTerrainTerrainMode,
-                         data::TextId::kNone}),
+                         data::TextId::kNotYet}),
       btn_update_(data::VboIdMain::kTerrainUpdate, data::TextId::kMenuPlacement,
           [this]() {
                     std::cout << "btn_update" << std::endl;
                     ui_terrain_generator_.Bake();
           }),
-      sprite_flatten_(data::VboIdMain::kTerrainFlatten, data::TextId::kNone),
+      sprite_flatten_(data::VboIdMain::kTerrainFlatten, data::TextId::kNotYet),
       toggle_flatten_(
-          UiStaticSprite{data::VboIdMain::kTerrainFlattenOff, data::TextId::kNone,
-                         [this]() {
-                           std::cout << "toggle_flatten" << std::endl;
-                         }},
-          UiStaticSprite{data::VboIdMain::kTerrainFlattenOn1, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kTerrainFlattenOn2, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kTerrainFlattenOn3, data::TextId::kNone}
+          {data::VboIdMain::kTerrainFlattenOff, data::TextId::kNotYet,
+           [this]() {
+             std::cout << "toggle_flatten" << std::endl;
+           }},
+          {data::VboIdMain::kTerrainFlattenOn1, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainFlattenOn2, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainFlattenOn3, data::TextId::kNotYet}
           ),
       slider_size_(
-          {data::VboIdMain::kTerrainSizeFill, data::TextId::kNone},
-          {data::VboIdMain::kTerrainSizeBack, data::TextId::kNone},
-          {data::VboIdMain::kTerrainSizeIcon, data::TextId::kNone}
+          {data::VboIdMain::kTerrainSizeFill, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSizeBack, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSizeIcon, data::TextId::kNotYet}
           ),
       slider_falloff_(
-          UiStaticSprite{data::VboIdMain::kTerrainFalloffFill, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kTerrainFalloffBack, data::TextId::kNone},
-          UiDynamicSprite{data::VboIdMain::kTerrainFalloffIcon,
-                          data::TextId::kNone}
+          {data::VboIdMain::kTerrainFalloffFill, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainFalloffBack, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainFalloffIcon, data::TextId::kNotYet}
           ),
+      btn_bake_({data::VboIdMain::kTerrainBake, data::TextId::kNotYet}),
+      ui_bake_(
+          ui_shared_resources_,
+          {data::VboIdMain::kTerrainBakeDesk, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainBakeAccept, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainBakeHeightmap, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainBakeErosionStepLabel, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainBakeErosionStepInput, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainBakeWeatheringStepLabel, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainBakeWeatheringStepInput, data::TextId::kNotYet}),
+      slots_(
+          ui_shared_resources_,
+          {data::VboIdMain::kTerrainSlotsHandler, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSlotsSlider, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSlotsBack, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSlotsCreate, data::TextId::kNotYet,
+           [this]() {
+             this->slots_.CreateGraph();
+             ui_shared_resources_.global_glfw_callback_data_.StartCharInput(
+                 slots_.GetNamePtr(slots_.GetSize() - 1));
+           }},
+          data::VboIdMain::kTerrainSlotsFlipPointEdgeFace_Back, data::TextId::kNotYet,
+          {data::VboIdMain::kTerrainSlotsFlipPointEdgeFace, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSlotsName, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSlotsConfig, data::TextId::kNotYet},
+          {{data::VboIdMain::kTerrainVisibleOff, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainVisibleOn1, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainVisibleOn2, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainVisibleOn3, data::TextId::kNotYet},
+          },
+          {data::VboIdMain::kTerrainSlotsSlot, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSlotsSlotColor, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSlotsRemove, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainSlotsSelected, data::TextId::kNotYet}),
       ui_event_handler_({
-          &btn_update_, &btn_regenerate_, &slider_size_,
-          &slider_falloff_, &toggle_flatten_}),
-      ui_terrain_generator_({data::VboIdMain::kMapArrow, data::TextId::kNone},
+          &btn_update_, &slider_size_,
+          &slider_falloff_, &toggle_flatten_, &btn_bake_, &slots_}),
+      ui_terrain_generator_({data::VboIdMain::kMapLeaf, data::TextId::kNotYet},
                             1.0f, ui_shared_resources_, cur_tile) {}
 
 void UiTerrainMode::BindCallbacks() {
@@ -130,11 +163,16 @@ void UiTerrainMode::Render() {
   slider_falloff_.RenderIcon();
 
   // Bake / Slots::Edit / NoiseEdit
-  if (render_slots_config_) {
-    config_.Render();
-  } else if (render_bake_config_) {
-    bake_config_.Render();
-  }
+//  if (render_slots_config_) {
+//    config_.Render();
+//  } else if (render_bake_config_) {
+//    bake_config_.Render();
+//  }
+  auto mouse_pos
+      = ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+  slots_.Render(mouse_pos);
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_bake_.Render();
 }
 
 
@@ -150,7 +188,6 @@ void UiTerrainMode::RenderPicking() {
   sprite_mode_.RenderPicking();
 
   btn_update_.RenderPicking();
-  btn_regenerate_.RenderPicking();
 
   slider_size_.RenderPicking();
   slider_falloff_.RenderPicking();
@@ -158,6 +195,8 @@ void UiTerrainMode::RenderPicking() {
   toggle_flatten_.RenderPicking();
 
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  slots_.RenderPicking();
+  ui_bake_.RenderPicking();
 }
 
 data::TextId UiTerrainMode::Hover(std::uint32_t global_id) {

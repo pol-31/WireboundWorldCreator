@@ -1,5 +1,7 @@
 #include "UiRenderer.h"
 
+#include "../io/Cameras.h"
+
 UiRenderer::UiRenderer(
     const Paths& paths, GlobalGlfwCallbackData& global_glfw_data_,
     TileRenderer& tile_renderer)
@@ -15,32 +17,30 @@ UiRenderer::UiRenderer(
       objects_(ui_shared_resources_),
       placement_(ui_shared_resources_, paths),
       tiles_(ui_shared_resources_),
-      text_renderer_({data::VboIdMain::kFullScreen, data::TextId::kNone}, paths),
+      text_renderer_({data::VboIdMain::kFullScreen, data::TextId::kNotYet}, paths),
       menu_(ui_shared_resources_, text_renderer_, &terrain_,
             &water_, &roads_, &fences_, &placement_, &objects_, &biomes_,
             &tiles_, cur_mode_),
       ui_loading_(
-          UiStaticSprite{data::VboIdMain::kLoading0, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading1, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading2, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading3, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading4, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading5, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading6, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading7, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading8, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading9, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kLoading10, data::TextId::kNone}),
+          UiStaticSprite{data::VboIdMain::kLoading0, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading1, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading2, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading3, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading4, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading5, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading6, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading7, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading8, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading9, data::TextId::kNotYet},
+          UiStaticSprite{data::VboIdMain::kLoading10, data::TextId::kNotYet}),
       ui_confirmation_(
-          UiDynamicSprite{data::VboIdMain::kAcceptDeclineDesk, data::TextId::kNone},
+          UiDynamicSprite{data::VboIdMain::kConfirmationDesk, data::TextId::kNotYet},
           5.0f,
           ui_shared_resources_,
-          UiStaticSprite{data::VboIdMain::kConfirmationClose, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kConfirmationAccept, data::TextId::kNone},
+          UiStaticSprite{data::VboIdMain::kConfirmationAccept, data::TextId::kNotYet},
           UiStaticSprite{data::VboIdMain::kConfirmationDecline,
-                         data::TextId::kNone},
-          UiDynamicSprite{data::VboIdMain::kConfirmationCross,
-                          data::TextId::kNone}) {
+                         data::TextId::kNotYet}),
+      compass_({data::VboIdMain::kCompass, data::TextId::kNotYet}) {
   Init();
 }
 
@@ -70,47 +70,17 @@ void UiRenderer::Render(data::TextId description_id) {
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
-
-  text_renderer_.RenderText("yyyyyyyyyyyyyyyyy\ntttttttttttttttt\n"
-      "The story is about a little weak Georgy,\n"
-      "so everyone started bullyuing him.\n"
-      "That's the whole story,\n"
-      "just trying to make more text,\n"
-      "so it will look good\n"
-      "and I could see text input\n"
-      "alignment by height\n"
-      "ggwp\n",
-      1.0f, glm::vec2{0.0f});
-
-  text_renderer_.RenderText("yyyyyyyyyyyyyyyyy\ntttttttttttttttt\n"
-      "The story is about a little weak Georgy,\n"
-      "so everyone started bullyuing him.\n"
-      "That's the whole story,\n"
-      "just trying to make more text,\n"
-      "so it will look good\n"
-      "and I could see text input\n"
-      "alignment by height\n"
-      "ggwp\n",
-      0.6f, glm::vec2{0.5f}, TextRenderer::Alignment::kLeft);
-
-  text_renderer_.RenderText("yyyyyyyyyyyyyyyyy\ntttttttttttttttt\n"
-      "The story is about a little weak Georgy,\n"
-      "so everyone started bullyuing him.\n"
-      "That's the whole story,\n"
-      "just trying to make more text,\n"
-      "so it will look good\n"
-      "and I could see text input\n"
-      "alignment by height\n"
-      "ggwp\n",
-      0.3f, glm::vec2{-0.5f}, TextRenderer::Alignment::kRight);
+  compass_.SetRotate(glm::radians(
+      ui_shared_resources_.global_glfw_callback_data_.camera->GetYaw()));
+  compass_.Render();
 
   render_menu_ = (glfwGetKey(gWindow, GLFW_KEY_TAB) == GLFW_PRESS);
   menu_.Render(render_menu_);
 
   if (render_menu_) {
-    text_renderer_.RenderMenuText(description_id);
+//    text_renderer_.RenderMenuText(description_id);
   } else {
-    text_renderer_.RenderModeText(description_id);
+//    text_renderer_.RenderModeText(description_id);
   }
 }
 
@@ -132,48 +102,19 @@ data::TextId UiRenderer::Hover(GLuint pressed_id) {
 void UiRenderer::RenderPicking(data::TextId description_id) {
   glBindVertexArray(ui_shared_resources_.vao_ui_);
 
-  text_renderer_.RenderTextPicking("yyyyyyyyyyyyyyyyy\ntttttttttttttttt\n"
-      "The story is about a little weak Georgy,\n"
-      "so everyone started bullyuing him.\n"
-      "That's the whole story,\n"
-      "just trying to make more text,\n"
-      "so it will look good\n"
-      "and I could see text input\n"
-      "alignment by height\n"
-      "ggwp\n",
-      1.0f, glm::vec2{0.0f});
-
-  text_renderer_.RenderTextPicking("yyyyyyyyyyyyyyyyy\ntttttttttttttttt\n"
-      "The story is about a little weak Georgy,\n"
-      "so everyone started bullyuing him.\n"
-      "That's the whole story,\n"
-      "just trying to make more text,\n"
-      "so it will look good\n"
-      "and I could see text input\n"
-      "alignment by height\n"
-      "ggwp\n",
-      0.6f, glm::vec2{0.5f}, TextRenderer::Alignment::kLeft);
-
-  text_renderer_.RenderTextPicking("yyyyyyyyyyyyyyyyy\ntttttttttttttttt\n"
-      "The story is about a little weak Georgy,\n"
-      "so everyone started bullyuing him.\n"
-      "That's the whole story,\n"
-      "just trying to make more text,\n"
-      "so it will look good\n"
-      "and I could see text input\n"
-      "alignment by height\n"
-      "ggwp\n",
-      0.3f, glm::vec2{-0.5f}, TextRenderer::Alignment::kRight);
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  compass_.RenderPicking();
 
   if (render_menu_) {
     menu_.RenderPicking();
     if (description_id != data::TextId::kNone) {
-      text_renderer_.RenderMenuTextPicking(description_id);
+//      text_renderer_.RenderMenuTextPicking(description_id);
     }
   } else {
     cur_mode_->RenderPicking();
     if (description_id != data::TextId::kNone) {
-      text_renderer_.RenderModeTextPicking(description_id);
+//      text_renderer_.RenderModeTextPicking(description_id);
     }
   }
 }

@@ -62,6 +62,7 @@ class UiRenderer {
 
   UiLoading ui_loading_;
   UiConfirmation ui_confirmation_;
+  UiDynamicSprite compass_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_UIRENDERER_H_

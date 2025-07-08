@@ -78,7 +78,7 @@ void TextRenderer::RenderMenuTextPicking(data::TextId id) {
 
   auto coords_transform = CoordsToTransformMatrix(
       coords_menu_[static_cast<int>(id)]);
-  glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
+//  glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
   text_slot_.RenderPicking();
 
   glUseProgram(0);
@@ -112,7 +112,7 @@ void TextRenderer::RenderModeTextPicking(data::TextId id) {
 
   auto coords_transform = CoordsToTransformMatrix(
       coords_mode_[static_cast<int>(id)]);
-  glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
+//  glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
   text_slot_.RenderPicking();
 
   glUseProgram(0);
@@ -148,7 +148,8 @@ int GetWidth(int code) {
   return result;
 }
 
-int TextRenderer::CalculateLineLength(std::string_view text) {
+int TextRenderer::CalculateLineLength(
+    std::string_view text, const UiDynamicSprite& text_slot) {
   int total_length = 0;
   for (auto ch : text) {
     if (ch == '\n') {
@@ -157,7 +158,7 @@ int TextRenderer::CalculateLineLength(std::string_view text) {
     total_length += GetWidth(static_cast<int>(ch) - 32);
   }
   float ui_scale = debug::gUiTransforms[
-                       4 * (text_slot_.GetId() - details::kIdOffsetUi)
+                       4 * (text_slot.GetId() - details::kIdOffsetUi)
   ].scale;
   return total_length * scale_ * ui_scale * 1024.0f / 78.0f;
 }
@@ -171,7 +172,7 @@ void TextRenderer::PrerenderModeText(int start, int end) {
 }
 
 void TextRenderer::RenderText(
-    /*UiDynamicSprite& text_slot, */std::string_view text,
+    UiDynamicSprite& text_slot, std::string_view text,
     float scale, glm::vec2 position, Alignment alignment) {
   float symbol_height = font::gFullHeight * scale_ * scale / 1024.0f;
 
@@ -179,10 +180,10 @@ void TextRenderer::RenderText(
   tex_bitmap_.Bind();
   render_shader_.Bind();
 
-  text_slot_.SetScale(scale * scale_);
+  text_slot.SetScale(scale * scale_);
 
   float ui_scale = debug::gUiTransforms[
-                       4 * (text_slot_.GetId() - details::kIdOffsetUi)
+                       4 * (text_slot.GetId() - details::kIdOffsetUi)
   ].scale;
 
   size_t line_start = 0;
@@ -212,8 +213,7 @@ void TextRenderer::RenderText(
     std::string_view line = text.substr(line_start, length);
 
     // --- process line ---
-
-    float line_length = scale * CalculateLineLength(line) / 1024.0f;
+    float line_length = scale * CalculateLineLength(line, text_slot) / 1024.0f;
 
     next_pos.x = position.x + line_length * new_line_offset_factor;
 
@@ -226,15 +226,15 @@ void TextRenderer::RenderText(
 
       glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
 
-      text_slot_.SetExtraScale(symbol_width / symbol_height);
+      text_slot.SetExtraScale(symbol_width / symbol_height);
       symbol_width *= ui_scale * 1024.0f / 78.0f;
 
       /// correct alignment (half prev, half next char)
       next_pos.x += symbol_width / 2.0f;
-      text_slot_.SetTranslate(next_pos);
+      text_slot.SetTranslate(next_pos);
       next_pos.x += symbol_width / 2.0f;
 
-      text_slot_.Render();
+      text_slot.Render();
     }
 
     if (line_end == std::string_view::npos) {
@@ -249,14 +249,15 @@ void TextRenderer::RenderText(
 }
 
 void TextRenderer::RenderText(
+    UiDynamicSprite& text_slot,
     const FixedSizeQueue<char, 64>* text,
     float scale, glm::vec2 position, Alignment alignment) {
-  RenderText(std::string_view(text->cbegin(), text->cend()),
+  RenderText(text_slot, std::string_view(text->cbegin(), text->cend()),
              scale, position, alignment);
 }
 
 void TextRenderer::RenderTextPicking(
-    /*UiDynamicSprite& text_slot, */std::string_view text,
+    UiDynamicSprite& text_slot, std::string_view text,
     float scale, glm::vec2 position, Alignment alignment) {
   /// picking for the first line is enough
   float symbol_height = font::gFullHeight * scale_ * scale / 1024.0f;
@@ -265,13 +266,13 @@ void TextRenderer::RenderTextPicking(
   tex_bitmap_.Bind();
   render_shader_picking_.Bind();
 
-  glm::mat3 coords_transform{1.0f}; // full screen
-  glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
+  // not used
+//  glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
 
-  text_slot_.SetScale(scale * scale_);
+  text_slot.SetScale(scale * scale_);
 
   float ui_scale = debug::gUiTransforms[
-                       4 * (text_slot_.GetId() - details::kIdOffsetUi)
+                       4 * (text_slot.GetId() - details::kIdOffsetUi)
   ].scale;
 
   size_t line_start = 0;
@@ -302,15 +303,15 @@ void TextRenderer::RenderTextPicking(
 
     // --- process line ---
 
-    float line_length = scale * CalculateLineLength(line) / 1024.0f;
+    float line_length = scale * CalculateLineLength(line, text_slot) / 1024.0f;
 
     next_pos.x = position.x + line_length * new_line_offset_factor;
 
     // --- process char ---
 
-    text_slot_.SetExtraScale(line_length / symbol_height);
-    text_slot_.SetTranslate(next_pos);
-    text_slot_.RenderPicking();
+    text_slot.SetExtraScale(line_length * 78.0f / (symbol_height * 1024.0f));
+    text_slot.SetTranslate(next_pos);
+    text_slot.RenderPicking();
 
     if (line_end == std::string_view::npos) {
       break;
@@ -323,9 +324,10 @@ void TextRenderer::RenderTextPicking(
 }
 
 void TextRenderer::RenderTextPicking(
+    UiDynamicSprite& text_slot,
     const FixedSizeQueue<char, 64>* text,
     float scale, glm::vec2 position, Alignment alignment) {
-  RenderTextPicking(std::string_view(text->cbegin(), text->cend()),
+  RenderTextPicking(text_slot, std::string_view(text->cbegin(), text->cend()),
                     scale, position, alignment);
 }
 
@@ -347,7 +349,7 @@ void TextRenderer::PrerenderImpl(
 
 // only 1-row text by now
 TextRenderer::Aabb TextRenderer::RenderPhrase(std::string_view text) {
-  int calculated_width = CalculateLineLength(text);
+  int calculated_width = CalculateLineLength(text, text_slot_);
   int symbol_height = static_cast<int>(font::gFullHeight * scale_);
   if (fbo_cursor_.x + calculated_width > 1024) {
     fbo_cursor_.x = 0;

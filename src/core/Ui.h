@@ -358,7 +358,7 @@ class UiSliderV final : public UiBase {
  public:
   UiSliderV(UiDynamicSprite&& fill_sprite,
             UiDynamicSprite&& back_sprite,
-           UiDynamicSprite&& icon_sprite,
+            UiDynamicSprite&& icon_sprite,
             float scale = 1.0f);
 
   UiSliderV(UiSliderV&& other) noexcept;
@@ -405,7 +405,7 @@ class UiSliderV final : public UiBase {
   UiDynamicSprite icon_sprite_;
 
   float progress_{0.0f};
-  bool pressed_{false};
+  bool pressed_ = false;
   float centre_;
   float length_;
   float scale_{1.0f};

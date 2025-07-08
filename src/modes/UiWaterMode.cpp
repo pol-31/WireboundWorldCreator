@@ -45,22 +45,22 @@ void UiWaterMode::MouseButtonCallback(
         global_data->menu->Press(pressed_id);
       } else {
         //TODO: bvh?
-        if (pressed_id < details::kIdOffsetUi && water->do_add_points_) {
+        if (false) {//pressed_id < details::kIdOffsetUi && water->do_add_points_) {
           //TODO; make it more explicit
           /// because water offset id goes after terrain ids
-          if (pressed_id < details::kIdOffsetWater) {
-            water->AddNewPoint(pressed_id);
-          }
+//          if (pressed_id < details::kIdOffsetWater) {
+//            water->AddNewPoint(pressed_id);
+//          }
         } else if (pressed_id == water->btn_bake_lake_.GetId()) {
           water->BakeLake();
         } else if (pressed_id == water->btn_bake_river_.GetId()) {
           water->BakeRiver();
         } else if (pressed_id == water->btn_bake_waterfall_.GetId()) {
           water->BakeWaterfall();
-        } else if (pressed_id == water->btn_create_.GetId()) {
-          water->Create(pressed_id);
-        } else if (pressed_id == water->btn_remove_.GetId()) {
-          water->Remove();
+//        } else if (pressed_id == water->btn_create_.GetId()) {
+//          water->Create(pressed_id);
+//        } else if (pressed_id == water->btn_remove_.GetId()) {
+//          water->Remove();
         } else if (pressed_id == water->btn_update_.GetId()) {
           water->UpdateOcean(); // TODO: update ocean (only ocean by now
         }
@@ -110,158 +110,170 @@ UiWaterMode::UiWaterMode(
     const Paths& paths)
     : IUiMode(ui_shared_resources,
               UiStaticSprite{data::VboIdMain::kWaterWaterMode,
-                             data::TextId::kNone}),
-      btn_bake_lake_(data::VboIdMain::kWaterLake, data::TextId::kNone,
+                             data::TextId::kNotYet}),
+      btn_bake_lake_(data::VboIdMain::kWaterLake, data::TextId::kNotYet,
                      [this]() {
                        this->BakeLake();
                      }),
-      btn_bake_river_(data::VboIdMain::kWaterRiver, data::TextId::kNone,
+      btn_bake_river_(data::VboIdMain::kWaterRiver, data::TextId::kNotYet,
                       [this]() {
                         this->BakeRiver();
                       }),
-      btn_bake_waterfall_(data::VboIdMain::kWaterWaterfall, data::TextId::kNone,
+      btn_bake_waterfall_(data::VboIdMain::kWaterWaterfall, data::TextId::kNotYet,
                           [this]() {
                             this->BakeWaterfall();
                           }),
-      btn_create_(data::VboIdMain::kWaterAdd, data::TextId::kNone,
-                  [this]() {
-                    std::cout << "AddNewPoint" << std::endl;
-//                    this->AddNewPoint();
-                  }),
-      btn_remove_(data::VboIdMain::kWaterRemove, data::TextId::kNone,
-                  [this]() {
-                    this->Remove();
-                  }),
-      btn_update_(data::VboIdMain::kWaterUpdate, data::TextId::kNone,
+      btn_update_(data::VboIdMain::kWaterUpdate, data::TextId::kNotYet,
                   [this]() {
                     this->UpdateOcean();
                   }),
       ocean_layer_config_1_(
-          UiDynamicSprite{data::VboIdMain::kWaterLayer1Window, data::TextId::kNone, [](){}},
-          1.4f,
-          ui_shared_resources,
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          UiDynamicSprite{data::VboIdMain::kWaterLayer1, data::TextId::kNone, [](){}},
-          UiSliderH{{data::VboIdMain::kWater1ScaleFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater1ScaleBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater1ScaleHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater1ScaleIcon, data::TextId::kNone},
-                    1000.0f},
-          UiSliderH{{data::VboIdMain::kWater1FetchFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater1FetchBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater1FetchHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater1FetchIcon, data::TextId::kNone},
-                    100000.0f},
-          UiSliderH{{data::VboIdMain::kWater1SpreadBlendFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater1SpreadBlendBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater1SpreadBlendHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater1SpreadBlendIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater1SwellFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater1SwellBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater1SwellHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater1SwellIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater1PeakEnhancementFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater1PeakEnhancementBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater1PeakEnhancementHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater1PeakEnhancementIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater1ShortWavesFadeFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater1ShortWavesFadeBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater1ShortWavesFadeHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater1ShortWavesFadeIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater1LambdaFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater1LambdaBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater1LambdaHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater1LambdaIcon, data::TextId::kNone},
-                    1.0f}),
-      ocean_layer_config_2_(
-          UiDynamicSprite{data::VboIdMain::kWaterLayer2Window, data::TextId::kNone, [](){}},
-          1.4f,
-          ui_shared_resources,
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          UiDynamicSprite{data::VboIdMain::kWaterLayer2, data::TextId::kNone, [](){}},
-          UiSliderH{{data::VboIdMain::kWater2ScaleFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater2ScaleBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater2ScaleHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater2ScaleIcon, data::TextId::kNone},
-                    1000.0f},
-          UiSliderH{{data::VboIdMain::kWater2FetchFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater2FetchBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater2FetchHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater2FetchIcon, data::TextId::kNone},
-                    100000.0f},
-          UiSliderH{{data::VboIdMain::kWater2SpreadBlendFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater2SpreadBlendBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater2SpreadBlendHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater2SpreadBlendIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater2SwellFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater2SwellBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater2SwellHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater2SwellIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater2PeakEnhancementFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater2PeakEnhancementBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater2PeakEnhancementHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater2PeakEnhancementIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater2ShortWavesFadeFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater2ShortWavesFadeBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater2ShortWavesFadeHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater2ShortWavesFadeIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater2LambdaFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater2LambdaBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater2LambdaHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater2LambdaIcon, data::TextId::kNone},
-                    1.0f}),
-      ocean_layer_config_3_(
-          UiDynamicSprite{data::VboIdMain::kWaterLayer3Window, data::TextId::kNone, [](){}},
+          {data::VboIdMain::kWaterLayer1Window, data::TextId::kNotYet, [](){}},
           1.4f,
           ui_shared_resources,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
-          UiDynamicSprite{data::VboIdMain::kWaterLayer3, data::TextId::kNone, [](){}},
-          UiSliderH{{data::VboIdMain::kWater3ScaleFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater3ScaleBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater3ScaleHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater3ScaleIcon, data::TextId::kNone},
-                    1000.0f},
-          UiSliderH{{data::VboIdMain::kWater3FetchFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater3FetchBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater3FetchHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater3FetchIcon, data::TextId::kNone},
-                    100000.0f},
-          UiSliderH{{data::VboIdMain::kWater3SpreadBlendFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater3SpreadBlendBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater3SpreadBlendHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater3SpreadBlendIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater3SwellFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater3SwellBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater3SwellHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater3SwellIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater3PeakEnhancementFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater3PeakEnhancementBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater3PeakEnhancementHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater3PeakEnhancementIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater3ShortWavesFadeFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater3ShortWavesFadeBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater3ShortWavesFadeHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater3ShortWavesFadeIcon, data::TextId::kNone},
-                    1.0f},
-          UiSliderH{{data::VboIdMain::kWater3LambdaFill, data::TextId::kNone},
-                    {data::VboIdMain::kWater3LambdaBack, data::TextId::kNone},
-                    {data::VboIdMain::kWater3LambdaHandler, data::TextId::kNone},
-                    {data::VboIdMain::kWater3LambdaIcon, data::TextId::kNone},
-                    1.0f}) {}
+          {{data::VboIdMain::kWaterLayer1PinBack, data::TextId::kNotYet, [](){}},
+          {data::VboIdMain::kWaterLayer1PinPoint, data::TextId::kNotYet, [](){}}},
+          {data::VboIdMain::kWaterLayer1, data::TextId::kNotYet, [](){}},
+          {data::VboIdMain::kWaterLayer1Text, data::TextId::kNotYet, [](){}},
+          {{data::VboIdMain::kWaterLayer1Off, data::TextId::kNotYet},
+          {data::VboIdMain::kWaterLayer1On1, data::TextId::kNotYet},
+          {data::VboIdMain::kWaterLayer1On2, data::TextId::kNotYet},
+          {data::VboIdMain::kWaterLayer1On3, data::TextId::kNotYet}},
+          {data::VboIdMain::kWater1ScaleLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater1ScaleFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1ScaleBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1ScaleHandler, data::TextId::kNotYet},
+           1000.0f},
+          {data::VboIdMain::kWater1FetchLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater1FetchFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1FetchBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1FetchHandler, data::TextId::kNotYet},
+           100000.0f},
+          {data::VboIdMain::kWater1SpreadBlendLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater1SpreadBlendFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1SpreadBlendBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1SpreadBlendHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater1SwellLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater1SwellFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1SwellBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1SwellHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater1PeakEnhancementLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater1PeakEnhancementFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1PeakEnhancementBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1PeakEnhancementHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater1ShortWavesFadeLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater1ShortWavesFadeFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1ShortWavesFadeBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1ShortWavesFadeHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater1LambdaLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater1LambdaFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1LambdaBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater1LambdaHandler, data::TextId::kNotYet},
+           1.0f}),
+      ocean_layer_config_2_(
+          {data::VboIdMain::kWaterLayer2Window, data::TextId::kNotYet, [](){}},
+          1.4f,
+          ui_shared_resources,
+          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
+          LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
+          {{data::VboIdMain::kWaterLayer2PinBack, data::TextId::kNotYet, [](){}},
+           {data::VboIdMain::kWaterLayer2PinPoint, data::TextId::kNotYet, [](){}}},
+          {data::VboIdMain::kWaterLayer2, data::TextId::kNotYet, [](){}},
+          {data::VboIdMain::kWaterLayer2Text, data::TextId::kNotYet, [](){}},
+          {{data::VboIdMain::kWaterLayer2Off, data::TextId::kNotYet},
+           {data::VboIdMain::kWaterLayer2On1, data::TextId::kNotYet},
+           {data::VboIdMain::kWaterLayer2On2, data::TextId::kNotYet},
+           {data::VboIdMain::kWaterLayer2On3, data::TextId::kNotYet}},
+          {data::VboIdMain::kWater2ScaleLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater2ScaleFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2ScaleBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2ScaleHandler, data::TextId::kNotYet},
+           1000.0f},
+          {data::VboIdMain::kWater2FetchLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater2FetchFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2FetchBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2FetchHandler, data::TextId::kNotYet},
+           100000.0f},
+          {data::VboIdMain::kWater2SpreadBlendLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater2SpreadBlendFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2SpreadBlendBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2SpreadBlendHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater2SwellLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater2SwellFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2SwellBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2SwellHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater2PeakEnhancementLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater2PeakEnhancementFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2PeakEnhancementBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2PeakEnhancementHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater2ShortWavesFadeLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater2ShortWavesFadeFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2ShortWavesFadeBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2ShortWavesFadeHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater2LambdaLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater2LambdaFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2LambdaBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater2LambdaHandler, data::TextId::kNotYet},
+           1.0f}),
+      ocean_layer_config_3_(
+          {data::VboIdMain::kWaterLayer3Window, data::TextId::kNotYet, [](){}},
+          1.4f,
+          ui_shared_resources,
+          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
+          LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
+          {{data::VboIdMain::kWaterLayer3PinBack, data::TextId::kNotYet, [](){}},
+           {data::VboIdMain::kWaterLayer3PinPoint, data::TextId::kNotYet, [](){}}},
+          {data::VboIdMain::kWaterLayer3, data::TextId::kNotYet, [](){}},
+          {data::VboIdMain::kWaterLayer3Text, data::TextId::kNotYet, [](){}},
+          {{data::VboIdMain::kWaterLayer3Off, data::TextId::kNotYet},
+           {data::VboIdMain::kWaterLayer3On1, data::TextId::kNotYet},
+           {data::VboIdMain::kWaterLayer3On2, data::TextId::kNotYet},
+           {data::VboIdMain::kWaterLayer3On3, data::TextId::kNotYet}},
+          {data::VboIdMain::kWater3ScaleLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater3ScaleFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3ScaleBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3ScaleHandler, data::TextId::kNotYet},
+           1000.0f},
+          {data::VboIdMain::kWater3FetchLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater3FetchFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3FetchBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3FetchHandler, data::TextId::kNotYet},
+           100000.0f},
+          {data::VboIdMain::kWater3SpreadBlendLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater3SpreadBlendFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3SpreadBlendBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3SpreadBlendHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater3SwellLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater3SwellFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3SwellBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3SwellHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater3PeakEnhancementLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater3PeakEnhancementFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3PeakEnhancementBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3PeakEnhancementHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater3ShortWavesFadeLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater3ShortWavesFadeFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3ShortWavesFadeBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3ShortWavesFadeHandler, data::TextId::kNotYet},
+           1.0f},
+          {data::VboIdMain::kWater3LambdaLabel, data::TextId::kNotYet},
+          {{data::VboIdMain::kWater3LambdaFill, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3LambdaBack, data::TextId::kNotYet},
+           {data::VboIdMain::kWater3LambdaHandler, data::TextId::kNotYet},
+           1.0f}) {}
 
 void UiWaterMode::Render() {
   glActiveTexture(GL_TEXTURE0);
@@ -274,12 +286,16 @@ void UiWaterMode::Render() {
   btn_bake_lake_.Render();
   btn_bake_river_.Render();
   btn_bake_waterfall_.Render();
-  btn_create_.Render();
-  btn_remove_.Render();
   btn_update_.Render();
 
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.static_sprite_shader_.Bind();
   ocean_layer_config_1_.Render();
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.static_sprite_shader_.Bind();
   ocean_layer_config_2_.Render();
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.static_sprite_shader_.Bind();
   ocean_layer_config_3_.Render();
 }
 
@@ -314,11 +330,16 @@ void UiWaterMode::RenderPicking() {
   btn_bake_lake_.RenderPicking();
   btn_bake_river_.RenderPicking();
   btn_bake_waterfall_.RenderPicking();
-  btn_create_.RenderPicking();
-  btn_remove_.RenderPicking();
   btn_update_.RenderPicking();
+
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
   ocean_layer_config_1_.RenderPicking();
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
   ocean_layer_config_2_.RenderPicking();
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.static_sprite_picking_shader_.Bind();
   ocean_layer_config_3_.RenderPicking();
 }
 
