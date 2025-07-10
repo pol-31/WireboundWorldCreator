@@ -41,23 +41,26 @@ void UiTilesMode::MouseButtonCallback(
 void UiTilesMode::KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {}
 
-UiTilesMode::UiTilesMode(UiSharedResources& ui_shared_resources)
-    : IUiMode(ui_shared_resources,
-              UiStaticSprite{data::VboIdMain::kTilesUiTilesMode,
-                             data::TextId::kNone}),
-      btn_up_(data::VboIdMain::kTilesUp, data::TextId::kNone,
+UiTilesMode::UiTilesMode(
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue)
+    : IUiMode(
+          ui_shared_resources,
+          window_queue,
+          {data::VboIdMain::kTilesTilesMode, data::TextId::kNotYet}),
+      btn_up_(data::VboIdMain::kTilesUp, data::TextId::kNotYet,
               [this]() {
                 std::cout << "btn_up" << std::endl;
               }),
-      btn_down_(data::VboIdMain::kTilesDown, data::TextId::kNone,
+      btn_down_(data::VboIdMain::kTilesDown, data::TextId::kNotYet,
                 [this]() {
                   std::cout << "btn_down" << std::endl;
                 }),
-      btn_left_(data::VboIdMain::kTilesLeft, data::TextId::kNone,
+      btn_left_(data::VboIdMain::kTilesLeft, data::TextId::kNotYet,
                 [this]() {
                   std::cout << "btn_left" << std::endl;
                 }),
-      btn_right_(data::VboIdMain::kTilesRight, data::TextId::kNone,
+      btn_right_(data::VboIdMain::kTilesRight, data::TextId::kNotYet,
                  [this]() {
                    std::cout << "btn_right" << std::endl;
                  }),

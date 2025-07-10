@@ -83,6 +83,10 @@ add_executable(WireboundWorldCreator
         src/common/TerrainGrid.cpp
         src/common/TerrainGrid.h
         src/common/IGraph.h
+        src/core/WindowQueue.h
+        src/core/WindowQueue.cpp
+        src/core/UiText.cpp
+        src/core/UiText.h
 
 )
 

@@ -11,8 +11,10 @@
 
 class UiWaterMode final : public IUiMode {
  public:
-  explicit UiWaterMode(UiSharedResources& ui_shared_resources,
-                     const Paths& paths);
+  explicit UiWaterMode(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      const Paths& paths);
 
   void Render() override;
   void RenderPicking() override;

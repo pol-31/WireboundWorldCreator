@@ -2,6 +2,8 @@
 #define WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_
 
 #include "Ui.h"
+#include "UiText.h"
+#include "WindowQueue.h"
 
 /// loading only on the bottom of the screen (so use UiStaticSprite)
 class UiLoading final : public UiBase {
@@ -98,13 +100,189 @@ class UiSlider2D final : public UiBase {
   static const float kTrackHeightFactor;
 };
 
+// cannot be pinned, cannot be hovered above,
+// single to interact - on very top; shadow all other
+class UiTopWindowBase : public UiBase {
+ public:
+  using UiBase::UpdateTransform;
+
+  UiTopWindowBase(
+      UiDynamicSprite&& desk,
+      UiDynamicSprite&& shadow,
+      float size_scale,
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue);
+
+  UiTopWindowBase(UiTopWindowBase&& other) noexcept;
+  UiTopWindowBase(const UiTopWindowBase& other) = delete;
+
+  UiTopWindowBase& operator=(UiTopWindowBase&& other) = delete;
+  UiTopWindowBase& operator=(const UiTopWindowBase& other) = delete;
+
+  void Show();
+
+  void Hide();
+
+  void UpdateTransform() final;
+
+  virtual bool Render() = 0;
+
+  virtual void RenderPicking() = 0;
+
+  virtual void Press(int id) = 0;
+
+  virtual void Release() = 0;
+
+  virtual data::TextId Hover(int id) = 0;
+
+ protected:
+  UiDynamicSprite desk_;
+  // Cancel() if not important; otherwise skip
+  UiDynamicSprite shadow_;
+
+  float size_scale_{1.0f};
+
+  // for shader bindings, mask texture
+  UiSharedResources& ui_shared_resources_;
+
+  WindowQueue& window_queue_;
+};
+
+class UiCaution final : public UiTopWindowBase {
+ public:
+  using Base = UiTopWindowBase;
+
+  UiCaution(
+      UiDynamicSprite&& desk,
+      UiDynamicSprite&& shadow,
+      float size_scale,
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      UiDynamicSprite&& text);
+
+  UiCaution(UiCaution&& other) noexcept;
+  UiCaution(const UiCaution& other) = delete;
+
+  UiCaution& operator=(UiCaution&& other) = delete;
+  UiCaution& operator=(const UiCaution& other) = delete;
+
+  bool Render();
+
+  void RenderPicking();
+
+  void Press(int id);
+
+  void Release();
+
+  data::TextId Hover(int id);
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+ private:
+  UiDynamicSprite text_;
+};
+
+class UiConfirmation final : public UiTopWindowBase {
+ public:
+  using Base = UiTopWindowBase;
+
+  UiConfirmation(
+      UiDynamicSprite&& desk,
+      UiDynamicSprite&& shadow,
+      float size_scale,
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      UiDynamicSprite&& btn_accept,
+      UiDynamicSprite&& btn_decline,
+      UiDynamicSprite&& text);
+
+  UiConfirmation(UiConfirmation&& other) noexcept;
+  UiConfirmation(const UiConfirmation& other) = delete;
+
+  UiConfirmation& operator=(UiConfirmation&& other) = delete;
+  UiConfirmation& operator=(const UiConfirmation& other) = delete;
+
+  bool Render();
+
+  void RenderPicking();
+
+  void Press(int id);
+
+  void Release();
+
+  data::TextId Hover(int id);
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+ private:
+  UiDynamicSprite text_;
+  UiDynamicSprite btn_accept_;
+  UiDynamicSprite btn_decline_;
+
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kConfirmationDecline) -
+      static_cast<int>(data::VboIdMain::kConfirmationDesk) + 1
+      > ui_event_handler_;
+};
+
+class UiFile final : public UiTopWindowBase {
+ public:
+  using Base = UiTopWindowBase;
+
+  UiFile(
+      UiDynamicSprite&& desk,
+      UiDynamicSprite&& shadow,
+      float size_scale,
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      UiDynamicSprite&& btn_accept,
+      UiDynamicSprite&& btn_decline,
+      UiTextLabel&& label,
+      UiTextInput&& text);
+
+  UiFile(UiFile&& other) noexcept;
+  UiFile(const UiFile& other) = delete;
+
+  UiFile& operator=(UiFile&& other) = delete;
+  UiFile& operator=(const UiFile& other) = delete;
+
+  bool Render();
+
+  void RenderPicking();
+
+  void Press(int id);
+
+  void Release();
+
+  data::TextId Hover(int id);
+
+  void UpdateTransform(float x_translate, float y_translate,
+                       float scale) override;
+
+ private:
+  UiDynamicSprite btn_accept_;
+  UiDynamicSprite btn_decline_;
+  UiTextLabel label_;
+  UiTextInput text_;
+
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kFileAccept) -
+      static_cast<int>(data::VboIdMain::kFileDesk) + 1
+      > ui_event_handler_;
+};
+
+// single interactable window; can add few
 class UiWindowBase : public UiBase {
  public:
   using UiBase::UpdateTransform;
 
   UiWindowBase(UiDynamicSprite&& sprite,
                float size_scale,
-               UiSharedResources& ui_shared_resources);
+               UiToggle2&& pin,
+               UiSharedResources& ui_shared_resources,
+               WindowQueue& window_queue);
 
   UiWindowBase(UiWindowBase&& other) noexcept;
   UiWindowBase(const UiWindowBase& other) = delete;
@@ -112,40 +290,81 @@ class UiWindowBase : public UiBase {
   UiWindowBase& operator=(UiWindowBase&& other) = delete;
   UiWindowBase& operator=(const UiWindowBase& other) = delete;
 
-  /// back_ready_==false when appearing or disappearing animation
-  /// returs false when disappearing fading is over
-  bool RenderBack(bool show);
+  UiWindowBase* GetWindowPtr();
 
-  void RenderPickingBack();
+  void Show();
+
+  void Hide();
+
+  void UpdateTransform() final;
+
+  virtual bool Render() = 0;
+
+  virtual void RenderPicking() = 0;
+
+  virtual void Press(int id) = 0;
+
+  virtual void Release() = 0;
+
+  virtual data::TextId Hover(int id) = 0;
+
+  [[nodiscard]] bool Pinned() const noexcept;
 
   [[nodiscard]] bool BackIsReady() const {
     return back_ready_;
   }
 
-  void UpdateTransform() final;
-
  protected:
-  UiDynamicSprite sprite_; // dynamic to set scale
-
-  float speed_{0.5f};
-  float progress_{0.0f};
-
+  UiDynamicSprite sprite_;
   // how it differs from the nested components
   float size_scale_{1.0f};
-
-  bool back_ready_{false};
-
+  UiToggle2 pin_;
   UiSharedResources& ui_shared_resources_; // for shader bindings, mask texture
+
+  WindowQueue& window_queue_;
+  int window_queue_id_ = -1;
+  // useful if window still pinned, but menu already hidden
+  bool do_show_ = false;
+
+  // animation related (mask-appearing / transformation)
+  float speed_{0.5f};
+  float progress_{0.0f};
+  bool back_ready_{false};
 };
 
-class UiTabMenu final : public UiWindowBase {
+class UiWindowAppear : public UiWindowBase {
  public:
-  using Base = UiWindowBase;
+  using UiBase::UpdateTransform;
+
+  UiWindowAppear(UiDynamicSprite&& sprite,
+                 float size_scale,
+                 UiToggle2&& pin,
+                 UiSharedResources& ui_shared_resources,
+                 WindowQueue& window_queue);
+
+  UiWindowAppear(UiWindowAppear&& other) noexcept;
+  UiWindowAppear(const UiWindowAppear& other) = delete;
+
+  UiWindowAppear& operator=(UiWindowAppear&& other) = delete;
+  UiWindowAppear& operator=(const UiWindowAppear& other) = delete;
+
+  /// back_ready_==false when appearing or disappearing animation
+  /// returs false when disappearing fading is over
+  bool RenderBack(bool show);
+
+  void RenderPickingBack();
+};
+
+class UiTabMenu final : public UiWindowAppear {
+ public:
+  using Base = UiWindowAppear;
 
   UiTabMenu(
-      UiDynamicSprite&& back_desk,
+      UiDynamicSprite&& sprite,
       float size_scale,
+      UiToggle2&& pin,
       UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
 
       UiStaticSprite&& btn_mode_terrain,
       UiStaticSprite&& btn_mode_water,
@@ -179,25 +398,22 @@ class UiTabMenu final : public UiWindowBase {
   UiTabMenu& operator=(UiTabMenu&& other) = delete;
   UiTabMenu& operator=(const UiTabMenu& other) = delete;
 
-  // returns "stop render"
-  bool Render(bool show, float angle_select, float angle_selected);
+  bool Render() override;
 
-  void RenderPicking();
+  void RenderPicking() override;
 
-  void Press(int id) {
-    ui_event_handler_.Press(id);
-  }
+  void Press(int id) override;
 
-  void Release() {
-    ui_event_handler_.Release();
-  }
+  void Release() override;
 
-  data::TextId Hover(int id) {
-    return ui_event_handler_.Hover(id);
-  }
+  data::TextId Hover(int id) override;
 
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
+
+  void SetSelectedArrow(float angle);
+
+  void SetSelectArrow(float angle);
 
  private:
   UiStaticSprite btn_mode_terrain_;
@@ -230,70 +446,68 @@ class UiTabMenu final : public UiWindowBase {
       static_cast<int>(data::VboIdMain::kMenuLoad) -
       static_cast<int>(data::VboIdMain::kMenuTerrain) + 1
       > ui_event_handler_;
+
+  float arrow_select_angle_ = 0;
+  float arrow_selected_angle_ = 0;
 };
 
-class UiConfirmation final : public UiWindowBase {
+class UiTipWindow final : public UiWindowAppear {
  public:
-  using Base = UiWindowBase;
+  using Base = UiWindowAppear;
 
-  UiConfirmation(
+  UiTipWindow(
       UiDynamicSprite&& sprite,
       float size_scale,
+      UiToggle2&& pin,
       UiSharedResources& ui_shared_resources,
-      UiStaticSprite&& btn_accept,
-      UiStaticSprite&& btn_decline);
+      WindowQueue& window_queue,
+      UiDynamicSprite&& text);
 
-  UiConfirmation(UiConfirmation&& other) noexcept;
-  UiConfirmation(const UiConfirmation& other) = delete;
+  UiTipWindow(UiTipWindow&& other) noexcept;
+  UiTipWindow(const UiTipWindow& other) = delete;
 
-  UiConfirmation& operator=(UiConfirmation&& other) = delete;
-  UiConfirmation& operator=(const UiConfirmation& other) = delete;
+  UiTipWindow& operator=(UiTipWindow&& other) = delete;
+  UiTipWindow& operator=(const UiTipWindow& other) = delete;
 
-  // returns "stop render"
-  bool Render(bool show);
+  bool Render() override;
 
-  void RenderPicking();
+  void RenderPicking() override;
 
-  void Press(int id) {
-    ui_event_handler_.Press(id);
-  }
+  void Press(int id) override;
 
-  void Release() {
-    ui_event_handler_.Release();
-  }
+  void Release() override;
 
-  data::TextId Hover(int id) {
-    return ui_event_handler_.Hover(id);
-  }
+  data::TextId Hover(int id) override;
 
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
 
- private:
-  UiStaticSprite btn_accept_;
-  UiStaticSprite btn_decline_;
+  void SetText(data::TextId text_id);
 
-  // 3 buttons
-  UiEventHandler<3> ui_event_handler_;
+ private:
+  UiDynamicSprite text_;
+  bool hovered_ = false;
 };
 
+// -
 /// only one scale allowed (no x or y scale)
-class UiPopUpBase : public UiBase {
+class UiWindowPopUp : public UiWindowBase {
  public:
   using UiBase::UpdateTransform;
 
-  UiPopUpBase(UiDynamicSprite&& sprite,
-              float size_scale,
-              UiSharedResources& ui_shared_resources,
-              LocalTransform start_transform,
-              LocalTransform end_transform,
-              UiToggle2&& pin);
+  UiWindowPopUp(UiDynamicSprite&& sprite,
+                float size_scale,
+                UiToggle2&& pin,
+                UiSharedResources& ui_shared_resources,
+                WindowQueue& window_queue,
+                LocalTransform start_transform,
+                LocalTransform end_transform);
 
-  UiPopUpBase(UiPopUpBase&& other) noexcept;
-  UiPopUpBase(const UiPopUpBase& other) = delete;
+  UiWindowPopUp(UiWindowPopUp&& other) noexcept;
+  UiWindowPopUp(const UiWindowPopUp& other) = delete;
 
-  UiPopUpBase& operator=(UiPopUpBase&& other) = delete;
-  UiPopUpBase& operator=(const UiPopUpBase& other) = delete;
+  UiWindowPopUp& operator=(UiWindowPopUp&& other) = delete;
+  UiWindowPopUp& operator=(const UiWindowPopUp& other) = delete;
 
   /// back_ready_==false when appearing or disappearing animation
   /// returs false when disappearing fading is over
@@ -301,21 +515,10 @@ class UiPopUpBase : public UiBase {
 
   void RenderPickingBack();
 
-  [[nodiscard]] bool BackIsReady() const {
-    return back_ready_;
-  }
-
-  void UpdateTransform() final;
-
  protected:
   // cubic interpolation here (not shader)
   LocalTransform cur_transform_;
-  UiDynamicSprite sprite_; // dynamic to set scale
-
-  UiToggle2 pin_;
-
-  // for shader bindings, mask texture
-  UiSharedResources& ui_shared_resources_;
+  bool hovered_ = false;
 
  private:
   void CubicInterpolation();
@@ -324,28 +527,21 @@ class UiPopUpBase : public UiBase {
   // store separately for easiest interpolation
   LocalTransform start_transform_;
   LocalTransform end_transform_;
-
-  // how it differs from the nested components
-  float size_scale_{1.0f};
-
-  const float speed_{0.5f};
-  float progress_{0.0f};
-
-  bool back_ready_ = false;
 };
 
 
-class UiSettings final : public UiPopUpBase {
+class UiSettings final : public UiWindowPopUp {
  public:
-  using Base = UiPopUpBase;
+  using Base = UiWindowPopUp;
 
   UiSettings(
       UiDynamicSprite&& sprite,
       float size_scale,
+      UiToggle2&& pin,
       UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
       LocalTransform start_transform,
       LocalTransform end_transform,
-      UiToggle2&& pin,
       UiDynamicSprite&& resolution_label,
       UiDynamicSprite&& resolution_left,
       UiDynamicSprite&& resolution_right,
@@ -419,21 +615,20 @@ class UiSettings final : public UiPopUpBase {
       static_cast<int>(data::VboIdMain::kSettingsTipInfoOn3) -
       static_cast<int>(data::VboIdMain::kSettingsDesk) + 1
       > ui_event_handler_;
-
-  bool hovered_ = false;
 };
 
-class UiWaterLayerConfig final : public UiPopUpBase {
+class UiWaterLayerConfig final : public UiWindowPopUp {
  public:
-  using Base = UiPopUpBase;
+  using Base = UiWindowPopUp;
 
   UiWaterLayerConfig(
       UiDynamicSprite&& sprite,
       float size_scale,
+      UiToggle2&& pin,
       UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
       LocalTransform start_transform,
       LocalTransform end_transform,
-      UiToggle2&& pin,
       UiDynamicSprite&& sprite_layer,
       UiDynamicSprite&& text_layer,
       UiToggle&& toggle_layer,
@@ -459,19 +654,19 @@ class UiWaterLayerConfig final : public UiPopUpBase {
   UiWaterLayerConfig& operator=(const UiWaterLayerConfig& other) = delete;
 
   // returns "stop render"
-  bool Render();
+  bool Render() override;
 
-  void Release();
+  void Release() override;
 
   bool Scroll(GLuint id, float yoffset) override;
 
-  void RenderPicking();
+  void RenderPicking() override;
 
-  void Press(int id) {
+  void Press(int id) override {
     modified_ = ui_event_handler_.Press(id);
   }
 
-  data::TextId Hover(int id);
+  data::TextId Hover(int id) override;
 
   bool Modified();
 
@@ -500,8 +695,6 @@ class UiWaterLayerConfig final : public UiPopUpBase {
   UiDynamicSprite lambda_text_;
 
   bool modified_{false};
-
-  bool hovered_{false};
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kWater1LambdaHandler) -

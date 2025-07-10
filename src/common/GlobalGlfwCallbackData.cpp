@@ -18,13 +18,3 @@ void GlobalGlfwCallbackData::UpdateCursorPos() {
 GLuint GlobalGlfwCallbackData::GetIdByMousePos() const {
   return picking_fbo->GetIdByMousePos(cursor_pos_);
 }
-
-void GlobalGlfwCallbackData::StartCharInput(FixedSizeQueue<char, 64>* name) {
-  text_renderer->StartInput(name);
-}
-
-void GlobalGlfwCallbackData::StopCharInput() {
-  glfwSetCharCallback(gWindow, nullptr);
-  text_renderer->StopInput();
-  (*cur_mode)->BindCallbacks();
-}

@@ -6,7 +6,9 @@
 
 class UiTilesMode final : public IUiMode {
  public:
-  explicit UiTilesMode(UiSharedResources& ui_shared_resources);
+  explicit UiTilesMode(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue);
 
   void Render() override;
   void RenderPicking() override;
@@ -31,7 +33,7 @@ class UiTilesMode final : public IUiMode {
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kTilesDown) -
-      static_cast<int>(data::VboIdMain::kTilesUiTilesMode) + 1
+      static_cast<int>(data::VboIdMain::kTilesTilesMode) + 1
       > ui_event_handler_;
 };
 

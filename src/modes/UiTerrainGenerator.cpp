@@ -8,7 +8,9 @@ const int UiTerrainGenerator::gTerrainHeight = 1024;
 UiTerrainGenerator::UiTerrainGenerator(
     UiDynamicSprite&& sprite,
     float size_scale,
+    UiToggle2&& pin,
     UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
     Tile& cur_tile
     /*UiDynamicSprite&& sprite,
     float size_scale,
@@ -19,7 +21,9 @@ UiTerrainGenerator::UiTerrainGenerator(
     UiStaticSprite&& btn_decline,
 
     UiDynamicSprite&& cross*/)
-    : Base(std::move(sprite), size_scale, ui_shared_resources),
+    : Base(std::move(sprite), size_scale,
+           std::move(pin), ui_shared_resources,
+           window_queue),
       shader_gen_nmap_("../shaders/generate_shaders/NormalMap.comp"),
       shader_gen_slope_map_("../shaders/generate_shaders/SlopeMap.comp"),
       shader_gen_ao_map_("../shaders/generate_shaders/AoMap.comp"),
@@ -64,7 +68,7 @@ UiTerrainGenerator::UiTerrainGenerator(
       cross_(std::move(other.cross_)),
       ui_event_handler_({&btn_close_, &btn_accept_, &btn_decline_}) {
   gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiTransformDbg*>(this);
+      = static_cast<UiBase*>(this);
 }*/
 
 void UiTerrainGenerator::ErodeWithFlow(

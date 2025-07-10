@@ -9,14 +9,16 @@
 
 #include "../core/Tile.h"
 
-class UiTerrainGenerator final : public UiWindowBase {
+class UiTerrainGenerator final : public UiWindowAppear {
  public:
-  using Base = UiWindowBase;
+  using Base = UiWindowAppear;
 
   UiTerrainGenerator(
       UiDynamicSprite&& sprite,
       float size_scale,
+      UiToggle2&& pin,
       UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
       Tile& cur_tile
       /*UiDynamicSprite&& sprite,
       float size_scale,
@@ -44,19 +46,23 @@ class UiTerrainGenerator final : public UiWindowBase {
     return false;
   }
 
-  void RenderPicking() {
+  bool Render() override {
+    return false;
+  }
+
+  void RenderPicking() override{
     //
   }
 
-  void Press(int id) {
+  void Press(int id) override {
 //    ui_event_handler_.Press(id);
   }
 
-  void Release() {
+  void Release() override {
 //    ui_event_handler_.Release();
   }
 
-  data::TextId Hover(int id) {
+  data::TextId Hover(int id) override {
     return data::TextId::kNone;
 //    return ui_event_handler_.Hover(id);
   }

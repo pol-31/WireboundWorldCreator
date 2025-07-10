@@ -42,32 +42,35 @@ void UiBiomesMode::KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {}
 
 
-UiBiomesMode::UiBiomesMode(UiSharedResources& ui_shared_resources)
-    : IUiMode(ui_shared_resources,
-              UiStaticSprite{data::VboIdMain::kBiomesUiBiomesMode,
-                             data::TextId::kNone}),
-      btn_wind_(data::VboIdMain::kBiomesWind, data::TextId::kNone,
+UiBiomesMode::UiBiomesMode(
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue)
+    : IUiMode(
+          ui_shared_resources,
+          window_queue,
+          {data::VboIdMain::kBiomesBiomesMode, data::TextId::kNotYet}),
+      btn_wind_(data::VboIdMain::kBiomesEditWindIcon, data::TextId::kNotYet,
                 [this]() {
                   this->BtnWind();
                 }),
-      btn_sun_(data::VboIdMain::kBiomesSun, data::TextId::kNone,
+      btn_sun_(data::VboIdMain::kBiomesEditSunIcon, data::TextId::kNotYet,
                [this]() {
                  this->BtnSun();
                }),
-      btn_time_(data::VboIdMain::kBiomesTime, data::TextId::kNone,
+      btn_time_(data::VboIdMain::kBiomesEditTimeIcon, data::TextId::kNotYet,
                 [this]() {
                   this->BtnTime();
                 }),
-      btn_precipitations_(data::VboIdMain::kBiomesPrecipitations,
-                          data::TextId::kNone,
+      btn_precipitations_(data::VboIdMain::kBiomesEditPrecipitationIcon,
+                          data::TextId::kNotYet,
           [this]() {
             this->BtnPrecipitations();
           }),
-      btn_temperature_(data::VboIdMain::kBiomesTemperature, data::TextId::kNone,
+      btn_temperature_(data::VboIdMain::kBiomesEditTemperatureIcon, data::TextId::kNotYet,
           [this]() {
             this->BtnTemperature();
           }),
-      btn_clouds_(data::VboIdMain::kBiomesClouds, data::TextId::kNone,
+      btn_clouds_(data::VboIdMain::kBiomesEditCloudIcon, data::TextId::kNotYet,
                   [this]() {
                     this->BtnClouds();
                   }),

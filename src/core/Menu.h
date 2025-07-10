@@ -15,6 +15,7 @@ class Menu {
   //TODO: includes settings
 
   Menu(UiSharedResources& ui_shared_resources,
+       WindowQueue& window_queue,
        TextRenderer& text_renderer,
        IUiMode* terrain_mode,
        IUiMode* water_mode,
@@ -28,11 +29,15 @@ class Menu {
 
   // TODO: on switching reset all unsaved in previous, update
 
+  void Show();
+
+  void Hide();
+
   void Render(bool show);
 
-  void RenderPicking();
+  void RenderPicking(bool show);
 
-  data::TextId Hover(uint32_t global_id);
+  data::TextId Hover(bool show, uint32_t global_id);
 
   bool Press(uint32_t global_id);
 
@@ -45,12 +50,25 @@ class Menu {
   /// why public: for manual switching (e.g. at init)
   void SetMode(int id);
 
+  void BindCallbacks();
+
  private:
+  static void ScrollCallback(
+      GLFWwindow* window, double xoffset, double yoffset);
+
+  static void MouseButtonCallback(
+      GLFWwindow* window, int button, int action, int mods);
+
+  static void KeyCallback(
+      GLFWwindow* window, int key, int scancode, int action, int mods);
+
   UiSharedResources& ui_shared_resources_;
   TextRenderer& text_renderer_;
 
+  // for Show() & Hide()
+  WindowQueue& window_queue_;
+
   UiTabMenu ui_tab_menu_;
-  UiSettings ui_settings_;
 
   IUiMode*& cur_mode_;
   // radians

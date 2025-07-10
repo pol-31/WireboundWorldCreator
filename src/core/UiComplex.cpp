@@ -199,30 +199,380 @@ void UiSlider2D::SetParentTransform(LocalTransform transform) {
   cursor_.SetParentTransform(transform);
 }
 
+UiTopWindowBase::UiTopWindowBase(
+    UiDynamicSprite&& desk,
+    UiDynamicSprite&& shadow,
+    float size_scale,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue)
+    : UiBase(desk.GetId(), {}),
+      desk_(std::move(desk)),
+      shadow_(std::move(shadow)),
+      size_scale_(size_scale),
+      ui_shared_resources_(ui_shared_resources),
+      window_queue_(window_queue) {
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+  desk_.SetScale(size_scale);
+}
+
+UiTopWindowBase::UiTopWindowBase(UiTopWindowBase&& other) noexcept
+    : UiBase(std::move(other)),
+      desk_(std::move(other.desk_)),
+      shadow_(std::move(other.shadow_)),
+      size_scale_(other.size_scale_),
+      ui_shared_resources_(other.ui_shared_resources_),
+      window_queue_(other.window_queue_) {
+  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+void UiTopWindowBase::Show() {
+  window_queue_.SetTopWindow(this);
+}
+
+void UiTopWindowBase::Hide() {
+  window_queue_.SetTopWindow(nullptr);
+}
+
+void UiTopWindowBase::UpdateTransform() {
+  auto transform = debug::gUiTransforms[
+      4 * (GetId() - details::kIdOffsetUi)
+  ];
+  UpdateTransform(
+      transform.translate.x, transform.translate.y, transform.scale);
+}
+
+UiCaution::UiCaution(
+    UiDynamicSprite&& desk,
+    UiDynamicSprite&& shadow,
+    float size_scale,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    UiDynamicSprite&& text)
+    : UiTopWindowBase(std::move(desk), std::move(shadow), size_scale,
+                      ui_shared_resources, window_queue),
+      text_(std::move(text)) {
+  gUiComponents[text_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk_.GetId();
+
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+  UiTopWindowBase::UpdateTransform();
+}
+
+UiCaution::UiCaution(UiCaution&& other) noexcept
+    : Base(std::move(other)),
+      text_(std::move(other.text_)) {
+  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+bool UiCaution::Render() {
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  desk_.Render();
+  shadow_.Render();
+  //  text_.Render();
+  return false;
+}
+
+void UiCaution::RenderPicking() {
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  desk_.RenderPicking();
+  shadow_.RenderPicking();
+  //  text_.RenderPicking();
+}
+
+void UiCaution::Press(int id) {
+  if (id == shadow_.GetId()) {
+    Hide();
+  }
+}
+
+void UiCaution::Release() {}
+
+data::TextId UiCaution::Hover(int id) {
+  return data::TextId::kNone;
+}
+
+void UiCaution::UpdateTransform(
+    float x_translate, float y_translate, float scale) {
+  desk_.UpdateTransform();
+  shadow_.UpdateTransform();
+  text_.UpdateTransform();
+}
+
+UiConfirmation::UiConfirmation(
+    UiDynamicSprite&& desk,
+    UiDynamicSprite&& shadow,
+    float size_scale,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    UiDynamicSprite&& btn_accept,
+    UiDynamicSprite&& btn_decline,
+    UiDynamicSprite&& text)
+    : UiTopWindowBase(std::move(desk), std::move(shadow), size_scale,
+                      ui_shared_resources, window_queue),
+      btn_accept_(std::move(btn_accept)),
+      btn_decline_(std::move(btn_decline)),
+      text_(std::move(text)),
+      ui_event_handler_({&btn_accept_, &btn_decline_}) {
+  gUiComponents[btn_accept_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk_.GetId();
+  gUiComponents[btn_decline_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk_.GetId();
+  gUiComponents[text_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk_.GetId();
+
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+  UiTopWindowBase::UpdateTransform();
+}
+
+UiConfirmation::UiConfirmation(UiConfirmation&& other) noexcept
+    : Base(std::move(other)),
+      btn_accept_(std::move(other.btn_accept_)),
+      btn_decline_(std::move(other.btn_decline_)),
+      text_(std::move(other.text_)),
+      ui_event_handler_({&btn_accept_, &btn_decline_}) {
+  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+bool UiConfirmation::Render() {
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  desk_.Render();
+  shadow_.Render();
+  btn_accept_.Render();
+  btn_decline_.Render();
+  //  text_.Render();
+  return false;
+}
+
+void UiConfirmation::RenderPicking() {
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  desk_.RenderPicking();
+  shadow_.RenderPicking();
+  btn_accept_.RenderPicking();
+  btn_decline_.RenderPicking();
+  //  text_.RenderPicking();
+}
+
+void UiConfirmation::Press(int id) {
+  ui_event_handler_.Press(id);
+  if (id != shadow_.GetId() && id != desk_.GetId()) {
+    Hide();
+  }
+}
+
+void UiConfirmation::Release() {
+  ui_event_handler_.Release();
+}
+
+data::TextId UiConfirmation::Hover(int id) {
+  return ui_event_handler_.Hover(id);
+}
+
+void UiConfirmation::UpdateTransform(
+    float x_translate, float y_translate, float scale) {
+  /// back
+  desk_.UpdateTransform();
+  shadow_.UpdateTransform();
+
+  /// children
+  btn_accept_.UpdateTransform();
+  btn_decline_.UpdateTransform();
+  text_.UpdateTransform();
+}
+
+UiFile::UiFile(
+    UiDynamicSprite&& desk,
+    UiDynamicSprite&& shadow,
+    float size_scale,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    UiDynamicSprite&& btn_accept,
+    UiDynamicSprite&& btn_decline,
+    UiTextLabel&& label,
+    UiTextInput&& text)
+    : UiTopWindowBase(std::move(desk), std::move(shadow), size_scale,
+                      ui_shared_resources, window_queue),
+      btn_accept_(std::move(btn_accept)),
+      btn_decline_(std::move(btn_decline)),
+      label_(std::move(label)),
+      text_(std::move(text)),
+      ui_event_handler_({&btn_accept_/*, &btn_decline_*/}) {
+  gUiComponents[btn_accept_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk_.GetId();
+  gUiComponents[btn_decline_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk_.GetId();
+  gUiComponents[label_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk_.GetId();
+  gUiComponents[text_.GetId() - details::kIdOffsetUi].parent_id_
+      = desk_.GetId();
+
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+  UiTopWindowBase::UpdateTransform();
+  label_.SetText("label");
+}
+
+UiFile::UiFile(UiFile&& other) noexcept
+    : Base(std::move(other)),
+      btn_accept_(std::move(other.btn_accept_)),
+      btn_decline_(std::move(other.btn_decline_)),
+      label_(std::move(other.label_)),
+      text_(std::move(other.text_)),
+      ui_event_handler_({&btn_accept_/*, &btn_decline_*/}) {
+  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+bool UiFile::Render() {
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  desk_.Render();
+  shadow_.Render();
+  btn_accept_.Render();
+  btn_decline_.Render();
+  label_.Render();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.tex_ui_.Bind();
+  text_.Render();
+  return false;
+}
+
+void UiFile::RenderPicking() {
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  desk_.RenderPicking();
+  shadow_.RenderPicking();
+  btn_accept_.RenderPicking();
+  btn_decline_.RenderPicking();
+  label_.RenderPicking();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  text_.RenderPicking();
+}
+
+void UiFile::Press(int id) {
+  ui_event_handler_.Press(id);
+  if (id == text_.GetId()) {
+    text_.Press();
+    return;
+  }
+  if (id == btn_accept_.GetId() || id == btn_decline_.GetId()) {
+    Hide();
+  }
+}
+
+void UiFile::Release() {
+  ui_event_handler_.Release();
+}
+
+data::TextId UiFile::Hover(int id) {
+  return ui_event_handler_.Hover(id);
+}
+
+void UiFile::UpdateTransform(
+    float x_translate, float y_translate, float scale) {
+  /// back
+  desk_.UpdateTransform();
+  shadow_.UpdateTransform();
+
+  /// children
+  btn_accept_.UpdateTransform();
+  btn_decline_.UpdateTransform();
+  label_.UpdateTransform();
+  text_.UpdateTransform();
+}
+
 UiWindowBase::UiWindowBase(
     UiDynamicSprite&& sprite,
-    float size_scale, UiSharedResources& ui_shared_resources)
+    float size_scale,
+    UiToggle2&& pin,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue)
     : UiBase(sprite.GetId(), {}),
       sprite_(std::move(sprite)),
+      size_scale_(size_scale),
+      pin_(std::move(pin)),
       ui_shared_resources_(ui_shared_resources),
-      speed_(4.0f),
-      size_scale_(size_scale) {
-  sprite_.SetScale(size_scale_);
+      window_queue_(window_queue),
+      speed_(4.0f) {
+  gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+  sprite_.SetScale(size_scale);
+  //todo; should be called after Derived ctor
+//  UpdateTransform();
 }
 
 UiWindowBase::UiWindowBase(UiWindowBase&& other) noexcept
     : UiBase(std::move(other)),
       sprite_(std::move(other.sprite_)),
+      size_scale_(other.size_scale_),
+      pin_(std::move(other.pin_)),
+      ui_shared_resources_(other.ui_shared_resources_),
+      window_queue_(other.window_queue_),
       speed_(other.speed_),
       progress_(other.progress_),
-      back_ready_(other.back_ready_),
-      size_scale_(other.size_scale_),
-      ui_shared_resources_(other.ui_shared_resources_) {}
+      back_ready_(other.back_ready_) {
+  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+UiWindowBase* UiWindowBase::GetWindowPtr() {
+  return this;
+}
+
+//TODO: useless?
+void UiWindowBase::Show() {
+  do_show_ = true;
+  if (window_queue_id_ != -1) {
+    return;
+  }
+  window_queue_id_ = window_queue_.PushBack(GetWindowPtr());
+}
+
+//unpin -> if(do_show) Hide()
+
+void UiWindowBase::Hide() {
+  do_show_ = false;
+  if (window_queue_id_ == -1 || Pinned()) {
+    return;
+  }
+  window_queue_.Erase(window_queue_id_);
+  window_queue_id_ = -1;
+  progress_ = 0.0f;
+}
+
+void UiWindowBase::UpdateTransform() {
+  auto transform = debug::gUiTransforms[
+      4 * (GetId() - details::kIdOffsetUi)
+  ];
+  UpdateTransform(
+      transform.translate.x, transform.translate.y, transform.scale);
+}
+
+bool UiWindowBase::Pinned() const noexcept {
+  return pin_.TurnedOn();
+}
+
+UiWindowAppear::UiWindowAppear(
+    UiDynamicSprite&& sprite,
+    float size_scale,
+    UiToggle2&& pin,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue)
+    : UiWindowBase(std::move(sprite), size_scale,
+                   std::move(pin), ui_shared_resources,
+                   window_queue) {}
+
+UiWindowAppear::UiWindowAppear(UiWindowAppear&& other) noexcept
+    : UiWindowBase(std::move(other)) {}
 
 /// back_ready_==false when appearing or disappearing animation
 /// returs false when disappearing fading is over
-bool UiWindowBase::RenderBack(bool show) {
-  ui_shared_resources_.mask_sprite_shader_.Bind();
+bool UiWindowAppear::RenderBack(bool show) {
   if (show) {
     progress_ += speed_ * gDeltaTime;
     if (progress_ >= 1.0f) {
@@ -236,35 +586,31 @@ bool UiWindowBase::RenderBack(bool show) {
     }
   }
   progress_ = std::clamp(progress_, 0.0f, 1.0f);
-  // By default desk texture also in general tex atlas
-  //    glActiveTexture(0);
-  //    desk_sprite_.Bind();
-//  glActiveTexture(GL_TEXTURE1);
-//  ui_shared_resources_.tex_ui_mask_.Bind();
-//  glUniform1f(shader::kSpriteProgress, progress_);
-  ui_shared_resources_.static_sprite_shader_.Bind();
+  glActiveTexture(GL_TEXTURE0);
+  ui_shared_resources_.tex_ui_.Bind();
+  glActiveTexture(GL_TEXTURE1);
+  ui_shared_resources_.mask_sprite_shader_.Bind();
+  ui_shared_resources_.tex_ui_mask_.Bind();
+  glUniform1f(shader::kSpriteProgress, progress_);
   sprite_.Render();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
   glActiveTexture(GL_TEXTURE0); // go back to default
+  pin_.Render();
   return true;
 }
 
-void UiWindowBase::RenderPickingBack() {
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
+void UiWindowAppear::RenderPickingBack() {
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   sprite_.RenderPicking();
-}
-
-void UiWindowBase::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
+  pin_.RenderPicking();
 }
 
 UiTabMenu::UiTabMenu(
     UiDynamicSprite&& sprite,
     float size_scale,
+    UiToggle2&& pin,
     UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
 
     UiStaticSprite&& btn_mode_terrain,
     UiStaticSprite&& btn_mode_water,
@@ -291,7 +637,9 @@ UiTabMenu::UiTabMenu(
     UiDynamicSprite&& arrow_selected,
     UiDynamicSprite&& save_data,
     UiDynamicSprite&& load_data)
-    : Base(std::move(sprite), size_scale, ui_shared_resources),
+    : UiWindowAppear(std::move(sprite), size_scale,
+                     std::move(pin), ui_shared_resources,
+                     window_queue),
       btn_mode_terrain_(std::move(btn_mode_terrain)),
       btn_mode_water_(std::move(btn_mode_water)),
       btn_mode_roads_(std::move(btn_mode_roads)),
@@ -318,6 +666,7 @@ UiTabMenu::UiTabMenu(
       save_data_(std::move(save_data)),
       load_data_(std::move(load_data)),
       ui_event_handler_({
+          &pin_,
           &btn_mode_terrain_,
           &btn_mode_water_,
           &btn_mode_roads_,
@@ -391,7 +740,8 @@ UiTabMenu::UiTabMenu(
 
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
-  Base::UpdateTransform();
+  UiWindowBase::UpdateTransform();
+  speed_ = 2.0f;
 }
 
 UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
@@ -423,6 +773,7 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
       load_data_(std::move(other.load_data_)),
 
       ui_event_handler_({
+          &pin_,
           &btn_mode_terrain_,
           &btn_mode_water_,
           &btn_mode_roads_,
@@ -451,8 +802,8 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
 }
 
 // returns "stop render"
-bool UiTabMenu::Render(bool show, float angle_select, float angle_selected) {
-  bool stop_show = Base::RenderBack(show);
+bool UiTabMenu::Render() {
+  bool stop_show = Base::RenderBack(true);
   if (!Base::BackIsReady()) {
     return stop_show;
   }
@@ -483,8 +834,8 @@ bool UiTabMenu::Render(bool show, float angle_select, float angle_selected) {
 
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
-  arrow_select_.SetRotate(angle_select);
-  arrow_selected_.SetRotate(angle_selected);
+  arrow_select_.SetRotate(arrow_select_angle_);
+  arrow_selected_.SetRotate(arrow_selected_angle_);
 
   arrow_select_.Render();
   arrow_selected_.Render();
@@ -531,10 +882,29 @@ void UiTabMenu::RenderPicking() {
   load_data_.RenderPicking();
 }
 
+void UiTabMenu::Press(int id) {
+  ui_event_handler_.Press(id);
+  if (id != pin_.GetId()) {
+    return;
+  }
+  if (!do_show_) {
+    Hide();
+  }
+}
+
+void UiTabMenu::Release() {
+  ui_event_handler_.Release();
+}
+
+data::TextId UiTabMenu::Hover(int id) {
+  return ui_event_handler_.Hover(id);
+}
+
 void UiTabMenu::UpdateTransform(
     float x_translate, float y_translate, float scale) {
   /// back
   sprite_.UpdateTransform();
+  pin_.UpdateTransform();
 
   /// children
   btn_mode_terrain_.UpdateTransform();
@@ -564,13 +934,162 @@ void UiTabMenu::UpdateTransform(
   load_data_.UpdateTransform();
 }
 
+void UiTabMenu::SetSelectedArrow(float angle) {
+  arrow_selected_angle_ = angle;
+}
+
+void UiTabMenu::SetSelectArrow(float angle) {
+  arrow_select_angle_ = angle;
+}
+
+UiTipWindow::UiTipWindow(
+    UiDynamicSprite&& sprite,
+    float size_scale,
+    UiToggle2&& pin,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    UiDynamicSprite&& text)
+    : UiWindowAppear(std::move(sprite), size_scale,
+                     std::move(pin), ui_shared_resources,
+                     window_queue),
+      text_(std::move(text)) {
+  gUiComponents[text_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+  UiWindowBase::UpdateTransform();
+  speed_ = 2.0f;
+}
+
+UiTipWindow::UiTipWindow(UiTipWindow&& other) noexcept
+    : Base(std::move(other)),
+      text_(std::move(other.text_)) {
+  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+bool UiTipWindow::Render() {
+  bool stop_show = Base::RenderBack(hovered_);
+  if (!Base::BackIsReady()) {
+    return stop_show;
+  }
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  text_.Render();
+  return stop_show;
+}
+
+void UiTipWindow::RenderPicking() {
+  Base::RenderPickingBack();
+}
+
+void UiTipWindow::Press(int id) {
+  if (id == sprite_.GetId()) {
+    sprite_.Press();
+  } else if (id == pin_.GetId()) {
+    pin_.Press();
+  } else {
+    return;
+  }
+  if (!do_show_) {
+    Hide();
+  }
+}
+
+void UiTipWindow::Release() {}
+
+data::TextId UiTipWindow::Hover(int id) {
+  if (id >= sprite_.GetId() && id <= text_.GetId()) {
+    hovered_ = true;
+  } else {
+    hovered_ = false;
+  }
+  return data::TextId::kNone;
+}
+
+void UiTipWindow::UpdateTransform(
+    float x_translate, float y_translate, float scale) {
+  /// back
+  sprite_.UpdateTransform();
+  pin_.UpdateTransform();
+
+  /// children
+  text_.UpdateTransform();
+}
+
+void UiTipWindow::SetText(data::TextId text_id) {
+  std::cout << "text id is " << static_cast<int>(text_id);
+}
+
+UiWindowPopUp::UiWindowPopUp(
+    UiDynamicSprite&& sprite,
+    float size_scale,
+    UiToggle2&& pin,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    LocalTransform start_transform,
+    LocalTransform end_transform)
+    : UiWindowBase(std::move(sprite), size_scale,
+                   std::move(pin), ui_shared_resources,
+                   window_queue),
+      start_transform_(start_transform),
+      end_transform_(end_transform) {}
+
+UiWindowPopUp::UiWindowPopUp(UiWindowPopUp&& other) noexcept
+    : UiWindowBase(std::move(other)),
+      cur_transform_(other.cur_transform_),
+      start_transform_(other.start_transform_),
+      end_transform_(other.end_transform_) {}
+
+bool UiWindowPopUp::RenderBack(bool show) {
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  if (pin_.TurnedOn() || show) {
+    progress_ += speed_ * gDeltaTime;
+    if (progress_ >= 1.0f) {
+      back_ready_ = true;
+    }
+  } else {
+    progress_ -= speed_ * gDeltaTime;
+  }
+  progress_ = std::clamp(progress_, 0.0f, 1.0f);
+  CubicInterpolation();
+  sprite_.SetParentTransform(cur_transform_);
+  pin_.SetParentTransform(cur_transform_);
+  sprite_.Render();
+  pin_.Render();
+  if (progress_ == 0.0f) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+void UiWindowPopUp::RenderPickingBack() {
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  sprite_.RenderPicking();
+  pin_.RenderPicking();
+}
+
+void UiWindowPopUp::CubicInterpolation() {
+  cur_transform_.translate =
+      start_transform_.translate
+      + progress_ * (end_transform_.translate - start_transform_.translate);
+  cur_transform_.rotate =
+      start_transform_.rotate
+      + progress_ * (end_transform_.rotate - start_transform_.rotate);
+  cur_transform_.scale =
+      start_transform_.scale
+      + progress_ * (end_transform_.scale - start_transform_.scale);
+}
+
 UiSettings::UiSettings(
     UiDynamicSprite&& sprite,
     float size_scale,
+    UiToggle2&& pin,
     UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
     LocalTransform start_transform,
     LocalTransform end_transform,
-    UiToggle2&& pin,
     UiDynamicSprite&& resolution_label,
     UiDynamicSprite&& resolution_left,
     UiDynamicSprite&& resolution_right,
@@ -589,8 +1108,10 @@ UiSettings::UiSettings(
     UiDynamicSprite&& tip_info_label,
     UiDynamicSprite&& tip_info,
     UiToggle&& toggle_tip_info)
-    : Base(std::move(sprite), size_scale, ui_shared_resources,
-           start_transform, end_transform, std::move(pin)),
+    : UiWindowPopUp(std::move(sprite), size_scale,
+                    std::move(pin), ui_shared_resources,
+                    window_queue,
+                    start_transform, end_transform),
       resolution_label_(std::move(resolution_label)),
       resolution_left_(std::move(resolution_left)),
       resolution_right_(std::move(resolution_right)),
@@ -650,9 +1171,10 @@ UiSettings::UiSettings(
       = sprite_.GetId();
   gUiComponents[toggle_tip_info_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
+
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
-  Base::UpdateTransform();
+  UiWindowBase::UpdateTransform();
 }
 
 UiSettings::UiSettings(UiSettings&& other) noexcept
@@ -748,6 +1270,9 @@ bool UiSettings::Render() {
 
 void UiSettings::RenderPicking() {
   Base::RenderPickingBack();
+  if (!Base::BackIsReady()) {
+    return;
+  }
   ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
   resolution_left_.RenderPicking();
@@ -787,6 +1312,12 @@ data::TextId UiSettings::Hover(int id) {
 
 void UiSettings::Press(int id) {
   ui_event_handler_.Press(id);
+  if (id != pin_.GetId()) {
+    return;
+  }
+  if (!do_show_) {
+    Hide();
+  }
 }
 
 void UiSettings::Release() {
@@ -844,163 +1375,14 @@ void UiSettings::UpdateTransform(
   toggle_tip_info_.UpdateTransform();
 }
 
-UiConfirmation::UiConfirmation(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiSharedResources& ui_shared_resources,
-    UiStaticSprite&& btn_accept,
-    UiStaticSprite&& btn_decline)
-    : Base(std::move(sprite), size_scale, ui_shared_resources),
-      btn_accept_(std::move(btn_accept)),
-      btn_decline_(std::move(btn_decline)),
-      ui_event_handler_({&btn_accept_, &btn_decline_}) {
-  gUiComponents[btn_accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[btn_decline_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  Base::UpdateTransform();
-}
-
-UiConfirmation::UiConfirmation(UiConfirmation&& other) noexcept
-    : Base(std::move(other)),
-      btn_accept_(std::move(other.btn_accept_)),
-      btn_decline_(std::move(other.btn_decline_)),
-      ui_event_handler_({&btn_accept_, &btn_decline_}) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
-
-// returns "stop render"
-bool UiConfirmation::Render(bool show) {
-  bool stop_show = Base::RenderBack(show);
-  if (!Base::BackIsReady()) {
-    return stop_show;
-  }
-
-  ui_shared_resources_.static_sprite_shader_.Bind();
-
-  btn_accept_.Render();
-  btn_decline_.Render();
-
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-
-  return stop_show;
-}
-
-void UiConfirmation::RenderPicking() {
-  Base::RenderPickingBack();
-  if (!Base::BackIsReady()) {
-    return;
-  }
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
-
-  btn_accept_.RenderPicking();
-  btn_decline_.RenderPicking();
-
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-}
-
-void UiConfirmation::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  /// back
-  sprite_.UpdateTransform();
-
-  /// children
-  btn_accept_.UpdateTransform();
-  btn_decline_.UpdateTransform();
-}
-
-UiPopUpBase::UiPopUpBase(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiSharedResources& ui_shared_resources,
-    LocalTransform start_transform,
-    LocalTransform end_transform,
-    UiToggle2&& pin)
-    : UiBase(sprite.GetId(), {}),
-      sprite_(std::move(sprite)),
-      start_transform_(start_transform),
-      end_transform_(end_transform),
-      ui_shared_resources_(ui_shared_resources),
-      pin_(std::move(pin)),
-      size_scale_(size_scale),
-      speed_(4.0f) {
-  gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  sprite_.SetScale(size_scale);
-}
-
-UiPopUpBase::UiPopUpBase(UiPopUpBase&& other) noexcept
-    : UiBase(std::move(other)),
-      sprite_(std::move(other.sprite_)),
-      cur_transform_(other.cur_transform_),
-      start_transform_(other.start_transform_),
-      end_transform_(other.end_transform_),
-      speed_(other.speed_),
-      progress_(other.progress_),
-      back_ready_(other.back_ready_),
-      size_scale_(other.size_scale_),
-      ui_shared_resources_(other.ui_shared_resources_),
-      pin_(std::move(other.pin_)) {}
-
-bool UiPopUpBase::RenderBack(bool show) {
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  if (pin_.TurnedOn() || show) {
-    progress_ += speed_ * gDeltaTime;
-    if (progress_ >= 1.0f) {
-      back_ready_ = true;
-    }
-  } else {
-    progress_ -= speed_ * gDeltaTime;
-  }
-  progress_ = std::clamp(progress_, 0.0f, 1.0f);
-  CubicInterpolation();
-  sprite_.SetParentTransform(cur_transform_);
-  pin_.SetParentTransform(cur_transform_);
-  sprite_.Render();
-  pin_.Render();
-  if (progress_ == 0.0f) {
-    return false;
-  } else {
-    return true;
-  }
-}
-
-void UiPopUpBase::RenderPickingBack() {
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-  sprite_.RenderPicking();
-  pin_.RenderPicking();
-}
-
-void UiPopUpBase::CubicInterpolation() {
-  cur_transform_.translate =
-      start_transform_.translate
-      + progress_ * (end_transform_.translate - start_transform_.translate);
-  cur_transform_.rotate =
-      start_transform_.rotate
-      + progress_ * (end_transform_.rotate - start_transform_.rotate);
-  cur_transform_.scale =
-      start_transform_.scale
-      + progress_ * (end_transform_.scale - start_transform_.scale);
-}
-
-void UiPopUpBase::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
-}
-
 UiWaterLayerConfig::UiWaterLayerConfig(
     UiDynamicSprite&& sprite,
     float size_scale,
+    UiToggle2&& pin,
     UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
     LocalTransform start_transform,
     LocalTransform end_transform,
-    UiToggle2&& pin,
     UiDynamicSprite&& sprite_layer,
     UiDynamicSprite&& text_layer,
     UiToggle&& toggle_layer,
@@ -1018,8 +1400,10 @@ UiWaterLayerConfig::UiWaterLayerConfig(
     UiSliderH&& short_waves_fade,
     UiDynamicSprite&& lambda_text,
     UiSliderH&& lambda)
-    : Base(std::move(sprite), size_scale, ui_shared_resources,
-           start_transform, end_transform, std::move(pin)),
+    : UiWindowPopUp(std::move(sprite), size_scale,
+                    std::move(pin), ui_shared_resources,
+                    window_queue,
+                    start_transform, end_transform),
       sprite_layer_(std::move(sprite_layer)),
       text_layer_(std::move(text_layer)),
       toggle_layer_(std::move(toggle_layer)),
@@ -1077,7 +1461,7 @@ UiWaterLayerConfig::UiWaterLayerConfig(
       = sprite_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
-  Base::UpdateTransform();
+  UiWindowBase::UpdateTransform();
 }
 
 UiWaterLayerConfig::UiWaterLayerConfig(UiWaterLayerConfig&& other) noexcept
@@ -1355,6 +1739,7 @@ UiEditFences::UiEditFences(
       = desk.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
+  UpdateTransform();
 }
 
 UiEditFences::UiEditFences(UiEditFences&& other) noexcept
@@ -1516,6 +1901,7 @@ UiEditTerrain::UiEditTerrain(
       = desk.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
+  UpdateTransform();
 }
 
 UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
@@ -1570,7 +1956,7 @@ void UiEditTerrain::Render() {
   //TODO: set indicator color
   color_indicator_.Render();
   tex_heightmap_.Bind();
-  heightmap_.RenderPicking();
+  heightmap_.Render();
   ui_shared_resources_.tex_ui_.Bind();
   random_generate_.Render();
 
@@ -1581,7 +1967,6 @@ void UiEditTerrain::Render() {
 
   ui_shared_resources_.global_glfw_callback_data_.text_renderer
       ->RenderText(name_, "name", 0.1f, glm::vec2{0.0f});
-
 }
 
 void UiEditTerrain::RenderPicking() {
@@ -1601,7 +1986,6 @@ void UiEditTerrain::RenderPicking() {
 
   ui_shared_resources_.global_glfw_callback_data_.text_renderer
       ->RenderTextPicking(name_, "name", 0.1f, glm::vec2{0.0f});
-
 }
 
 void UiEditTerrain::UpdateTransform(
@@ -1661,6 +2045,7 @@ UiTerrainBake::UiTerrainBake(
       = desk.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
+  UpdateTransform();
 }
 
 UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept

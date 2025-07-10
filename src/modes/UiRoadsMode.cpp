@@ -38,10 +38,6 @@ void UiRoadsMode::MouseButtonCallback(
           fences->BakeGravel();
         } else if (pressed_id == fences->btn_bake_soil_.GetId()) {
           fences->BakeSoil();
-        } else if (pressed_id == fences->btn_create_.GetId()) {
-          fences->Create(pressed_id);
-        } else if (pressed_id == fences->btn_remove_.GetId()) {
-          fences->Remove();
         }
       }
     }
@@ -75,15 +71,15 @@ void UiRoadsMode::KeyCallback(
 }
 
 UiRoadsMode::UiRoadsMode(
-    UiSharedResources& ui_shared_resources)
-    : IUiMode(ui_shared_resources,
-              UiStaticSprite{data::VboIdMain::kRoadsUiRoadsMode,
-                             data::TextId::kNone}),
-      btn_bake_asphalt_(data::VboIdMain::kRoadsAsphalt, data::TextId::kNone),
-      btn_bake_gravel_(data::VboIdMain::kRoadsGravel, data::TextId::kNone),
-      btn_bake_soil_(data::VboIdMain::kRoadsSoil, data::TextId::kNone),
-      btn_create_(data::VboIdMain::kRoadsAdd, data::TextId::kNone),
-      btn_remove_(data::VboIdMain::kRoadsRemove, data::TextId::kNone) {}
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue)
+    : IUiMode(
+          ui_shared_resources,
+          window_queue,
+          {data::VboIdMain::kRoadsRoadsMode, data::TextId::kNotYet}),
+      btn_bake_asphalt_(data::VboIdMain::kRoadsAsphalt, data::TextId::kNotYet),
+      btn_bake_gravel_(data::VboIdMain::kRoadsGravel, data::TextId::kNotYet),
+      btn_bake_soil_(data::VboIdMain::kRoadsSoil, data::TextId::kNotYet) {}
 
 void UiRoadsMode::Render() {
   glActiveTexture(GL_TEXTURE0);
@@ -96,8 +92,6 @@ void UiRoadsMode::Render() {
   btn_bake_asphalt_.Render();
   btn_bake_gravel_.Render();
   btn_bake_soil_.Render();
-  btn_create_.Render();
-  btn_remove_.Render();
 }
 
 void UiRoadsMode::RenderPicking() {
@@ -111,8 +105,6 @@ void UiRoadsMode::RenderPicking() {
   btn_bake_asphalt_.RenderPicking();
   btn_bake_gravel_.RenderPicking();
   btn_bake_soil_.RenderPicking();
-  btn_create_.RenderPicking();
-  btn_remove_.RenderPicking();
 }
 
 void UiRoadsMode::Create(GLuint id) {

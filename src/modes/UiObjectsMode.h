@@ -6,7 +6,9 @@
 
 class UiObjectsMode final : public IUiMode {
  public:
-  explicit UiObjectsMode(UiSharedResources& ui_shared_resources);
+  explicit UiObjectsMode(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue);
 
   void Render() override;
   void RenderPicking() override;
@@ -48,7 +50,7 @@ class UiObjectsMode final : public IUiMode {
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kObjectsHuman) -
-      static_cast<int>(data::VboIdMain::kObjectsUiObjectsMode) + 1
+      static_cast<int>(data::VboIdMain::kObjectsObjectsMode) + 1
       > ui_event_handler_;
 };
 

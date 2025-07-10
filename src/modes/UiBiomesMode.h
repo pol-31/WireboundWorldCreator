@@ -6,7 +6,9 @@
 
 class UiBiomesMode final : public IUiMode {
  public:
-  explicit UiBiomesMode(UiSharedResources& ui_shared_resources);
+  explicit UiBiomesMode(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue);
 
   void Render() override;
   void RenderPicking() override;
@@ -44,8 +46,8 @@ class UiBiomesMode final : public IUiMode {
   UiStaticSprite btn_clouds_;
 
   UiEventHandler<
-      static_cast<int>(data::VboIdMain::kBiomesClouds) -
-      static_cast<int>(data::VboIdMain::kBiomesUiBiomesMode) + 1
+      static_cast<int>(data::VboIdMain::kBiomesEditCloudIcon) -
+      static_cast<int>(data::VboIdMain::kBiomesBiomesMode) + 1
       > ui_event_handler_;
 };
 

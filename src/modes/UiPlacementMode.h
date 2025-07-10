@@ -12,8 +12,10 @@
 
 class UiPlacementMode final : public IUiMode {
  public:
-  explicit UiPlacementMode(UiSharedResources& ui_shared_resources,
-                         const Paths& paths);
+  explicit UiPlacementMode(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      const Paths& paths);
 
   void Render() override;
   void RenderPicking() override;
@@ -61,7 +63,7 @@ class UiPlacementMode final : public IUiMode {
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kPlacementChangeMode) -
-      static_cast<int>(data::VboIdMain::kPlacementUiPlacementMode) + 1
+      static_cast<int>(data::VboIdMain::kPlacementPlacementMode) + 1
       > ui_event_handler_;
 
 

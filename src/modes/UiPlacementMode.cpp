@@ -49,33 +49,31 @@ void UiPlacementMode::MouseButtonCallback(
 void UiPlacementMode::KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {}
 
-UiPlacementMode::UiPlacementMode(UiSharedResources& ui_shared_resources,
-                             const Paths& paths)
-    : IUiMode(ui_shared_resources,
-              UiStaticSprite{data::VboIdMain::kPlacementUiPlacementMode,
-                             data::TextId::kNone}),
-      btn_trees_(data::VboIdMain::kPlacementTrees, data::TextId::kNone),
-      btn_bushes_(data::VboIdMain::kPlacementBushes, data::TextId::kNone),
-      btn_tall_grass(data::VboIdMain::kPlacementTallGrass, data::TextId::kNone),
-      btn_undergrowth_(data::VboIdMain::kPlacementUndergrowth, data::TextId::kNone),
-      btn_change_mode_(data::VboIdMain::kPlacementChangeMode, data::TextId::kNone),
+UiPlacementMode::UiPlacementMode(
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    const Paths& paths)
+    : IUiMode(
+          ui_shared_resources,
+          window_queue,
+          {data::VboIdMain::kPlacementPlacementMode, data::TextId::kNotYet}),
+      btn_trees_(data::VboIdMain::kPlacementTrees, data::TextId::kNotYet),
+      btn_bushes_(data::VboIdMain::kPlacementBushes, data::TextId::kNotYet),
+      btn_tall_grass(data::VboIdMain::kPlacementTallGrass, data::TextId::kNotYet),
+      btn_undergrowth_(data::VboIdMain::kPlacementUndergrowth, data::TextId::kNotYet),
+      btn_change_mode_(data::VboIdMain::kPlacementChangeMode, data::TextId::kNotYet),
       slider_color_(
-          UiStaticSprite{data::VboIdMain::kPlacementColorFill, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kPlacementColorBack, data::TextId::kNone},
-          UiDynamicSprite{data::VboIdMain::kPlacementColorIcon,
-                          data::TextId::kNone}),
+          {data::VboIdMain::kPlacementColorFill, data::TextId::kNotYet},
+          {data::VboIdMain::kPlacementColorBack, data::TextId::kNotYet},
+          {data::VboIdMain::kPlacementColorIcon, data::TextId::kNotYet}),
       slider_size_(
-          UiStaticSprite{data::VboIdMain::kPlacementSizeFill, data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kPlacementSizeBack, data::TextId::kNone},
-          UiDynamicSprite{data::VboIdMain::kPlacementSizeIcon,
-                          data::TextId::kNone}),
+          {data::VboIdMain::kPlacementSizeFill, data::TextId::kNotYet},
+          {data::VboIdMain::kPlacementSizeBack, data::TextId::kNotYet},
+          {data::VboIdMain::kPlacementSizeIcon, data::TextId::kNotYet}),
       slider_falloff_(
-          UiStaticSprite{data::VboIdMain::kPlacementFalloffFill,
-                                     data::TextId::kNone},
-          UiStaticSprite{data::VboIdMain::kPlacementFalloffBack,
-                                     data::TextId::kNone},
-          UiDynamicSprite{data::VboIdMain::kPlacementFalloffIcon,
-                                      data::TextId::kNone}),
+          {data::VboIdMain::kPlacementFalloffFill, data::TextId::kNotYet},
+          {data::VboIdMain::kPlacementFalloffBack, data::TextId::kNotYet},
+          {data::VboIdMain::kPlacementFalloffIcon, data::TextId::kNotYet}),
       ui_event_handler_({
           &btn_trees_, &btn_bushes_, &btn_tall_grass, &btn_undergrowth_,
           &btn_change_mode_, &slider_color_, &slider_size_, &slider_falloff_}),

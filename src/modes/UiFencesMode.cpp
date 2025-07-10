@@ -85,10 +85,12 @@ void UiFencesMode::KeyCallback(
 }
 
 UiFencesMode::UiFencesMode(
-    UiSharedResources& ui_shared_resources)
-    : IUiMode(ui_shared_resources,
-              UiStaticSprite{data::VboIdMain::kFencesFencesMode,
-                             data::TextId::kNotYet}),
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue)
+    : IUiMode(
+          ui_shared_resources,
+          window_queue,
+          {data::VboIdMain::kFencesFencesMode, data::TextId::kNotYet}),
       btn_bake_picket_(data::VboIdMain::kFencesPicket, data::TextId::kNotYet),
       btn_bake_chain_linked_(data::VboIdMain::kFencesChainLink,
                              data::TextId::kNotYet),
@@ -102,8 +104,7 @@ UiFencesMode::UiFencesMode(
           {data::VboIdMain::kFencesSlotsCreate, data::TextId::kNotYet,
            [this]() {
              this->slots_.CreateGraph();
-             ui_shared_resources_.global_glfw_callback_data_.StartCharInput(
-                 slots_.GetNamePtr(slots_.GetSize() - 1));
+             std::cout << "there input starts" << std::endl;
            }},
           data::VboIdMain::kFencesSlotsFlipSelectEdit_Back, data::TextId::kNotYet,
           data::VboIdMain::kFencesSlotsFlipPointEdgeFace_Back, data::TextId::kNotYet,

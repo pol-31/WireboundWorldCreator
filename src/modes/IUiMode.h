@@ -4,12 +4,15 @@
 #include "UiSharedResources.h"
 
 #include "../core/Ui.h"
+#include "../core/WindowQueue.h"
 
 class IUiMode {
  public:
   IUiMode(UiSharedResources& ui_shared_resources,
+          WindowQueue& window_queue,
           UiStaticSprite&& sprite_mode)
       : ui_shared_resources_(ui_shared_resources),
+        window_queue_(window_queue),
         sprite_mode_(std::move(sprite_mode)) {}
 
   virtual void Render() = 0;
@@ -99,6 +102,9 @@ class IUiMode {
 
  protected:
   UiSharedResources& ui_shared_resources_;
+
+  // for Hover()
+  WindowQueue& window_queue_;
 
   UiStaticSprite sprite_mode_;
 };

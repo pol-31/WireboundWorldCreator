@@ -8,7 +8,9 @@
 
 class UiFencesMode final : public IUiMode {
  public:
-  UiFencesMode(UiSharedResources& ui_shared_resources);
+  UiFencesMode(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue);
 
   void Render() override;
   void RenderPicking() override;

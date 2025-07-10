@@ -17,6 +17,7 @@ void UiTerrainMode::ScrollCallback(
       pressed_id != static_cast<GLuint>(-1)) {
     terrain->slider_falloff_.Scroll(pressed_id, yoffset);
     terrain->slider_size_.Scroll(pressed_id, yoffset);
+    global_data->windows->Scroll(pressed_id, yoffset);
     return;
   }
   if (yoffset < 0.0f) {
@@ -36,30 +37,25 @@ void UiTerrainMode::MouseButtonCallback(
 
   if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
     auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
-      global_data->menu->Press(pressed_id);
-    } else {
-      terrain->ui_event_handler_.Press(pressed_id);
-    }
+    terrain->ui_event_handler_.Press(pressed_id);
+    global_data->windows->Press(pressed_id);
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
-      global_data->menu->Release();
-      std::cout << "Release()" << std::endl;
-    } else {
-      terrain->ui_event_handler_.Release();
-    }
+    terrain->ui_event_handler_.Release();
+    global_data->windows->Release();
   }
 }
 
 void UiTerrainMode::KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {}
 
-UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
-                             Tile& cur_tile)
+UiTerrainMode::UiTerrainMode(
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    Tile& cur_tile)
     : IUiMode(
           ui_shared_resources,
-          UiStaticSprite{data::VboIdMain::kTerrainTerrainMode,
-                         data::TextId::kNotYet}),
+          window_queue,
+          {data::VboIdMain::kTerrainTerrainMode, data::TextId::kNotYet}),
       btn_update_(data::VboIdMain::kTerrainUpdate, data::TextId::kMenuPlacement,
           [this]() {
                     std::cout << "btn_update" << std::endl;
@@ -103,8 +99,7 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
           {data::VboIdMain::kTerrainSlotsCreate, data::TextId::kNotYet,
            [this]() {
              this->slots_.CreateGraph();
-             ui_shared_resources_.global_glfw_callback_data_.StartCharInput(
-                 slots_.GetNamePtr(slots_.GetSize() - 1));
+             std::cout << "there input starts" << std::endl;
            }},
           data::VboIdMain::kTerrainSlotsFlipPointEdgeFace_Back, data::TextId::kNotYet,
           {data::VboIdMain::kTerrainSlotsFlipPointEdgeFace, data::TextId::kNotYet},
@@ -122,8 +117,14 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
       ui_event_handler_({
           &btn_update_, &slider_size_,
           &slider_falloff_, &toggle_flatten_, &btn_bake_, &slots_}),
-      ui_terrain_generator_({data::VboIdMain::kMapLeaf, data::TextId::kNotYet},
-                            1.0f, ui_shared_resources_, cur_tile) {}
+      ui_terrain_generator_(
+          {data::VboIdMain::kTerrainEditDesk, data::TextId::kNotYet},
+          1.0f,
+          {{data::VboIdMain::kTerrainEditDeskPinBack, data::TextId::kNotYet},
+           {data::VboIdMain::kTerrainEditDeskPinPoint, data::TextId::kNotYet}},
+          ui_shared_resources_,
+          window_queue,
+          cur_tile) {}
 
 void UiTerrainMode::BindCallbacks() {
   glfwSetScrollCallback(gWindow, ScrollCallback);
@@ -173,6 +174,9 @@ void UiTerrainMode::Render() {
   slots_.Render(mouse_pos);
   ui_shared_resources_.tex_ui_.Bind();
   ui_bake_.Render();
+
+  ui_shared_resources_.tex_ui_.Bind();
+  window_queue_.Render();
 }
 
 
@@ -197,8 +201,14 @@ void UiTerrainMode::RenderPicking() {
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   slots_.RenderPicking();
   ui_bake_.RenderPicking();
+
+  window_queue_.RenderPicking();
 }
 
 data::TextId UiTerrainMode::Hover(std::uint32_t global_id) {
-  return ui_event_handler_.Hover(global_id);
+  data::TextId result = ui_event_handler_.Hover(global_id);
+  if (result != data::TextId::kNone) {
+    return result;
+  }
+  return window_queue_.Hover(global_id);
 }

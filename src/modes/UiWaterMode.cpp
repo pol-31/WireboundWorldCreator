@@ -20,6 +20,7 @@ void UiWaterMode::ScrollCallback(
     water->ocean_layer_config_1_.Scroll(pressed_id, yoffset);
     water->ocean_layer_config_2_.Scroll(pressed_id, yoffset);
     water->ocean_layer_config_3_.Scroll(pressed_id, yoffset);
+    global_data->windows->Scroll(pressed_id, yoffset);
     return;
   }
   if (yoffset < 0.0f) {
@@ -38,43 +39,39 @@ void UiWaterMode::MouseButtonCallback(
   //TODO: refactor to "if(!cond) return"
   //TODO: change order (based on usage frequency)
   global_data->camera->ProcessMouseKey(button, action, mods);
-  if (action == GLFW_PRESS) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
-      if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
-        global_data->menu->Press(pressed_id);
-      } else {
-        //TODO: bvh?
-        if (false) {//pressed_id < details::kIdOffsetUi && water->do_add_points_) {
-          //TODO; make it more explicit
-          /// because water offset id goes after terrain ids
-//          if (pressed_id < details::kIdOffsetWater) {
-//            water->AddNewPoint(pressed_id);
-//          }
-        } else if (pressed_id == water->btn_bake_lake_.GetId()) {
-          water->BakeLake();
-        } else if (pressed_id == water->btn_bake_river_.GetId()) {
-          water->BakeRiver();
-        } else if (pressed_id == water->btn_bake_waterfall_.GetId()) {
-          water->BakeWaterfall();
-//        } else if (pressed_id == water->btn_create_.GetId()) {
-//          water->Create(pressed_id);
-//        } else if (pressed_id == water->btn_remove_.GetId()) {
-//          water->Remove();
-        } else if (pressed_id == water->btn_update_.GetId()) {
-          water->UpdateOcean(); // TODO: update ocean (only ocean by now
-        }
-        // have no effect if pressed_id doesn't match
-        water->ocean_layer_config_1_.Press(pressed_id);
-        water->ocean_layer_config_2_.Press(pressed_id);
-        water->ocean_layer_config_3_.Press(pressed_id);
-      }
+  if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
+    auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+    //TODO: bvh?
+    if (false) {//pressed_id < details::kIdOffsetUi && water->do_add_points_) {
+      //TODO; make it more explicit
+      /// because water offset id goes after terrain ids
+      //          if (pressed_id < details::kIdOffsetWater) {
+      //            water->AddNewPoint(pressed_id);
+      //          }
+    } else if (pressed_id == water->btn_bake_lake_.GetId()) {
+      water->BakeLake();
+    } else if (pressed_id == water->btn_bake_river_.GetId()) {
+      water->BakeRiver();
+    } else if (pressed_id == water->btn_bake_waterfall_.GetId()) {
+      water->BakeWaterfall();
+      //        } else if (pressed_id == water->btn_create_.GetId()) {
+      //          water->Create(pressed_id);
+      //        } else if (pressed_id == water->btn_remove_.GetId()) {
+      //          water->Remove();
+    } else if (pressed_id == water->btn_update_.GetId()) {
+      water->UpdateOcean(); // TODO: update ocean (only ocean by now
     }
-  } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    // have no effect if pressed_id doesn't match
+    water->ocean_layer_config_1_.Press(pressed_id);
+    water->ocean_layer_config_2_.Press(pressed_id);
+    water->ocean_layer_config_3_.Press(pressed_id);
+    global_data->windows->Press(pressed_id);
+  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     //Release
     water->ocean_layer_config_1_.Release();
     water->ocean_layer_config_2_.Release();
     water->ocean_layer_config_3_.Release();
+    global_data->windows->Release();
   }
 }
 
@@ -107,10 +104,12 @@ void UiWaterMode::KeyCallback(
 
 UiWaterMode::UiWaterMode(
     UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
     const Paths& paths)
-    : IUiMode(ui_shared_resources,
-              UiStaticSprite{data::VboIdMain::kWaterWaterMode,
-                             data::TextId::kNotYet}),
+    : IUiMode(
+          ui_shared_resources,
+          window_queue,
+          {data::VboIdMain::kWaterWaterMode, data::TextId::kNotYet}),
       btn_bake_lake_(data::VboIdMain::kWaterLake, data::TextId::kNotYet,
                      [this]() {
                        this->BakeLake();
@@ -130,11 +129,12 @@ UiWaterMode::UiWaterMode(
       ocean_layer_config_1_(
           {data::VboIdMain::kWaterLayer1Window, data::TextId::kNotYet, [](){}},
           1.4f,
+          {{data::VboIdMain::kWaterLayer1PinBack, data::TextId::kNotYet, [](){}},
+           {data::VboIdMain::kWaterLayer1PinPoint, data::TextId::kNotYet}},
           ui_shared_resources,
+          window_queue,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
-          {{data::VboIdMain::kWaterLayer1PinBack, data::TextId::kNotYet, [](){}},
-          {data::VboIdMain::kWaterLayer1PinPoint, data::TextId::kNotYet, [](){}}},
           {data::VboIdMain::kWaterLayer1, data::TextId::kNotYet, [](){}},
           {data::VboIdMain::kWaterLayer1Text, data::TextId::kNotYet, [](){}},
           {{data::VboIdMain::kWaterLayer1Off, data::TextId::kNotYet},
@@ -179,11 +179,12 @@ UiWaterMode::UiWaterMode(
       ocean_layer_config_2_(
           {data::VboIdMain::kWaterLayer2Window, data::TextId::kNotYet, [](){}},
           1.4f,
+          {{data::VboIdMain::kWaterLayer2PinBack, data::TextId::kNotYet, [](){}},
+           {data::VboIdMain::kWaterLayer2PinPoint, data::TextId::kNotYet}},
           ui_shared_resources,
+          window_queue,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
-          {{data::VboIdMain::kWaterLayer2PinBack, data::TextId::kNotYet, [](){}},
-           {data::VboIdMain::kWaterLayer2PinPoint, data::TextId::kNotYet, [](){}}},
           {data::VboIdMain::kWaterLayer2, data::TextId::kNotYet, [](){}},
           {data::VboIdMain::kWaterLayer2Text, data::TextId::kNotYet, [](){}},
           {{data::VboIdMain::kWaterLayer2Off, data::TextId::kNotYet},
@@ -228,11 +229,12 @@ UiWaterMode::UiWaterMode(
       ocean_layer_config_3_(
           {data::VboIdMain::kWaterLayer3Window, data::TextId::kNotYet, [](){}},
           1.4f,
+          {{data::VboIdMain::kWaterLayer3PinBack, data::TextId::kNotYet, [](){}},
+           {data::VboIdMain::kWaterLayer3PinPoint, data::TextId::kNotYet}},
           ui_shared_resources,
+          window_queue,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
-          {{data::VboIdMain::kWaterLayer3PinBack, data::TextId::kNotYet, [](){}},
-           {data::VboIdMain::kWaterLayer3PinPoint, data::TextId::kNotYet, [](){}}},
           {data::VboIdMain::kWaterLayer3, data::TextId::kNotYet, [](){}},
           {data::VboIdMain::kWaterLayer3Text, data::TextId::kNotYet, [](){}},
           {{data::VboIdMain::kWaterLayer3Off, data::TextId::kNotYet},
@@ -297,6 +299,9 @@ void UiWaterMode::Render() {
   ui_shared_resources_.tex_ui_.Bind();
   ui_shared_resources_.static_sprite_shader_.Bind();
   ocean_layer_config_3_.Render();
+
+  ui_shared_resources_.tex_ui_.Bind();
+  window_queue_.Render();
 }
 
 bool UiWaterMode::ConfigModified() {
@@ -341,6 +346,8 @@ void UiWaterMode::RenderPicking() {
   ui_shared_resources_.tex_ui_.Bind();
   ui_shared_resources_.static_sprite_picking_shader_.Bind();
   ocean_layer_config_3_.RenderPicking();
+
+  window_queue_.RenderPicking();
 }
 
 void UiWaterMode::ReBake() {
@@ -377,5 +384,6 @@ data::TextId UiWaterMode::Hover(std::uint32_t global_id) {
   ocean_layer_config_1_.Hover(global_id);
   ocean_layer_config_2_.Hover(global_id);
   ocean_layer_config_3_.Hover(global_id);
+  window_queue_.Hover(global_id);
   return data::TextId::kNone;
 }

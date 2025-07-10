@@ -13,6 +13,7 @@ class Menu;
 class PickingFramebuffer;
 class UiSharedResources;
 class TextRenderer;
+class WindowQueue;
 
 namespace debug {
 
@@ -33,6 +34,7 @@ struct GlobalGlfwCallbackData {
   debug::UiDebugger* ui_debugger{nullptr};
   UiSharedResources* ui_shared_resources{nullptr};
   TextRenderer* text_renderer{nullptr};
+  WindowQueue* windows{nullptr};
 
   glm::dvec2 cursor_pos_{0.0};
   glm::vec2 cursor_pos_tex_norm_{0.0f};
@@ -40,10 +42,6 @@ struct GlobalGlfwCallbackData {
   void UpdateCursorPos();
 
   [[nodiscard]] GLuint GetIdByMousePos() const;
-
-  void StartCharInput(FixedSizeQueue<char, 64>* name);
-
-  void StopCharInput();
 };
 
 #endif //WIREBOUNDWORLDCREATOR_SRC_GLOBALGLFWCALLBACKDATA_H_

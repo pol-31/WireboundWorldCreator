@@ -21,19 +21,24 @@ class IGraph {
     int type_id;
   };
 
+  virtual BaseInstanceData* GetBaseInstanceData(int id) = 0;
+
+  virtual const FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) const = 0;
+
+  virtual FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) = 0;
+
   virtual void CreateGraph() = 0;
   virtual void SelectGraph(int id) = 0;
   virtual void RemoveGraph(int id) = 0;
   virtual void Render() = 0;
-  virtual void Press(GLuint id) = 0;
-  virtual BaseInstanceData* GetBaseInstanceData(int id) = 0;
+
   virtual int GetSize() const noexcept = 0;
   virtual int GetSlotId() const noexcept = 0;
 
-  /*
- FlipPressMode(); // wtf, seems to be wrong
-  FlipPointsMode(); // wtf, seems to be wrong
-   * */
+  // Arbitrary do have them, Terrain Grid may not
+//  Create/Select/Remove vertex;
+//  Create/Select/Remove edge;
+//  Create/Select/Remove face;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_IGRAPH_H_

@@ -102,7 +102,8 @@ void WireboundWorldCreator::CheckGlobalData() {
       !global_data_.picking_fbo ||
       !global_data_.ui_debugger ||
       !global_data_.ui_shared_resources ||
-      !global_data_.text_renderer) {
+      !global_data_.text_renderer ||
+      !global_data_.windows) {
     throw "init global glfw callback data plz";
   }
 }

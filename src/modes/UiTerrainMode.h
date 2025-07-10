@@ -15,8 +15,10 @@
 
 class UiTerrainMode final : public IUiMode {
  public:
-  explicit UiTerrainMode(UiSharedResources& ui_shared_resources,
-                         Tile& cur_tile);
+  explicit UiTerrainMode(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      Tile& cur_tile);
 
   void Render() override;
   void RenderPicking() override;

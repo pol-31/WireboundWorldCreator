@@ -1047,6 +1047,10 @@ void UiToggle2::Press() {
   off_.Press();
 }
 
+data::TextId UiToggle2::Hover(std::uint32_t id) {
+  return off_.Hover();
+}
+
 void UiToggle2::UpdateTransform(
     float x_translate, float y_translate, float scale) {
   off_.UpdateTransform();

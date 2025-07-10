@@ -13,6 +13,8 @@
 #include "../core/TileRenderer.h"
 #include "../modes/AllUiModes.h"
 
+#include "../core/WindowQueue.h"
+
 #ifndef NDEBUG
 #include "../common/UiDebugger.h"
 #endif // NDEBUG
@@ -42,6 +44,8 @@ class UiRenderer {
 
   debug::UiDebugger ui_debugger_;
 
+  WindowQueue windows_;
+
   IUiMode* cur_mode_{nullptr};
   UiTerrainMode terrain_;
   UiWaterMode water_;
@@ -55,14 +59,17 @@ class UiRenderer {
   TextRenderer text_renderer_;
 
   Menu menu_;
-
-  bool debug_ui_prev_{false};
-
-  bool render_menu_{false};
+  UiSettings ui_settings_;
+  UiConfirmation ui_confirmation_;
+  UiCaution ui_caution_;
+  UiFile ui_file_;
+  UiTipWindow ui_tip_;
 
   UiLoading ui_loading_;
-  UiConfirmation ui_confirmation_;
   UiDynamicSprite compass_;
+
+  bool debug_ui_prev_{false};
+  bool render_menu_{false};
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_UIRENDERER_H_

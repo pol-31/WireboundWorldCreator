@@ -8,7 +8,9 @@
 
 class UiRoadsMode final : public IUiMode {
  public:
-  UiRoadsMode(UiSharedResources& ui_shared_resources);
+  UiRoadsMode(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue);
 
   void Render() override;
   void RenderPicking() override;
@@ -37,8 +39,6 @@ class UiRoadsMode final : public IUiMode {
   UiStaticSprite btn_bake_asphalt_;
   UiStaticSprite btn_bake_gravel_;
   UiStaticSprite btn_bake_soil_;
-  UiStaticSprite btn_create_;
-  UiStaticSprite btn_remove_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIROADSMODE_H_

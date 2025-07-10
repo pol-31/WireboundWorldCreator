@@ -41,35 +41,38 @@ void UiObjectsMode::MouseButtonCallback(
 void UiObjectsMode::KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {}
 
-UiObjectsMode::UiObjectsMode(UiSharedResources& ui_shared_resources)
-    : IUiMode(ui_shared_resources,
-              UiStaticSprite{data::VboIdMain::kObjectsUiObjectsMode,
-                             data::TextId::kNone}),
-      btn_mavka_(data::VboIdMain::kObjectsMavka, data::TextId::kNone,
+UiObjectsMode::UiObjectsMode(
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue)
+    : IUiMode(
+          ui_shared_resources,
+          window_queue,
+          {data::VboIdMain::kObjectsObjectsMode, data::TextId::kNotYet}),
+      btn_mavka_(data::VboIdMain::kObjectsMavka, data::TextId::kNotYet,
                 [this]() {
                   this->BtnMavka();
                 }),
-      btn_vodyaniy_(data::VboIdMain::kObjectsVodyaniy, data::TextId::kNone,
+      btn_vodyaniy_(data::VboIdMain::kObjectsVodyaniy, data::TextId::kNotYet,
                [this]() {
                  this->BtnVodyaniy();
                }),
-      btn_chugaister_(data::VboIdMain::kObjectsChugaister, data::TextId::kNone,
+      btn_chugaister_(data::VboIdMain::kObjectsChugaister, data::TextId::kNotYet,
                 [this]() {
                   this->BtnChugaister();
                 }),
-      btn_pedestal_(data::VboIdMain::kObjectsPedestal, data::TextId::kNone,
+      btn_pedestal_(data::VboIdMain::kObjectsPedestal, data::TextId::kNotYet,
           [this]() {
             this->BtnPedestal();
           }),
-      btn_campfire_(data::VboIdMain::kObjectsCampfire, data::TextId::kNone,
+      btn_campfire_(data::VboIdMain::kObjectsCampfire, data::TextId::kNotYet,
           [this]() {
             this->BtnCampfire();
           }),
-      btn_road_sign_(data::VboIdMain::kObjectsRoadSign, data::TextId::kNone,
+      btn_road_sign_(data::VboIdMain::kObjectsRoadSign, data::TextId::kNotYet,
                   [this]() {
                     this->BtnRoadSign();
                   }),
-      btn_human_(data::VboIdMain::kObjectsHuman, data::TextId::kNone,
+      btn_human_(data::VboIdMain::kObjectsHuman, data::TextId::kNotYet,
                   [this]() {
                     this->BtnHuman();
                   }),

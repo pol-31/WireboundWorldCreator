@@ -688,9 +688,7 @@ class UiToggle2 final : public UiBase {
 
   void Press() override;
 
-  data::TextId Hover(std::uint32_t id) {
-    return off_.Hover();
-  }
+  data::TextId Hover(std::uint32_t id);
 
   void UpdateTransform(
       float x_translate, float y_translate, float scale) override;
