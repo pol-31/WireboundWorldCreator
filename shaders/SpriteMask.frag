@@ -30,7 +30,7 @@ void main() {
     vec4 mask_texel = texture(mask, texcoord * vec2(2.0f, 4.0f));
 
     float tr = 1.0f;
-    float mask_value = mix(0.0f, mask_texel.r, progress);
+    float mask_value = mix(mask_texel.r, 1.0f, progress);
 
     vec3 color;
     float trnta = step(0.2f, texel.a * mask_value) * transparency;

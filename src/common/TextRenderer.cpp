@@ -3,13 +3,14 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <stb_image_write.h>
 
+#include "../modes/IUiMode.h"
 #include "../common/Font.h"
 #include "../common/Text.h"
 #include "ShadersBinding.h"
 #include "../io/Window.h"
 #include "UiDebugger.h"
 
-TextRenderer::TextRenderer(UiDynamicSprite&& text_slot, const Paths& paths)
+TextRenderer::TextRenderer(const Paths& paths)
     : tex_bitmap_("../assets/bmp_ascii_header.png", GL_RED),
 //    : tex_bitmap_("../assets/AsciiBitmap.png", GL_RED),
       tex_menu_(1024, 1024, GL_RED),
@@ -18,7 +19,6 @@ TextRenderer::TextRenderer(UiDynamicSprite&& text_slot, const Paths& paths)
           paths.shader_text_vert, paths.shader_text_frag),
       render_shader_picking_(
           paths.shader_text_vert, paths.shader_sprite_picking_frag),
-      text_slot_(std::move(text_slot)),
       scale_(0.5) {
   Init();
 }
@@ -32,10 +32,10 @@ void TextRenderer::Init() {
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
-  glUniform1f(shader::kSpriteResolution, gResFactor);
+//  glUniform1f(shader::kSpriteResolution, gResFactor);
   render_shader_picking_.Bind();
-  glUniform1i(shader::kSpriteTexture, 0);
-  glUniform1f(shader::kSpriteResolution, gResFactor);
+//  glUniform1i(shader::kSpriteTexture, 0);
+//  glUniform1f(shader::kSpriteResolution, gResFactor);
   glUseProgram(0);
 
   GLuint fbos[2];
@@ -62,10 +62,10 @@ void TextRenderer::RenderMenuText(data::TextId id) {
   glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
   int width = coords.right - coords.left;
   int height = coords.top - coords.bottom;
-  text_slot_.SetExtraScale(static_cast<float>(width) / height);
+  text_slot_->SetExtraScale(static_cast<float>(width) / height);
   // translation & rotation the same
 
-  text_slot_.Render();
+  text_slot_->Render();
 
   glUseProgram(0);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -79,7 +79,7 @@ void TextRenderer::RenderMenuTextPicking(data::TextId id) {
   auto coords_transform = CoordsToTransformMatrix(
       coords_menu_[static_cast<int>(id)]);
 //  glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
-  text_slot_.RenderPicking();
+  text_slot_->RenderPicking();
 
   glUseProgram(0);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -96,10 +96,10 @@ void TextRenderer::RenderModeText(data::TextId id) {
   glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
   int width = coords.right - coords.left;
   int height = coords.top - coords.bottom;
-  text_slot_.SetExtraScale(static_cast<float>(width) / height);
+  text_slot_->SetExtraScale(static_cast<float>(width) / height);
   // translation & rotation the same
 
-  text_slot_.Render();
+  text_slot_->Render();
 
   glUseProgram(0);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -113,7 +113,7 @@ void TextRenderer::RenderModeTextPicking(data::TextId id) {
   auto coords_transform = CoordsToTransformMatrix(
       coords_mode_[static_cast<int>(id)]);
 //  glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
-  text_slot_.RenderPicking();
+  text_slot_->RenderPicking();
 
   glUseProgram(0);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -349,7 +349,7 @@ void TextRenderer::PrerenderImpl(
 
 // only 1-row text by now
 TextRenderer::Aabb TextRenderer::RenderPhrase(std::string_view text) {
-  int calculated_width = CalculateLineLength(text, text_slot_);
+  int calculated_width = CalculateLineLength(text, *text_slot_);
   int symbol_height = static_cast<int>(font::gFullHeight * scale_);
   if (fbo_cursor_.x + calculated_width > 1024) {
     fbo_cursor_.x = 0;
@@ -418,7 +418,9 @@ void TextRenderer::RemoveLastChar() {
   input_source_->SafePopBack();
 }
 
-void TextRenderer::StartInput(FixedSizeQueue<char, 64>* input_source) {
+void TextRenderer::StartInput(
+    UiDynamicSprite& text_slot,
+    FixedSizeQueue<char, 64>* input_source) {
   BindCallbacks();
   input_source_ = input_source;
 }
@@ -443,6 +445,10 @@ void TextRenderer::CharCallback(GLFWwindow* window, unsigned int codepoint) {
   }
 }
 
+
+void TextRenderer::ScrollCallback(
+    GLFWwindow* window, double xoffset, double yoffset) {}
+
 void TextRenderer::KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {
   if (action == GLFW_RELEASE) {
@@ -453,7 +459,8 @@ void TextRenderer::KeyCallback(
       glfwGetWindowUserPointer(window));
   if (key == GLFW_KEY_ESCAPE
       || key == GLFW_KEY_ENTER) {
-    global_data->StopCharInput();
+    glfwSetCharCallback(gWindow, nullptr);
+    (*global_data->cur_mode)->BindCallbacks();
   } else if (key == GLFW_KEY_BACKSPACE) {
     global_data->text_renderer->RemoveLastChar();
   }
@@ -464,6 +471,7 @@ void TextRenderer::MouseButtonCallback(
   if (action == GLFW_PRESS) {
     auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
         glfwGetWindowUserPointer(window));
-    global_data->StopCharInput();
+    glfwSetCharCallback(gWindow, nullptr);
+    (*global_data->cur_mode)->BindCallbacks();
   }
 }

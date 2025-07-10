@@ -45,17 +45,26 @@ kFencesEditNameBack replace with idk... slot sprite?
 UiToggle2 - replace on_ sprite
 terrain: Bake place after slots, so UiTerrainMode::ui_event_handler include slots
 label field for each: kTerrainEditScaleXText
+for each text input we should have input area (back) and text out area (text itself)
+
+keyboard assign window
+
+
+07.09
+do we need WindowQueue both for global data and IUiEdit modes?
 
 ---------------------------------------
 --- FIRST YOU DO (the whole window infrastructure + text input):
 desk: tip info, confirmation, file
-WindowBase class with __Pin__
-text input (text / number)
+text input (text / number) --> LET'S TAKE ui_slots_slot_back from... roads
+
+
 --- THEN YOU DO (generate terrain):
 Terrain Generation
+
+
+
 --- AND ONLY THEN YOU DO (graph draw: UiSlots + Grid/Graph):
 map edge/face/vertex visualization
 biome round slider (wind, sun, time)
 ---------------------------------------
-
-TODO: not owns, BUT: add UiWindowBase to UiRenderer::opened_windows_ std::vector/array

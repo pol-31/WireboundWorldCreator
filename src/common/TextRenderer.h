@@ -28,7 +28,7 @@ class TextRenderer {
     kCentre
   };
 
-  TextRenderer(UiDynamicSprite&& text_slot, const Paths& paths);
+  TextRenderer(const Paths& paths);
 
   ~TextRenderer();
 
@@ -37,7 +37,8 @@ class TextRenderer {
   void RemoveLastChar();
 
   /// binds its callbacks
-  void StartInput(FixedSizeQueue<char, 64>* input_source);
+  void StartInput(UiDynamicSprite& text_slot,
+                  FixedSizeQueue<char, 64>* input_source);
 
   void StopInput();
 
@@ -73,10 +74,13 @@ class TextRenderer {
 
   void PrerenderModeText(int start, int end);
 
- private:
   void BindCallbacks();
 
+ private:
   static void CharCallback(GLFWwindow* window, unsigned int codepoint);
+
+  static void ScrollCallback(
+      GLFWwindow* window, double xoffset, double yoffset);
 
   static void KeyCallback(
       GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -124,9 +128,9 @@ class TextRenderer {
   Shader render_shader_;
   Shader render_shader_picking_;
 
-  UiDynamicSprite text_slot_;
-
-  FixedSizeQueue<char, 64>* input_source_{nullptr};
+  // where to read & write
+  UiDynamicSprite* text_slot_ = nullptr;
+  FixedSizeQueue<char, 64>* input_source_ = nullptr;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TEXTRENDERER_H_
