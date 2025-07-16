@@ -882,14 +882,15 @@ void UiTabMenu::RenderPicking() {
   load_data_.RenderPicking();
 }
 
-void UiTabMenu::Press(int id) {
-  ui_event_handler_.Press(id);
+bool UiTabMenu::Press(int id) {
+  bool handled = ui_event_handler_.Press(id);
   if (id != pin_.GetId()) {
-    return;
+    return handled;
   }
   if (!do_show_) {
     Hide();
   }
+  return handled;
 }
 
 void UiTabMenu::Release() {
@@ -983,17 +984,18 @@ void UiTipWindow::RenderPicking() {
   Base::RenderPickingBack();
 }
 
-void UiTipWindow::Press(int id) {
+bool UiTipWindow::Press(int id) {
   if (id == sprite_.GetId()) {
     sprite_.Press();
   } else if (id == pin_.GetId()) {
     pin_.Press();
   } else {
-    return;
+    return false;
   }
   if (!do_show_) {
     Hide();
   }
+  return false;
 }
 
 void UiTipWindow::Release() {}
@@ -1310,14 +1312,15 @@ data::TextId UiSettings::Hover(int id) {
   return hovered_id;
 }
 
-void UiSettings::Press(int id) {
-  ui_event_handler_.Press(id);
+bool UiSettings::Press(int id) {
+  bool handled = ui_event_handler_.Press(id);
   if (id != pin_.GetId()) {
-    return;
+    return handled;
   }
   if (!do_show_) {
     Hide();
   }
+  return handled;
 }
 
 void UiSettings::Release() {
@@ -1595,6 +1598,11 @@ void UiWaterLayerConfig::RenderPicking() {
       ->RenderTextPicking(lambda_text_, "lambda", 0.1f, glm::vec2{0.0f});
 }
 
+bool UiWaterLayerConfig::Press(int id) {
+  modified_ = ui_event_handler_.Press(id);
+  return modified_;
+}
+
 void UiWaterLayerConfig::Release() {
   ui_event_handler_.Release();
 }
@@ -1856,9 +1864,73 @@ void UiEditFences::UpdateTransform() {
       transform.translate.x, transform.translate.y, transform.scale);
 }
 
-UiEditTerrain::UiEditTerrain(
+UiEditTerrainNoise::UiEditTerrainNoise(
     UiSharedResources& ui_shared_resources,
-    UiDynamicSprite&& desk,
+    UiDynamicSprite&& config,
+    UiTextLabel&& text_name,
+    UiToggle&& toggle_invert,
+    UiToggle&& toggle_tiling,
+    UiSliderH2&& slider_strength)
+    : config_(std::move(config)),
+      text_name_(std::move(text_name)),
+      toggle_invert_(std::move(toggle_invert)),
+      toggle_tiling_(std::move(toggle_tiling)),
+      slider_strength_(std::move(slider_strength)),
+      ui_shared_resources_(ui_shared_resources) {}
+
+void UiEditTerrainNoise::Render() {
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  config_.Render();
+  toggle_invert_.Render();
+  toggle_tiling_.Render();
+  auto mouse_pos =
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+  slider_strength_.Render(mouse_pos);
+  // only after (due to internal shader & texture modification)
+  text_name_.Render();
+}
+
+void UiEditTerrainNoise::RenderPicking() {
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  config_.RenderPicking();
+  toggle_invert_.RenderPicking();
+  toggle_tiling_.RenderPicking();
+  slider_strength_.RenderPicking();
+  // only after (due to internal shader & texture modification)
+  if (debug::gCtrlMode) {
+    text_name_.RenderPicking();
+  }
+}
+
+void UiEditTerrainNoise::SetParentId(int id) {
+  gUiComponents[config_.GetId() - details::kIdOffsetUi].parent_id_
+      = id;
+  gUiComponents[toggle_invert_.GetId() - details::kIdOffsetUi].parent_id_
+      = id;
+  gUiComponents[toggle_tiling_.GetId() - details::kIdOffsetUi].parent_id_
+      = id;
+  gUiComponents[slider_strength_.GetId() - details::kIdOffsetUi].parent_id_
+      = id;
+  gUiComponents[text_name_.GetId() - details::kIdOffsetUi].parent_id_
+      = id;
+}
+
+void UiEditTerrainNoise::UpdateTransform() {
+  config_.UpdateTransform();
+  toggle_invert_.UpdateTransform();
+  toggle_tiling_.UpdateTransform();
+  slider_strength_.UpdateTransform();
+  text_name_.UpdateTransform();
+}
+
+UiEditTerrain::UiEditTerrain(
+    UiDynamicSprite&& sprite,
+    float size_scale,
+    UiToggle2&& pin,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    TextRenderer& text_renderer,
     UiDynamicSprite&& accept,
     UiDynamicSprite&& name,
     UiDynamicSprite&& name_back,
@@ -1867,8 +1939,8 @@ UiEditTerrain::UiEditTerrain(
     UiDynamicSprite&& color_indicator,
     UiDynamicSprite&& heightmap,
     UiDynamicSprite&& random_generate)
-    : UiBase(desk.GetId(), {}),
-      desk_(std::move(desk)),
+    : Base(std::move(sprite), size_scale, std::move(pin),
+           ui_shared_resources, window_queue),
       accept_(std::move(accept)),
       name_(std::move(name)),
       name_back_(std::move(name_back)),
@@ -1878,35 +1950,179 @@ UiEditTerrain::UiEditTerrain(
       tex_heightmap_("../assets/terrain/map_erosion_deposition.png", GL_RED),
       heightmap_(std::move(heightmap)),
       random_generate_(std::move(random_generate)),
+
+      text_noise_invert_({text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditLabelInvert, data::TextId::kNotYet}}),
+      text_noise_tiling_({text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise1TilingLabel, data::TextId::kNotYet}}),
+      text_noise_strength_({text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise1StrengthText, data::TextId::kNotYet}}),
+
+      noise1_(ui_shared_resources,
+              {data::VboIdMain::kTerrainEditNoise1Config, data::TextId::kNotYet},
+              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise1Name, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise1InvertOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise1InvertOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise1InvertOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise1InvertOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise1TilingOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise1TilingOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise1TilingOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise1TilingOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise1StrengthArea, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise1StrengthIcon, data::TextId::kNotYet}}),
+      noise2_(ui_shared_resources,
+              {data::VboIdMain::kTerrainEditNoise2Config, data::TextId::kNotYet},
+              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise2Name, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise2InvertOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise2InvertOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise2InvertOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise2InvertOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise2TilingOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise2TilingOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise2TilingOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise2TilingOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise2StrengthArea, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise2StrengthIcon, data::TextId::kNotYet}}),
+      noise3_(ui_shared_resources,
+              {data::VboIdMain::kTerrainEditNoise3Config, data::TextId::kNotYet},
+              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise3Name, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise3InvertOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise3InvertOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise3InvertOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise3InvertOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise3TilingOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise3TilingOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise3TilingOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise3TilingOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise3StrengthArea, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise3StrengthIcon, data::TextId::kNotYet}}),
+      noise4_(ui_shared_resources,
+              {data::VboIdMain::kTerrainEditNoise4Config, data::TextId::kNotYet},
+              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise4Name, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise4InvertOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise4InvertOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise4InvertOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise4InvertOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise4TilingOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise4TilingOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise4TilingOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise4TilingOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise4StrengthArea, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise4StrengthIcon, data::TextId::kNotYet}}),
+      noise5_(ui_shared_resources,
+              {data::VboIdMain::kTerrainEditNoise5Config, data::TextId::kNotYet},
+              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise5Name, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise5InvertOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise5InvertOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise5InvertOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise5InvertOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise5TilingOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise5TilingOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise5TilingOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise5TilingOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise5StrengthArea, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise5StrengthIcon, data::TextId::kNotYet}}),
+      noise6_(ui_shared_resources,
+              {data::VboIdMain::kTerrainEditNoise6Config, data::TextId::kNotYet},
+              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise6Name, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise6InvertOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise6InvertOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise6InvertOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise6InvertOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise6TilingOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise6TilingOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise6TilingOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise6TilingOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise6StrengthArea, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise6StrengthIcon, data::TextId::kNotYet}}),
+      noise7_(ui_shared_resources,
+              {data::VboIdMain::kTerrainEditNoise7Config, data::TextId::kNotYet},
+              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise7Name, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise7InvertOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise7InvertOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise7InvertOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise7InvertOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise7TilingOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise7TilingOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise7TilingOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise7TilingOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise7StrengthArea, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise7StrengthIcon, data::TextId::kNotYet}}),
+      noise8_(ui_shared_resources,
+              {data::VboIdMain::kTerrainEditNoise8Config, data::TextId::kNotYet},
+              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise8Name, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise8InvertOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise8InvertOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise8InvertOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise8InvertOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise8TilingOff, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise8TilingOn1, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise8TilingOn2, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise8TilingOn3, data::TextId::kNotYet}},
+              {{data::VboIdMain::kTerrainEditNoise8StrengthArea, data::TextId::kNotYet},
+               {data::VboIdMain::kTerrainEditNoise8StrengthIcon, data::TextId::kNotYet}}),
+
+      noise_perlin_(text_renderer, sprite_.GetId()),
+      noise_cellular_(text_renderer, sprite_.GetId()),
+      noise_metaballs(text_renderer, sprite_.GetId()),
+      noise_fbm_grid(text_renderer, sprite_.GetId()),
+      noise_fbm_multi_(text_renderer, sprite_.GetId()),
+      noise_fbmd_perlin_(text_renderer, sprite_.GetId()),
+      noise_fbm_warp_(text_renderer, sprite_.GetId()),
+      noise_fmb_perlin_warp(text_renderer, sprite_.GetId()),
+
       ui_event_handler_({
+          &pin_,
+          &noise1_.config_, &noise1_.toggle_invert_, &noise1_.toggle_tiling_, &noise1_.slider_strength_,
+          &noise2_.config_, &noise2_.toggle_invert_, &noise2_.toggle_tiling_, &noise2_.slider_strength_,
+          &noise3_.config_, &noise3_.toggle_invert_, &noise3_.toggle_tiling_, &noise3_.slider_strength_,
+          &noise4_.config_, &noise4_.toggle_invert_, &noise4_.toggle_tiling_, &noise4_.slider_strength_,
+          &noise5_.config_, &noise5_.toggle_invert_, &noise5_.toggle_tiling_, &noise5_.slider_strength_,
+          &noise6_.config_, &noise6_.toggle_invert_, &noise6_.toggle_tiling_, &noise6_.slider_strength_,
+          &noise7_.config_, &noise7_.toggle_invert_, &noise7_.toggle_tiling_, &noise7_.slider_strength_,
+          &noise8_.config_, &noise8_.toggle_invert_, &noise8_.toggle_tiling_, &noise8_.slider_strength_,
           &accept_, &name_back_, &color_palette_,
           &color_brightness_, &random_generate_
       }),
       ui_shared_resources_(ui_shared_resources) {
+  gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
   gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[name_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[name_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[color_palette_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[color_brightness_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[color_indicator_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[heightmap_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[random_generate_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
+  gUiComponents[text_noise_invert_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+  gUiComponents[text_noise_tiling_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+  gUiComponents[text_noise_strength_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
+  noise1_.SetParentId(sprite_.GetId());
+  noise2_.SetParentId(sprite_.GetId());
+  noise3_.SetParentId(sprite_.GetId());
+  noise4_.SetParentId(sprite_.GetId());
+  noise5_.SetParentId(sprite_.GetId());
+  noise6_.SetParentId(sprite_.GetId());
+  noise7_.SetParentId(sprite_.GetId());
+  noise8_.SetParentId(sprite_.GetId());
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
-  UpdateTransform();
+  UiWindowBase::UpdateTransform();
+  speed_ = 2.0f;
 }
 
 UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
-    : UiBase(std::move(other)),
-      desk_(std::move(other.desk_)),
+    : Base(std::move(other)),
       accept_(std::move(other.accept_)),
       name_(std::move(other.name_)),
       name_back_(std::move(other.name_back_)),
@@ -1916,12 +2132,43 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
       tex_heightmap_(std::move(other.tex_heightmap_)),
       heightmap_(std::move(other.heightmap_)),
       random_generate_(std::move(other.random_generate_)),
+
+      text_noise_invert_(std::move(other.text_noise_invert_)),
+      text_noise_tiling_(std::move(other.text_noise_tiling_)),
+      text_noise_strength_(std::move(other.text_noise_strength_)),
+
+      noise1_(std::move(other.noise1_)),
+      noise2_(std::move(other.noise2_)),
+      noise3_(std::move(other.noise3_)),
+      noise4_(std::move(other.noise4_)),
+      noise5_(std::move(other.noise5_)),
+      noise6_(std::move(other.noise6_)),
+      noise7_(std::move(other.noise7_)),
+      noise8_(std::move(other.noise8_)),
+
+      noise_perlin_(std::move(other.noise_perlin_)),
+      noise_cellular_(std::move(other.noise_cellular_)),
+      noise_metaballs(std::move(other.noise_metaballs)),
+      noise_fbm_grid(std::move(other.noise_fbm_grid)),
+      noise_fbm_multi_(std::move(other.noise_fbm_multi_)),
+      noise_fbmd_perlin_(std::move(other.noise_fbmd_perlin_)),
+      noise_fbm_warp_(std::move(other.noise_fbm_warp_)),
+      noise_fmb_perlin_warp(std::move(other.noise_fmb_perlin_warp)),
       ui_event_handler_({
+          &pin_,
+          &noise1_.config_, &noise1_.toggle_invert_, &noise1_.toggle_tiling_, &noise1_.slider_strength_,
+          &noise2_.config_, &noise2_.toggle_invert_, &noise2_.toggle_tiling_, &noise2_.slider_strength_,
+          &noise3_.config_, &noise3_.toggle_invert_, &noise3_.toggle_tiling_, &noise3_.slider_strength_,
+          &noise4_.config_, &noise4_.toggle_invert_, &noise4_.toggle_tiling_, &noise4_.slider_strength_,
+          &noise5_.config_, &noise5_.toggle_invert_, &noise5_.toggle_tiling_, &noise5_.slider_strength_,
+          &noise6_.config_, &noise6_.toggle_invert_, &noise6_.toggle_tiling_, &noise6_.slider_strength_,
+          &noise7_.config_, &noise7_.toggle_invert_, &noise7_.toggle_tiling_, &noise7_.slider_strength_,
+          &noise8_.config_, &noise8_.toggle_invert_, &noise8_.toggle_tiling_, &noise8_.slider_strength_,
           &accept_, &name_back_, &color_palette_,
           &color_brightness_, &random_generate_
       }),
       ui_shared_resources_(other.ui_shared_resources_) {
-  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
+  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
 }
 
@@ -1930,67 +2177,150 @@ data::TextId UiEditTerrain::Hover(int id) {
 }
 
 bool UiEditTerrain::Press(int id) {
-  return ui_event_handler_.Press(id);
+  if (!selected_noise_) {
+    if (id == accept_.GetId()) {
+      std::cout << "GENERATE TERRAIN" << std::endl;
+//      auto hmap = GenerateEmptyTerrainHmap();
+//      noise1_.GenerateNoiseHmap(); // generate only at init() and was_modified()
+//      noise1_.Apply(hmap); // here apply all
+      return true;
+    } else if (id == noise1_.config_.GetId()) {
+      selected_noise_ = &noise_perlin_;
+      return true;
+    } else if (id == noise2_.config_.GetId()) {
+      selected_noise_ = &noise_cellular_;
+      return true;
+    } else if (id == noise3_.config_.GetId()) {
+      selected_noise_ = &noise_metaballs;
+      return true;
+    } else if (id == noise4_.config_.GetId()) {
+      selected_noise_ = &noise_fbm_grid;
+      return true;
+    } else if (id == noise5_.config_.GetId()) {
+      selected_noise_ = &noise_fbm_multi_;
+      return true;
+    } else if (id == noise6_.config_.GetId()) {
+      selected_noise_ = &noise_fbmd_perlin_;
+      return true;
+    } else if (id == noise7_.config_.GetId()) {
+      selected_noise_ = &noise_fbm_warp_;
+      return true;
+    } else if (id == noise8_.config_.GetId()) {
+      selected_noise_ = &noise_fmb_perlin_warp;
+      return true;
+    } else if (id == sprite_.GetId()) {
+      return true;
+    }
+    return ui_event_handler_.Press(id);
+  } else {
+    return selected_noise_->Press(id);
+  }
 }
 
 void UiEditTerrain::Release() {
-  ui_event_handler_.Release();
+  if (!selected_noise_) {
+    ui_event_handler_.Release();
+  } else {
+    selected_noise_->Release();
+  }
 }
 
 bool UiEditTerrain::Scroll(GLuint id, float yoffset) {
-  return color_palette_.Scroll(id, yoffset) ||
-         color_brightness_.Scroll(id, yoffset);
+  if (!selected_noise_) {
+    color_palette_.Scroll(id, yoffset) ||
+        color_brightness_.Scroll(id, yoffset);
+  } else {
+    selected_noise_->Scroll(id, yoffset);
+  }
 }
 
-void UiEditTerrain::Render() {
-  ui_shared_resources_.static_sprite_shader_.Bind();
-
+bool UiEditTerrain::Render() {
   auto mouse_pos =
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+  bool stop_show = Base::RenderBack(true);
+  if (!Base::BackIsReady()) {
+    return stop_show;
+  }
+  if (!selected_noise_) {
 
-  desk_.Render();
-  accept_.Render();
-  name_back_.Render();
-  color_palette_.Render(mouse_pos);
-  color_brightness_.Render(mouse_pos);
-  //TODO: set indicator color
-  color_indicator_.Render();
-  tex_heightmap_.Bind();
-  heightmap_.Render();
-  ui_shared_resources_.tex_ui_.Bind();
-  random_generate_.Render();
+   ui_shared_resources_.static_sprite_shader_.Bind();
 
-  color_palette_.RenderIcon();
-  color_brightness_.RenderIcon();
+   accept_.Render();
+   name_back_.Render();
+   color_palette_.Render(mouse_pos);
+   color_brightness_.Render(mouse_pos);
+   //TODO: set indicator color
+   color_indicator_.Render();
+   tex_heightmap_.Bind();
+   heightmap_.Render();
+   ui_shared_resources_.tex_ui_.Bind();
+   random_generate_.Render();
 
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+   color_palette_.RenderIcon();
+   color_brightness_.RenderIcon();
 
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(name_, "name", 0.1f, glm::vec2{0.0f});
+   noise1_.Render();
+   noise2_.Render();
+   noise3_.Render();
+   noise4_.Render();
+   noise5_.Render();
+   noise6_.Render();
+   noise7_.Render();
+   noise8_.Render();
+
+   ui_shared_resources_.dynamic_sprite_shader_.Bind();
+
+   ui_shared_resources_.global_glfw_callback_data_.text_renderer
+       ->RenderText(name_, "name", 0.1f, glm::vec2{0.0f});
+   text_noise_invert_.Render();
+   text_noise_tiling_.Render();
+   text_noise_strength_.Render();
+  } else {
+    selected_noise_->Render(mouse_pos);
+  }
+  return false;
 }
 
 void UiEditTerrain::RenderPicking() {
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
+  Base::RenderPickingBack();
+  if (!selected_noise_) {
+    ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
-  desk_.RenderPicking();
-  accept_.RenderPicking();
-  name_back_.RenderPicking();
-  color_palette_.RenderPicking();
-  color_brightness_.RenderPicking();
-  //TODO: set indicator color
-  color_indicator_.RenderPicking();
-  heightmap_.RenderPicking();
-  random_generate_.RenderPicking();
+    accept_.RenderPicking();
+    name_back_.RenderPicking();
+    color_palette_.RenderPicking();
+    color_brightness_.RenderPicking();
+    //TODO: set indicator color
+    color_indicator_.RenderPicking();
+    heightmap_.RenderPicking();
+    random_generate_.RenderPicking();
 
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+    noise1_.RenderPicking();
+    noise2_.RenderPicking();
+    noise3_.RenderPicking();
+    noise4_.RenderPicking();
+    noise5_.RenderPicking();
+    noise6_.RenderPicking();
+    noise7_.RenderPicking();
+    noise8_.RenderPicking();
 
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(name_, "name", 0.1f, glm::vec2{0.0f});
+    ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+
+    ui_shared_resources_.global_glfw_callback_data_.text_renderer
+        ->RenderTextPicking(name_, "name", 0.1f, glm::vec2{0.0f});
+    text_noise_invert_.RenderPicking();
+    text_noise_tiling_.RenderPicking();
+    text_noise_strength_.RenderPicking();
+  } else {
+    selected_noise_->RenderPicking();
+  }
 }
 
 void UiEditTerrain::UpdateTransform(
     float x_translate, float y_translate, float scale) {
-  desk_.UpdateTransform();
+  sprite_.UpdateTransform();
+  pin_.UpdateTransform();
+
   accept_.UpdateTransform();
   name_.UpdateTransform();
   name_back_.UpdateTransform();
@@ -1999,27 +2329,45 @@ void UiEditTerrain::UpdateTransform(
   color_indicator_.UpdateTransform();
   heightmap_.UpdateTransform();
   random_generate_.UpdateTransform();
-}
 
-void UiEditTerrain::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
+  text_noise_invert_.UpdateTransform();
+  text_noise_tiling_.UpdateTransform();
+  text_noise_strength_.UpdateTransform();
+
+  noise1_.UpdateTransform();
+  noise2_.UpdateTransform();
+  noise3_.UpdateTransform();
+  noise4_.UpdateTransform();
+  noise5_.UpdateTransform();
+  noise6_.UpdateTransform();
+  noise7_.UpdateTransform();
+  noise8_.UpdateTransform();
+
+  noise_perlin_.UpdateTransform();
+  noise_cellular_.UpdateTransform();
+  noise_metaballs.UpdateTransform();
+  noise_fbm_grid.UpdateTransform();
+  noise_fbm_multi_.UpdateTransform();
+  noise_fbmd_perlin_.UpdateTransform();
+  noise_fbm_warp_.UpdateTransform();
+  noise_fmb_perlin_warp.UpdateTransform();
 }
 
 UiTerrainBake::UiTerrainBake(
+    UiDynamicSprite&& sprite,
+    float size_scale,
+    UiToggle2&& pin,
     UiSharedResources& ui_shared_resources,
-    UiDynamicSprite&& desk,
+    WindowQueue& window_queue,
+    TextRenderer& text_renderer,
     UiDynamicSprite&& accept,
     UiDynamicSprite&& heightmap,
-    UiDynamicSprite&& erosion_label,
+    UiTextLabelId&& erosion_label,
     UiDynamicSprite&& erosion_input,
-    UiDynamicSprite&& weathering_label,
+    UiTextLabelId&& weathering_label,
     UiDynamicSprite&& weathering_input)
-    : UiBase(desk.GetId(), {}),
-      desk_(std::move(desk)),
+    : Base(std::move(sprite), size_scale, std::move(pin),
+           ui_shared_resources, window_queue),
       accept_(std::move(accept)),
       tex_heightmap_("../assets/terrain/map_erosion_wear.png", GL_RED),
       heightmap_(std::move(heightmap)),
@@ -2028,29 +2376,31 @@ UiTerrainBake::UiTerrainBake(
       weathering_label_(std::move(weathering_label)),
       weathering_input_(std::move(weathering_input)),
       ui_event_handler_({
-          &accept_, &erosion_input_, &weathering_input_
+          &pin_, &accept_, &erosion_input_, &weathering_input_
       }),
       ui_shared_resources_(ui_shared_resources) {
   gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[heightmap_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[erosion_label_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[erosion_input_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[weathering_label_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
   gUiComponents[weathering_input_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
+      = sprite_.GetId();
+  gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
+      = sprite_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
-  UpdateTransform();
+  UiWindowBase::UpdateTransform();
+  speed_ = 2.0f;
 }
 
 UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
-    : UiBase(std::move(other)),
-      desk_(std::move(other.desk_)),
+    : Base(std::move(other)),
       accept_(std::move(other.accept_)),
       tex_heightmap_(std::move(other.tex_heightmap_)),
       heightmap_(std::move(other.heightmap_)),
@@ -2059,10 +2409,10 @@ UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
       weathering_label_(std::move(other.weathering_label_)),
       weathering_input_(std::move(other.weathering_input_)),
       ui_event_handler_({
-          &accept_, &erosion_input_, &weathering_input_
+          &pin_, &accept_, &erosion_input_, &weathering_input_
       }),
       ui_shared_resources_(other.ui_shared_resources_) {
-  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
+  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
 }
 
@@ -2082,13 +2432,16 @@ bool UiTerrainBake::Scroll(GLuint id, float yoffset) {
   return false;
 }
 
-void UiTerrainBake::Render() {
+bool UiTerrainBake::Render() {
+  bool stop_show = Base::RenderBack(true);
+  if (!Base::BackIsReady()) {
+    return stop_show;
+  }
   ui_shared_resources_.static_sprite_shader_.Bind();
 
   auto mouse_pos =
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
 
-  desk_.Render();
   accept_.Render();
   tex_heightmap_.Bind();
   heightmap_.Render();
@@ -2098,44 +2451,34 @@ void UiTerrainBake::Render() {
 
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(erosion_label_, "erosion", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(weathering_label_, "weathering", 0.1f, glm::vec2{0.0f});
+  erosion_label_.Render();
+  weathering_label_.Render();
+  return false;
 }
 
 void UiTerrainBake::RenderPicking() {
+  RenderPickingBack();
   ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
-  desk_.RenderPicking();
   accept_.RenderPicking();
   heightmap_.RenderPicking();
   erosion_input_.RenderPicking();
   weathering_input_.RenderPicking();
 
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(erosion_label_, "erosion", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(weathering_label_, "weathering", 0.1f, glm::vec2{0.0f});
+  erosion_label_.RenderPicking();
+  weathering_label_.RenderPicking();
 }
 
 void UiTerrainBake::UpdateTransform(
     float x_translate, float y_translate, float scale) {
-  desk_.UpdateTransform();
+  sprite_.UpdateTransform();
+  pin_.UpdateTransform();
+
   accept_.UpdateTransform();
   heightmap_.UpdateTransform();
   erosion_label_.UpdateTransform();
   erosion_input_.UpdateTransform();
   weathering_label_.UpdateTransform();
   weathering_input_.UpdateTransform();
-}
-
-void UiTerrainBake::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
 }

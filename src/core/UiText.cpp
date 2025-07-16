@@ -77,7 +77,7 @@ void UiTextInput::SetTranslate(glm::vec2 translate) {
   text_.SetTranslate(translate);
 }
 
-UiTextLabel::UiTextLabel(
+UiTextLabelBase::UiTextLabelBase(
     TextRenderer& text_renderer,
     float scale,
     glm::vec2 translate,
@@ -86,23 +86,62 @@ UiTextLabel::UiTextLabel(
       text_renderer_(text_renderer),
       text_(std::move(text)),
       scale_(scale),
-      translate_(translate),
-      label_() {
+      translate_(translate) {
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
   UpdateTransform();
 }
 
-UiTextLabel::UiTextLabel(UiTextLabel&& other) noexcept
+UiTextLabelBase::UiTextLabelBase(UiTextLabelBase&& other) noexcept
     : UiBase(std::move(other)),
       text_renderer_(other.text_renderer_),
       text_(std::move(other.text_)),
       scale_(other.scale_),
-      translate_(other.translate_),
-      label_(std::move(other.label_)) {
+      translate_(other.translate_) {
   gUiComponents[text_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
 }
+
+void UiTextLabelBase::Press() {}
+
+data::TextId UiTextLabelBase::Hover(std::uint32_t id) {
+  return text_.Hover();
+}
+
+void UiTextLabelBase::UpdateTransform(
+    float x_translate, float y_translate, float scale) {
+  text_.UpdateTransform();
+}
+
+void UiTextLabelBase::UpdateTransform() {
+  auto transform = debug::gUiTransforms[
+      4 * (GetId() - details::kIdOffsetUi)
+  ];
+  UpdateTransform(
+      transform.translate.x, transform.translate.y, transform.scale);
+}
+
+void UiTextLabelBase::SetParentTransform(LocalTransform transform) {
+  text_.SetParentTransform(transform);
+}
+
+void UiTextLabelBase::SetTranslate(glm::vec2 translate) {
+  text_.SetTranslate(translate);
+}
+
+UiTextLabel::UiTextLabel(
+    TextRenderer& text_renderer,
+    float scale,
+    glm::vec2 translate,
+    UiDynamicSprite&& text)
+    : UiTextLabelBase(text_renderer, scale, translate, std::move(text)),
+      label_() {
+  UpdateTransform();
+}
+
+UiTextLabel::UiTextLabel(UiTextLabel&& other) noexcept
+    : UiTextLabelBase(std::move(other)),
+      label_(std::move(other.label_)) {}
 
 void UiTextLabel::Render() {
   text_renderer_.RenderText(text_, label_, scale_, translate_);
@@ -112,29 +151,25 @@ void UiTextLabel::RenderPicking() {
   text_renderer_.RenderTextPicking(text_, label_, scale_, translate_);
 }
 
-void UiTextLabel::Press() {}
-
-data::TextId UiTextLabel::Hover(std::uint32_t id) {
-  return text_.Hover();
+UiTextLabelId::UiTextLabelId(
+    TextRenderer& text_renderer,
+    float scale,
+    glm::vec2 translate,
+    UiDynamicSprite&& text,
+    data::TextId text_id)
+    : UiTextLabelBase(text_renderer, scale, translate, std::move(text)),
+      text_id_(text_id) {
+  UpdateTransform();
 }
 
-void UiTextLabel::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  text_.UpdateTransform();
+UiTextLabelId::UiTextLabelId(UiTextLabelId&& other) noexcept
+    : UiTextLabelBase(std::move(other)),
+      text_id_(other.text_id_) {}
+
+void UiTextLabelId::Render() {
+  text_renderer_.RenderMenuText(text_, text_id_, scale_);
 }
 
-void UiTextLabel::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
-}
-
-void UiTextLabel::SetParentTransform(LocalTransform transform) {
-  text_.SetParentTransform(transform);
-}
-
-void UiTextLabel::SetTranslate(glm::vec2 translate) {
-  text_.SetTranslate(translate);
+void UiTextLabelId::RenderPicking() {
+  text_renderer_.RenderMenuTextPicking(text_, text_id_);
 }

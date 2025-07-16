@@ -30,6 +30,7 @@ shader_terrain_vert=../shaders/Terrain.vert
 shader_terrain_tesc=../shaders/Terrain.tesc
 shader_terrain_tese=../shaders/Terrain.tese
 shader_terrain_frag=../shaders/Terrain.frag
+shader_terrain_picking_frag=../shaders/TerrainPicking.frag
 
 shader_placement_vert=../shaders/Placement.vert
 shader_placement_frag=../shaders/Placement.frag

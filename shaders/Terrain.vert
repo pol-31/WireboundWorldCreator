@@ -1,23 +1,19 @@
 #version 460 core
 
+layout (location = 0) in vec2 in_patch_vertex; // 0..1 corner
+layout (location = 1) in uint vertex_id;
+
+
 out VS_OUT {
     vec2 tc;
 } vs_out;
 
-// grid InstanceId_max x VertexIndexId
+void main() {
+    int x = int(vertex_id & 63);
+    int y = int(vertex_id >> 6);
+    vec2 patch_offset = vec2(x, y);
 
-void main(void) {
-    const vec4 vertices[] = vec4[](
-    vec4(0.5, 0.0, -0.5, 1.0),
-    vec4(0.5, 0.0, 0.5, 1.0),
-    vec4(-0.5, 0.0, -0.5, 1.0),
-    vec4(-0.5, 0.0, 0.5, 1.0)
-    );
-    int x = gl_InstanceID & 63;
-    int y = gl_InstanceID >> 6;
-
-    vec2 offs = vec2(x, y);
-    vs_out.tc = (vertices[gl_VertexID].xz + offs + vec2(0.5)) / 64.0;
-    gl_Position = vertices[gl_VertexID] + vec4(float(x - 32), 0.0,
-    float(y - 32), 0.0);
+    vs_out.tc = (patch_offset + in_patch_vertex) / 64.0; // texcoord
+    vec2 world = patch_offset + in_patch_vertex;
+    gl_Position = vec4(world.x - 32.0, 0.0, world.y - 32.0, 1.0);
 }

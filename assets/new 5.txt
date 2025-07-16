@@ -46,6 +46,12 @@ UiToggle2 - replace on_ sprite
 terrain: Bake place after slots, so UiTerrainMode::ui_event_handler include slots
 label field for each: kTerrainEditScaleXText
 for each text input we should have input area (back) and text out area (text itself)
+error line below
+bigger desk sprite for UiEditTerrain
+remove kTerrainEditNoise1InvertLabel, we have one kTerrainEditLabelInvert
+   as well as tiling, strength
+SliderH2 - bigger handle(icon), modify arae (remove embedded handle/icons)
+terrain "Bake" btn icon
 
 keyboard assign window
 
@@ -61,6 +67,9 @@ text input (text / number) --> LET'S TAKE ui_slots_slot_back from... roads
 
 --- THEN YOU DO (generate terrain):
 Terrain Generation
+*> includes:
+* number input (type & border validation)
+* picking -> collect sliders -> Accept.Press() -> *updated terrain hmap*
 
 
 
@@ -68,3 +77,10 @@ Terrain Generation
 map edge/face/vertex visualization
 biome round slider (wind, sun, time)
 ---------------------------------------
+
+
+ TextRenderer& text_renderer,
+      float scale,
+      glm::vec2 translate,
+      UiDynamicSprite&& text,
+      data::TextId text_id

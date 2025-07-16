@@ -348,7 +348,7 @@ void UiSlotsModels::Render(glm::vec2 mouse_pos) {
   flip_select_edit_.Render();
   flip_point_edge_.Render();
 
-  ui_edit_.Render();
+//  ui_edit_.Render();
 }
 
 /* std::vector<GLuint> selected_vertices_;
@@ -383,7 +383,7 @@ void UiSlotsModels::UpdateTransform(
   slot_remove_.UpdateTransform();
   slot_selected_.UpdateTransform();
 
-  ui_edit_.UpdateTransform();
+//  ui_edit_.UpdateTransform();
 
   sl_data_.length_ = sl_data_.kTrackLengthFactor * scale *
             (back_.GetTopBorder() - back_.GetBottomBorder());
@@ -453,7 +453,7 @@ void UiSlotsModels::RenderPicking() {
     flip_point_edge_.RenderPicking();
   }
 
-  ui_edit_.RenderPicking();
+//  ui_edit_.RenderPicking();
 }
 
 bool UiSlotsModels::Press(int id) {
@@ -473,9 +473,9 @@ bool UiSlotsModels::Press(int id) {
     }
   } else {
     bool handled = ui_event_handler_.Press(id);
-    if (!handled) {
-      handled = ui_edit_.Press(id);
-    }
+//    if (!handled) {
+//      handled = ui_edit_.Press(id);
+//    }
     if (id == create_.GetId()) {
       // instead of FocusOnSelected();
       sl_data_.Set(1.0f, handler_,
@@ -600,6 +600,8 @@ void UiSlotsModels::PressGraph(GLuint id) {
 /// outside is's shown as a slider area
 UiSlotsTerrain::UiSlotsTerrain(
     UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    TextRenderer& text_renderer,
     UiDynamicSprite&& handler,
     UiDynamicSprite&& slider,
     UiDynamicSprite&& back,
@@ -638,8 +640,13 @@ UiSlotsTerrain::UiSlotsTerrain(
       slot_selected_(std::move(slot_selected)),
       graph_(ui_shared_resources),
       ui_edit_(
-          ui_shared_resources,
           {data::VboIdMain::kTerrainEditDesk, data::TextId::kNotYet},
+          2.0f,
+          {{data::VboIdMain::kTerrainEditDeskPinBack, data::TextId::kNotYet, []() {}},
+          {data::VboIdMain::kTerrainEditDeskPinPoint, data::TextId::kNotYet}},
+          ui_shared_resources,
+          window_queue,
+          text_renderer,
           {data::VboIdMain::kTerrainEditAccept, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainEditName, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainEditNameBack, data::TextId::kNotYet},
@@ -786,7 +793,7 @@ void UiSlotsTerrain::Render(glm::vec2 mouse_pos) {
   flip_point_edge_back_.Render();
   flip_point_edge_.Render();
 
-  ui_edit_.Render();
+//  ui_edit_.Render();
 }
 
 void UiSlotsTerrain::UpdateTransform(
@@ -805,7 +812,7 @@ void UiSlotsTerrain::UpdateTransform(
   slot_remove_.UpdateTransform();
   slot_selected_.UpdateTransform();
 
-  ui_edit_.UpdateTransform();
+//  ui_edit_.UpdateTransform();
 
   sl_data_.length_ = sl_data_.kTrackLengthFactor * scale *
             (back_.GetTopBorder() - back_.GetBottomBorder());
@@ -873,16 +880,19 @@ void UiSlotsTerrain::RenderPicking() {
     flip_point_edge_.RenderPicking();
   }
 
-  ui_edit_.RenderPicking();
+//  ui_edit_.RenderPicking();
 }
 
 bool UiSlotsTerrain::Press(int id) {
+  std::cout << "Press()" << std::endl;
   if (id == slot_back_.GetId()) {
+    std::cout << "-- slot back (selected)" << std::endl;
     auto slot_id = sl_data_.GetSlotId(
         ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
     graph_.SelectGraph(slot_id);
     sl_data_.FocusOnSelected(slot_id, graph_.GetSize(), handler_, slot_back_);
   } else if (id == slot_remove_.GetId()) {
+    std::cout << "-- slot remove (remove)" << std::endl;
     auto removed_id = sl_data_.GetSlotId(
         ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
     if (graph_.GetSize() > 0) {
@@ -891,12 +901,17 @@ bool UiSlotsTerrain::Press(int id) {
       sl_data_.UpdateRenderData(back_.GetTopBorder() - back_.GetBottomBorder(),
                                 graph_.GetSize());
     }
+  } else if (id == slot_config_.GetId()) {
+    std::cout << "-- slot edit (edit show)" << std::endl;
+    ui_edit_.Show();
   } else {
     bool handled = ui_event_handler_.Press(id);
-    if (!handled) {
-      handled = ui_edit_.Press(id);
-    }
+//    if (!handled) {
+//      handled = ui_edit_.Press(id);
+//    }
     if (id == create_.GetId()) {
+      std::cout << "-- slot create (create)" << std::endl;
+      ui_edit_.Show();
       // instead of FocusOnSelected();
       sl_data_.Set(1.0f, handler_,
                    back_.GetTopBorder() - back_.GetBottomBorder(),

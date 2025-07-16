@@ -45,6 +45,7 @@ class UiRenderer {
   debug::UiDebugger ui_debugger_;
 
   WindowQueue windows_;
+  TextRenderer text_renderer_;
 
   IUiMode* cur_mode_{nullptr};
   UiTerrainMode terrain_;
@@ -56,7 +57,6 @@ class UiRenderer {
   UiPlacementMode placement_;
   UiTilesMode tiles_;
 
-  TextRenderer text_renderer_;
 
   Menu menu_;
   UiSettings ui_settings_;

@@ -26,7 +26,7 @@ class WindowQueue {
 
   void RenderPicking();
 
-  void Press(int id);
+  bool Press(int id);
 
   void Release();
 

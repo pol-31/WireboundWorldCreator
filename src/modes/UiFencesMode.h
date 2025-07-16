@@ -10,6 +10,7 @@ class UiFencesMode final : public IUiMode {
  public:
   UiFencesMode(
       UiSharedResources& ui_shared_resources,
+      TextRenderer& text_renderer,
       WindowQueue& window_queue);
 
   void Render() override;

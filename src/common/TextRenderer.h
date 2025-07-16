@@ -28,7 +28,8 @@ class TextRenderer {
     kCentre
   };
 
-  TextRenderer(const Paths& paths);
+  TextRenderer(const Paths& paths,
+               UiDynamicSprite&& prerender_text_slot);
 
   ~TextRenderer();
 
@@ -62,9 +63,11 @@ class TextRenderer {
                          float scale, glm::vec2 position,
                          Alignment alignment = Alignment::kCentre);
 
-  void RenderMenuText(data::TextId id);
+  void RenderMenuText(
+      UiDynamicSprite& text_slot, data::TextId id, float scale);
 
-  void RenderMenuTextPicking(data::TextId id);
+  void RenderMenuTextPicking(
+      UiDynamicSprite& text_slot, data::TextId id);
 
   void RenderModeText(data::TextId id);
 
@@ -123,7 +126,7 @@ class TextRenderer {
   std::vector<Aabb> coords_menu_;
   std::vector<Aabb> coords_mode_;
 
-  const float scale_{1.0f};
+  const float scale_{0.1f};
 
   Shader render_shader_;
   Shader render_shader_picking_;
@@ -131,6 +134,8 @@ class TextRenderer {
   // where to read & write
   UiDynamicSprite* text_slot_ = nullptr;
   FixedSizeQueue<char, 64>* input_source_ = nullptr;
+
+  UiDynamicSprite prerender_text_slot_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TEXTRENDERER_H_

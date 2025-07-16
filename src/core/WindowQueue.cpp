@@ -50,16 +50,22 @@ void WindowQueue::RenderPicking() {
   }
 }
 
-void WindowQueue::Press(int id) {
+bool WindowQueue::Press(int id) {
   if (top_window_) {
     top_window_->Press(id);
-    return;
+    return true;
   }
+  bool result = false;
   for (auto window : windows_) {
     if (window) {
-      window->Press(id);
+      if (window->Press(id)) {
+        result = true;
+      } else if (!window->Pinned()) {
+        window->Hide();
+      }
     }
   }
+  return result;
 }
 
 void WindowQueue::Release() {

@@ -11,6 +11,10 @@ class TerrainRenderer {
  public:
   TerrainRenderer(Tile& tile, const Paths& paths);
 
+  ~TerrainRenderer() {
+    DeInit();
+  }
+
   void Render();
 
   //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
@@ -21,9 +25,15 @@ class TerrainRenderer {
  private:
   void Init();
 
+  void DeInit();
+
+  const int gGridSize = 64;
+  std::array<GLuint, 64 * 64> patch_grid_;
+
   Tile& tile_;
   GLuint vao_{0};
-  GLuint vbo_{0};
+  GLuint vbo_quad_{0};
+  GLuint vbo_ids_{0};
   Shader shader_;
   Shader shader_picking_;
   Texture nmap_;

@@ -830,6 +830,7 @@ void UiSliderH2::Render(glm::vec2 mouse_pos) {
   int width_px = int(progress_ * length_ * 0.5f * gWindowWidth);
   glScissor(x_px, 0, width_px, 4000);
   glDisable(GL_SCISSOR_TEST);
+  icon_sprite_.Render();
 }
 
 void UiSliderH2::RenderIcon() {
@@ -869,6 +870,14 @@ void UiSliderH2::Set(float progress) {
 
 data::TextId UiSliderH2::Hover(std::uint32_t id) {
   return back_sprite_.Hover();
+}
+
+void UiSliderH2::Press() {
+  pressed_ = true;
+}
+
+void UiSliderH2::Release() {
+  pressed_ = false;
 }
 
 void UiSliderH2::UnHover() {

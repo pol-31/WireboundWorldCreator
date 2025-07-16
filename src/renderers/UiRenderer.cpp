@@ -10,15 +10,16 @@ UiRenderer::UiRenderer(
                    ui_shared_resources_.vbo_ui_transform_,
                    global_glfw_data_.cursor_pos_tex_norm_),
       windows_(),
-      terrain_(ui_shared_resources_, windows_, tile_renderer.cur_tile_),
+      text_renderer_(
+          paths, {data::VboIdMain::kSpareText10, data::TextId::kNotYet}),
+      terrain_(ui_shared_resources_, windows_, text_renderer_, tile_renderer.cur_tile_),
       water_(ui_shared_resources_, windows_, paths),
-      fences_(ui_shared_resources_, windows_),
+      fences_(ui_shared_resources_, text_renderer_, windows_),
       roads_(ui_shared_resources_, windows_),
       biomes_(ui_shared_resources_, windows_),
       objects_(ui_shared_resources_, windows_),
       placement_(ui_shared_resources_, windows_, paths),
       tiles_(ui_shared_resources_, windows_),
-      text_renderer_(paths),
       menu_(ui_shared_resources_, windows_, text_renderer_, &terrain_,
             &water_, &roads_, &fences_, &placement_, &objects_, &biomes_,
             &tiles_, cur_mode_),
@@ -165,7 +166,7 @@ void UiRenderer::Render(data::TextId description_id) {
     } else {
       menu_.Hide();
       ui_settings_.Hide();
-      ui_file_.Show();
+//      ui_file_.Show();
 //      ui_file_.Hide();
       cur_mode_->BindCallbacks();
     }
@@ -247,7 +248,7 @@ void UiRenderer::Serialize() {
 }
 
 void UiRenderer::Init() {
-//  text_renderer_.PrerenderMenuText(0, 24);
+  text_renderer_.PrerenderMenuText(0, 24);
   ui_debugger_.ForceUpdate();
 }
 

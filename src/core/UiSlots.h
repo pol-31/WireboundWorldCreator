@@ -48,11 +48,9 @@ class IUiSlots : public UiBase {
 
   void Release() override;
 
-
   void UpdateTransform() override;
 
-  /// --- end UiBase methods
-
+  /// interface virtual methods
   virtual void Render(glm::vec2 mouse_pos) = 0;
   virtual void RenderPicking() = 0;
   virtual bool Press(int id) = 0;
@@ -61,11 +59,14 @@ class IUiSlots : public UiBase {
   virtual bool Scroll(GLuint id, float yoffset) = 0;
 
   /// as a decorator for graph_
+  /*bool Press(int id) {
+    if (!InRange()) {
+      return false;
+    }
 
+  }*/
   void CreateGraph();
-
   void SelectGraph(GLuint id);
-
   void RemoveGraph(GLuint id);
 
   void RenderGraph();
@@ -110,6 +111,8 @@ class UiSlotsTerrain final : public IUiSlots {
  public:
   UiSlotsTerrain(
       UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer,
       UiDynamicSprite&& handler,
       UiDynamicSprite&& slider,
       UiDynamicSprite&& back,

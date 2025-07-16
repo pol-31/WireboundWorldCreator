@@ -19,6 +19,7 @@ struct Paths {
   std::string shader_terrain_tesc;
   std::string shader_terrain_tese;
   std::string shader_terrain_frag;
+  std::string shader_terrain_picking_frag;
   std::string shader_placement_vert;
   std::string shader_placement_frag;
   std::string shader_water_vert;
@@ -91,6 +92,7 @@ struct Paths {
         {"shader_terrain_tesc", &shader_terrain_tesc},
         {"shader_terrain_tese", &shader_terrain_tese},
         {"shader_terrain_frag", &shader_terrain_frag},
+        {"shader_terrain_picking_frag", &shader_terrain_picking_frag},
         {"shader_placement_vert", &shader_placement_vert},
         {"shader_placement_frag", &shader_placement_frag},
         {"shader_water_vert", &shader_water_vert},

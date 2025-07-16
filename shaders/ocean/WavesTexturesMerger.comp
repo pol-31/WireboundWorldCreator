@@ -27,7 +27,7 @@ layout(std140, binding = 2) uniform Environment {
 void main() {
 //    float actual_lambda = 1.0f + Lambda * 0.0001f;
     float actual_lambda = Lambda;
-    actual_lambda = 0.1f;
+//    actual_lambda = 0.1f;
 
     uvec2 id = gl_GlobalInvocationID.xy;
 

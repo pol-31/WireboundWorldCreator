@@ -10,10 +10,16 @@ TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
     : tile_(tile),
       shader_(paths.shader_terrain_vert, paths.shader_terrain_tesc,
               paths.shader_terrain_tese, paths.shader_terrain_frag),
-      shader_picking_(paths.shader_height_map_picking_vert,
-                      paths.shader_height_map_picking_frag),
+      shader_picking_(paths.shader_terrain_vert, paths.shader_terrain_tesc,
+                      paths.shader_terrain_tese, paths.shader_terrain_picking_frag),
       nmap_("../../ProvingGround\\cmake-build-debug\\normal_map.png", GL_RG8) {
   Init();
+}
+
+void TerrainRenderer::DeInit() {
+  GLuint vbos[] = {vbo_quad_, vbo_ids_};
+  glDeleteBuffers(2, vbos);
+  glDeleteVertexArrays(1, &vao_);
 }
 
 void TerrainRenderer::Render() {
@@ -24,6 +30,8 @@ void TerrainRenderer::Render() {
     glUniform1i(1, 1); // material (temp)
     glUniform1i(2, 2); // normal
     glUniform1i(3, 3); // ao
+    shader_picking_.Bind();
+    glUniform1i(shader::kTerrainHeightMap, 0);
   }
 #endif
   if(glfwGetKey(gWindow, GLFW_KEY_1)) {
@@ -34,25 +42,31 @@ void TerrainRenderer::Render() {
 
   tile_.map_terrain_height.Bind();
   glActiveTexture(GL_TEXTURE1);
-  tile_.map_erosion_deposition.Bind();
+  tile_.map_terrain_occlusion.Bind();
 
   glActiveTexture(GL_TEXTURE2);
   tile_.map_terrain_normal.Bind();
   glActiveTexture(GL_TEXTURE3);
-  tile_.map_terrain_occlusion.Bind();
+  tile_.map_erosion_deposition.Bind();
 
   glBindVertexArray(vao_);
-
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
 
+  //  glDrawArrays(GL_PATCHES, 0, patch_vertices.size());
   glBindVertexArray(0);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
 void TerrainRenderer::RenderPicking() const {
-  //TODO: remove
+  shader_picking_.Bind();
+  glActiveTexture(GL_TEXTURE0);
+  tile_.map_terrain_height.Bind();
+  glBindVertexArray(vao_);
+  glPatchParameteri(GL_PATCH_VERTICES, 4);
+  glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
+  glBindVertexArray(0);
 }
 
 glm::vec3 TerrainRenderer::GetYPosition(int vertex_id) const {
@@ -71,17 +85,35 @@ void TerrainRenderer::Init() {
   glGenVertexArrays(1, &vao_);
   glBindVertexArray(vao_);
 
-  glGenBuffers(1, &vbo_);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-  // vertex data defined in shader and accessed via gl_VertexID
-  GLfloat vertices[16];
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  GLuint vbos[2];
+  glGenBuffers(1, vbos);
+  vbo_quad_ = vbos[0];
+  vbo_ids_ = vbos[1];
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_quad_);
 
+  const float quad[] = {
+      0.0f, 0.0f,
+      1.0f, 0.0f,
+      0.0f, 1.0f,
+      1.0f, 1.0f
+  };
 
-  // Enable the vertex attribute array
+  glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0,
-                        reinterpret_cast<void*>(0));
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
+  glVertexAttribDivisor(0, 0);
+
+  for (int i = 0; i < gGridSize * gGridSize; ++i) {
+    patch_grid_[i] = i;
+  }
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_ids_);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLuint) * patch_grid_.size(), patch_grid_.data(), GL_STATIC_DRAW);
+  glEnableVertexAttribArray(1);
+  glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
+  glVertexAttribDivisor(1, 1); // <-- per-instance!
+
+  glBindVertexArray(0);
 
   shader_.Bind();
   glUniform1i(shader::kTerrainHeightMap, 0);

@@ -7,6 +7,31 @@
 namespace data {
 
 enum class TextId {
+  // terrain noise traits
+  kScale,
+  kSeed,
+  kJitter,
+  kPhase,
+  kPhases,
+  kOctaves,
+  kShift,
+  kTimeShift,
+  kGain,
+  kLacunarity,
+  kTranslate,
+  kWarpStrength,
+  kOctaveFactor,
+  kTransform,
+  kSlopeness,
+  kNegative,
+  kFactors,
+  kQ,
+  kR,
+
+  kErosion,
+  kWeathering,
+
+
   kMenuTerrain,
   kMenuWater,
   kMenuRoads,
@@ -16,6 +41,9 @@ enum class TextId {
   kMenuBiomes,
   kMenuTiles,
   kMenu,
+
+  kResolution,
+  kShowTips,
 
   Newgame,
   Loadgame,
@@ -35,11 +63,12 @@ enum class TextId {
   Hatebreed,
 
   kTotal,
+  kNotYet, // not yet done
   kNone, // shouldn't be used (always check != kNone)
 };
 
 inline constexpr int gTotalText = static_cast<int>(TextId::kTotal)
-                                  - static_cast<int>(TextId::kMenuTerrain);
+                                  - static_cast<int>(TextId::kScale);
 
 extern const std::array<std::string_view, gTotalText> gText;
 

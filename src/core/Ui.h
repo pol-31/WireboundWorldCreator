@@ -580,13 +580,9 @@ class UiSliderH2 final : public UiBase {
 
   [[nodiscard]] data::TextId Hover(std::uint32_t id);
 
-  void Press() override {
-    pressed_ = true;
-  }
+  void Press() override;
 
-  void Release() override {
-    pressed_ = false;
-  }
+  void Release() override;
 
   bool Scroll(GLuint id, float yoffset) override;
 

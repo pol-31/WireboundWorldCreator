@@ -18,6 +18,7 @@ class UiTerrainMode final : public IUiMode {
   explicit UiTerrainMode(
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
+      TextRenderer& text_renderer,
       Tile& cur_tile);
 
   void Render() override;

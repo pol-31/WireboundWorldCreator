@@ -86,6 +86,7 @@ void UiFencesMode::KeyCallback(
 
 UiFencesMode::UiFencesMode(
     UiSharedResources& ui_shared_resources,
+    TextRenderer& text_renderer,
     WindowQueue& window_queue)
     : IUiMode(
           ui_shared_resources,

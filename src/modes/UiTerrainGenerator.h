@@ -54,7 +54,7 @@ class UiTerrainGenerator final : public UiWindowAppear {
     //
   }
 
-  void Press(int id) override {
+  bool Press(int id) override {
 //    ui_event_handler_.Press(id);
   }
 

@@ -10,8 +10,10 @@
 #include "../io/Window.h"
 #include "UiDebugger.h"
 
-TextRenderer::TextRenderer(const Paths& paths)
+TextRenderer::TextRenderer(
+    const Paths& paths, UiDynamicSprite&& prerender_text_slot)
     : tex_bitmap_("../assets/bmp_ascii_header.png", GL_RED),
+      prerender_text_slot_(std::move(prerender_text_slot)),
 //    : tex_bitmap_("../assets/AsciiBitmap.png", GL_RED),
       tex_menu_(1024, 1024, GL_RED),
       tex_mode_(1024, 1024, GL_RED),
@@ -51,7 +53,9 @@ void TextRenderer::DeInit() {
   glDeleteFramebuffers(2, fbos);
 }
 
-void TextRenderer::RenderMenuText(data::TextId id) {
+void TextRenderer::RenderMenuText(
+    UiDynamicSprite& text_slot, data::TextId id, float scale) {
+  text_slot_ = &text_slot;
   glActiveTexture(GL_TEXTURE0);
   tex_menu_.Bind();
   render_shader_.Bind();
@@ -64,6 +68,7 @@ void TextRenderer::RenderMenuText(data::TextId id) {
   int height = coords.top - coords.bottom;
   text_slot_->SetExtraScale(static_cast<float>(width) / height);
   // translation & rotation the same
+  text_slot_->SetScale(scale);
 
   text_slot_->Render();
 
@@ -71,7 +76,9 @@ void TextRenderer::RenderMenuText(data::TextId id) {
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderMenuTextPicking(data::TextId id) {
+void TextRenderer::RenderMenuTextPicking(
+    UiDynamicSprite& text_slot, data::TextId id) {
+  text_slot_ = &text_slot;
   glActiveTexture(GL_TEXTURE0);
   tex_menu_.Bind();
   render_shader_picking_.Bind();
@@ -164,6 +171,7 @@ int TextRenderer::CalculateLineLength(
 }
 
 void TextRenderer::PrerenderMenuText(int start, int end) {
+  text_slot_ = &prerender_text_slot_;
   PrerenderImpl(start, end, tex_menu_, coords_menu_);
 }
 
@@ -345,11 +353,12 @@ void TextRenderer::PrerenderImpl(
     coords.push_back(RenderPhrase(data::gText[i]));
   }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  texture.Store("prerenderedTexture.png", 1, GL_RED, GL_UNSIGNED_BYTE);
 }
 
 // only 1-row text by now
 TextRenderer::Aabb TextRenderer::RenderPhrase(std::string_view text) {
-  int calculated_width = CalculateLineLength(text, *text_slot_);
+  int calculated_width = CalculateLineLength(text, *text_slot_) * 78.0f / 1024.0f;
   int symbol_height = static_cast<int>(font::gFullHeight * scale_);
   if (fbo_cursor_.x + calculated_width > 1024) {
     fbo_cursor_.x = 0;

@@ -66,24 +66,26 @@ class UiTextInput final : public UiBase {
   glm::vec2 translate_ = glm::vec2{0.0f};
 };
 
-class UiTextLabel final : public UiBase {
+class UiTextLabelBase : public UiBase {
  public:
-  UiTextLabel(
+  UiTextLabelBase(
       TextRenderer& text_renderer,
       float scale,
       glm::vec2 translate,
       UiDynamicSprite&& text);
 
-  UiTextLabel(UiTextLabel&& other) noexcept;
+  UiTextLabelBase(UiTextLabelBase&& other) noexcept;
 
-  UiTextLabel(const UiTextLabel& other) = delete;
+  UiTextLabelBase(const UiTextLabelBase& other) = delete;
 
-  UiTextLabel& operator=(UiTextLabel&& other) = delete;
-  UiTextLabel& operator=(const UiTextLabel& other) = delete;
+  UiTextLabelBase& operator=(UiTextLabelBase&& other) = delete;
+  UiTextLabelBase& operator=(const UiTextLabelBase& other) = delete;
 
-  void Render();
+  // implemented by Derived
+//  void Render();
 
-  void RenderPicking();
+  // implemented by Derived
+//  void RenderPicking();
 
   void Press() override;
 
@@ -114,17 +116,66 @@ class UiTextLabel final : public UiBase {
     return translate_;
   }
 
+ protected:
+  UiDynamicSprite text_;
+  TextRenderer& text_renderer_;
+  float scale_ = 1.0f;
+  glm::vec2 translate_ = glm::vec2{0.0f};
+};
+
+class UiTextLabel final : public UiTextLabelBase {
+ public:
+  UiTextLabel(
+      TextRenderer& text_renderer,
+      float scale,
+      glm::vec2 translate,
+      UiDynamicSprite&& text);
+
+  UiTextLabel(UiTextLabel&& other) noexcept;
+
+  UiTextLabel(const UiTextLabel& other) = delete;
+
+  UiTextLabel& operator=(UiTextLabel&& other) = delete;
+  UiTextLabel& operator=(const UiTextLabel& other) = delete;
+
+  void Render();
+
+  void RenderPicking();
+
   void SetText(std::string_view label) {
     label_ = label;
   }
 
  private:
-  UiDynamicSprite text_;
-
-  TextRenderer& text_renderer_;
   std::string label_;
-  float scale_ = 1.0f;
-  glm::vec2 translate_ = glm::vec2{0.0f};
+};
+
+class UiTextLabelId final : public UiTextLabelBase {
+ public:
+  UiTextLabelId(
+      TextRenderer& text_renderer,
+      float scale,
+      glm::vec2 translate,
+      UiDynamicSprite&& text,
+      data::TextId text_id);
+
+  UiTextLabelId(UiTextLabelId&& other) noexcept;
+
+  UiTextLabelId(const UiTextLabelId& other) = delete;
+
+  UiTextLabelId& operator=(UiTextLabelId&& other) = delete;
+  UiTextLabelId& operator=(const UiTextLabelId& other) = delete;
+
+  void Render();
+
+  void RenderPicking();
+
+  void SetText(data::TextId text_id) {
+    text_id_ = text_id;
+  }
+
+ private:
+  data::TextId text_id_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UITEXT_H_
