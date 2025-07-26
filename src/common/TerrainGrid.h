@@ -2,6 +2,7 @@
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_TERRAINGRID_H_
 
 #include <array>
+#include <set>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -12,140 +13,89 @@
 
 /// similar to ArbitraryGraph, but for terrain ui-slots
 
+// no Target {vertex, edge, face} state
+// no Press {edit, select} state
 class TerrainGrid final : public IGraph {
  public:
+  // select modes (Shift-Ctrl modifiers):
+  // - by click - press : produces separate points
+  // - circle area - press / hold : produces std::vector<GLuint> on each update
+  // - square area - hold : produces std::vector<GLuint>
+  enum class SelectMode {
+    kCircle,
+    kSingle,
+    kSquare
+  };
+
   TerrainGrid(UiSharedResources& ui_shared_resources);
 
-  //TODO:
-  void Press(GLuint id) {
-    Select(id);
-  }
-
-  void Select(GLuint vertex_id);
-
-  void SelectVertex(GLuint vertex_id);
-
-  void SelectEdge(GLuint vertex_id);
-
-  void SelectFace(GLuint vertex_id);
-
-  /// emplace back
   void CreateGraph() override;
 
-  /// move instances_[slot_id] data to the end, as well as
-  /// modify all offsets and edge vertices id (ebo buffer data)
   void SelectGraph(int slot_id) override;
 
-  /// remove instances_[slot_id] from all buffers, as well as
-  /// modify all offsets and edge vertices id (ebo buffer data)
   void RemoveGraph(int slot_id) override;
+
+  void Render(glm::vec2 mouse_pos) override;
+
+  void UpdateVertexBuffer();
+
+  // vec2 position -> GLuint point
+  std::set<GLuint> ProjectCursorOnGridRadius(glm::vec2 mouse_pos);
+  std::set<GLuint> CursorOnGridRadius(GLuint point);
+
+  GLuint ProjectCursorOnGrid(glm::vec2 mouse_pos);
+
+  std::set<GLuint> FindSinglePath(glm::vec2 pos1, glm::vec2 pos2);
+
+  void Press(glm::vec2 mouse_pos,
+             bool shift_pressed, bool ctrl_pressed);
+
+  void Release() override;
+
+  void Select(glm::vec2 mouse_pos);
+
+  void Select(GLuint id);
+
+  SelectMode FlipSelectMode();
+
+  [[nodiscard]] int GetSize() const noexcept override;
 
   /// -1 in case of non-selected
   [[nodiscard]] int GetSlotId() const noexcept override {
     return selected_slot_id_;
   }
 
-  [[nodiscard]] int GetSize() const noexcept override {
-    return instances_.size();
-  }
-
   BaseInstanceData* GetBaseInstanceData(int id) override {
     return &instances_[id];
   };
 
-  void FlipSelectMode();
+  const FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) const override {
+    return &instances_[instance_id].name;
+  }
 
-  void Render() override;
+  FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) override {
+    return &instances_[instance_id].name;
+  }
 
-  static constexpr size_t gMaxLayers = 100;
+  static constexpr size_t gMaxLayers = 10;
+  static constexpr int gRadius = 10;
 
  private:
-  enum class Target {
-    kVertices,
-    kEdges,
-    kFaces
-  };
   struct InstanceData : public IGraph::BaseInstanceData {
-    std::array<float, 1024 * 1024> heights;
-//    Texture tex_f_hmap_;
-    //TODO: TextureF?
+    glm::vec3 scale = glm::vec3{1.0f};
+    glm::vec3 rotate = glm::vec3{0.0f};
+    glm::vec3 translate = glm::vec3{0.0f};
+    bool do_tiling = false;
+
+    // original size 1024 by 1024, so we could edit after saving
+    std::array<uint8_t, 1024 * 1024> heights;
+    Texture hmap; // TODO: class_TextureF
   };
 
-  void EditPoint(GLuint vertex_id);
-  void EditEdgePoint(GLuint vertex_id);
+  void Init();
 
-  // wrt slots, so at creation we push_back, at remove we remove & decrement
-  // instances_[slot_id] and NOT instances_[instance_id]
-  // so the dependency is: graph_id == instances_[slot_id]
-  std::vector<InstanceData> instances_;
+  void DeInit();
 
-  int selected_slot_id_{-1};
-
-  std::vector<GLuint> selected_ids_;
-
-  Target target_;
-
-  UiSharedResources& ui_shared_resources_;
-};
-
-class TerrainGrid {
- public:
-  // no Target {vertex, edge, face} state
-  // no Press {edit, select} state
-
-  // select modes (Shift-Ctrl modifiers):
-  // - by click - press : produces separate points
-  // - circle area - press / hold : produces std::vector<GLuint> on each update
-  // - square area - hold : produces std::vector<GLuint>
-  enum class SelectMode {
-    kSingle,
-    kCircle,
-    kSquare
-  };
-
-  void Render(glm::vec2 mouse_pos) {
-    if (pressed_) {
-      Select(mouse_pos, true)
-    }
-    //TODO: render
-  }
-
-  void Press(glm::vec2 mouse_pos) {
-    pressed_ = true;
-    if (shift_pressed) {
-      if (select_mode == kCircle) {
-        std::set<GLuint> new_vertices;
-        // :=:=:=:=:=:
-        new_vertices = FindCiclePath(last_mouse_pos_, mouse_pos);
-      } else {
-        // ._._._._._.
-        new_vertices = FindSinglePath(last_mouse_pos_, mouse_pos);
-      }
-      selected_vertices_ = std::unite(selected_vertices_, new_vertices);
-    } else if (!ctrl_pressed) {
-      selected_vertices_.clear();
-    }
-    GLuint vertex_id = ProjectCursorOnGrid(mouse_pos);
-    if (select_mode == kClick) {
-      selected_vertices_.push_back(pressed_id);
-    } else if (select_mode == kCircle) {
-      auto new_vertices = ProjectCursorOnGridRadius(mouse_pos, radius);
-      selected_vertices_ = std::unite(selected_vertices_, new_vertices);
-    } else { // select_mode == kSquare
-      last_mouse_pos_ = mouse_pos;
-    }
-    UpdateVertexBuffer();
-  }
-
-  void Release() {
-    pressed_ = false;
-    if (select_mode == kSquare) {
-      auto new_vertices = picking_fbo.SelectSquare(last_mouse_pos_);
-      selected_vertices_ = std::unite(selected_vertices_, new_vertices);
-    }
-  }
-
- private:
   /// according to fbo picking id's (storing differs)
   /// (no copy, single instance -> std::set)
   std::set<GLuint> selected_vertices_;
@@ -168,9 +118,32 @@ class TerrainGrid {
   /// SELECT SECTION
   bool pressed_ = false;
 
-  glm:vec2 last_mouse_pos_;
+  //TODO: __fix code__
+
+  // last mouse pos - dynamic, updated each render frame
+  glm::vec2 last_mouse_pos_;
+  // update only at the beginning of shape draw
+  glm::vec2 square_last_mouse_pos_;
 
   SelectMode select_mode_;
+  // no Target {vertex, edge, face} - we have grid of points only
+
+  // -- ------ --- -- -- --- --- --- ---
+  // -- ------ --- -- -- --- --- --- ---
+
+  /*
+   * here we need:
+   * std::array data + int size
+   * std::move views on removing
+   * */
+  //TODO: can't use due to stack limitations (1Mb)
+//  std::array<InstanceData, gMaxLayers> instances_;
+  std::vector<InstanceData> instances_;
+  int instances_size_ = 0;
+
+
+  int selected_slot_id_{-1};
+  UiSharedResources& ui_shared_resources_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TERRAINGRID_H_

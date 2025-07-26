@@ -98,6 +98,7 @@ void IUiSlots::Press() {
 void IUiSlots::Release() {
   sl_data_.pressed_ = false;
   ui_event_handler_->Release();
+  graph_->Release();
 }
 
 void IUiSlots::UpdateTransform() {
@@ -123,7 +124,7 @@ void IUiSlots::RemoveGraph(GLuint id) {
 }
 
 void IUiSlots::RenderGraph() {
-  graph_->Render();
+  graph_->Render(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_);
 }
 
 int IUiSlots::GetSize() const noexcept {
@@ -468,7 +469,7 @@ bool UiSlotsModels::Press(int id) {
     if (graph_.GetSize() > 0) {
       std::cout << "graph removed " << removed_id << std::endl;
       graph_.RemoveGraph(removed_id);
-      sl_data_.UpdateRenderData(back_.GetTopBorder() - back_.GetBottomBorder(),
+      sl_data_.UpdateRenderData(slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
                                 graph_.GetSize());
     }
   } else {
@@ -641,7 +642,7 @@ UiSlotsTerrain::UiSlotsTerrain(
       graph_(ui_shared_resources),
       ui_edit_(
           {data::VboIdMain::kTerrainEditDesk, data::TextId::kNotYet},
-          2.0f,
+          4.0f,
           {{data::VboIdMain::kTerrainEditDeskPinBack, data::TextId::kNotYet, []() {}},
           {data::VboIdMain::kTerrainEditDeskPinPoint, data::TextId::kNotYet}},
           ui_shared_resources,
@@ -673,16 +674,16 @@ UiSlotsTerrain::UiSlotsTerrain(
       = back_.GetId();
   gUiComponents[flip_point_edge_sprite_.GetId() - details::kIdOffsetUi].parent_id_
       = back_.GetId();
-  gUiComponents[slot_name_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slot_config_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[toggle_slot_visible_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
   gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].parent_id_
       = back_.GetId();
+  gUiComponents[slot_name_.GetId() - details::kIdOffsetUi].parent_id_
+      = slot_back_.GetId();
+  gUiComponents[slot_config_.GetId() - details::kIdOffsetUi].parent_id_
+      = slot_back_.GetId();
+  gUiComponents[toggle_slot_visible_.GetId() - details::kIdOffsetUi].parent_id_
+      = slot_back_.GetId();
   gUiComponents[slot_color_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
+      = slot_back_.GetId();
   gUiComponents[slot_remove_.GetId() - details::kIdOffsetUi].parent_id_
       = slot_back_.GetId();
   gUiComponents[slot_selected_.GetId() - details::kIdOffsetUi].parent_id_
@@ -739,7 +740,7 @@ UiSlotsTerrain::UiSlotsTerrain(UiSlotsTerrain&& other) noexcept
 void UiSlotsTerrain::Render(glm::vec2 mouse_pos) {
   if (sl_data_.pressed_) {
     sl_data_.Set(mouse_pos, handler_,
-                 back_.GetTopBorder() - back_.GetBottomBorder(),
+                 slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
                  graph_.GetSize());
   }
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
@@ -770,6 +771,7 @@ void UiSlotsTerrain::Render(glm::vec2 mouse_pos) {
     slot_config_.Render();
     toggle_slot_visible_.Render();
     slot_color_.Render();
+//    std::cout << "offset for " << sl_data_.slot_height_ << std::endl;
     next_offset.y -= sl_data_.slot_height_;
   }
   next_offset = sl_data_.start_slot_translate_;
@@ -821,7 +823,7 @@ void UiSlotsTerrain::UpdateTransform(
   sl_data_.centre_ = (back_.GetTopBorder() + back_.GetBottomBorder()) / 2.0f;
   float related_pos = sl_data_.progress_ * sl_data_.length_ - sl_data_.length_ / 2.0f + sl_data_.centre_;
   sl_data_.Set({0.0f, related_pos}, handler_,
-               back_.GetTopBorder() - back_.GetBottomBorder(),
+               slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
                graph_.GetSize());
 }
 
@@ -885,7 +887,14 @@ void UiSlotsTerrain::RenderPicking() {
 
 bool UiSlotsTerrain::Press(int id) {
   std::cout << "Press()" << std::endl;
-  if (id == slot_back_.GetId()) {
+  if (id < details::kIdOffsetWater) {
+    std::cout << "Add point #" << id << std::endl;
+    std::cout << "Coordinates are: " << (id & 1023)
+              << " and " << (id >> 10) << std::endl;
+    //TODO: if water/other subtract maybe...
+    graph_.Press(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_, false, false);
+//    graph_.Select(id);
+  } else if (id == slot_back_.GetId()) {
     std::cout << "-- slot back (selected)" << std::endl;
     auto slot_id = sl_data_.GetSlotId(
         ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
@@ -898,7 +907,7 @@ bool UiSlotsTerrain::Press(int id) {
     if (graph_.GetSize() > 0) {
       std::cout << "graph removed " << removed_id << std::endl;
       graph_.RemoveGraph(removed_id);
-      sl_data_.UpdateRenderData(back_.GetTopBorder() - back_.GetBottomBorder(),
+      sl_data_.UpdateRenderData(slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
                                 graph_.GetSize());
     }
   } else if (id == slot_config_.GetId()) {
@@ -911,10 +920,10 @@ bool UiSlotsTerrain::Press(int id) {
 //    }
     if (id == create_.GetId()) {
       std::cout << "-- slot create (create)" << std::endl;
-      ui_edit_.Show();
+//      ui_edit_.Show();
       // instead of FocusOnSelected();
       sl_data_.Set(1.0f, handler_,
-                   back_.GetTopBorder() - back_.GetBottomBorder(),
+                   slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
                    graph_.GetSize());
     }
     return handled;
@@ -932,7 +941,7 @@ bool UiSlotsTerrain::Scroll(GLuint id, float yoffset) {
   float factor = 1.0f / std::max(graph_.GetSize() - sl_data_.kSlotsNum, 1);
   float progress = std::clamp(sl_data_.progress_ - normalized_yoffset * factor, 0.0f, 1.0f);
   sl_data_.Set(progress, handler_,
-               back_.GetTopBorder() - back_.GetBottomBorder(),
+               slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
                graph_.GetSize());
   return true;
 }
@@ -955,17 +964,17 @@ void UiSlotsTerrain::NextClickMode() {
       flip_point_edge_.SetStart(
           {glm::vec2{0.0f}, 1.0f, 0.0f});
       flip_point_edge_.SetEnd(
-          {glm::vec2{0.0f}, 1.0f, glm::pi<float>() / 3.0f});
+          {glm::vec2{0.0f}, 1.0f, 2.0f * glm::pi<float>() / 3.0f});
       break;
     case EditState::kEdges:
       flip_point_edge_.SetStart(
-          {glm::vec2{0.0f}, 1.0f, glm::pi<float>() / 3.0f});
-      flip_point_edge_.SetEnd(
           {glm::vec2{0.0f}, 1.0f, 2.0f * glm::pi<float>() / 3.0f});
+      flip_point_edge_.SetEnd(
+          {glm::vec2{0.0f}, 1.0f, 4.0f * glm::pi<float>() / 3.0f});
       break;
     case EditState::kFaces:
       flip_point_edge_.SetStart(
-          {glm::vec2{0.0f}, 1.0f, 2.0f * glm::pi<float>() / 3.0f});
+          {glm::vec2{0.0f}, 1.0f, 4.0f * glm::pi<float>() / 3.0f});
       flip_point_edge_.SetEnd(
           {glm::vec2{0.0f}, 1.0f, glm::two_pi<float>()});
       break;

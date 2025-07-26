@@ -17,6 +17,7 @@ void UiTerrainMode::ScrollCallback(
       pressed_id != static_cast<GLuint>(-1)) {
     terrain->slider_falloff_.Scroll(pressed_id, yoffset);
     terrain->slider_size_.Scroll(pressed_id, yoffset);
+    terrain->slots_.Scroll(pressed_id, yoffset);
     global_data->windows->Scroll(pressed_id, yoffset);
     return;
   }
@@ -139,10 +140,10 @@ UiTerrainMode::UiTerrainMode(
           &btn_update_, &slider_size_,
           &slider_falloff_, &toggle_flatten_, &btn_bake_, &slots_}),
       ui_terrain_generator_(
-          {data::VboIdMain::kTerrainEditDesk, data::TextId::kNotYet},
+          {data::VboIdMain::kSpareText8, data::TextId::kNotYet},
           1.0f,
-          {{data::VboIdMain::kTerrainEditDeskPinBack, data::TextId::kNotYet, []() {}},
-           {data::VboIdMain::kTerrainEditDeskPinPoint, data::TextId::kNotYet}},
+          {{data::VboIdMain::kSpareText9, data::TextId::kNotYet, []() {}},
+           {data::VboIdMain::kSpareText10, data::TextId::kNotYet}},
           ui_shared_resources_,
           window_queue,
           cur_tile) {}
@@ -198,6 +199,8 @@ void UiTerrainMode::Render() {
 
   ui_shared_resources_.tex_ui_.Bind();
   window_queue_.Render();
+
+  slots_.RenderGraph();
 }
 
 

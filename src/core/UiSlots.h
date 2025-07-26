@@ -4,6 +4,9 @@
 #include "Ui.h"
 #include "UiComplex.h"
 
+#include "../common/ArbitraryGraph.h"
+#include "../common/TerrainGrid.h"
+
 struct UiSlotsSliderData {
   float progress_{0.0f};
   bool pressed_{false};
@@ -169,8 +172,7 @@ class UiSlotsTerrain final : public IUiSlots {
 
   /// store here, pointers to base class, see explanation at base class
 
-  //TODO: TerrainGrid instead
-  ArbitraryGraph graph_; // IGraph* for base
+  TerrainGrid graph_; // IGraph* for base
 
   UiEditTerrain ui_edit_; // IUiEdit* for base
 

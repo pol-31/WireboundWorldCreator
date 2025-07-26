@@ -2177,6 +2177,9 @@ data::TextId UiEditTerrain::Hover(int id) {
 }
 
 bool UiEditTerrain::Press(int id) {
+  if (id == sprite_.GetId() || id == pin_.GetId()) {
+    return true;
+  }
   if (!selected_noise_) {
     if (id == accept_.GetId()) {
       std::cout << "GENERATE TERRAIN" << std::endl;
@@ -2208,13 +2211,10 @@ bool UiEditTerrain::Press(int id) {
     } else if (id == noise8_.config_.GetId()) {
       selected_noise_ = &noise_fmb_perlin_warp;
       return true;
-    } else if (id == sprite_.GetId()) {
-      return true;
     }
     return ui_event_handler_.Press(id);
-  } else {
-    return selected_noise_->Press(id);
   }
+  return selected_noise_->Press(id);
 }
 
 void UiEditTerrain::Release() {
@@ -2242,9 +2242,7 @@ bool UiEditTerrain::Render() {
     return stop_show;
   }
   if (!selected_noise_) {
-
    ui_shared_resources_.static_sprite_shader_.Bind();
-
    accept_.Render();
    name_back_.Render();
    color_palette_.Render(mouse_pos);
@@ -2282,7 +2280,7 @@ bool UiEditTerrain::Render() {
 }
 
 void UiEditTerrain::RenderPicking() {
-  Base::RenderPickingBack();
+  RenderPickingBack();
   if (!selected_noise_) {
     ui_shared_resources_.static_sprite_picking_shader_.Bind();
 
@@ -2318,6 +2316,7 @@ void UiEditTerrain::RenderPicking() {
 
 void UiEditTerrain::UpdateTransform(
     float x_translate, float y_translate, float scale) {
+  std::cout << "UPDATE" << std::endl;
   sprite_.UpdateTransform();
   pin_.UpdateTransform();
 

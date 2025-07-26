@@ -86,7 +86,7 @@ void TerrainRenderer::Init() {
   glBindVertexArray(vao_);
 
   GLuint vbos[2];
-  glGenBuffers(1, vbos);
+  glGenBuffers(2, vbos);
   vbo_quad_ = vbos[0];
   vbo_ids_ = vbos[1];
   glBindBuffer(GL_ARRAY_BUFFER, vbo_quad_);
@@ -98,7 +98,7 @@ void TerrainRenderer::Init() {
       1.0f, 1.0f
   };
 
-  glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), quad, GL_STATIC_DRAW);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
   glVertexAttribDivisor(0, 0);
@@ -111,7 +111,7 @@ void TerrainRenderer::Init() {
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLuint) * patch_grid_.size(), patch_grid_.data(), GL_STATIC_DRAW);
   glEnableVertexAttribArray(1);
   glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
-  glVertexAttribDivisor(1, 1); // <-- per-instance!
+  glVertexAttribDivisor(1, 1);
 
   glBindVertexArray(0);
 
