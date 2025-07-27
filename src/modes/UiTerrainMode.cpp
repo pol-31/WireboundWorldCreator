@@ -66,8 +66,7 @@ UiTerrainMode::UiTerrainMode(
           {data::VboIdMain::kTerrainTerrainMode, data::TextId::kNotYet}),
       btn_update_(data::VboIdMain::kTerrainUpdate, data::TextId::kMenuPlacement,
           [this]() {
-                    std::cout << "btn_update" << std::endl;
-                    ui_terrain_generator_.Bake();
+                    std::cout << "btn_update?" << std::endl;
           }),
       sprite_flatten_(data::VboIdMain::kTerrainFlatten, data::TextId::kNotYet),
       toggle_flatten_(

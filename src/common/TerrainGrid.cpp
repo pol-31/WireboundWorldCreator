@@ -66,17 +66,33 @@ void TerrainGrid::Render(glm::vec2 mouse_pos) {
   glBindVertexArray(vao_);
   glPointSize(5.0f);
   glDrawArrays(GL_POINTS, 0, selected_vertices_.size());
-  //TODO: render points OR edges OR faces
+
+  if (pressed_) {
+    //TODO: draw newborn points
+  }
+  if (select_square_buffer_[0] != select_square_buffer_[2]) {
+    ui_shared_resources_.select_square_shader_.Bind();
+    glBindVertexArray(square_vao_);
+    glLineWidth(1.0f);
+    glDrawArrays(GL_LINE_STRIP, 0, select_square_buffer_.size());
+  }
 }
 
 void TerrainGrid::Init() {
+  select_square_buffer_.fill(glm::vec2{0.0f});
   instances_.resize(gMaxLayers);
 
-  glGenVertexArrays(1, &vao_);
-  glGenBuffers(1, &vbo_);
+  GLuint vao[2];
+  GLuint vbo[2];
+  glGenVertexArrays(2, vao);
+  glGenBuffers(2, vbo);
+
+  vao_ = vao[0];
+  square_vao_ = vao[1];
+  vbo_ = vbo[0];
+  square_vbo_ = vbo[1];
 
   glBindVertexArray(vao_);
-
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
   // max selected: 1024 by 1024
   glBufferData(GL_ARRAY_BUFFER, 1024 * 1024 * sizeof(GLuint),
@@ -84,12 +100,22 @@ void TerrainGrid::Init() {
   glEnableVertexAttribArray(0);
   glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), (void*)0);
 
+  glBindVertexArray(square_vao_);
+  glBindBuffer(GL_ARRAY_BUFFER, square_vbo_);
+  glBufferData(GL_ARRAY_BUFFER, select_square_buffer_.size() * sizeof(glm::vec2),
+               select_square_buffer_.data(), GL_DYNAMIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+
   glBindVertexArray(0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void TerrainGrid::DeInit() {
-  glDeleteBuffers(1, &vbo_);
-  glDeleteVertexArrays(1, &vao_);
+  GLuint vao[] = {vao_, square_vao_};
+  GLuint vbo[] = {vbo_, square_vbo_};
+  glDeleteVertexArrays(2, vbo);
+  glDeleteBuffers(2, vao);
 }
 
 void TerrainGrid::UpdateVertexBuffer() {
@@ -97,39 +123,34 @@ void TerrainGrid::UpdateVertexBuffer() {
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
   glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(GLuint),
                   vertices.data());
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-// vec2 position -> GLuint point
-std::set<GLuint> TerrainGrid::ProjectCursorOnGridRadius(
-    glm::vec2 mouse_pos) {
-  std::set<GLuint> vertices_total;
-  //TODO: beware with mouse_pos values (0-1023?)
-  for (int dy = -gRadius; dy <= gRadius; ++dy) {
-    for (int dx = -gRadius; dx <= gRadius; ++dx) {
-      int xi = static_cast<int>(mouse_pos.x) + dx;
-      int yi = static_cast<int>(mouse_pos.y) + dy;
-
-      // Check if still inside circle
-      if (dx * dx + dy * dy > gRadius * gRadius) {
-        continue;
-      }
-
-      // Clamp bounds to grid
-      if (xi < 0 || xi >= 1024 || yi < 0 || yi >= 1024) {
-        continue;
-      }
-
-      // (xi, yi) is inside the circle
-      GLuint point = ProjectCursorOnGrid({xi, yi});
-      vertices_total.insert(point);
-    }
-  }
-  return  vertices_total;
+void TerrainGrid::UpdateSquareBuffer(glm::vec2 mouse_pos) {
+  select_square_buffer_[0] =
+      {(mouse_check_point_.x / gWindowWidth) * 2.0f - 1.0f,
+       (1.0f - mouse_check_point_.y / gWindowHeight) * 2.0f - 1.0f};
+  select_square_buffer_[1] =
+      {(mouse_check_point_.x / gWindowWidth) * 2.0f - 1.0f,
+       (1.0f - mouse_pos.y / gWindowHeight) * 2.0f - 1.0f};
+  select_square_buffer_[2] =
+      {(mouse_pos.x / gWindowWidth) * 2.0f - 1.0f,
+       (1.0f - mouse_pos.y / gWindowHeight) * 2.0f - 1.0f};
+  select_square_buffer_[3] =
+      {(mouse_pos.x / gWindowWidth) * 2.0f - 1.0f,
+       (1.0f - mouse_check_point_.y / gWindowHeight) * 2.0f - 1.0f};
+  std::cout << "width " << (select_square_buffer_[0].x - select_square_buffer_[2].x)
+            << ", height " << (select_square_buffer_[0].y - select_square_buffer_[2].y)
+            << std::endl;
+  glBindBuffer(GL_ARRAY_BUFFER, square_vbo_);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2) * 4,
+                  select_square_buffer_.data());
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 std::set<GLuint> TerrainGrid::CursorOnGridRadius(GLuint point) {
   std::set<GLuint> vertices_total;
-  int x = point & 1024;
+  int x = point & 1023;
   int y =  point >> 10;
   //TODO: beware with mouse_pos values (0-1023?)
   for (int dy = -gRadius; dy <= gRadius; ++dy) {
@@ -148,10 +169,11 @@ std::set<GLuint> TerrainGrid::CursorOnGridRadius(GLuint point) {
       }
 
       // (xi, yi) is inside the circle
-      GLuint point = xi + yi * 1024;
+      GLuint point = xi + (yi << 10);
       vertices_total.insert(point);
     }
   }
+  std::cout << "total " << vertices_total.size() << std::endl;
   return  vertices_total;
 }
 
@@ -167,33 +189,55 @@ std::set<GLuint> TerrainGrid::FindSinglePath(
   GLuint start = ui_shared_resources_.global_glfw_callback_data_.
                  picking_fbo->GetIdByMousePos(pos1);
   GLuint end = ui_shared_resources_.global_glfw_callback_data_.
-               picking_fbo->GetIdByMousePos(pos1);
-
-  //
+               picking_fbo->GetIdByMousePos(pos2);
+  GLuint left = std::min(start & 1023, end & 1023);
+  GLuint right = std::max(start & 1023, end & 1023);
+  GLuint bottom = std::min(start, end) >> 10;
+  GLuint top = std::max(start, end) >> 10;
+  for (int i = left; i < right; ++i) {
+    vertices_total.insert((bottom << 10) + i);
+  }
+  // Y lower, X higher
+  GLuint hor_dir = right;
+  if (start < end) {
+    if ((start & 1023) > (end & 1023)) {
+      hor_dir = left;
+    }
+  } else {
+    if ((start & 1023) < (end & 1023)) {
+      hor_dir = left;
+    }
+  }
+  for (int i = bottom; i < top; ++i) {
+    vertices_total.insert((i << 10) + hor_dir);
+  }
   return vertices_total;
 }
 
 void TerrainGrid::Press(glm::vec2 mouse_pos,
            bool shift_pressed, bool ctrl_pressed) {
   pressed_ = true;
-  return;
   if (shift_pressed) {
-    std::set<GLuint> new_vertices;
-    auto path = FindSinglePath(last_mouse_pos_, mouse_pos);
+    auto path = FindSinglePath(mouse_check_point_, mouse_pos);
     if (select_mode_ == SelectMode::kCircle) {
       // :=:=:=:=:=:
       std::set<GLuint> vertices_total;
       for (auto point : path) {
         auto vertices_new = CursorOnGridRadius(point);
-        new_vertices.insert(new_vertices.begin(), new_vertices.end());
+        selected_vertices_.insert(vertices_new.begin(), vertices_new.end());
       }
-    } else { // kSingle or kSquare
+    } else if (select_mode_ == SelectMode::kSingle) { // kSingle or kSquare
       // ._._._._._.
-      new_vertices = path;
+      selected_vertices_.insert(path.begin(), path.end());
+    } else {
+      FormSquare(mouse_pos);
+      UpdateVertexBuffer();
+      return;
+      // same as on release
     }
-    selected_vertices_.insert(new_vertices.begin(), new_vertices.end());
-  } else if (!ctrl_pressed) {
-    square_last_mouse_pos_ = mouse_pos;
+  } else if (ctrl_pressed) {
+    /// nothing
+  } else {
     selected_vertices_.clear();
   }
   GLuint vertex_id = ProjectCursorOnGrid(mouse_pos);
@@ -202,37 +246,101 @@ void TerrainGrid::Press(glm::vec2 mouse_pos,
   } else if (select_mode_ == SelectMode::kCircle) {
     auto new_vertices = CursorOnGridRadius(vertex_id);
     selected_vertices_.insert(new_vertices.begin(), new_vertices.end());
-  } else { // select_mode == kSquare
-    last_mouse_pos_ = mouse_pos;
   }
+  mouse_check_point_ = mouse_pos;
   UpdateVertexBuffer();
 }
 
+bool TerrainGrid::is_inside_convex_polygon(const glm::vec2& p) {
+  size_t n = select_square_buffer_.size();
+  for (size_t i = 0; i < n; ++i) {
+    const glm::vec2& a = select_square_buffer_[i];
+    const glm::vec2& b = select_square_buffer_[(i + 1) % n];
+    float cross = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+    if (cross < 0) // If using clockwise winding, use >0 instead
+      return false;
+  }
+  return true;
+}
+
+void TerrainGrid::get_vertices_inside_convex_shape() {
+  // Bounding box for performance
+  float min_x = 1024;
+  float max_x = 0;
+  float min_y = 1024;
+  float max_y = 0;
+
+  std::array<glm::uvec2, 4> polygon;
+  for (int i = 0; i < select_square_buffer_.size(); ++i) {
+    auto id = ui_shared_resources_.global_glfw_callback_data_
+                  .picking_fbo->GetIdByMousePos(select_square_buffer_[i]);
+//    polygon[i] = id;../idk;
+  }
+//  for (auto point : select_square_buffer_) {
+//    polygon
+//  }
+
+  for (const auto& p : select_square_buffer_) {
+    min_x = std::min(min_x, p.x);
+    max_x = std::max(max_x, p.x);
+    min_y = std::min(min_y, p.y);
+    max_y = std::max(max_y, p.y);
+  }
+  std::terminate();
+  //TODO: but we have mouse_pos, not ids...
+
+  for (int y = std::max(0, (int)std::floor(min_y));
+       y <= std::min(1023, (int)std::ceil(max_y)); ++y) {
+    for (int x = std::max(0, (int)std::floor(min_x));
+         x <= std::min(1023, (int)std::ceil(max_x)); ++x) {
+      glm::vec2 p = { float(x) + 0.5f, float(y) + 0.5f }; // center of the grid cell
+      if (is_inside_convex_polygon(p)) {
+        selected_vertices_.insert((y << 10) + x);
+      }
+    }
+  }
+}
+
+void TerrainGrid::FormSquare(glm::vec2 mouse_pos) {
+  GLuint start = ui_shared_resources_.global_glfw_callback_data_.
+                 picking_fbo->GetIdByMousePos(mouse_check_point_);
+  GLuint end = ui_shared_resources_.global_glfw_callback_data_.
+               picking_fbo->GetIdByMousePos(mouse_pos);
+  GLuint left = std::min(start & 1023, end & 1023);
+  GLuint right = std::max(start & 1023, end & 1023);
+  GLuint bottom = std::min(start, end) >> 10;
+  GLuint top = std::max(start, end) >> 10;
+  for (int i = left; i < right; ++i) {
+    for (int j = bottom; j < top; ++j) {
+      selected_vertices_.insert((j << 10) + i);
+    }
+  }
+//  get_vertices_inside_convex_shape();
+  select_square_buffer_.fill(glm::vec2{0.0f});
+  UpdateVertexBuffer();
+  mouse_check_point_ = mouse_pos;
+}
+
 void TerrainGrid::Release() {
+  if (!pressed_) {
+    return;
+  }
   pressed_ = false;
   if (select_mode_ == SelectMode::kSquare) {
-    auto new_vertices =
-        ui_shared_resources_.global_glfw_callback_data_.
-        picking_fbo->SelectSquare(square_last_mouse_pos_, last_mouse_pos_);
-    selected_vertices_.insert(new_vertices.begin(), new_vertices.end());
+    FormSquare(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_);
   }
 }
 
 void TerrainGrid::Select(glm::vec2 mouse_pos) {
-  auto new_vertices = ProjectCursorOnGridRadius(mouse_pos);
-  selected_vertices_.insert(new_vertices.begin(), new_vertices.end());
-  UpdateVertexBuffer();
-  std::cerr << "size " << selected_vertices_.size() << std::endl;
-  return;
-  // shift / ctrl don't matter
+  // shift and ctrl doesn't matter
+  GLuint vertex_id = ProjectCursorOnGrid(mouse_pos);
   if (select_mode_ == SelectMode::kSingle) {
-    GLuint vertex_id = ProjectCursorOnGrid(mouse_pos);
+    std::cout << selected_vertices_.size() << std::endl;
     selected_vertices_.insert(vertex_id);
   } else if (select_mode_ == SelectMode::kSquare) {
-    square_last_mouse_pos_ = mouse_pos;
-    //TODO: only DrawSquare changes its shape
+    UpdateSquareBuffer(mouse_pos);
   } else { // SelectMode::kCircle
-    auto new_vertices = ProjectCursorOnGridRadius(mouse_pos);
+    auto new_vertices = CursorOnGridRadius(vertex_id);
     selected_vertices_.insert(new_vertices.begin(), new_vertices.end());
   }
   UpdateVertexBuffer();
@@ -244,6 +352,16 @@ void TerrainGrid::Select(GLuint id) {
   UpdateVertexBuffer();
   std::cerr << "size " << selected_vertices_.size() << std::endl;
 }
+
+/**
+ *
+let's cheat and select regardless of mvp:
+- kSquare: start - end (Decardian)
+- kSingle: single point / trivial path
+- kCircle: around the single point
+BUT(!): draw-square/circle should be shown projected.
+__extra: out text with vertex id, x, y (use kSpareTextN)
+ * */
 
 TerrainGrid::SelectMode TerrainGrid::FlipSelectMode() {
   switch (select_mode_) {
@@ -257,7 +375,6 @@ TerrainGrid::SelectMode TerrainGrid::FlipSelectMode() {
       select_mode_ = SelectMode::kCircle;
       break;
   }
-  selected_vertices_.clear();
   return select_mode_;
 }
 

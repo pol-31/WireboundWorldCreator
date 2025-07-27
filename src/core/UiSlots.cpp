@@ -892,7 +892,10 @@ bool UiSlotsTerrain::Press(int id) {
     std::cout << "Coordinates are: " << (id & 1023)
               << " and " << (id >> 10) << std::endl;
     //TODO: if water/other subtract maybe...
-    graph_.Press(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_, false, false);
+    bool shift_pressed = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT);
+    bool ctrl_pressed = glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT);
+    graph_.Press(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_,
+                 shift_pressed, ctrl_pressed);
 //    graph_.Select(id);
   } else if (id == slot_back_.GetId()) {
     std::cout << "-- slot back (selected)" << std::endl;
@@ -958,6 +961,7 @@ void UiSlotsTerrain::NextClickMode() {
       edit_state_ = EditState::kVertices;
       break;
   }
+  graph_.FlipSelectMode(); // TODO: temp
   flip_point_edge_.StopAnimation();
   switch (edit_state_) {
     case EditState::kVertices:

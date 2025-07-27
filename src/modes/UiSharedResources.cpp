@@ -24,8 +24,10 @@ UiSharedResources::UiSharedResources(
       static_sprite_progress_shader_(paths.shader_sprite_progress_vert,
                                      paths.shader_sprite_frag),
       arbitrary_graph_shader_(paths.shader_graph_vert,
-                              paths.shader_graph_frag,
-                              paths.shader_graph_geom),
+                              paths.shader_graph_frag/*,
+                              paths.shader_graph_geom*/),
+      select_square_shader_("../shaders/SelectSquare.vert",
+                            "../shaders/SelectSquare.frag"),
       global_glfw_callback_data_(global_glfw_callback_data) {
   Init();
 }

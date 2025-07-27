@@ -2,6 +2,7 @@
 #define WIREBOUNDWORLDCREATOR_SRC_PICKINGFRAMEBFFER_H_
 
 #include <stdexcept>
+#include <set>
 
 #include <glad/glad.h>
 
@@ -37,6 +38,21 @@ class PickingFramebuffer {
                  GL_RED_INTEGER, GL_UNSIGNED_INT, &id);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     return id;
+  }
+
+  [[nodiscard]] std::set<GLuint> SelectSquare(
+      glm::vec2 bot_left, glm::vec2 top_right) {
+    int width = std::abs(top_right.x - bot_left.x);
+    int height = std::abs(top_right.y - bot_left.y);
+    std::vector<GLuint> vertices(width * height);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo_);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glReadPixels(static_cast<int>(bot_left.x),
+                 gWindowHeight - static_cast<int>(bot_left.y), width, height,
+                 GL_RED_INTEGER, GL_UNSIGNED_INT, vertices.data());
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    std::set<GLuint> vertices_set{vertices.begin(), vertices.end()};
+    return vertices_set;
   }
 
   void Bind() const {

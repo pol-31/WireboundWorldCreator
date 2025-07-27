@@ -39,8 +39,6 @@ class TerrainGrid final : public IGraph {
 
   void UpdateVertexBuffer();
 
-  // vec2 position -> GLuint point
-  std::set<GLuint> ProjectCursorOnGridRadius(glm::vec2 mouse_pos);
   std::set<GLuint> CursorOnGridRadius(GLuint point);
 
   GLuint ProjectCursorOnGrid(glm::vec2 mouse_pos);
@@ -92,9 +90,13 @@ class TerrainGrid final : public IGraph {
     Texture hmap; // TODO: class_TextureF
   };
 
+  void FormSquare(glm::vec2 mouse_pos);
+
   void Init();
 
   void DeInit();
+
+  void UpdateSquareBuffer(glm::vec2 mouse_pos);
 
   /// according to fbo picking id's (storing differs)
   /// (no copy, single instance -> std::set)
@@ -115,15 +117,22 @@ class TerrainGrid final : public IGraph {
   GLuint vao_;
   GLuint vbo_;
 
+  GLuint square_vao_;
+  GLuint square_vbo_;
+
+  bool is_inside_convex_polygon(const glm::vec2& p);
+  void get_vertices_inside_convex_shape();
+
+  std::array<glm::vec2, 4> select_square_buffer_;
+
   /// SELECT SECTION
   bool pressed_ = false;
 
   //TODO: __fix code__
 
-  // last mouse pos - dynamic, updated each render frame
-  glm::vec2 last_mouse_pos_;
   // update only at the beginning of shape draw
-  glm::vec2 square_last_mouse_pos_;
+  // like bottom-left for kSquare
+  glm::vec2 mouse_check_point_ = glm::vec2{0.0f};
 
   SelectMode select_mode_;
   // no Target {vertex, edge, face} - we have grid of points only

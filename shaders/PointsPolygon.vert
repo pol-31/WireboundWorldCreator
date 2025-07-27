@@ -36,7 +36,7 @@ void main() {
 
 
     vec4 final_pos = vec4(pos.x, 0.0f, pos.y, 1.0f);
-    final_pos.y = texture(tex_displacement, tc).r * dmap_depth;
+    final_pos.y = texture(tex_displacement, tc).r * dmap_depth / 8.0f + 3.7f;
     gl_Position = camera.proj * camera.view * transform * final_pos;
 
 //    float t = float(in_vertex_id == selected_id_1 ||

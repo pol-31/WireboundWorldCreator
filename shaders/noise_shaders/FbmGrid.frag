@@ -1,7 +1,19 @@
 #version 460 core
 out float fragColor;
 
-layout (location = 1) uniform vec2 resolution;
+layout (location = 0) uniform vec2 resolution;
+
+layout (location = 1) uniform float scale_x;
+layout (location = 2) uniform float scale_y;
+layout (location = 3) uniform int octaves;
+layout (location = 4) uniform float shift;
+//layout (location = 5) uniform float time_shift;
+layout (location = 6) uniform float gain;
+layout (location = 7) uniform float lacunarity;
+//layout (location = 8) uniform vec3 translate;
+layout (location = 9) uniform float warp_strength;
+layout (location = 10) uniform float octave_factor;
+layout (location = 11) uniform float seed;
 
 
 uint ihash1D(uint q)
@@ -182,7 +194,9 @@ vec2 multiNoise(vec4 pos, vec4 scale, float time, float seed) {
 // @param octaveFactor The octave intensity factor, the lower the more pronounced the lower octaves will be, range: [-1, 1], default: 0.0
 // @param seed Seed to randomize result, range: [0, inf], default: 0.0
 // @return value of the noise, range: [0, inf]
-float fbmGrid(vec2 pos, vec2 scale, int octaves, float shift, float timeShift, float gain, float lacunarity, vec3 translate, float warpStrength, float octaveFactor, float seed)
+float fbmGrid(vec2 pos, vec2 scale, int octaves, float shift, float timeShift,
+              float gain, float lacunarity, vec3 translate, float warpStrength,
+              float octaveFactor, float seed)
 {
     float amplitude = gain;
     float time = timeShift;
@@ -219,7 +233,10 @@ float fbmGrid(vec2 pos, vec2 scale, int octaves, float shift, float timeShift, f
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
 
-    float height = fbmGrid(uv, vec2(4.0f, 4.0f), 4, 100.0f, 0.0f, 0.5f, 5, vec3(0.5, -0.25, 0.15), 0.5f, 0.0f, 0.0f);
+//    float height = fbmGrid(uv, vec2(4.0f, 4.0f), 4, 100.0f, time_shift, 0.5f, 5, translate, 0.5f, 0.0f, 0.0f);
+    float height = fbmGrid(uv, vec2(scale_x, sacle_scale_y), octaves, shift, 0.0f,
+                           gain, lacunarity, vec3(0.5, -0.25, 0.15),
+                           warp_strength, octave_factor, seed);
 
     fragColor = height;
 }

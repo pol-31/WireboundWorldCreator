@@ -106,7 +106,12 @@ class TerrainNoiseBase : public ITerrainNoise {
   std::array<UiTextLabelId*, gTextNum> texts_;
 
   UiEventHandler<gWidgetsNum> ui_event_handler_;
+  Shader shader_;
 };
+
+Texture GenAndSave(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name);
 
 class TerrainNoisePerlin final
     : public TerrainNoiseBase<
@@ -118,11 +123,18 @@ class TerrainNoisePerlin final
       2, 0, 2,
       static_cast<int>(data::VboIdMain::kTerrainNoisePerlinSeedIcon)
           - static_cast<int>(data::VboIdMain::kTerrainNoisePerlinScaleText)>;
+
   explicit TerrainNoisePerlin(TextRenderer& text_renderer, GLuint parent_id);
 
+  Texture Generate(
+      glm::vec2 resolution, std::vector<unsigned char>& buffer,
+      std::string_view tex_name);
+
  private:
-  UiSliderH2 slider_scale_;
-  UiTextLabelId text_scale_;
+  UiSliderH2 slider_scale_x_;
+  UiTextLabelId text_scale_x_;
+  // UiSliderH2 slider_scale_y_;
+  // UiTextLabelId text_scale_y_;
   UiSliderH2 slider_seed_;
   UiTextLabelId text_seed_;
 };
@@ -140,9 +152,15 @@ class TerrainNoiseCellular final
 
   explicit TerrainNoiseCellular(TextRenderer& text_renderer, GLuint parent_id);
 
+  Texture Generate(
+      glm::vec2 resolution, std::vector<unsigned char>& buffer,
+      std::string_view tex_name);
+
  private:
-  UiSliderH2 slider_scale_;
-  UiTextLabelId text_scale_;
+  UiSliderH2 slider_scale_x_;
+  UiTextLabelId text_scale_x_;
+  // UiSliderH2 slider_scale_y_;
+  // UiTextLabelId text_scale_y_;
   UiSliderH2 slider_jitter_;
   UiTextLabelId text_jitter_;
   UiSliderH2 slider_seed_;
@@ -162,13 +180,19 @@ class TerrainNoiseMetaballs final
 
   explicit TerrainNoiseMetaballs(TextRenderer& text_renderer, GLuint parent_id);
 
+  Texture Generate(
+      glm::vec2 resolution, std::vector<unsigned char>& buffer,
+      std::string_view tex_name);
+
  private:
-  UiSliderH2 slider_scale_;
-  UiTextLabelId text_scale_;
+  UiSliderH2 slider_scale_x_;
+  UiTextLabelId text_scale_x_;
+  // UiSliderH2 slider_scale_y_;
+  // UiTextLabelId text_scale_y_;
   UiSliderH2 slider_jitter_;
   UiTextLabelId text_jitter_;
-  UiSliderH2 slider_phase_;
-  UiTextLabelId text_phase_;
+//  UiSliderH2 slider_phase_; remove
+//  UiTextLabelId text_phase_; remove
   UiSliderH2 slider_seed_;
   UiTextLabelId text_seed_;
 };
@@ -186,21 +210,27 @@ class TerrainNoiseFbmGrid final
 
   explicit TerrainNoiseFbmGrid(TextRenderer& text_renderer, GLuint parent_id);
 
+  Texture Generate(
+      glm::vec2 resolution, std::vector<unsigned char>& buffer,
+      std::string_view tex_name);
+
  private:
-  UiSliderH2 slider_scale_;
-  UiTextLabelId text_scale_;
+  UiSliderH2 slider_scale_x_;
+  UiTextLabelId text_scale_x_;
+  // UiSliderH2 slider_scale_y_;
+  // UiTextLabelId text_scale_y_;
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
   UiSliderH2 slider_shift_;
   UiTextLabelId text_shift_;
-  UiSliderH2 slider_time_shift_;
-  UiTextLabelId text_time_shift_;
+//  UiSliderH2 slider_time_shift_; remove
+//  UiTextLabelId text_time_shift_; remove
   UiSliderH2 slider_gain_;
   UiTextLabelId text_gain_;
   UiSliderH2 slider_lacunarity_;
   UiTextLabelId text_lacunarity_;
-  UiSliderH2 slider_translate_;
-  UiTextLabelId text_translate_;
+//  UiSliderH2 slider_translate_; remove
+//  UiTextLabelId text_translate_; remove
   UiSliderH2 slider_warp_strength_;
   UiTextLabelId text_warp_strength_;
   UiSliderH2 slider_octave_factor_;
@@ -222,15 +252,21 @@ class TerrainNoiseFbmMulti final
 
   explicit TerrainNoiseFbmMulti(TextRenderer& text_renderer, GLuint parent_id);
 
+  Texture Generate(
+      glm::vec2 resolution, std::vector<unsigned char>& buffer,
+      std::string_view tex_name);
+
  private:
-  UiSliderH2 slider_scale_;
-  UiTextLabelId text_scale_;
+  UiSliderH2 slider_scale_x_;
+  UiTextLabelId text_scale_x_;
+  // UiSliderH2 slider_scale_y_;
+  // UiTextLabelId text_scale_y_;
   UiSliderH2 slider_lacunarity_;
   UiTextLabelId text_lacunarity_;
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
-  UiSliderH2 slider_phases_;
-  UiTextLabelId text_phases_;
+//  UiSliderH2 slider_phases_; remove
+//  UiTextLabelId text_phases_; remove
   UiSliderH2 slider_seed_;
   UiTextLabelId text_seed_;
 };
@@ -248,15 +284,21 @@ class TerrainNoiseFbmdPerlin final
 
   explicit TerrainNoiseFbmdPerlin(TextRenderer& text_renderer, GLuint parent_id);
 
+  Texture Generate(
+      glm::vec2 resolution, std::vector<unsigned char>& buffer,
+      std::string_view tex_name);
+
  private:
-  UiSliderH2 slider_scale_;
-  UiTextLabelId text_scale_;
+  UiSliderH2 slider_scale_x_;
+  UiTextLabelId text_scale_x_;
+  // UiSliderH2 slider_scale_y_;
+  // UiTextLabelId text_scale_y_;
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
-  UiSliderH2 slider_shift_;
-  UiTextLabelId text_shift_;
-  UiSliderH2 slider_transform_;
-  UiTextLabelId text_transform_;
+//  UiSliderH2 slider_shift_; remove
+//  UiTextLabelId text_shift_; remove
+//  UiSliderH2 slider_transform_; remove
+//  UiTextLabelId text_transform_; remove
   UiSliderH2 slider_gain_;
   UiTextLabelId text_gain_;
   UiSliderH2 slider_lacunarity_;
@@ -285,17 +327,23 @@ class TerrainNoiseFbmWarp final
 
   explicit TerrainNoiseFbmWarp(TextRenderer& text_renderer, GLuint parent_id);
 
+  Texture Generate(
+      glm::vec2 resolution, std::vector<unsigned char>& buffer,
+      std::string_view tex_name);
+
  private:
-  UiSliderH2 slider_scale_;
-  UiTextLabelId text_scale_;
-  UiSliderH2 slider_factors_;
-  UiTextLabelId text_factors_;
+  UiSliderH2 slider_scale_x_;
+  UiTextLabelId text_scale_x_;
+  // UiSliderH2 slider_scale_y_;
+  // UiTextLabelId text_scale_y_;
+//  UiSliderH2 slider_factors_; remove
+//  UiTextLabelId text_factors_; remove
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
-  UiSliderH2 slider_shift_;
-  UiTextLabelId text_shift_;
-  UiSliderH2 slider_time_shift_;
-  UiTextLabelId text_time_shift_;
+//  UiSliderH2 slider_shift_; remove
+//  UiTextLabelId text_shift_; remove
+//  UiSliderH2 slider_time_shift_; remove
+//  UiTextLabelId text_time_shift_; remove
   UiSliderH2 slider_gain_;
   UiTextLabelId text_gain_;
   UiSliderH2 slider_lacunarity_;
@@ -328,17 +376,23 @@ class TerrainNoiseFbmPerlinWarp final
 
   explicit TerrainNoiseFbmPerlinWarp(TextRenderer& text_renderer, GLuint parent_id);
 
+  Texture Generate(
+      glm::vec2 resolution, std::vector<unsigned char>& buffer,
+      std::string_view tex_name);
+
  private:
-  UiSliderH2 slider_scale_;
-  UiTextLabelId text_scale_;
-  UiSliderH2 slider_factors_;
-  UiTextLabelId text_factors_;
+  UiSliderH2 slider_scale_x_;
+  UiTextLabelId text_scale_x_;
+  // UiSliderH2 slider_scale_y_;
+  // UiTextLabelId text_scale_y_;
+//  UiSliderH2 slider_factors_; remove
+//  UiTextLabelId text_factors_; remove
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
-  UiSliderH2 slider_shift_;
-  UiTextLabelId text_shift_;
-  UiSliderH2 slider_time_shift_;
-  UiTextLabelId text_time_shift_;
+//  UiSliderH2 slider_shift_; remove
+//  UiTextLabelId text_shift_; remove
+//  UiSliderH2 slider_time_shift_; remove
+//  UiTextLabelId text_time_shift_; remove
   UiSliderH2 slider_gain_;
   UiTextLabelId text_gain_;
   UiSliderH2 slider_lacunarity_;

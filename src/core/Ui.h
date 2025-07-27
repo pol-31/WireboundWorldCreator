@@ -654,6 +654,10 @@ class UiToggle final : public UiBase {
 
   void SetTranslate(glm::vec2 translate);
 
+  [[nodiscard]] bool IsOff() const noexcept {
+    return turned_off_;
+  }
+
  private:
   UiDynamicSprite off_;
   UiDynamicSprite on1_;

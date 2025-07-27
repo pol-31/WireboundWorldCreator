@@ -1,8 +1,12 @@
 #version 460 core
 out float fragColor;
 
-layout (location = 1) uniform vec2 resolution;
+layout (location = 0) uniform vec2 resolution;
 
+layout (location = 1) uniform float scale_x;
+layout (location = 2) uniform float scale_y;
+layout (location = 3) uniform float jitter;
+layout (location = 4) uniform float seed;
 
 uint ihash1D(uint q)
 {
@@ -151,7 +155,7 @@ vec2 cellularNoise(vec2 pos, vec2 scale, float jitter, float seed)
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
 
-    float height = cellularNoise(uv, vec2(28.0f, 12.0f), 1.0f, 0.0f).x;
+    float height = cellularNoise(uv, vec2(scale_x, scale_y), jitter, seed).x;
 
     fragColor = height;
 }

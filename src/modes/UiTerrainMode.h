@@ -55,8 +55,6 @@ class UiTerrainMode final : public IUiMode {
       static_cast<int>(data::VboIdMain::kTerrainSlotsFlipPointEdgeFace) -
       static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1
       > ui_event_handler_;
-
-  UiTerrainGenerator ui_terrain_generator_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINMODE_H_

@@ -827,6 +827,10 @@ class UiEditTerrain final : public UiWindowAppear {
       UiDynamicSprite&& heightmap,
       UiDynamicSprite&& random_generate);
 
+  ~UiEditTerrain() {
+    DeInit();
+  }
+
   UiEditTerrain(UiEditTerrain&& other) noexcept;
   UiEditTerrain(const UiEditTerrain& other) = delete;
 
@@ -849,6 +853,22 @@ class UiEditTerrain final : public UiWindowAppear {
                        float scale) override;
 
  private:
+  void Init();
+
+  void DeInit();
+
+  void Generate();
+
+  void UpdateCpuData();
+
+
+  GLuint vao_id_;
+  GLuint vbo_id_;
+  GLuint ebo_id_;
+  GLuint fbo_id_;
+  GLuint fbo_tex_id_;
+
+
   UiDynamicSprite accept_;
   UiDynamicSprite name_;
   UiDynamicSprite name_back_;
@@ -900,6 +920,7 @@ class UiTerrainBake final : public UiWindowAppear {
   using Base = UiWindowAppear;
 
   UiTerrainBake(
+      Tile& cur_tile,
       UiDynamicSprite&& sprite,
       float size_scale,
       UiToggle2&& pin,
@@ -935,6 +956,55 @@ class UiTerrainBake final : public UiWindowAppear {
                        float scale) override;
 
  private:
+  struct Particle{
+    //Construct Particle at Position
+    Particle(glm::vec2 _pos) {
+      pos = _pos;
+    }
+
+    glm::vec2 pos;
+    glm::vec2 speed = glm::vec2(0.0);
+
+    float volume = 1.0;   //This will vary in time
+    float sediment = 0.0; //Fraction of Volume that is Sediment!
+  };
+
+  void Bake(int steps_thermal, int steps_weathering, float talus);
+
+  void UpdateCpuData();
+
+  void ErodeWithFlow(const std::vector<std::vector<glm::vec2>>& flow_dir,
+                     const std::vector<std::vector<float>>& water_accum,
+                     int cycles);
+
+  glm::vec3 SurfaceNormal(int i, int j);
+
+  void ErodeWeathering(int cycles);
+
+
+  void ProcessErosion(const std::vector<std::vector<glm::vec2>>& flow_dir,
+                      const std::vector<std::vector<float>>& water_accum,
+                      int iterations);
+
+  void ProcessThermalWeathering(int iterations, float talus = 0.02f);
+
+  void GenerateSplatmap();
+
+  void GenerateNmap();
+
+  void GenerateSlope();
+
+  void GenerateAo();
+
+  void Perturbate();
+
+  void ComputeFlowMaps(
+      std::vector<std::vector<glm::vec2>>& flow_dir,
+      std::vector<std::vector<float>>& flow_accum);
+
+  void GenerateFlowMap(std::vector<std::vector<glm::vec2>>& flow_dir,
+                       std::vector<std::vector<float>>& flow_accum);
+
   UiDynamicSprite accept_;
 
   Texture tex_heightmap_;
@@ -951,6 +1021,30 @@ class UiTerrainBake final : public UiWindowAppear {
       > ui_event_handler_;
 
   UiSharedResources& ui_shared_resources_;
+
+
+
+
+
+
+  std::vector<std::vector<float>> height_map_data_;
+
+  Shader shader_gen_nmap_;
+  Shader shader_gen_slope_map_;
+  Shader shader_gen_ao_map_;
+  Shader shader_perturbate_;
+
+  Texture& tex_hmap_;
+  Texture& tex_nmap_;
+  Texture& tex_slope_map_;
+  Texture& tex_ao_map_;
+  Texture& tex_splat_map_;
+
+  Texture& tex_erosion_thermal_map_;
+  Texture& tex_erosion_hydraulic_map_;
+
+  Texture& tex_water_accum_;
+  Texture& tex_water_flow_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_

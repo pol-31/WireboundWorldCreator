@@ -52,6 +52,8 @@ remove kTerrainEditNoise1InvertLabel, we have one kTerrainEditLabelInvert
    as well as tiling, strength
 SliderH2 - bigger handle(icon), modify arae (remove embedded handle/icons)
 terrain "Bake" btn icon
+add desk for each noise config (this way we don't need btn_Close)
+add noise name for each noise config
 
 keyboard assign window
 
@@ -84,3 +86,40 @@ biome round slider (wind, sun, time)
       glm::vec2 translate,
       UiDynamicSprite&& text,
       data::TextId text_id
+	 
+
+
+
+
+
+
+
+
+
+
+
+	 
+TODO:
+- redesign some ui components
+- TerrainGrid render
+
+
+let's cheat and select regardless of mvp:
+- kSquare: start - end (Decardian)
+- kSingle: single point / trivial path
+- kCircle: around the single point
+BUT(!): draw-square/circle should be shown projected.
+__extra: out text with vertex id, x, y (use kSpareTextN)
+
+#1 random points on kSingle (due to resolution limit...)
+#2 render selected points as the TerrainRenderer do
+    (zero height as zero alpha) (postponed due to #3)
+#3 rotate kSingle / kSquare (we can leverage mouse_pos difference)
+#4 render selection projections (circle/square pillow sprites)
+
+
+
+noise config mods:
+scale -> 2 sliders (x, y)
+
+scale slider as 2d figure, but dragging it to left +x, up +y

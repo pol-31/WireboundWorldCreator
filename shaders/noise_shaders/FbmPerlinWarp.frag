@@ -1,7 +1,22 @@
 #version 460 core
 out float fragColor;
 
-layout (location = 1) uniform vec2 resolution;
+layout (location = 0) uniform vec2 resolution;
+
+layout (location = 1) uniform float scale_x;
+layout (location = 2) uniform float scale_y;
+//layout (location = 3) uniform vec2 factors;
+layout (location = 4) uniform int octaves;
+//layout (location = 5) uniform vec4 shifts;
+//layout (location = 6) uniform float time_shift;
+layout (location = 7) uniform float gain;
+layout (location = 8) uniform float lacunarity;
+layout (location = 9) uniform float slopeness;
+layout (location = 10) uniform float octave_factor;
+layout (location = 11) uniform bool negative;
+layout (location = 12) uniform float seed;
+layout (location = 13) uniform float q;
+layout (location = 14) uniform float r;
 
 
 uint ihash1D(uint q)
@@ -515,7 +530,14 @@ float fbmPerlinWarp(vec2 pos, vec2 scale, vec2 factors, int octaves, vec4 shifts
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
 
-    float height = fbmPerlinWarp(uv, vec2(4.0f, 4.0f), vec2(1.0f), 4, vec4(2.0f), 0.0f, 0.5f, vec2(2.0f), 0.5f, 0.0f, false, 0.0f, vec2(2.0f), vec2(2.0f));
+//    float height = fbmPerlinWarp(uv, vec2(4.0f, 4.0f), vec2(1.0f), 4, vec4(2.0f), 0.0f, 0.5f, vec2(2.0f), 0.5f, 0.0f, false, 0.0f, vec2(2.0f), vec2(2.0f));
+    vec2 factors = vec2(1.0f);
+    vec4 shifts = vec4(1.0f);
+    float time_shift = 0.0f;
+    float height = fbmPerlinWarp(
+        uv, vec2(scale_x, scale_y), factors, octaves, shifts, time_shift,
+        gain, vec2(lacunarity), slopeness,
+        octave_factor, negative, seed, vec2(q), vec2(r));
 
 
     fragColor = height;

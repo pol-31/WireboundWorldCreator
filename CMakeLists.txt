@@ -69,8 +69,6 @@ add_executable(WireboundWorldCreator
         src/common/GlobalGlfwCallbackData.cpp
         src/core/UiSlots.cpp
         src/core/UiSlots.h
-        src/modes/UiTerrainGenerator.cpp
-        src/modes/UiTerrainGenerator.h
         src/renderers/UiRenderer.cpp
         src/renderers/UiRenderer.h
         src/modes/UiSharedResources.cpp

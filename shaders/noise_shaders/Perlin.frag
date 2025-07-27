@@ -1,7 +1,11 @@
 #version 460 core
 out float fragColor;
 
-layout (location = 1) uniform vec2 resolution;
+layout (location = 0) uniform vec2 resolution;
+
+layout (location = 1) uniform float scale_x;
+layout (location = 2) uniform float scale_y;
+layout (location = 3) uniform float seed;
 
 uint ihash1D(uint q)
 {
@@ -148,7 +152,7 @@ float perlinNoise(vec2 pos, vec2 scale, float seed)
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
 
-    float height = perlinNoise(uv, vec2(20.0f, 12.0f), 100.0f);
+    float height = perlinNoise(uv, vec2(scale_x, scale_y), seed);
 
     fragColor = height;
 }

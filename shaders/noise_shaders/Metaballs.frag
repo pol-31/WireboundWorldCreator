@@ -1,8 +1,13 @@
 #version 460 core
 out float fragColor;
 
-layout (location = 1) uniform vec2 resolution;
+layout (location = 0) uniform vec2 resolution;
 
+layout (location = 1) uniform float scale_x;
+layout (location = 2) uniform float scale_y;
+layout (location = 3) uniform float jitter;
+//layout (location = 4) uniform float phase;
+layout (location = 5) uniform float seed;
 
 uint ihash1D(uint q)
 {
@@ -165,7 +170,8 @@ float metaballs(vec2 pos, vec2 scale, float jitter, float phase, float seed)
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
 
-    float height = metaballs(uv, vec2(12.0f, 12.0f), 1.0f, 0.0f, 0.0f);
+//    float height = metaballs(uv, vec2(scale_x, scale_y), jitter, phase, seed);
+    float height = metaballs(uv, vec2(scale_x, scale_y), jitter, 0.0f, seed);
 
     fragColor = height;
 }

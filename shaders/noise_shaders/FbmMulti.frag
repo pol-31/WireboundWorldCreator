@@ -1,7 +1,14 @@
 #version 460 core
 out float fragColor;
 
-layout (location = 1) uniform vec2 resolution;
+layout (location = 0) uniform vec2 resolution;
+
+layout (location = 1) uniform float scale_x;
+layout (location = 2) uniform float scale_y;
+layout (location = 3) uniform float lacunarity;
+layout (location = 4) uniform int octaves;
+//layout (location = 5) uniform float phase;
+layout (location = 6) uniform float seed;
 
 
 uint ihash1D(uint q)
@@ -222,7 +229,8 @@ vec4 fbmMulti(vec2 pos, vec2 scale, float lacunarity, int octaves, float phase, 
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
 
-    float height = fbmMulti(uv, vec2(5.0f, 5.0f), 2, 4, 4, 0).x;
+//    float height = fbmMulti(uv, vec2(scale_x, scale_y), lacunarity, octaves, phase, seed).x;
+    float height = fbmMulti(uv, vec2(scale_x, scale_y), lacunarity, octaves, 0.0f, seed).x;
 
     fragColor = height;
 }

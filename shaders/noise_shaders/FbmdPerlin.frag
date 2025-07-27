@@ -1,7 +1,19 @@
 #version 460 core
 out float fragColor;
 
-layout (location = 1) uniform vec2 resolution;
+layout (location = 0) uniform vec2 resolution;
+
+layout (location = 1) uniform float scale_x;
+layout (location = 2) uniform float scale_y;
+layout (location = 3) uniform int octaves;
+//layout (location = 4) uniform vec2 shift;
+//layout (location = 5) uniform mat1 transform;
+layout (location = 6) uniform float gain;
+layout (location = 7) uniform float lacunarity;
+layout (location = 8) uniform float slopeness;
+layout (location = 9) uniform float octave_factor;
+layout (location = 10) uniform bool negative;
+layout (location = 11) uniform float seed;
 
 
 uint ihash1D(uint q)
@@ -310,7 +322,9 @@ vec3 perlinNoised(vec2 pos, vec2 scale, float rotation, float seed)
 // @param negative If true use a negative range for the noise values, will result in more contrast, range: [false, true]
 // @param seed Seed to randomize result, range: [0, inf], default: 0.0
 // @return x = value of the noise, range: [-1, inf], yz = derivative of the noise, range: [-1, 1]
-vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, mat2 transform, float gain, vec2 lacunarity, float slopeness, float octaveFactor, bool negative, float seed)
+vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, mat2 transform,
+                float gain, vec2 lacunarity, float slopeness, float octaveFactor,
+                bool negative, float seed)
 {
     // fbm implementation based on Inigo Quilez
     float amplitude = gain;
@@ -342,7 +356,12 @@ void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
 
     mat2 transform = mat2(1.0f, 0.0f, 0.0f, 1.0f);
-    float height = fbmdPerlin(uv, vec2(10.0f, 10.0f), 2, vec2(0.0f), transform, 0.5f, vec2(2.0f), 0.25f, 0.0f, false, 0.0f).x;
+    vec2 shift = vec2(0.0f);
+//    float height = fbmdPerlin(uv, vec2(10.0f, 10.0f), 2, vec2(0.0f), transform, 0.5f, vec2(2.0f), 0.25f, 0.0f, false, 0.0f).x;
+    float height = fbmdPerlin(
+        uv, vec2(scale_x, scale_y), octaves, shift,
+        transform, gain, vec2(lacunarity), slopeness,
+        octave_factor, negative, seed).x;
 
     fragColor = height;
 }

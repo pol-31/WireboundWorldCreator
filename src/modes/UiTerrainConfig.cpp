@@ -1,11 +1,31 @@
 #include "UiTerrainConfig.h"
 
+Texture GenAndSave(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  // YOU MUST: bind shader, set uniforms
+  // YOU MUST: bind shader, set uniforms
+  // YOU MUST: bind shader, set uniforms
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+  glReadPixels(0, 0, resolution.x, resolution.y, GL_RED, GL_UNSIGNED_BYTE,
+               buffer.data());
+
+  Texture height_map(resolution.x, resolution.y, GL_R8, GL_LINEAR,
+                     GL_CLAMP_TO_EDGE);
+  height_map.Bind();
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, resolution.x, resolution.y,
+               0, GL_RED, GL_UNSIGNED_BYTE, buffer.data());
+  height_map.Store(tex_name, 1, GL_RED, GL_UNSIGNED_BYTE);
+  return std::move(height_map);
+}
+
 TerrainNoisePerlin::TerrainNoisePerlin(TextRenderer& text_renderer, GLuint parent_id)
-    : slider_scale_(
+    : slider_scale_x_(
           {data::VboIdMain::kTerrainNoisePerlinScaleArea, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainNoisePerlinScaleIcon, data::TextId::kNotYet}
           ),
-      text_scale_(
+      text_scale_x_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoisePerlinScaleText, data::TextId::kNotYet}, data::TextId::kScale),
       slider_seed_(
@@ -15,18 +35,31 @@ TerrainNoisePerlin::TerrainNoisePerlin(TextRenderer& text_renderer, GLuint paren
       text_seed_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoisePerlinSeedText, data::TextId::kNotYet}, data::TextId::kSeed) {
-  sliders_ = {&slider_scale_, &slider_seed_};
-  texts_ = {&text_scale_, &text_seed_};
-  ui_event_handler_ = {&slider_scale_, &slider_seed_};
+  sliders_ = {&slider_scale_x_, &slider_seed_};
+  texts_ = {&text_scale_x_, &text_seed_};
+  ui_event_handler_ = {&slider_scale_x_, &slider_seed_};
+  shader_ = Shader("../shaders/noise_shaders/TerrainNoise.vert",
+                   "../shaders/noise_shaders/Perlin.frag");
   SetParent(parent_id);
 }
 
+Texture TerrainNoisePerlin::Generate(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  shader_.Bind();
+  glUniform2fv(0, 1, glm::value_ptr(resolution));
+  glUniform1f(1, slider_scale_x_.GetProgress());
+  glUniform1f(2, slider_scale_x_.GetProgress());
+  glUniform1f(3, slider_seed_.GetProgress());
+  return GenAndSave(resolution, buffer, tex_name);
+}
+
 TerrainNoiseCellular::TerrainNoiseCellular(TextRenderer& text_renderer, GLuint parent_id)
-    : slider_scale_(
+    : slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseCellularScaleArea, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainNoiseCellularScaleIcon, data::TextId::kNotYet}
           ),
-      text_scale_(
+      text_scale_x_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseCellularScaleText, data::TextId::kNotYet}, data::TextId::kScale),
       slider_jitter_(
@@ -43,18 +76,32 @@ TerrainNoiseCellular::TerrainNoiseCellular(TextRenderer& text_renderer, GLuint p
       text_seed_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseCellularSeedText, data::TextId::kNotYet}, data::TextId::kSeed) {
-  Base::sliders_ = {&slider_scale_, &slider_jitter_, &slider_seed_};
-  Base::texts_ = {&text_scale_, &text_jitter_, &text_seed_};
-  Base::ui_event_handler_ = {&slider_scale_, &slider_jitter_, &slider_seed_};
+  Base::sliders_ = {&slider_scale_x_, &slider_jitter_, &slider_seed_};
+  Base::texts_ = {&text_scale_x_, &text_jitter_, &text_seed_};
+  Base::ui_event_handler_ = {&slider_scale_x_, &slider_jitter_, &slider_seed_};
+  shader_ = Shader("../shaders/noise_shaders/TerrainNoise.vert",
+                   "../shaders/noise_shaders/Cellular.frag");
   SetParent(parent_id);
 }
 
+Texture TerrainNoiseCellular::Generate(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  shader_.Bind();
+  glUniform2fv(0, 1, glm::value_ptr(resolution));
+  glUniform1f(1, slider_scale_x_.GetProgress());
+  glUniform1f(2, slider_scale_x_.GetProgress());
+  glUniform1f(3, slider_jitter_.GetProgress());
+  glUniform1f(4, slider_seed_.GetProgress());
+  return GenAndSave(resolution, buffer, tex_name);
+}
+
 TerrainNoiseMetaballs::TerrainNoiseMetaballs(TextRenderer& text_renderer, GLuint parent_id)
-    : slider_scale_(
+    : slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseMetaballsScaleArea, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainNoiseMetaballsScaleIcon, data::TextId::kNotYet}
           ),
-      text_scale_(
+      text_scale_x_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseMetaballsScaleText, data::TextId::kNotYet}, data::TextId::kScale),
       slider_jitter_(
@@ -64,13 +111,6 @@ TerrainNoiseMetaballs::TerrainNoiseMetaballs(TextRenderer& text_renderer, GLuint
       text_jitter_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseMetaballsJitterText, data::TextId::kNotYet}, data::TextId::kJitter),
-      slider_phase_(
-          {data::VboIdMain::kTerrainNoiseMetaballsPhaseArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseMetaballsPhaseIcon, data::TextId::kNotYet}
-          ),
-      text_phase_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseMetaballsPhaseText, data::TextId::kNotYet}, data::TextId::kPhase),
       slider_seed_(
           {data::VboIdMain::kTerrainNoiseMetaballsSeedArea, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainNoiseMetaballsSeedIcon, data::TextId::kNotYet}
@@ -78,21 +118,32 @@ TerrainNoiseMetaballs::TerrainNoiseMetaballs(TextRenderer& text_renderer, GLuint
       text_seed_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseMetaballsSeedText, data::TextId::kNotYet}, data::TextId::kSeed) {
-  Base::sliders_ = {&slider_scale_, &slider_jitter_,
-                    &slider_phase_, &slider_seed_};
-  Base::texts_ = {&text_scale_, &text_jitter_,
-                  &text_phase_, &text_seed_};
-  Base::ui_event_handler_ = {&slider_scale_, &slider_jitter_,
-                             &slider_phase_, &slider_seed_};
+  Base::sliders_ = {&slider_scale_x_, &slider_jitter_, &slider_seed_};
+  Base::texts_ = {&text_scale_x_, &text_jitter_, &text_seed_};
+  Base::ui_event_handler_ = {&slider_scale_x_, &slider_jitter_, &slider_seed_};
+  shader_ = Shader("../shaders/noise_shaders/TerrainNoise.vert",
+                   "../shaders/noise_shaders/Metaballs.frag");
   SetParent(parent_id);
 }
 
+Texture TerrainNoiseMetaballs::Generate(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  shader_.Bind();
+  glUniform2fv(0, 1, glm::value_ptr(resolution));
+  glUniform1f(1, slider_scale_x_.GetProgress());
+  glUniform1f(2, slider_scale_x_.GetProgress());
+  glUniform1f(3, slider_jitter_.GetProgress());
+  glUniform1f(5, slider_seed_.GetProgress());
+  return GenAndSave(resolution, buffer, tex_name);
+}
+
 TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(TextRenderer& text_renderer, GLuint parent_id)
-    : slider_scale_(
+    : slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmGridScaleArea, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainNoiseFbmGridScaleIcon, data::TextId::kNotYet}
           ),
-      text_scale_(
+      text_scale_x_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmGridScaleText, data::TextId::kNotYet}, data::TextId::kScale),
       slider_octaves_(
@@ -109,13 +160,6 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(TextRenderer& text_renderer, GLuint par
       text_shift_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmGridShiftText, data::TextId::kNotYet}, data::TextId::kShift),
-      slider_time_shift_(
-          {data::VboIdMain::kTerrainNoiseFbmGridTimeShiftArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridTimeShiftIcon, data::TextId::kNotYet}
-          ),
-      text_time_shift_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridTimeShiftText, data::TextId::kNotYet}, data::TextId::kShift),
       slider_gain_(
           {data::VboIdMain::kTerrainNoiseFbmGridGainArea, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainNoiseFbmGridGainIcon, data::TextId::kNotYet}
@@ -130,13 +174,6 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(TextRenderer& text_renderer, GLuint par
       text_lacunarity_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmGridLacunarityText, data::TextId::kNotYet}, data::TextId::kLacunarity),
-      slider_translate_(
-          {data::VboIdMain::kTerrainNoiseFbmGridTranslateArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridTranslateIcon, data::TextId::kNotYet}
-          ),
-      text_translate_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridTranslateText, data::TextId::kNotYet}, data::TextId::kTranslate),
       slider_warp_strength_(
           {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthArea, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthIcon, data::TextId::kNotYet}
@@ -159,26 +196,45 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(TextRenderer& text_renderer, GLuint par
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmGridSeedText, data::TextId::kNotYet}, data::TextId::kSeed) {
   Base::sliders_ = {
-      &slider_scale_, &slider_octaves_, &slider_shift_, &slider_time_shift_,
-      &slider_gain_, &slider_lacunarity_, &slider_translate_,
+      &slider_scale_x_, &slider_octaves_, &slider_shift_,
+      &slider_gain_, &slider_lacunarity_,
       &slider_warp_strength_, &slider_octave_factor_, &slider_seed_};
   Base::texts_ = {
-      &text_scale_, &text_octaves_, &text_shift_, &text_time_shift_,
-      &text_gain_, &text_lacunarity_, &text_translate_,
+      &text_scale_x_, &text_octaves_, &text_shift_,
+      &text_gain_, &text_lacunarity_,
       &text_warp_strength_, &text_octave_factor_, &text_seed_};
   Base::ui_event_handler_ = {
-      &slider_scale_, &slider_octaves_, &slider_shift_, &slider_time_shift_,
-      &slider_gain_, &slider_lacunarity_, &slider_translate_,
+      &slider_scale_x_, &slider_octaves_, &slider_shift_,
+      &slider_gain_, &slider_lacunarity_,
       &slider_warp_strength_, &slider_octave_factor_, &slider_seed_};
+  shader_ = Shader("../shaders/noise_shaders/TerrainNoise.vert",
+                   "../shaders/noise_shaders/FbmGrid.frag");
   SetParent(parent_id);
 }
 
+Texture TerrainNoiseFbmGrid::Generate(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  shader_.Bind();
+  glUniform2fv(0, 1, glm::value_ptr(resolution));
+  glUniform1f(1, slider_scale_x_.GetProgress());
+  glUniform1f(2, slider_scale_x_.GetProgress());
+  glUniform1i(3, static_cast<int>(slider_octaves_.GetProgress()));
+  glUniform1f(4, slider_shift_.GetProgress());
+  glUniform1f(6, slider_gain_.GetProgress());
+  glUniform1f(7, slider_lacunarity_.GetProgress());
+  glUniform1f(9, slider_warp_strength_.GetProgress());
+  glUniform1f(10, slider_octave_factor_.GetProgress());
+  glUniform1f(11, slider_seed_.GetProgress());
+  return GenAndSave(resolution, buffer, tex_name);
+}
+
 TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(TextRenderer& text_renderer, GLuint parent_id)
-    : slider_scale_(
+    : slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmMultiScaleArea, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainNoiseFbmMultiScaleIcon, data::TextId::kNotYet}
           ),
-      text_scale_(
+      text_scale_x_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmMultiScaleText, data::TextId::kNotYet}, data::TextId::kScale),
       slider_lacunarity_(
@@ -195,14 +251,6 @@ TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(TextRenderer& text_renderer, GLuint p
       text_octaves_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmMultiOctavesText, data::TextId::kNone}, data::TextId::kOctaves),
-      slider_phases_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiPhaseArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmMultiPhaseIcon, data::TextId::kNone}
-          ),
-      //TODO; phases?
-      text_phases_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmMultiPhaseText, data::TextId::kNone}, data::TextId::kPhases),
       slider_seed_(
           {data::VboIdMain::kTerrainNoiseFbmMultiSeedArea, data::TextId::kNone},
           {data::VboIdMain::kTerrainNoiseFbmMultiSeedIcon, data::TextId::kNone}
@@ -211,23 +259,35 @@ TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(TextRenderer& text_renderer, GLuint p
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmMultiSeedText, data::TextId::kNone}, data::TextId::kSeed) {
   Base::sliders_ = {
-      &slider_scale_, &slider_lacunarity_, &slider_octaves_,
-      &slider_phases_, &slider_seed_};
+      &slider_scale_x_, &slider_lacunarity_, &slider_octaves_, &slider_seed_};
   Base::texts_ = {
-      &text_scale_, &text_lacunarity_, &text_octaves_,
-      &text_phases_, &text_seed_};
+      &text_scale_x_, &text_lacunarity_, &text_octaves_, &text_seed_};
   Base::ui_event_handler_ = {
-      &slider_scale_, &slider_lacunarity_, &slider_octaves_,
-      &slider_phases_, &slider_seed_};
+      &slider_scale_x_, &slider_lacunarity_, &slider_octaves_, &slider_seed_};
+  shader_ = Shader("../shaders/noise_shaders/TerrainNoise.vert",
+                   "../shaders/noise_shaders/FbmMulti.frag");
   SetParent(parent_id);
 }
 
+Texture TerrainNoiseFbmMulti::Generate(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  shader_.Bind();
+  glUniform2fv(0, 1, glm::value_ptr(resolution));
+  glUniform1f(1, slider_scale_x_.GetProgress());
+  glUniform1f(2, slider_scale_x_.GetProgress());
+  glUniform1f(3, slider_lacunarity_.GetProgress());
+  glUniform1i(4, static_cast<int>(slider_octaves_.GetProgress()));
+  glUniform1f(6, slider_seed_.GetProgress());
+  return GenAndSave(resolution, buffer, tex_name);
+}
+
 TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(TextRenderer& text_renderer, GLuint parent_id)
-    : slider_scale_(
+    : slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleArea, data::TextId::kNone},
           {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleIcon, data::TextId::kNone}
           ),
-      text_scale_(
+      text_scale_x_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleText, data::TextId::kNone}, data::TextId::kScale),
       slider_octaves_(
@@ -237,20 +297,6 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(TextRenderer& text_renderer, GLui
       text_octaves_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesText, data::TextId::kNone}, data::TextId::kOctaves),
-      slider_shift_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinShiftArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinShiftIcon, data::TextId::kNone}
-          ),
-      text_shift_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinShiftText, data::TextId::kNone}, data::TextId::kShift),
-      slider_transform_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinTransformArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinTransformIcon, data::TextId::kNone}
-          ),
-      text_transform_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinTransformText, data::TextId::kNone}, data::TextId::kTransform),
       slider_gain_(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinGainArea, data::TextId::kNone},
           {data::VboIdMain::kTerrainNoiseFbmdPerlinGainIcon, data::TextId::kNone}
@@ -296,36 +342,48 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(TextRenderer& text_renderer, GLui
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeText, data::TextId::kNone}, data::TextId::kNegative) {
   Base::sliders_ = {
-      &slider_scale_, &slider_octaves_, &slider_shift_, &slider_transform_,
+      &slider_scale_x_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_};
   Base::toggles_ = {&toggle_negative_};
   Base::texts_ = {
-      &text_scale_, &text_octaves_, &text_shift_, &text_transform_,
+      &text_scale_x_, &text_octaves_,
       &text_gain_, &text_lacunarity_, &text_slopeness_,
       &text_octave_factor_, &text_seed_, &text_negative_};
   Base::ui_event_handler_ = {
-      &slider_scale_, &slider_octaves_, &slider_shift_, &slider_transform_,
+      &slider_scale_x_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_};
+  shader_ = Shader("../shaders/noise_shaders/TerrainNoise.vert",
+                   "../shaders/noise_shaders/FbmdPerlin.frag");
   SetParent(parent_id);
 }
 
+Texture TerrainNoiseFbmdPerlin::Generate(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  shader_.Bind();
+  glUniform2fv(0, 1, glm::value_ptr(resolution));
+  glUniform1f(1, slider_scale_x_.GetProgress());
+  glUniform1f(2, slider_scale_x_.GetProgress());
+  glUniform1i(3, static_cast<int>(slider_octaves_.GetProgress()));
+  glUniform1f(6, slider_gain_.GetProgress());
+  glUniform1f(7, slider_lacunarity_.GetProgress());
+  glUniform1f(8, slider_slopeness_.GetProgress());
+  glUniform1f(9, slider_octave_factor_.GetProgress());
+  glUniform1f(11, slider_seed_.GetProgress());
+  glUniform1i(10, static_cast<int>(!toggle_negative_.IsOff()));
+  return GenAndSave(resolution, buffer, tex_name);
+}
+
 TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(TextRenderer& text_renderer, GLuint parent_id)
-    : slider_scale_(
+    : slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmWarpScaleArea, data::TextId::kNone},
           {data::VboIdMain::kTerrainNoiseFbmWarpScaleIcon, data::TextId::kNone}
           ),
-      text_scale_(
+      text_scale_x_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmWarpScaleText, data::TextId::kNone}, data::TextId::kScale),
-      slider_factors_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpFactorsArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpFactorsIcon, data::TextId::kNone}
-          ),
-      text_factors_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpFactorsText, data::TextId::kNone}, data::TextId::kFactors),
       slider_octaves_(
           {data::VboIdMain::kTerrainNoiseFbmWarpOctavesArea, data::TextId::kNone},
           {data::VboIdMain::kTerrainNoiseFbmWarpOctavesIcon, data::TextId::kNone}
@@ -333,20 +391,6 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(TextRenderer& text_renderer, GLuint par
       text_octaves_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmWarpOctavesText, data::TextId::kNone}, data::TextId::kOctaves),
-      slider_shift_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpShiftArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpShiftIcon, data::TextId::kNone}
-          ),
-      text_shift_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpShiftText, data::TextId::kNone}, data::TextId::kShift),
-      slider_time_shift_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpTimeShiftArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpTimeShiftIcon, data::TextId::kNone}
-          ),
-      text_time_shift_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpTimeShiftText, data::TextId::kNone}, data::TextId::kTimeShift),
       slider_gain_(
           {data::VboIdMain::kTerrainNoiseFbmWarpGainArea, data::TextId::kNone},
           {data::VboIdMain::kTerrainNoiseFbmWarpGainIcon, data::TextId::kNone}
@@ -406,36 +450,50 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(TextRenderer& text_renderer, GLuint par
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmWarpNegativeText, data::TextId::kNone}, data::TextId::kNegative) {
   Base::sliders_ = {
-      &slider_scale_, &slider_factors_, &slider_octaves_, &slider_shift_, &slider_time_shift_,
+      &slider_scale_x_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
   Base::toggles_ = {&toggle_negative_};
   Base::texts_ = {
-      &text_scale_, &text_factors_, &text_octaves_, &text_shift_, &text_time_shift_,
+      &text_scale_x_, &text_octaves_,
       &text_gain_, &text_lacunarity_, &text_slopeness_,
       &text_octave_factor_, &text_seed_, &text_q_, &text_r_, &text_negative_};
   Base::ui_event_handler_ = {
-      &slider_scale_, &slider_octaves_, &slider_shift_, &slider_time_shift_,
+      &slider_scale_x_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
+  shader_ = Shader("../shaders/noise_shaders/TerrainNoise.vert",
+                   "../shaders/noise_shaders/FbmWarp.frag");
   SetParent(parent_id);
 }
 
+Texture TerrainNoiseFbmWarp::Generate(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  shader_.Bind();
+  glUniform2fv(0, 1, glm::value_ptr(resolution));
+  glUniform1f(1, slider_scale_x_.GetProgress());
+  glUniform1f(2, slider_scale_x_.GetProgress());
+  glUniform1i(4, static_cast<int>(slider_octaves_.GetProgress()));
+  glUniform1f(7, slider_gain_.GetProgress());
+  glUniform1f(8, slider_lacunarity_.GetProgress());
+  glUniform1f(9, slider_slopeness_.GetProgress());
+  glUniform1f(10, slider_octave_factor_.GetProgress());
+  glUniform1f(12, slider_seed_.GetProgress());
+  glUniform1f(13, slider_q_.GetProgress());
+  glUniform1f(14, slider_r_.GetProgress());
+  glUniform1i(11, static_cast<int>(!toggle_negative_.IsOff()));
+  return GenAndSave(resolution, buffer, tex_name);
+}
+
 TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(TextRenderer& text_renderer, GLuint parent_id)
-    : slider_scale_(
+    : slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleArea, data::TextId::kNone},
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleIcon, data::TextId::kNone}
           ),
-      text_scale_(
+      text_scale_x_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleText, data::TextId::kNone}, data::TextId::kScale),
-      slider_factors_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpFactorsArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpFactorsIcon, data::TextId::kNone}
-          ),
-      text_factors_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpFactorsText, data::TextId::kNone}, data::TextId::kFactors),
       slider_octaves_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesArea, data::TextId::kNone},
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesIcon, data::TextId::kNone}
@@ -443,20 +501,6 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(TextRenderer& text_renderer
       text_octaves_(
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesText, data::TextId::kNone}, data::TextId::kOctaves),
-      slider_shift_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpShiftArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpShiftIcon, data::TextId::kNone}
-          ),
-      text_shift_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpShiftText, data::TextId::kNone}, data::TextId::kShift),
-      slider_time_shift_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpTimeShiftArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpTimeShiftIcon, data::TextId::kNone}
-          ),
-      text_time_shift_(
-          text_renderer, 0.1f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpTimeShiftText, data::TextId::kNone}, data::TextId::kTimeShift),
       slider_gain_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainArea, data::TextId::kNone},
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainIcon, data::TextId::kNone}
@@ -516,17 +560,38 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(TextRenderer& text_renderer
           text_renderer, 0.1f, glm::vec2{1.0f},
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeText, data::TextId::kNone}, data::TextId::kNegative) {
   Base::sliders_ = {
-      &slider_scale_, &slider_factors_, &slider_octaves_, &slider_shift_, &slider_time_shift_,
+      &slider_scale_x_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
   Base::toggles_ = {&toggle_negative_};
   Base::texts_ = {
-      &text_scale_, &text_factors_, &text_octaves_, &text_shift_, &text_time_shift_,
+      &text_scale_x_, &text_octaves_,
       &text_gain_, &text_lacunarity_, &text_slopeness_,
       &text_octave_factor_, &text_seed_, &text_q_, &text_r_, &text_negative_};
   Base::ui_event_handler_ = {
-      &slider_scale_, &slider_octaves_, &slider_shift_, &slider_time_shift_,
+      &slider_scale_x_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
+  shader_ = Shader("../shaders/noise_shaders/TerrainNoise.vert",
+                   "../shaders/noise_shaders/FbmPerlinWarp.frag");
   SetParent(parent_id);
+}
+
+Texture TerrainNoiseFbmPerlinWarp::Generate(
+    glm::vec2 resolution, std::vector<unsigned char>& buffer,
+    std::string_view tex_name) {
+  shader_.Bind();
+  glUniform2fv(0, 1, glm::value_ptr(resolution));
+  glUniform1f(1, slider_scale_x_.GetProgress());
+  glUniform1f(2, slider_scale_x_.GetProgress());
+  glUniform1i(4, static_cast<int>(slider_octaves_.GetProgress()));
+  glUniform1f(7, slider_gain_.GetProgress());
+  glUniform1f(8, slider_lacunarity_.GetProgress());
+  glUniform1f(9, slider_slopeness_.GetProgress());
+  glUniform1f(10, slider_octave_factor_.GetProgress());
+  glUniform1f(12, slider_seed_.GetProgress());
+  glUniform1f(13, slider_q_.GetProgress());
+  glUniform1f(14, slider_r_.GetProgress());
+  glUniform1i(11, static_cast<int>(!toggle_negative_.IsOff()));
+  return GenAndSave(resolution, buffer, tex_name);
 }
