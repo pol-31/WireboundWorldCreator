@@ -6,6 +6,8 @@ namespace data {
 
 const std::array<std::string_view, gTotalText> gText = {
     "scale",
+    "scale X",
+    "scale Y",
     "seed",
     "jitter",
     "phase",
@@ -24,8 +26,18 @@ const std::array<std::string_view, gTotalText> gText = {
     "factors",
     "q",
     "r",
+    "Perlin",
+    "Cellular",
+    "Metaballs",
+    "FbmGrid",
+    "FbmMulti",
+    "FbmdPerlin",
+    "FbmWarp",
+    "FbmPerlinWarp",
+
     "erosion",
     "weathering",
+
     "menu Terrain",
     "menu Water",
     "menu Roads",
@@ -35,8 +47,8 @@ const std::array<std::string_view, gTotalText> gText = {
     "menu Biomes",
     "menu Tiles",
     "menu",
-    "resolution"
-    "show tips"
+    "resolution",
+    "show tips",
     "New game",
     "Load game",
     "Continue",

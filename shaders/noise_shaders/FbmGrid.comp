@@ -1,14 +1,21 @@
 #version 460 core
-out float fragColor;
+layout (local_size_x = 16, local_size_y = 16) in;
 
-layout (location = 0) uniform vec2 resolution;
+layout(r32f, binding = 0) uniform writeonly image2D out_texture;
+
+//layout (location = 0) uniform vec2 resolution;
 
 layout (location = 1) uniform float scale_x;
 layout (location = 2) uniform float scale_y;
-layout (location = 3) uniform float lacunarity;
-layout (location = 4) uniform int octaves;
-//layout (location = 5) uniform float phase;
-layout (location = 6) uniform float seed;
+layout (location = 3) uniform int octaves;
+layout (location = 4) uniform float shift;
+//layout (location = 5) uniform float time_shift;
+layout (location = 6) uniform float gain;
+layout (location = 7) uniform float lacunarity;
+//layout (location = 8) uniform vec3 translate;
+layout (location = 9) uniform float warp_strength;
+layout (location = 10) uniform float octave_factor;
+layout (location = 11) uniform float seed;
 
 
 uint ihash1D(uint q)
@@ -123,7 +130,6 @@ void betterHash2D(vec4 coords0, vec4 coords1, out vec4 hashX, out vec4 hashY)
 // Each has a tradeoff between quality and speed, some may also experience artifacts for certain ranges and are not realiable.
 #define multiHash2D betterHash2D
 
-
 // the main noise interpolation function using a hermite polynomial
 float noiseInterpolate(const in float x)
 {
@@ -144,26 +150,6 @@ vec4 noiseInterpolate(const in vec4 x)
 {
     vec4 x2 = x * x;
     return x2 * x * (x * (x * 6.0 - 15.0) + 10.0);
-}
-vec2 noiseInterpolateDu(const in float x)
-{
-    float x2 = x * x;
-    float u = x2 * x * (x * (x * 6.0 - 15.0) + 10.0);
-    float du = 30.0 * x2 * (x * (x - 2.0) + 1.0);
-    return vec2(u, du);
-}
-vec4 noiseInterpolateDu(const in vec2 x)
-{
-    vec2 x2 = x * x;
-    vec2 u = x2 * x * (x * (x * 6.0 - 15.0) + 10.0);
-    vec2 du = 30.0 * x2 * (x * (x - 2.0) + 1.0);
-    return vec4(u, du);
-}
-void noiseInterpolateDu(const in vec3 x, out vec3 u, out vec3 du)
-{
-    vec3 x2 = x * x;
-    u = x2 * x * (x * (x * 6.0 - 15.0) + 10.0);
-    du = 30.0 * x2 * (x * (x - 2.0) + 1.0);
 }
 
 // 2D Value noise that returns two values.
@@ -198,39 +184,62 @@ vec2 multiNoise(vec4 pos, vec4 scale, float time, float seed) {
     return multiNoise(pos, scale, time, vec2(seed));
 }
 
-// FBM implementation using value noise which returns multiple values.
+// FBM implementation using a variation of Value noise.
 // @param scale Number of tiles, must be  integer for tileable results, range: [2, inf]
 // @param octaves Number of octaves for the fbm, range: [1, inf]
+// @param shift Position shift for each octave, range: [0, inf], default: 100.0
+// @param timeShift Time shift for each octave, range: [-inf, inf]
+// @param gain Gain for each fbm octave, range: [0, 2], default: 0.5
 // @param lacunarity Frequency of the fbm, must be integer for tileable results, range: [1, 32]
-// @param phase The phase for rotating the hash, range: [0, inf], default: 0.0
+// @param translate Translate factors for the value noise , range: [-inf, inf], default: {0.5, -0.25, 0.15}
+// @param warpStrength The warp factor used for domain warping, range: [-10, 10], default: 0.5
+// @param octaveFactor The octave intensity factor, the lower the more pronounced the lower octaves will be, range: [-1, 1], default: 0.0
 // @param seed Seed to randomize result, range: [0, inf], default: 0.0
 // @return value of the noise, range: [0, inf]
-vec4 fbmMulti(vec2 pos, vec2 scale, float lacunarity, int octaves, float phase, float seed)
+float fbmGrid(vec2 pos, vec2 scale, int octaves, float shift, float timeShift,
+              float gain, float lacunarity, vec3 translate, float warpStrength,
+              float octaveFactor, float seed)
 {
-    vec4 seeds = vec4(0.0, 1031.0, 537.0, 23.0) + seed;
-    float f = 2.0 / lacunarity;
+    float amplitude = gain;
+    float time = timeShift;
+    vec2 frequency = scale;
+    vec2 offset = vec2(shift, 0.0);
+    vec2 p = pos * frequency;
+    octaveFactor = 1.0 + octaveFactor * 0.12;
 
-    vec4 value = vec4(0.0);
-    float w = 1.0;
-    float acc = 0.0;
+    vec2 sinCos = vec2(sin(shift), cos(shift));
+    mat2 rotate = mat2(sinCos.y, sinCos.x, sinCos.x, sinCos.y);
+
+    float value = 0.0;
     for (int i = 0; i < octaves; i++)
     {
-        vec2 ns = vec2(scale / w);
-        vec4 n;
-        n.xy = multiNoise(pos.xyxy, ns.xyxy, phase, seeds.xy);
-        n.zw = multiNoise(pos.xyxy, ns.xyxy, phase, seeds.zw);
-        value += (n * 0.5 + 0.5) * w;
-        acc += w;
-        w *= 0.5 * f;
+        vec2 pi = p / frequency + value * warpStrength;
+        vec4 mn;
+        mn.xy = multiNoise(pi.xyxy + vec2(0.0, translate.x).xxyy, frequency.xyxy, time, seed);
+        mn.zw = multiNoise(pi.xyxy + translate.yyzz, frequency.xyxy, time, seed);
+        mn.xy = mn.xy * mn.zw;
+
+        float n = pow(abs(mn.x * mn.y), 0.25) * 2.0 - 1.0;
+        value += amplitude * n;
+
+        p = p * lacunarity + offset * float(1 + i);
+        frequency *= lacunarity;
+        amplitude = pow(amplitude * gain, octaveFactor);
+        time += timeShift;
+        offset *= rotate;
     }
-    return value / acc;
+    value = value * 0.5 + 0.5;
+    return value * value;
 }
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / resolution;
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(out_texture);
+    vec2 uv = vec2(coord) / vec2(size);
 
-//    float height = fbmMulti(uv, vec2(scale_x, scale_y), lacunarity, octaves, phase, seed).x;
-    float height = fbmMulti(uv, vec2(scale_x, scale_y), lacunarity, octaves, 0.0f, seed).x;
-
-    fragColor = height;
+//    float height = fbmGrid(uv, vec2(4.0f, 4.0f), 4, 100.0f, time_shift, 0.5f, 5, translate, 0.5f, 0.0f, 0.0f);
+    float height = fbmGrid(uv, vec2(scale_x, scale_y), octaves, shift, 0.0f,
+                           gain, lacunarity, vec3(0.5, -0.25, 0.15),
+                           warp_strength, octave_factor, seed);
+    imageStore(out_texture, coord, vec4(height));
 }

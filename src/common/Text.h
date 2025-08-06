@@ -9,6 +9,8 @@ namespace data {
 enum class TextId {
   // terrain noise traits
   kScale,
+  kScaleX,
+  kScaleY,
   kSeed,
   kJitter,
   kPhase,
@@ -27,6 +29,14 @@ enum class TextId {
   kFactors,
   kQ,
   kR,
+  kPerlin,
+  kCellular,
+  kMetaballs,
+  kFbmGrid,
+  kFbmMulti,
+  kFbmdPerlin,
+  kFbmWarp,
+  kFbmPerlinWarp,
 
   kErosion,
   kWeathering,

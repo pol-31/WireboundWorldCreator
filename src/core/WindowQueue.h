@@ -12,9 +12,15 @@ class UiTopWindowBase;
 
 class WindowQueue {
  public:
-  using SizeType = std::array<UiWindowBase*, 5>::size_type;
+  using DataType = std::array<UiWindowBase*, 20>;
+  using SizeType = DataType::size_type;
 
   WindowQueue();
+
+  WindowQueue(const WindowQueue& other) = delete;
+  WindowQueue(WindowQueue&& other) = delete;
+  WindowQueue& operator=(const WindowQueue& other) = delete;
+  WindowQueue& operator=(WindowQueue&& other) = delete;
 
   SizeType PushBack(UiWindowBase* window);
 
@@ -43,7 +49,7 @@ class WindowQueue {
   }
 
  private:
-  std::array<UiWindowBase*, 5> windows_;
+  DataType windows_;
 
   // edit, bake, settings, tips - can be pinned
   // confirmation, file - cannot be pinned

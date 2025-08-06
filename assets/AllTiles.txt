@@ -37,7 +37,7 @@
 --- --- delimiter --- ---
 pos_x=0
 pos_y=0
-map_terrain_height=../../ProvingGround\cmake-build-debug\height_map_updated.png
+map_terrain_height=../assets/terrain/hmap1024.r32
 map_erosion_wear=../assets/terrain/map_erosion_wear.png
 map_erosion_flow=../assets/terrain/map_erosion_flow.png
 map_erosion_deposition=../../ProvingGround\cmake-build-debug\flowDirTex.png

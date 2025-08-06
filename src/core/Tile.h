@@ -69,22 +69,25 @@ struct TileInfo {
 struct Tile {
   int pos_x;
   int pos_y;
-  Texture map_terrain_height{};
-  Texture map_erosion_wear{}; // material effect
-  Texture map_erosion_flow{}; // material effect
-  Texture map_erosion_deposition{}; // material effect
-  Texture map_terrain_cavity{}; // ssao
-  Texture map_terrain_occlusion{};
-  Texture map_terrain_normal{};
-  Texture map_terrain_wetness{};
+  Texture32F map_terrain_height{}; // r32f
+
+  Texture map_terrain_normal{}; // rg8
+  Texture map_terrain_slope{}; // r8
+  Texture map_terrain_ao{}; // r8
+  Texture map_terrain_splat{}; // rgba8
+
+  Texture32F map_terrain_erosion_thermal{}; // r32f
+  Texture32F map_terrain_erosion_hydraulic{}; // r32f
+  Texture32F map_water_accum{}; // r32f
+  Texture map_water_flow{}; // rg8
+
   Texture map_water_height{};
-  Texture map_water_flow{};
   // other data serializing called individually (e.g. graphs, placement)
 
   //TODO; indeed, wisdom here is
   /// need to duplicate both on GPU and CPU:
   /// for gpu to render; for cpu to dynamically obtain object y pos
-  std::vector<uint8_t> terrain_heights_;
+  std::vector<float> terrain_heights_;
   std::vector<uint8_t> water_heights_;
 
   /// we need this at the beginning of working with each tile, so we could
@@ -92,48 +95,7 @@ struct Tile {
   /// state (input map_water_height + water from external tiles)
   std::vector<uint8_t> water_heights_init_;
 
-  explicit Tile(const TileInfo& tile_info) {
-    // TODO; use placeholders (full black / full white texture)
-
-    // position data already valid
-    // (we've thrown at TileRenderer::Init()) in case of missing
-    pos_x = tile_info.pos_x;
-    pos_y = tile_info.pos_y;
-    // map_terrain_height is necessary (if float GL_RED is ignored)
-    map_terrain_height = Texture(tile_info.map_terrain_height, GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
-    map_erosion_wear = Texture(tile_info.map_erosion_wear, GL_RED);
-    map_erosion_flow = Texture(tile_info.map_erosion_flow, GL_RED);
-    map_erosion_deposition = Texture(tile_info.map_erosion_deposition, GL_RGBA);
-    map_terrain_cavity = Texture(tile_info.map_terrain_cavity, GL_RED);
-    map_terrain_occlusion = Texture(tile_info.map_terrain_occlusion, GL_RED);
-    //  map_terrain_normal = Texture(tile_info.map_terrain_normal, GL_RED);
-    map_terrain_wetness = Texture(tile_info.map_terrain_wetness, GL_RED);
-
-    if (tile_info.map_water_height.empty()) {
-      map_water_height = Texture(1024, 1024, GL_RED, GL_LINEAR, GL_CLAMP_TO_EDGE);
-    } else {
-      map_water_height = Texture(tile_info.map_water_height, GL_RED);
-    }
-    //  InitHeightMap(tile_info.map_water_height, map_water_height);
-
-    map_water_flow = Texture(tile_info.map_water_flow, GL_RED);
-
-    // duplicating data both on CPU & GPU (see Tile.h for more info)
-    terrain_heights_.resize(1024 * 1024);
-    map_terrain_height.Bind();
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE,
-                  terrain_heights_.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    water_heights_init_.resize(1024 * 1024);
-    map_water_height.Bind();
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE,
-                  water_heights_init_.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    /// see explanation at header file (Tile.h)
-    water_heights_ = water_heights_init_;
-  }
+  explicit Tile(const TileInfo& tile_info);
 
   /* Can we compute only 9... why not - at least for grass and water yes:
    * 1 2 3 4 4 4 ...

@@ -81,6 +81,8 @@ inline constexpr std::array<float, 2> kMsgInfoPos = {0.0f, -0.9f};
 // centre pos for message error text sprite
 inline constexpr std::array<float, 2> kMsgErrorPos = {0.0f, 0.0f};
 
+inline constexpr int gTerrainSize = 1024;
+
 } // namespace details
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC__DETAILS_H_

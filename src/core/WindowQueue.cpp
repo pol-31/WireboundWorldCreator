@@ -56,7 +56,9 @@ bool WindowQueue::Press(int id) {
     return true;
   }
   bool result = false;
-  for (auto window : windows_) {
+  /// this way we won't Hide() new created
+  auto windows_copy = windows_;
+  for (auto window : windows_copy) {
     if (window) {
       if (window->Press(id)) {
         result = true;

@@ -1,7 +1,9 @@
 #version 460 core
-out float fragColor;
+layout (local_size_x = 16, local_size_y = 16) in;
 
-layout (location = 0) uniform vec2 resolution;
+layout(r32f, binding = 0) uniform writeonly image2D out_texture;
+
+//layout (location = 0) uniform vec2 resolution;
 
 layout (location = 1) uniform float scale_x;
 layout (location = 2) uniform float scale_y;
@@ -353,7 +355,9 @@ vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, mat2 transform,
 }
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / resolution;
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(out_texture);
+    vec2 uv = vec2(coord) / vec2(size);
 
     mat2 transform = mat2(1.0f, 0.0f, 0.0f, 1.0f);
     vec2 shift = vec2(0.0f);
@@ -362,6 +366,5 @@ void main() {
         uv, vec2(scale_x, scale_y), octaves, shift,
         transform, gain, vec2(lacunarity), slopeness,
         octave_factor, negative, seed).x;
-
-    fragColor = height;
+    imageStore(out_texture, coord, vec4(height));
 }

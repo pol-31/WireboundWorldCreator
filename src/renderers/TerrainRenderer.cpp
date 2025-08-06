@@ -42,12 +42,12 @@ void TerrainRenderer::Render() {
 
   tile_.map_terrain_height.Bind();
   glActiveTexture(GL_TEXTURE1);
-  tile_.map_terrain_occlusion.Bind();
+  tile_.map_terrain_ao.Bind();
 
   glActiveTexture(GL_TEXTURE2);
   tile_.map_terrain_normal.Bind();
   glActiveTexture(GL_TEXTURE3);
-  tile_.map_erosion_deposition.Bind();
+  tile_.map_terrain_erosion_thermal.Bind();
 
   glBindVertexArray(vao_);
   glPatchParameteri(GL_PATCH_VERTICES, 4);

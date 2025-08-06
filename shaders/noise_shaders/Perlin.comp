@@ -1,12 +1,13 @@
 #version 460 core
-out float fragColor;
+layout (local_size_x = 16, local_size_y = 16) in;
 
-layout (location = 0) uniform vec2 resolution;
+layout(r32f, binding = 0) uniform writeonly image2D out_texture;
+
+//layout (location = 0) uniform vec2 resolution;
 
 layout (location = 1) uniform float scale_x;
 layout (location = 2) uniform float scale_y;
-layout (location = 3) uniform float jitter;
-layout (location = 4) uniform float seed;
+layout (location = 3) uniform float seed;
 
 uint ihash1D(uint q)
 {
@@ -61,6 +62,16 @@ float hash1D(vec3 x)
     return float(v.x + v.y * v.z) * (1.0 / float(0xffffffffu));
 }
 
+// @return Value of the noise, range: [0, 1]
+vec2 hash2D(vec2 x)
+{
+    // based on: Inigo Quilez, Integer Hash - III, 2017
+    uvec4 q = uvec2(x * 8192.0).xyyx + uvec2(0u, 3115245u).xxyy;
+    q = 1103515245u * ((q >> 1u) ^ q.yxwz);
+    uvec2 n = 1103515245u * (q.xz ^ (q.yw >> 3u));
+    return vec2(n) * (1.0 / float(0xffffffffu));
+}
+
 // generates 2 random numbers for the coordinate
 vec2 betterHash2D(vec2 x)
 {
@@ -110,52 +121,41 @@ void betterHash2D(vec4 coords0, vec4 coords1, out vec4 hashX, out vec4 hashY)
 // Each has a tradeoff between quality and speed, some may also experience artifacts for certain ranges and are not realiable.
 #define multiHash2D betterHash2D
 
-// Classic 3x3 Cellular noise with F1 and F2 distances.
+// 2D Perlin noise.
 // @param scale Number of tiles, must be  integer for tileable results, range: [2, inf]
-// @param jitter Jitter factor for the cells, if zero then it will result in a square grid, range: [0, 1], default: 1.0
 // @param seed Seed to randomize result, range: [0, inf], default: 0.0
-// @return Returns the cellular distances, x = F1, y = F2, range: [0, 1].
-vec2 cellularNoise(vec2 pos, vec2 scale, float jitter, float seed)
+// @return Value of the noise, range: [-1, 1]
+float perlinNoise(vec2 pos, vec2 scale, float seed)
 {
+    // based on Modifications to Classic Perlin Noise by Brian Sharpe: https://archive.is/cJtlS
     pos *= scale;
-    vec2 i = floor(pos);
-    vec2 f = pos - i;
+    vec4 i = floor(pos).xyxy + vec2(0.0, 1.0).xxyy;
+    vec4 f = (pos.xyxy - i.xyxy) - vec2(0.0, 1.0).xxyy;
+    i = mod(i, scale.xyxy) + seed;
 
-    const vec3 offset = vec3(-1.0, 0.0, 1.0);
-    vec4 cells = mod(i.xyxy + offset.xxzz, scale.xyxy) + seed;
-    i = mod(i, scale) + seed;
-    vec4 dx0, dy0, dx1, dy1;
-    multiHash2D(vec4(cells.xy, vec2(i.x, cells.y)), vec4(cells.zyx, i.y), dx0, dy0);
-    multiHash2D(vec4(cells.zwz, i.y), vec4(cells.xw, vec2(i.x, cells.w)), dx1, dy1);
+    // grid gradients
+    vec4 gradientX, gradientY;
+    multiHash2D(i, gradientX, gradientY);
+    gradientX -= 0.49999;
+    gradientY -= 0.49999;
 
-    dx0 = offset.xyzx + dx0 * jitter - f.xxxx; // -1 0 1 -1
-    dy0 = offset.xxxy + dy0 * jitter - f.yyyy; // -1 -1 -1 0
-    dx1 = offset.zzxy + dx1 * jitter - f.xxxx; // 1 1 -1 0
-    dy1 = offset.zyzz + dy1 * jitter - f.yyyy; // 1 0 1 1
-    vec4 d0 = dx0 * dx0 + dy0 * dy0;
-    vec4 d1 = dx1 * dx1 + dy1 * dy1;
-
-    vec2 centerPos = multiHash2D(i) * jitter - f; // 0 0
-
-    vec4 F = min(d0, d1);
-    // shuffle into F the 4 lowest values
-    F = min(F, max(d0, d1).wzyx);
-    // shuffle into F the 2 lowest values
-    F.xy = min(min(F.xy, F.zw), max(F.xy, F.zw).yx);
-    // add the last value
-    F.zw = vec2(dot(centerPos, centerPos), 1e+5);
-    // shuffle into F the final 2 lowest values
-    F.xy = min(min(F.xy, F.zw), max(F.xy, F.zw).yx);
-
-    vec2 f12 = vec2(min(F.x, F.y), max(F.x, F.y));
-    // normalize: 0.75^2 * 2.0  == 1.125
-    return sqrt(f12) * (1.0 / 1.125);
+    // perlin surflet
+    vec4 gradients = inversesqrt(gradientX * gradientX + gradientY * gradientY) * (gradientX * f.xzxz + gradientY * f.yyww);
+    // normalize: 1.0 / 0.75^3
+    gradients *= 2.3703703703703703703703703703704;
+    vec4 lengthSq = f * f;
+    lengthSq = lengthSq.xzxz + lengthSq.yyww;
+    vec4 xSq = 1.0 - min(vec4(1.0), lengthSq);
+    xSq = xSq * xSq * xSq;
+    return dot(xSq, gradients);
 }
 
+
 void main() {
-    vec2 uv = gl_FragCoord.xy / resolution;
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(out_texture);
+    vec2 uv = vec2(coord) / vec2(size);
 
-    float height = cellularNoise(uv, vec2(scale_x, scale_y), jitter, seed).x;
-
-    fragColor = height;
+    float height = perlinNoise(uv, vec2(scale_x, scale_y), seed);
+    imageStore(out_texture, coord, vec4(height));
 }

@@ -14,7 +14,7 @@ class PickingFramebuffer {
  public:
   PickingFramebuffer()
       : texture_(gWindowWidth, gWindowHeight, GL_R32UI,
-                 GL_LINEAR, GL_CLAMP_TO_EDGE, true) {
+                 GL_LINEAR, GL_CLAMP_TO_EDGE) {
     Init();
   }
   ~PickingFramebuffer() {
@@ -24,8 +24,8 @@ class PickingFramebuffer {
   //in case of gWindow resize
   void UpdateResolution() {
     DeInit();
-    texture_ = Texture(gWindowWidth, gWindowHeight, GL_R32UI,
-                       GL_LINEAR, GL_CLAMP_TO_EDGE, true);
+    texture_ = TextureUi(gWindowWidth, gWindowHeight, GL_R32UI,
+                       GL_LINEAR, GL_CLAMP_TO_EDGE);
     Init();
   }
 
@@ -78,7 +78,7 @@ class PickingFramebuffer {
   }
 
   GLuint fbo_{0};
-  Texture texture_;
+  TextureUi texture_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_PICKINGFRAMEBFFER_H_

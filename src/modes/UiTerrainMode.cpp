@@ -67,6 +67,7 @@ UiTerrainMode::UiTerrainMode(
       btn_update_(data::VboIdMain::kTerrainUpdate, data::TextId::kMenuPlacement,
           [this]() {
                     std::cout << "btn_update?" << std::endl;
+                    ui_bake_.Bake(1000, 1000, 0.1f);
           }),
       sprite_flatten_(data::VboIdMain::kTerrainFlatten, data::TextId::kNotYet),
       toggle_flatten_(
@@ -93,24 +94,25 @@ UiTerrainMode::UiTerrainMode(
                   this->ui_bake_.Show();
                 }),
       ui_bake_(
+          cur_tile,
           {data::VboIdMain::kTerrainBakeDesk, data::TextId::kNotYet},
-          2.0f,
+          1.0f,
           {{data::VboIdMain::kTerrainBakeDeskPinBack, data::TextId::kNotYet, []() {}},
            {data::VboIdMain::kTerrainBakeDeskPinPoint, data::TextId::kNotYet}},
           ui_shared_resources_,
           window_queue,
           text_renderer,
           {data::VboIdMain::kTerrainBakeAccept, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainBakeHeightmap, data::TextId::kNotYet},
-          {text_renderer, 0.1f, glm::vec2{0.0f},
+          {text_renderer, 0.05f, glm::vec2{0.0f},
            {data::VboIdMain::kTerrainBakeErosionStepLabel, data::TextId::kNotYet},
           data::TextId::kErosion},
           {data::VboIdMain::kTerrainBakeErosionStepInput, data::TextId::kNotYet},
-          {text_renderer, 0.1f, glm::vec2{0.0f},
+          {text_renderer, 0.05f, glm::vec2{0.0f},
            {data::VboIdMain::kTerrainBakeWeatheringStepLabel, data::TextId::kNotYet},
            data::TextId::kWeathering},
           {data::VboIdMain::kTerrainBakeWeatheringStepInput, data::TextId::kNotYet}),
       slots_(
+          cur_tile,
           ui_shared_resources_,
           window_queue,
           text_renderer,
@@ -137,15 +139,7 @@ UiTerrainMode::UiTerrainMode(
           {data::VboIdMain::kTerrainSlotsSelected, data::TextId::kNotYet}),
       ui_event_handler_({
           &btn_update_, &slider_size_,
-          &slider_falloff_, &toggle_flatten_, &btn_bake_, &slots_}),
-      ui_terrain_generator_(
-          {data::VboIdMain::kSpareText8, data::TextId::kNotYet},
-          1.0f,
-          {{data::VboIdMain::kSpareText9, data::TextId::kNotYet, []() {}},
-           {data::VboIdMain::kSpareText10, data::TextId::kNotYet}},
-          ui_shared_resources_,
-          window_queue,
-          cur_tile) {}
+          &slider_falloff_, &toggle_flatten_, &btn_bake_, &slots_}) {}
 
 void UiTerrainMode::BindCallbacks() {
   glfwSetScrollCallback(gWindow, ScrollCallback);

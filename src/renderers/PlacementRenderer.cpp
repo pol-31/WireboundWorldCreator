@@ -85,7 +85,7 @@ void PlacementRenderer::RenderDraw() const {
   tile_.map_terrain_height.Bind();
 
   glActiveTexture(GL_TEXTURE1);
-  tile_.map_terrain_wetness.Bind();
+  tile_.map_terrain_slope.Bind();
 //  tile_.cur_placement_mode_tex_->Bind();
 
   glPatchParameteri(GL_PATCH_VERTICES, 4);

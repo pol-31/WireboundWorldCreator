@@ -1,35 +1,33 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_
 
-#include "../core/Ui.h"
-#include "../core/UiText.h"
+#include "../core/UiComplex.h"
+#include "TerrainNoiseData.h"
 
-const int gNoisesNum = 8;
-
-class ITerrainNoise {
- public:
-  virtual void Render(glm::vec2 mouse_pos) = 0;
-
-  virtual void RenderPicking() = 0;
-
-  virtual bool Scroll(GLuint id, float yoffset) = 0;
-
-  virtual void UpdateTransform() = 0;
-
-  virtual bool Press(int id) = 0;
-
-  virtual void Release() = 0;
-
-  virtual data::TextId Hover(int id) = 0;
-};
+Texture32F GenAndSave(std::string_view tex_name);
 
 template <size_t gSlidersNum, size_t gTogglesNum,
           size_t gTextNum, size_t gWidgetsNum>
-class TerrainNoiseBase : public ITerrainNoise {
+class TerrainNoiseBase : public UiWindowAppear {
  public:
-  TerrainNoiseBase() = default;
+  TerrainNoiseBase(
+      UiDynamicSprite&& sprite,
+      float size_scale,
+      UiToggle2&& pin,
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      UiDynamicSprite&& btn_save,
+      UiTextLabelId&& name)
+      : UiWindowAppear(std::move(sprite), size_scale, std::move(pin),
+                       ui_shared_resources, window_queue),
+        btn_save_(std::move(btn_save)),
+        name_(std::move(name)) {}
 
-  void Render(glm::vec2 mouse_pos) override {
+  bool Render() override {
+    RenderBack(true);
+    btn_save_.Render();
+    auto mouse_pos =
+        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
     for (auto slider : sliders_) {
       slider->Render(mouse_pos);
     }
@@ -39,9 +37,13 @@ class TerrainNoiseBase : public ITerrainNoise {
     for (auto text : texts_) {
       text->Render();
     }
+    name_.Render();
+    return false;
   }
 
   void RenderPicking() override {
+    RenderPickingBack();
+    btn_save_.RenderPicking();
     for (auto slider : sliders_) {
       slider->RenderPicking();
     }
@@ -51,6 +53,7 @@ class TerrainNoiseBase : public ITerrainNoise {
     for (auto text : texts_) {
       text->RenderPicking();
     }
+    name_.RenderPicking();
   }
 
   bool Scroll(GLuint id, float yoffset) override {
@@ -61,7 +64,11 @@ class TerrainNoiseBase : public ITerrainNoise {
     return handled;
   }
 
-  void UpdateTransform() override {
+  void UpdateTransform(
+      float x_translate, float y_translate, float scale) override {
+    sprite_.UpdateTransform();
+    pin_.UpdateTransform();
+    btn_save_.UpdateTransform();
     for (auto slider : sliders_) {
       slider->UpdateTransform();
     }
@@ -71,6 +78,7 @@ class TerrainNoiseBase : public ITerrainNoise {
     for (auto text : texts_) {
       text->UpdateTransform();
     }
+    name_.UpdateTransform();
   }
 
   bool Press(int id) override {
@@ -99,7 +107,23 @@ class TerrainNoiseBase : public ITerrainNoise {
       gUiComponents[text->GetId() - details::kIdOffsetUi].parent_id_
           = parent_id;
     }
+    gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
+        = parent_id;
+    gUiComponents[name_.GetId() - details::kIdOffsetUi].parent_id_
+        = parent_id;
+    gUiComponents[btn_save_.GetId() - details::kIdOffsetUi].parent_id_
+        = parent_id;
+    gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
+        = static_cast<UiBase*>(this);
+    //TODO: move ctor
   }
+
+  UiTextLabelId name_;
+  UiDynamicSprite btn_save_;
+
+  //TODO:
+//  UiDynamicSprite hmap_;
+//  Texture32F& hmap_ref_;
 
   std::array<UiSliderH2*, gSlidersNum> sliders_;
   std::array<UiToggle*, gTogglesNum> toggles_;
@@ -109,58 +133,58 @@ class TerrainNoiseBase : public ITerrainNoise {
   Shader shader_;
 };
 
-Texture GenAndSave(
-    glm::vec2 resolution, std::vector<unsigned char>& buffer,
-    std::string_view tex_name);
-
 class TerrainNoisePerlin final
     : public TerrainNoiseBase<
-          2, 0, 2,
+          3, 0, 3,
           static_cast<int>(data::VboIdMain::kTerrainNoisePerlinSeedIcon)
-              - static_cast<int>(data::VboIdMain::kTerrainNoisePerlinScaleText)> {
+              - static_cast<int>(data::VboIdMain::kTerrainNoisePerlinDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      2, 0, 2,
+      3, 0, 3,
       static_cast<int>(data::VboIdMain::kTerrainNoisePerlinSeedIcon)
-          - static_cast<int>(data::VboIdMain::kTerrainNoisePerlinScaleText)>;
+          - static_cast<int>(data::VboIdMain::kTerrainNoisePerlinDesk)>;
 
-  explicit TerrainNoisePerlin(TextRenderer& text_renderer, GLuint parent_id);
+  explicit TerrainNoisePerlin(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer);
 
-  Texture Generate(
-      glm::vec2 resolution, std::vector<unsigned char>& buffer,
-      std::string_view tex_name);
+  NoisePerlinData Generate(
+      glm::vec2 resolution, std::string_view tex_name);
 
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
-  // UiSliderH2 slider_scale_y_;
-  // UiTextLabelId text_scale_y_;
+  UiSliderH2 slider_scale_y_;
+  UiTextLabelId text_scale_y_;
   UiSliderH2 slider_seed_;
   UiTextLabelId text_seed_;
 };
 
 class TerrainNoiseCellular final
     : public TerrainNoiseBase<
-          3, 0, 3,
+          4, 0, 4,
           static_cast<int>(data::VboIdMain::kTerrainNoiseCellularSeedIcon)
-              - static_cast<int>(data::VboIdMain::kTerrainNoiseCellularScaleText)> {
+              - static_cast<int>(data::VboIdMain::kTerrainNoiseCellularDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      3, 0, 3,
+      4, 0, 4,
       static_cast<int>(data::VboIdMain::kTerrainNoiseCellularSeedIcon)
-          - static_cast<int>(data::VboIdMain::kTerrainNoiseCellularScaleText)>;
+          - static_cast<int>(data::VboIdMain::kTerrainNoiseCellularDesk)>;
 
-  explicit TerrainNoiseCellular(TextRenderer& text_renderer, GLuint parent_id);
+  explicit TerrainNoiseCellular(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer);
 
-  Texture Generate(
-      glm::vec2 resolution, std::vector<unsigned char>& buffer,
-      std::string_view tex_name);
+  NoiseCellularData Generate(
+      glm::vec2 resolution, std::string_view tex_name);
 
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
-  // UiSliderH2 slider_scale_y_;
-  // UiTextLabelId text_scale_y_;
+  UiSliderH2 slider_scale_y_;
+  UiTextLabelId text_scale_y_;
   UiSliderH2 slider_jitter_;
   UiTextLabelId text_jitter_;
   UiSliderH2 slider_seed_;
@@ -171,66 +195,64 @@ class TerrainNoiseMetaballs final
     : public TerrainNoiseBase<
           4, 0, 4,
           static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsSeedIcon)
-              - static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsScaleText)> {
+              - static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsDesk)> {
  public:
   using Base = TerrainNoiseBase<
       4, 0, 4,
       static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsSeedIcon)
-          - static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsScaleText)>;
+          - static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsDesk)>;
 
-  explicit TerrainNoiseMetaballs(TextRenderer& text_renderer, GLuint parent_id);
+  explicit TerrainNoiseMetaballs(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer);
 
-  Texture Generate(
-      glm::vec2 resolution, std::vector<unsigned char>& buffer,
-      std::string_view tex_name);
+  NoiseMetaballsData Generate(
+      glm::vec2 resolution, std::string_view tex_name);
 
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
-  // UiSliderH2 slider_scale_y_;
-  // UiTextLabelId text_scale_y_;
+  UiSliderH2 slider_scale_y_;
+  UiTextLabelId text_scale_y_;
   UiSliderH2 slider_jitter_;
   UiTextLabelId text_jitter_;
-//  UiSliderH2 slider_phase_; remove
-//  UiTextLabelId text_phase_; remove
   UiSliderH2 slider_seed_;
   UiTextLabelId text_seed_;
 };
 
 class TerrainNoiseFbmGrid final
     : public TerrainNoiseBase<
-          10, 0, 10,
+          9, 0, 9,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridSeedIcon)
-              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridScaleText)> {
+              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      10, 0, 10,
+      9, 0, 9,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridSeedIcon)
-          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridScaleText)>;
+          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridDesk)>;
 
-  explicit TerrainNoiseFbmGrid(TextRenderer& text_renderer, GLuint parent_id);
+  explicit TerrainNoiseFbmGrid(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer);
 
-  Texture Generate(
-      glm::vec2 resolution, std::vector<unsigned char>& buffer,
-      std::string_view tex_name);
+  NoiseFbmGridData Generate(
+      glm::vec2 resolution, std::string_view tex_name);
 
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
-  // UiSliderH2 slider_scale_y_;
-  // UiTextLabelId text_scale_y_;
+  UiSliderH2 slider_scale_y_;
+  UiTextLabelId text_scale_y_;
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
   UiSliderH2 slider_shift_;
   UiTextLabelId text_shift_;
-//  UiSliderH2 slider_time_shift_; remove
-//  UiTextLabelId text_time_shift_; remove
   UiSliderH2 slider_gain_;
   UiTextLabelId text_gain_;
   UiSliderH2 slider_lacunarity_;
   UiTextLabelId text_lacunarity_;
-//  UiSliderH2 slider_translate_; remove
-//  UiTextLabelId text_translate_; remove
   UiSliderH2 slider_warp_strength_;
   UiTextLabelId text_warp_strength_;
   UiSliderH2 slider_octave_factor_;
@@ -243,62 +265,60 @@ class TerrainNoiseFbmMulti final
     : public TerrainNoiseBase<
           5, 0, 5,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiSeedIcon)
-              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiScaleText)> {
+              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiDesk)> {
  public:
   using Base = TerrainNoiseBase<
       5, 0, 5,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiSeedIcon)
-          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiScaleText)>;
+          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiDesk)>;
 
-  explicit TerrainNoiseFbmMulti(TextRenderer& text_renderer, GLuint parent_id);
+  explicit TerrainNoiseFbmMulti(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer);
 
-  Texture Generate(
-      glm::vec2 resolution, std::vector<unsigned char>& buffer,
-      std::string_view tex_name);
+  NoiseFbmMultiData Generate(
+      glm::vec2 resolution, std::string_view tex_name);
 
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
-  // UiSliderH2 slider_scale_y_;
-  // UiTextLabelId text_scale_y_;
+  UiSliderH2 slider_scale_y_;
+  UiTextLabelId text_scale_y_;
   UiSliderH2 slider_lacunarity_;
   UiTextLabelId text_lacunarity_;
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
-//  UiSliderH2 slider_phases_; remove
-//  UiTextLabelId text_phases_; remove
   UiSliderH2 slider_seed_;
   UiTextLabelId text_seed_;
 };
 
 class TerrainNoiseFbmdPerlin final
     : public TerrainNoiseBase<
-          9, 1, 10,
+          8, 1, 9,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinSeedIcon)
-              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinScaleText)> {
+              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      9, 1, 10,
+      8, 1, 9,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinSeedIcon)
-          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinScaleText)>;
+          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinDesk)>;
 
-  explicit TerrainNoiseFbmdPerlin(TextRenderer& text_renderer, GLuint parent_id);
+  explicit TerrainNoiseFbmdPerlin(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer);
 
-  Texture Generate(
-      glm::vec2 resolution, std::vector<unsigned char>& buffer,
-      std::string_view tex_name);
+  NoiseFbmdPerlinData Generate(
+      glm::vec2 resolution, std::string_view tex_name);
 
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
-  // UiSliderH2 slider_scale_y_;
-  // UiTextLabelId text_scale_y_;
+  UiSliderH2 slider_scale_y_;
+  UiTextLabelId text_scale_y_;
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
-//  UiSliderH2 slider_shift_; remove
-//  UiTextLabelId text_shift_; remove
-//  UiSliderH2 slider_transform_; remove
-//  UiTextLabelId text_transform_; remove
   UiSliderH2 slider_gain_;
   UiTextLabelId text_gain_;
   UiSliderH2 slider_lacunarity_;
@@ -316,34 +336,30 @@ class TerrainNoiseFbmdPerlin final
 
 class TerrainNoiseFbmWarp final
     : public TerrainNoiseBase<
-          12, 1, 13,
+          10, 1, 11,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpRIcon)
-              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpScaleText)> {
+              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      12, 1, 13,
+      10, 1, 11,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpRIcon)
-          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpScaleText)>;
+          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpDesk)>;
 
-  explicit TerrainNoiseFbmWarp(TextRenderer& text_renderer, GLuint parent_id);
+  explicit TerrainNoiseFbmWarp(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer);
 
-  Texture Generate(
-      glm::vec2 resolution, std::vector<unsigned char>& buffer,
-      std::string_view tex_name);
+  NoiseFbmWarpData Generate(
+      glm::vec2 resolution, std::string_view tex_name);
 
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
-  // UiSliderH2 slider_scale_y_;
-  // UiTextLabelId text_scale_y_;
-//  UiSliderH2 slider_factors_; remove
-//  UiTextLabelId text_factors_; remove
+  UiSliderH2 slider_scale_y_;
+  UiTextLabelId text_scale_y_;
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
-//  UiSliderH2 slider_shift_; remove
-//  UiTextLabelId text_shift_; remove
-//  UiSliderH2 slider_time_shift_; remove
-//  UiTextLabelId text_time_shift_; remove
   UiSliderH2 slider_gain_;
   UiTextLabelId text_gain_;
   UiSliderH2 slider_lacunarity_;
@@ -365,34 +381,30 @@ class TerrainNoiseFbmWarp final
 
 class TerrainNoiseFbmPerlinWarp final
     : public TerrainNoiseBase<
-          12, 1, 13,
+          10, 1, 11,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpRIcon)
-              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleText)> {
+              - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      12, 1, 13,
+      10, 1, 11,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpRIcon)
-          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleText)>;
+          - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpDesk)>;
 
-  explicit TerrainNoiseFbmPerlinWarp(TextRenderer& text_renderer, GLuint parent_id);
+  explicit TerrainNoiseFbmPerlinWarp(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer);
 
-  Texture Generate(
-      glm::vec2 resolution, std::vector<unsigned char>& buffer,
-      std::string_view tex_name);
+  NoiseFbmPerlinWarpData Generate(
+      glm::vec2 resolution, std::string_view tex_name);
 
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
-  // UiSliderH2 slider_scale_y_;
-  // UiTextLabelId text_scale_y_;
-//  UiSliderH2 slider_factors_; remove
-//  UiTextLabelId text_factors_; remove
+  UiSliderH2 slider_scale_y_;
+  UiTextLabelId text_scale_y_;
   UiSliderH2 slider_octaves_;
   UiTextLabelId text_octaves_;
-//  UiSliderH2 slider_shift_; remove
-//  UiTextLabelId text_shift_; remove
-//  UiSliderH2 slider_time_shift_; remove
-//  UiTextLabelId text_time_shift_; remove
   UiSliderH2 slider_gain_;
   UiTextLabelId text_gain_;
   UiSliderH2 slider_lacunarity_;

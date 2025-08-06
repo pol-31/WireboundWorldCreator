@@ -2,8 +2,8 @@
 
 layout (local_size_x = 8, local_size_y = 8) in;
 
-layout (binding = 0, r8) uniform readonly image2D height_map;   // Input heightmap (single channel)
-layout (binding = 1, r8) uniform writeonly image2D output_map; // Output perturbed heightmap
+layout (binding = 0, r32f) uniform readonly image2D height_map;   // Input heightmap (single channel)
+layout (binding = 1, r32f) uniform writeonly image2D output_map; // Output perturbed heightmap
 
 // 3D Simplex noise function stub — you should replace with your own or use one from:
 // https://github.com/ashima/webgl-noise/blob/master/src/noise3D.glsl

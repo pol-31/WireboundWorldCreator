@@ -7,8 +7,6 @@
 #include "IUiMode.h"
 #include "../common/Vbos.h"
 
-#include "UiTerrainGenerator.h"
-
 #include "../core/Tile.h"
 #include "../core/UiSlots.h"
 #include "../core/UiComplex.h"

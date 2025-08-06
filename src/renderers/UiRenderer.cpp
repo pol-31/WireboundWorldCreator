@@ -25,7 +25,7 @@ UiRenderer::UiRenderer(
             &tiles_, cur_mode_),
       ui_settings_(
           {data::VboIdMain::kSettingsDesk, data::TextId::kNotYet},
-          4.0f,
+          2.0f,
           {{data::VboIdMain::kSettingsDeskPinBack, data::TextId::kNotYet, [](){}},
            {data::VboIdMain::kSettingsDeskPinPoint, data::TextId::kNotYet}},
           ui_shared_resources_,
@@ -35,19 +35,16 @@ UiRenderer::UiRenderer(
           {data::VboIdMain::kSettingsResolutionLabel, data::TextId::kNotYet},
           {data::VboIdMain::kSettingsResolutionLeft, data::TextId::kNotYet},
           {data::VboIdMain::kSettingsResolutionRight, data::TextId::kNotYet},
-          {data::VboIdMain::kSettingsResolutionSlot, data::TextId::kNotYet},
           {data::VboIdMain::kSettingsResolution, data::TextId::kNotYet},
           {{data::VboIdMain::kSettingsFullScreenOff, data::TextId::kNotYet},
            {data::VboIdMain::kSettingsFullScreenOn1, data::TextId::kNotYet},
            {data::VboIdMain::kSettingsFullScreenOn2, data::TextId::kNotYet},
            {data::VboIdMain::kSettingsFullScreenOn3, data::TextId::kNotYet}},
-          {data::VboIdMain::kSettingsSensitivityIcon, data::TextId::kNotYet},
           UiSliderH2{
               {data::VboIdMain::kSettingsSensitivityArea, data::TextId::kNotYet},
               {data::VboIdMain::kSettingsSensitivityHandle, data::TextId::kNotYet},
           },
           {data::VboIdMain::kSettingsKeyboard, data::TextId::kNotYet},
-          {data::VboIdMain::kSettingsSoundIcon, data::TextId::kNotYet},
           UiSliderH2{
               {data::VboIdMain::kSettingsSoundArea, data::TextId::kNotYet},
               {data::VboIdMain::kSettingsSoundHandle, data::TextId::kNotYet},
@@ -56,7 +53,6 @@ UiRenderer::UiRenderer(
            {data::VboIdMain::kSettingsSoundOn1, data::TextId::kNotYet},
            {data::VboIdMain::kSettingsSoundOn2, data::TextId::kNotYet},
            {data::VboIdMain::kSettingsSoundOn3, data::TextId::kNotYet}},
-          {data::VboIdMain::kSettingsMusicIcon, data::TextId::kNotYet},
           UiSliderH2{
               {data::VboIdMain::kSettingsMusicArea, data::TextId::kNotYet},
               {data::VboIdMain::kSettingsMusicHandle, data::TextId::kNotYet},
@@ -248,7 +244,7 @@ void UiRenderer::Serialize() {
 }
 
 void UiRenderer::Init() {
-  text_renderer_.PrerenderMenuText(0, 24);
+  text_renderer_.PrerenderMenuText(0, 58);
   ui_debugger_.ForceUpdate();
 }
 

@@ -1,125 +1,47 @@
-+ noise TEXT for negative (1/3)
-+ typo in kTerrainBakeErosinoStepInput,
-? UiSlots add edge-vertex & select-edit modes
-- UiSlots::Remove() sprite (to remove/reset selected vertex/edge)
-+ UiSlots::Add and flip_add-select for terrain
-+ bool terrain_edit_noise_tiling
++ label field for each: kTerrainEditScaleXText
++ error line below
++ SliderH2 - bigger handle(icon), modify arae (remove embedded handle/icons)
+------------------------------------------------------------------
+------------------------------------------------------------------
+------------------------------------------------------------------
 
-+ all text labels - wrong tex coors (not full screen)
-
-+ kFullSCreen typo
-+ separate Hue/Saturation and Brightness palette
-+ kMenuCross, remove?
-+ "Pin" for each pop-up (so we could setup sprite positions)
-+ TabMenu - merge toggle with mode sprite
-+ TabMenu arrows - center, so we could simply rotate the sprite with transform mat
-
-+ no "close button" - just press outside the window
-
-
-+ fix settings: resolution drop down; AND UiSliderH2 icon + handler fix
-+ remove UiSliderH with 4 components, replaced by 3 components + extra text
-+ water icons to text
-
-
-class UiTextLabel;
-class UiTextInput;
-class UiNumberInput;
-class UiPalette;
-class UiColorIndicator;
-class UiHeightmapSprite;
+07.09
+do we need WindowQueue both for global data and IUiEdit modes?
+window dissappearing by fire
 
 How to represent terrain in 3d? correct:layers, BUT how to be with mountain climbing?
 okay, NO abcose angles - ONLY heightmap, but layered on Y.
 SO: ArbitraryGraph.h
 
-Update - God hand load/save
-Keyboard in style of stones in position raisen or not
 
-
-
-NEW ISSUES:
-text_back make stick lower than actual sprite, so area above the stick was clickable
-kFencesTypeBack replace with stick below
-kFencesEditNameBack replace with idk... slot sprite?
-UiToggle2 - replace on_ sprite
-terrain: Bake place after slots, so UiTerrainMode::ui_event_handler include slots
-label field for each: kTerrainEditScaleXText
-for each text input we should have input area (back) and text out area (text itself)
-error line below
-bigger desk sprite for UiEditTerrain
-remove kTerrainEditNoise1InvertLabel, we have one kTerrainEditLabelInvert
-   as well as tiling, strength
-SliderH2 - bigger handle(icon), modify arae (remove embedded handle/icons)
-terrain "Bake" btn icon
-add desk for each noise config (this way we don't need btn_Close)
-add noise name for each noise config
-
-keyboard assign window
-
-
-07.09
-do we need WindowQueue both for global data and IUiEdit modes?
-
----------------------------------------
---- FIRST YOU DO (the whole window infrastructure + text input):
-desk: tip info, confirmation, file
-text input (text / number) --> LET'S TAKE ui_slots_slot_back from... roads
-
-
---- THEN YOU DO (generate terrain):
-Terrain Generation
-*> includes:
-* number input (type & border validation)
-* picking -> collect sliders -> Accept.Press() -> *updated terrain hmap*
-
-
-
---- AND ONLY THEN YOU DO (graph draw: UiSlots + Grid/Graph):
-map edge/face/vertex visualization
-biome round slider (wind, sun, time)
----------------------------------------
-
-
- TextRenderer& text_renderer,
-      float scale,
-      glm::vec2 translate,
-      UiDynamicSprite&& text,
-      data::TextId text_id
-	 
-
-
-
-
-
-
-
-
-
-
-
-	 
 TODO:
-- redesign some ui components
-- TerrainGrid render
-
-
-let's cheat and select regardless of mvp:
-- kSquare: start - end (Decardian)
-- kSingle: single point / trivial path
-- kCircle: around the single point
-BUT(!): draw-square/circle should be shown projected.
-__extra: out text with vertex id, x, y (use kSpareTextN)
-
-#1 random points on kSingle (due to resolution limit...)
-#2 render selected points as the TerrainRenderer do
-    (zero height as zero alpha) (postponed due to #3)
-#3 rotate kSingle / kSquare (we can leverage mouse_pos difference)
-#4 render selection projections (circle/square pillow sprites)
+BUG
+NEW
+- sliders scale
+---> terrain layers (each store all noises settings) Add/Remove updated basic cur_tile_.hmap_
+---> group & align (no pain preferred)
+- description relevance?
+PURGATORY (useless / temp imposs)
 
 
 
-noise config mods:
-scale -> 2 sliders (x, y)
 
-scale slider as 2d figure, but dragging it to left +x, up +y
+//TODO:
+// 1. line: O-O-O-O-O
+// - each one has 1 parent (let't take most left)
+// - each one has {float_scale, glm::vec2 offset}
+// this way NO INTERNAL TRANSFORM (via Ctrl button)
+// TODO: how to get it: parse ../assets/VboTransform.txt...
+//
+// OR... let's skip it for now.
+
+----------------------------------------------
+----------------------------------------------
+----------------------------------------------
+NEW ISSUES:
+- UiConfirmation (caution, file, etc...) shadow + text sprites (FREE ALL kSpareText)
+- UiSliderV2 for noise config window (take sprites from in UiSlots)
+- TextRenderer::prerender_text_slot
+- Noise config (separate windows): hmap sprites
+- Bake config: texture's names (Texture32F& + UiDynamicSprite)
+- keyboard assign window (stones in position raisen not)

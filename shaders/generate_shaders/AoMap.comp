@@ -3,7 +3,7 @@
 layout (local_size_x = 8, local_size_y = 8) in;
 
 // 8-bit heightmap input
-layout (binding = 0, r8) uniform readonly image2D height_map;
+layout (binding = 0, r32f) uniform readonly image2D height_map;
 
 // AO output (grayscale)
 layout (binding = 1, r8) uniform writeonly image2D ao_map;
@@ -19,7 +19,7 @@ void main() {
     ivec2 id = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(height_map);
 
-    float h_center = imageLoad(height_map, id).r / 255.0 * height_scale;
+    float h_center = imageLoad(height_map, id).r * height_scale;
 
     float occlusion = 0.0;
 

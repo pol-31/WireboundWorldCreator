@@ -15,28 +15,33 @@ class Texture {
  public:
   Texture() = default;
   
-  Texture(std::string_view path, int format, int filter = GL_LINEAR,
-          int wrap = GL_REPEAT, bool gen_mipmap = true);
+  Texture(std::string_view path, int format,
+          int filter = GL_LINEAR, int wrap = GL_REPEAT);
 
-  Texture(int width, int height, GLint format, int filter = GL_LINEAR,
-          int wrap = GL_REPEAT, bool integer = false);
+  Texture(int width, int height, GLint format,
+          int filter = GL_LINEAR, int wrap = GL_REPEAT);
 
+  /// in case id already generated, but we want RAII
   Texture(GLuint opengl_id, GLsizei width,
           GLsizei height, GLint format)
     : opengl_id_(opengl_id),
       width_(width),
       height_(height),
       format_(format) {}
-  
-  explicit Texture(const std::array<std::string, 6>& cubemap_paths) {
-    LoadCubemap(cubemap_paths);
-  }
 
   Texture(const Texture& other) = delete;
   Texture& operator=(const Texture& other) = delete;
 
   Texture(Texture&& other) noexcept;
   Texture& operator=(Texture&& other) noexcept;
+
+  virtual void CreateTextureData();
+
+  virtual void LoadTextureData(std::string_view path);
+
+  virtual void GetTextureData(
+      GLint format, std::vector<uint8_t>& pixels,
+      int component, GLint channels) const;
 
   ~Texture() {
     DeInit();
@@ -57,9 +62,7 @@ class Texture {
   [[nodiscard]] GLsizei GetFormat() const {
     return format_;
   }
-//  [[nodiscard]] GLsizei GetChannels() const {
-//    return channels_;
-//  }
+
   [[nodiscard]] std::pair<GLsizei, GLsizei> GetSize() const {
     return {width_, height_};
   }
@@ -76,46 +79,63 @@ class Texture {
     return opengl_id_ != 0;
   }
 
-  // for dbg (don't need for the majority of texture)
   /// component id starts from 1;
   /// component = 0 means we store all channels;
   /// We can't use format_, because here OpenGL requires,
   /// for instance, GL_RGBA instead of GL_RGBA32F
-  void Store(std::string_view path, GLint channels, GLint format,
-             GLenum type, int component = 0) const;
+  void Store(std::string_view path, GLint channels,
+             GLint format, int component = 0) const;
 
- private:
-  /// doesn't matter; as a placeholder for OpenGL calls with nullptr data
-  static std::size_t kNoFormat;
-  static std::size_t kNoFormatI;
-  static std::size_t kNoType;
-
-  static std::vector<uint8_t> FloatsToUint(
-      const std::vector<float>& data, int component, GLint channels);
-
-  void LoadStbImage(std::string_view path, bool gen_mipmap);
-
-  /// for .r16 and .32 extensions; we assume (width == height)
-  void LoadRawFloat(std::string_view path, int float_size);
-
+ protected:
   static GLint FormatStbImageToOpenGL(GLint channels) noexcept;
 
-  void LoadCubemap(const std::array<std::string, 6>& cubemap_paths);
-  
   void DeInit();
 
-  /*TODO:
-   * very often we need only opengl_id to render, but size and format useful
-   * for debugging (or framebuffer?), so we can remove it... by declaring
-   *   using Texture = DbgTexture or RelTexture;
-   * so this way our thousands of textures for models could store only id,
-   * BUT we still need format for framebuffer or compute shaders
-   * */
   GLuint opengl_id_{0};
   GLsizei width_{0};
   GLsizei height_{0};
   GLint format_{0};
-//  GLint channels_{0};
+};
+
+class Texture32F final : public Texture {
+  public:
+   Texture32F() = default;
+
+   Texture32F(std::string_view path, GLint format);
+
+   Texture32F(int width, int height, GLint format);
+
+   Texture32F(int size, GLint format)
+       : Texture32F(size, size, format) {}
+
+   void CreateTextureData() override;
+
+   void LoadTextureData(std::string_view path) override;
+
+   void GetTextureData(GLint format, std::vector<uint8_t> &pixels,
+                       int component, GLint channels) const override;
+
+   static std::vector<uint8_t> FloatsToUint(
+       const std::vector<float>& data, int component, GLint channels);
+};
+
+class TextureUi final : public Texture {
+ public:
+//  using Texture::Texture;
+  TextureUi() = default;
+
+  TextureUi(std::string_view path, int format,
+          int filter = GL_LINEAR, int wrap = GL_REPEAT);
+
+  TextureUi(int width, int height, GLint format,
+          int filter = GL_LINEAR, int wrap = GL_REPEAT);
+
+  void CreateTextureData() override;
+
+  void LoadTextureData(std::string_view path) override;
+
+  void GetTextureData(GLint format, std::vector<uint8_t> &pixels,
+                      int component, GLint channels) const override;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC__TEXTURE_H_

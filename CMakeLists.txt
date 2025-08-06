@@ -85,6 +85,10 @@ add_executable(WireboundWorldCreator
         src/core/WindowQueue.cpp
         src/core/UiText.cpp
         src/core/UiText.h
+        src/modes/UiTerrainWIndows.cpp
+        src/modes/UiTerrainWIndows.h
+        src/core/Tile.cpp
+        src/modes/TerrainNoiseData.h
 
 )
 
