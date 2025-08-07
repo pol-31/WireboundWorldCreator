@@ -1,5 +1,7 @@
 #include "UiSharedResources.h"
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include "../io/Window.h"
 #include "../common/Vbos.h"
 #include "../common/ShadersBinding.h"
@@ -28,6 +30,8 @@ UiSharedResources::UiSharedResources(
                               paths.shader_graph_geom*/),
       select_square_shader_("../shaders/SelectSquare.vert",
                             "../shaders/SelectSquare.frag"),
+      hmap_shader_(paths.shader_sprite_dynamic_vert,
+                   "../shaders/SpriteHmap.frag"),
       global_glfw_callback_data_(global_glfw_callback_data) {
   Init();
 }
@@ -59,15 +63,18 @@ void UiSharedResources::UpdateResolution() {
 void UiSharedResources::Init() {
   InitVbos();
   InitVaos();
+  glm::vec4 color{1.0f};
   static_sprite_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
+  glUniform4fv(7, 1, glm::value_ptr(color));
 //  glUniform1f(shader::kSpriteResolution, gResFactor);
   static_sprite_progress_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
+  glUniform4fv(7, 1, glm::value_ptr(color));
 //  glUniform1f(shader::kSpriteResolution, gResFactor);
 
   //Good!
@@ -95,7 +102,11 @@ void UiSharedResources::Init() {
   glUniform1i(shader::kSpriteTexture, 0);
   glUniform1f(shader::kSpriteBrightness, 1.0f);
   glUniform1f(shader::kSpriteTransparency, 1.0f);
+  glUniform4fv(7, 1, glm::value_ptr(color));
 //  glUniform1f(shader::kSpriteResolution, gResFactor);
+
+  hmap_shader_.Bind();
+  glUniform1i(shader::kSpriteTexture, 0);
   glUseProgram(0);
   //  static_sprite_picking_shader_.Bind();
   //  glUniform1i(shader::kSpriteTexture, 0);

@@ -5,7 +5,7 @@
 #include "UiText.h"
 #include "WindowQueue.h"
 
-#include "../modes/UiTerrainConfig.h"
+//#include "../modes/UiTerrainConfig.h"
 
 /// loading only on the bottom of the screen (so use UiStaticSprite)
 class UiLoading final : public UiBase {
@@ -133,7 +133,8 @@ class UiTopWindowBase : public UiBase {
 
   virtual void Press(int id) = 0;
 
-  virtual void Release() = 0;
+  // no override
+//  virtual void Release() = 0;
 
   virtual data::TextId Hover(int id) = 0;
 
@@ -168,15 +169,15 @@ class UiCaution final : public UiTopWindowBase {
   UiCaution& operator=(UiCaution&& other) = delete;
   UiCaution& operator=(const UiCaution& other) = delete;
 
-  bool Render();
+  bool Render() override;
 
-  void RenderPicking();
+  void RenderPicking() override;
 
-  void Press(int id);
+  void Press(int id) override;
 
-  void Release();
+  void Release() override;
 
-  data::TextId Hover(int id);
+  data::TextId Hover(int id) override;
 
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
@@ -205,15 +206,15 @@ class UiConfirmation final : public UiTopWindowBase {
   UiConfirmation& operator=(UiConfirmation&& other) = delete;
   UiConfirmation& operator=(const UiConfirmation& other) = delete;
 
-  bool Render();
+  bool Render() override;
 
-  void RenderPicking();
+  void RenderPicking() override;
 
-  void Press(int id);
+  void Press(int id) override;
 
-  void Release();
+  void Release() override;
 
-  data::TextId Hover(int id);
+  data::TextId Hover(int id) override;
 
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
@@ -250,15 +251,15 @@ class UiFile final : public UiTopWindowBase {
   UiFile& operator=(UiFile&& other) = delete;
   UiFile& operator=(const UiFile& other) = delete;
 
-  bool Render();
+  bool Render() override;
 
-  void RenderPicking();
+  void RenderPicking() override;
 
-  void Press(int id);
+  void Press(int id) override;
 
-  void Release();
+  void Release() override;
 
-  data::TextId Hover(int id);
+  data::TextId Hover(int id) override;
 
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
@@ -306,7 +307,8 @@ class UiWindowBase : public UiBase {
 
   virtual bool Press(int id) = 0;
 
-  virtual void Release() = 0;
+  // no override
+//  virtual void Release() = 0;
 
   virtual data::TextId Hover(int id) = 0;
 
@@ -547,16 +549,12 @@ class UiSettings final : public UiWindowPopUp {
       UiDynamicSprite&& resolution_label,
       UiDynamicSprite&& resolution_left,
       UiDynamicSprite&& resolution_right,
-      UiDynamicSprite&& resolution_slot,
       UiDynamicSprite&& resolution,
       UiToggle&& toggle_fullscreen,
-      UiDynamicSprite sensitivity_icon,
       UiSliderH2 sensitivity,
       UiDynamicSprite keyboard,
-      UiDynamicSprite&& sound_icon,
       UiSliderH2&& sound,
       UiToggle&& toggle_sound,
-      UiDynamicSprite&& music_icon,
       UiSliderH2&& music,
       UiToggle&& toggle_music,
       UiDynamicSprite&& tip_info_label,
@@ -570,15 +568,15 @@ class UiSettings final : public UiWindowPopUp {
   UiSettings& operator=(const UiSettings& other) = delete;
 
   // returns "stop render"
-  bool Render();
+  bool Render() override;
 
-  void RenderPicking();
+  void RenderPicking() override;
 
-  bool Press(int id);
+  bool Press(int id) override;
 
-  void Release();
+  void Release() override;
 
-  data::TextId Hover(int id);
+  data::TextId Hover(int id) override;
 
   bool Scroll(GLuint id, float yoffset) override;
 
@@ -590,21 +588,17 @@ class UiSettings final : public UiWindowPopUp {
   UiDynamicSprite resolution_label_;
   UiDynamicSprite resolution_left_;
   UiDynamicSprite resolution_right_;
-  UiDynamicSprite resolution_slot_;
 
   UiDynamicSprite resolution_;
   UiToggle toggle_fullscreen_;
 
-  UiDynamicSprite sensitivity_icon_;
   UiSliderH2 sensitivity_;
 
   UiDynamicSprite keyboard_;
 
-  UiDynamicSprite sound_icon_;
   UiSliderH2 sound_;
   UiToggle toggle_sound_;
 
-  UiDynamicSprite music_icon_;
   UiSliderH2 music_;
   UiToggle toggle_music_;
 
@@ -769,282 +763,6 @@ class UiEditFences final : public UiBase {
       > ui_event_handler_;
 
   UiSharedResources& ui_shared_resources_;
-};
-
-// no parent-child rel; facade pattern
-class UiEditTerrainNoise {
- public:
-  UiEditTerrainNoise(
-      UiSharedResources& ui_shared_resources,
-      UiDynamicSprite&& config,
-      UiTextLabel&& text_name,
-      UiToggle&& toggle_invert,
-      UiToggle&& toggle_tiling,
-      UiSliderH2&& slider_strength);
-
-  UiEditTerrainNoise(UiEditTerrainNoise&& other) noexcept = default;
-  UiEditTerrainNoise(const UiEditTerrainNoise& other) = delete;
-
-  UiEditTerrainNoise& operator=(UiEditTerrainNoise&& other) = delete;
-  UiEditTerrainNoise& operator=(const UiEditTerrainNoise& other) = delete;
-
-  /// no Press(), Release(), Hover() <- done in external ui_event_handler
-  void Render();
-
-  void RenderPicking();
-
-  void SetParentId(int id);
-
-  void UpdateTransform();
-
-  // public, for simpler external ui_event_handler adding
-  UiDynamicSprite config_;
-  UiTextLabel text_name_;
-  UiToggle toggle_invert_;
-  UiToggle toggle_tiling_;
-  UiSliderH2 slider_strength_;
-
-  UiSharedResources& ui_shared_resources_;
-};
-
-class UiEditTerrain final : public UiWindowAppear {
- public:
-  using Base = UiWindowAppear;
-
-  UiEditTerrain(
-      UiDynamicSprite&& sprite,
-      float size_scale,
-      UiToggle2&& pin,
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue,
-      TextRenderer& text_renderer,
-      UiDynamicSprite&& accept,
-      UiDynamicSprite&& name,
-      UiDynamicSprite&& name_back,
-      UiSlider2D&& color_palette,
-      UiSliderH2&& color_brightness,
-      UiDynamicSprite&& color_indicator,
-      UiDynamicSprite&& heightmap,
-      UiDynamicSprite&& random_generate);
-
-  ~UiEditTerrain() {
-    DeInit();
-  }
-
-  UiEditTerrain(UiEditTerrain&& other) noexcept;
-  UiEditTerrain(const UiEditTerrain& other) = delete;
-
-  UiEditTerrain& operator=(UiEditTerrain&& other) = delete;
-  UiEditTerrain& operator=(const UiEditTerrain& other) = delete;
-
-  data::TextId Hover(int id) override;
-
-  bool Press(int id) override;
-
-  void Release() override;
-
-  bool Scroll(GLuint id, float yoffset) override;
-
-  bool Render() override;
-
-  void RenderPicking() override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
- private:
-  void Init();
-
-  void DeInit();
-
-  void Generate();
-
-  void UpdateCpuData();
-
-
-  GLuint vao_id_;
-  GLuint vbo_id_;
-  GLuint ebo_id_;
-  GLuint fbo_id_;
-  GLuint fbo_tex_id_;
-
-
-  UiDynamicSprite accept_;
-  UiDynamicSprite name_;
-  UiDynamicSprite name_back_;
-
-  UiSlider2D color_palette_;
-  UiSliderH2 color_brightness_;
-  UiDynamicSprite color_indicator_;
-
-  // vao, vbo the same (kTerrainEditHeightmap for fullscreen tx)
-  // we simply need Texture which bind to, AND update it somehow
-  Texture tex_heightmap_;
-  UiDynamicSprite heightmap_;
-  UiDynamicSprite random_generate_;
-
-  UiTextLabel text_noise_invert_;
-  UiTextLabel text_noise_tiling_;
-  UiTextLabel text_noise_strength_;
-
-  UiEditTerrainNoise noise1_;
-  UiEditTerrainNoise noise2_;
-  UiEditTerrainNoise noise3_;
-  UiEditTerrainNoise noise4_;
-  UiEditTerrainNoise noise5_;
-  UiEditTerrainNoise noise6_;
-  UiEditTerrainNoise noise7_;
-  UiEditTerrainNoise noise8_;
-
-  TerrainNoisePerlin noise_perlin_;
-  TerrainNoiseCellular noise_cellular_;
-  TerrainNoiseMetaballs noise_metaballs;
-  TerrainNoiseFbmGrid noise_fbm_grid;
-  TerrainNoiseFbmMulti noise_fbm_multi_;
-  TerrainNoiseFbmdPerlin noise_fbmd_perlin_;
-  TerrainNoiseFbmWarp noise_fbm_warp_;
-  TerrainNoiseFbmPerlinWarp noise_fmb_perlin_warp;
-
-  ITerrainNoise* selected_noise_ = nullptr;
-
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kTerrainEditNoise8StrengthIcon) -
-      static_cast<int>(data::VboIdMain::kTerrainEditDesk) + 1
-      > ui_event_handler_;
-
-  UiSharedResources& ui_shared_resources_;
-};
-
-class UiTerrainBake final : public UiWindowAppear {
- public:
-  using Base = UiWindowAppear;
-
-  UiTerrainBake(
-      Tile& cur_tile,
-      UiDynamicSprite&& sprite,
-      float size_scale,
-      UiToggle2&& pin,
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue,
-      TextRenderer& text_renderer,
-      UiDynamicSprite&& accept,
-      UiDynamicSprite&& heightmap,
-      UiTextLabelId&& erosion_label,
-      UiDynamicSprite&& erosion_input,
-      UiTextLabelId&& weathering_label,
-      UiDynamicSprite&& weathering_input);
-
-  UiTerrainBake(UiTerrainBake&& other) noexcept;
-  UiTerrainBake(const UiTerrainBake& other) = delete;
-
-  UiTerrainBake& operator=(UiTerrainBake&& other) = delete;
-  UiTerrainBake& operator=(const UiTerrainBake& other) = delete;
-
-  data::TextId Hover(int id) override;
-
-  bool Press(int id);
-
-  void Release() override;
-
-  bool Scroll(GLuint id, float yoffset) override;
-
-  bool Render() override;
-
-  void RenderPicking() override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
- private:
-  struct Particle{
-    //Construct Particle at Position
-    Particle(glm::vec2 _pos) {
-      pos = _pos;
-    }
-
-    glm::vec2 pos;
-    glm::vec2 speed = glm::vec2(0.0);
-
-    float volume = 1.0;   //This will vary in time
-    float sediment = 0.0; //Fraction of Volume that is Sediment!
-  };
-
-  void Bake(int steps_thermal, int steps_weathering, float talus);
-
-  void UpdateCpuData();
-
-  void ErodeWithFlow(const std::vector<std::vector<glm::vec2>>& flow_dir,
-                     const std::vector<std::vector<float>>& water_accum,
-                     int cycles);
-
-  glm::vec3 SurfaceNormal(int i, int j);
-
-  void ErodeWeathering(int cycles);
-
-
-  void ProcessErosion(const std::vector<std::vector<glm::vec2>>& flow_dir,
-                      const std::vector<std::vector<float>>& water_accum,
-                      int iterations);
-
-  void ProcessThermalWeathering(int iterations, float talus = 0.02f);
-
-  void GenerateSplatmap();
-
-  void GenerateNmap();
-
-  void GenerateSlope();
-
-  void GenerateAo();
-
-  void Perturbate();
-
-  void ComputeFlowMaps(
-      std::vector<std::vector<glm::vec2>>& flow_dir,
-      std::vector<std::vector<float>>& flow_accum);
-
-  void GenerateFlowMap(std::vector<std::vector<glm::vec2>>& flow_dir,
-                       std::vector<std::vector<float>>& flow_accum);
-
-  UiDynamicSprite accept_;
-
-  Texture tex_heightmap_;
-  UiDynamicSprite heightmap_;
-
-  UiTextLabelId erosion_label_;
-  UiDynamicSprite erosion_input_;
-  UiTextLabelId weathering_label_;
-  UiDynamicSprite weathering_input_;
-
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kTerrainBakeHeightmap) -
-      static_cast<int>(data::VboIdMain::kTerrainBakeDesk) + 1
-      > ui_event_handler_;
-
-  UiSharedResources& ui_shared_resources_;
-
-
-
-
-
-
-  std::vector<std::vector<float>> height_map_data_;
-
-  Shader shader_gen_nmap_;
-  Shader shader_gen_slope_map_;
-  Shader shader_gen_ao_map_;
-  Shader shader_perturbate_;
-
-  Texture& tex_hmap_;
-  Texture& tex_nmap_;
-  Texture& tex_slope_map_;
-  Texture& tex_ao_map_;
-  Texture& tex_splat_map_;
-
-  Texture& tex_erosion_thermal_map_;
-  Texture& tex_erosion_hydraulic_map_;
-
-  Texture& tex_water_accum_;
-  Texture& tex_water_flow_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_

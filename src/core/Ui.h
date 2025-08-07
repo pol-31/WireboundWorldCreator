@@ -602,6 +602,8 @@ class UiSliderH2 final : public UiBase {
 
   void UpdateTransform() override;
 
+  void SetValue(float value);
+
  private:
   // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
   void Set(glm::vec2 mouse_pos);
@@ -658,6 +660,12 @@ class UiToggle final : public UiBase {
     return turned_off_;
   }
 
+  void Set(bool value) {
+    if (turned_off_ != value) {
+      Press();
+    }
+  }
+
  private:
   UiDynamicSprite off_;
   UiDynamicSprite on1_;
@@ -701,6 +709,12 @@ class UiToggle2 final : public UiBase {
 
   [[nodiscard]] bool TurnedOn() const noexcept {
     return !turned_off_;
+  }
+
+  void Set(bool value) {
+    if (turned_off_ != value) {
+      Press();
+    }
   }
 
  private:

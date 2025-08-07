@@ -4,8 +4,14 @@
 #include "../core/TileRenderer.h"
 
 TerrainGrid::TerrainGrid(
-    UiSharedResources& ui_shared_resources)
-    : ui_shared_resources_(ui_shared_resources) {
+    UiSharedResources& ui_shared_resources,
+    UiEditTerrain& ui_edit_terrain,
+    std::vector<TerrainInstanceData>& instances,
+    int& instances_size)
+    : ui_shared_resources_(ui_shared_resources),
+      ui_edit_terrain_(ui_edit_terrain),
+      instances_(instances),
+      instances_size_(instances_size) {
   Init();
 }
 
@@ -15,12 +21,15 @@ void TerrainGrid::CreateGraph() {
   } else {
     selected_slot_id_ = instances_size_;
     selected_vertices_.clear();
-    InstanceData instance_data;
+    TerrainInstanceData instance_data;
     instance_data.name = FixedSizeQueue<char, 64>{};
     instance_data.color = glm::vec3{1.0f};
     instance_data.do_show = true;
-    instance_data.heights.fill(0);
-    instance_data.hmap = {};
+    instance_data.type_id = 0; // TODO: unused
+    instance_data.data = NoiseTerrainData{};
+    // default scale, rotate, translate, do_tiling, do_invert
+    instance_data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
+    instance_data.heights.fill(0.0f);
     instances_[instances_size_++] = std::move(instance_data);
   }
 }
@@ -35,24 +44,29 @@ void TerrainGrid::SelectGraph(int slot_id) {
   }
   selected_slot_id_ = slot_id;
   selected_vertices_.clear();
-  std::cout << "selected " << selected_slot_id_
-            << ", not implemented" << std::endl;
 }
 
-void TerrainGrid::RemoveGraph(int slot_id) {
+bool TerrainGrid::RemoveGraph(int slot_id) {
   if (slot_id >= instances_size_) {
     throw "remove non-existent graph id";
   }
-  //TODO: deselect
-  /*if (selected_slot_id_ > slot_id) {
+  if (instances_size_ == 1) {
+    std::cerr << "Unable to remove the base level" << std::endl;
+    return false;
+  }
+  if (selected_slot_id_ > slot_id) {
     --selected_slot_id_;
   } else if (selected_slot_id_ == slot_id) {
-    selected_slot_id_ = -1;
-    selected_ids_.clear();
-  }*/
-  //TODO: erase
-  //    instances_.erase(instances_.begin() + slot_id);
-  std::cout << "*slot removed" << std::endl;
+    std::cerr << "Unable to implement that right now ;(" << std::endl;
+    return false;
+    // the issue is, we need to return new id outside like a callback do
+    selected_slot_id_ = std::max(0, --slot_id);
+    selected_vertices_.clear();
+  }
+  --instances_size_;
+  instances_.erase(instances_.begin() + slot_id);
+  std::cout << "*slot removed " << slot_id << std::endl;
+  return true;
 }
 
 void TerrainGrid::Render(glm::vec2 mouse_pos) {
@@ -61,8 +75,7 @@ void TerrainGrid::Render(glm::vec2 mouse_pos) {
   }
   ui_shared_resources_.arbitrary_graph_shader_.Bind();
   glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
-      ->cur_tile_.map_terrain_height.Bind();
+  instances_[selected_slot_id_].data.hmap.Bind();
   glBindVertexArray(vao_);
   glPointSize(5.0f);
   glDrawArrays(GL_POINTS, 0, selected_vertices_.size());
@@ -380,4 +393,8 @@ TerrainGrid::SelectMode TerrainGrid::FlipSelectMode() {
 
 int TerrainGrid::GetSize() const noexcept {
   return instances_size_;
+}
+
+TerrainInstanceData* TerrainGrid::GetInstanceData() {
+  return &instances_[selected_slot_id_];
 }

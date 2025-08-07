@@ -45,3 +45,14 @@ NEW ISSUES:
 - Noise config (separate windows): hmap sprites
 - Bake config: texture's names (Texture32F& + UiDynamicSprite)
 - keyboard assign window (stones in position raisen not)
+- UiSlotsTerrain - btn RESET - to set default config
+- desaturate color indicator
+
+
+
+adjust sliders scale					(1)
+text input								(2)
+align ui
+noise scale-rotate-translate: somehow... TODO: THINK!!!
+selected-points interaction (up/down) TODO: THINK!!!
+

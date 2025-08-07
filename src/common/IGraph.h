@@ -23,7 +23,9 @@ class IGraph {
 
   virtual void CreateGraph() = 0;
   virtual void SelectGraph(int id) = 0;
-  virtual void RemoveGraph(int id) = 0;
+
+  // returns if smt was removed
+  virtual bool RemoveGraph(int id) = 0;
   virtual void Render(glm::vec2 mouse_pos) = 0;
 
   virtual int GetSize() const noexcept = 0;

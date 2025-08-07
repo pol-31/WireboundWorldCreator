@@ -851,6 +851,12 @@ void UiSliderH2::RenderPicking() const {
   }
 }
 
+void UiSliderH2::SetValue(float value) {
+  /// deduced from GetProgress
+  Set(1.0f - value / scale_);
+}
+
+
 void UiSliderH2::Set(glm::vec2 mouse_pos) {
   float half_length_ = length_ / 2.0f;
   float offset = glm::clamp(
@@ -966,7 +972,7 @@ void UiToggle::RenderPicking() const {
 void UiToggle::Press() {
   turned_off_ = !turned_off_;
   progress_ = 0.0f;
-  off_.Press();
+//  off_.Press();
 }
 
 void UiToggle::UpdateTransform(
@@ -1053,7 +1059,7 @@ void UiToggle2::RenderPicking() const {
 
 void UiToggle2::Press() {
   turned_off_ = !turned_off_;
-  off_.Press();
+//  off_.Press();
 }
 
 data::TextId UiToggle2::Hover(std::uint32_t id) {

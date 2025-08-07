@@ -38,6 +38,8 @@ class UiSharedResources {
   Shader dynamic_sprite_picking_shader_;
   Shader static_sprite_progress_shader_;
 
+  Shader hmap_shader_;
+
   Shader select_square_shader_;
 
   Shader arbitrary_graph_shader_;

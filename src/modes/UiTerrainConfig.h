@@ -152,6 +152,8 @@ class TerrainNoisePerlin final
   NoisePerlinData Generate(
       glm::vec2 resolution, std::string_view tex_name);
 
+  void SetConfig(const NoisePerlinData& config);
+
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
@@ -179,6 +181,8 @@ class TerrainNoiseCellular final
 
   NoiseCellularData Generate(
       glm::vec2 resolution, std::string_view tex_name);
+
+  void SetConfig(const NoiseCellularData& config);
 
  private:
   UiSliderH2 slider_scale_x_;
@@ -210,6 +214,8 @@ class TerrainNoiseMetaballs final
   NoiseMetaballsData Generate(
       glm::vec2 resolution, std::string_view tex_name);
 
+  void SetConfig(const NoiseMetaballsData& config);
+
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
@@ -239,6 +245,8 @@ class TerrainNoiseFbmGrid final
 
   NoiseFbmGridData Generate(
       glm::vec2 resolution, std::string_view tex_name);
+
+  void SetConfig(const NoiseFbmGridData& config);
 
  private:
   UiSliderH2 slider_scale_x_;
@@ -280,6 +288,8 @@ class TerrainNoiseFbmMulti final
   NoiseFbmMultiData Generate(
       glm::vec2 resolution, std::string_view tex_name);
 
+  void SetConfig(const NoiseFbmMultiData& config);
+
  private:
   UiSliderH2 slider_scale_x_;
   UiTextLabelId text_scale_x_;
@@ -311,6 +321,8 @@ class TerrainNoiseFbmdPerlin final
 
   NoiseFbmdPerlinData Generate(
       glm::vec2 resolution, std::string_view tex_name);
+
+  void SetConfig(const NoiseFbmdPerlinData& config);
 
  private:
   UiSliderH2 slider_scale_x_;
@@ -352,6 +364,8 @@ class TerrainNoiseFbmWarp final
 
   NoiseFbmWarpData Generate(
       glm::vec2 resolution, std::string_view tex_name);
+
+  void SetConfig(const NoiseFbmWarpData& config);
 
  private:
   UiSliderH2 slider_scale_x_;
@@ -397,6 +411,8 @@ class TerrainNoiseFbmPerlinWarp final
 
   NoiseFbmPerlinWarpData Generate(
       glm::vec2 resolution, std::string_view tex_name);
+
+  void SetConfig(const NoiseFbmPerlinWarpData& config);
 
  private:
   UiSliderH2 slider_scale_x_;

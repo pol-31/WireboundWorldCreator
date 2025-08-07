@@ -7,6 +7,8 @@
 #include "../common/Paths.h"
 #include "../common/Shader.h"
 
+class TerrainInstanceData;
+
 class TerrainRenderer {
  public:
   TerrainRenderer(Tile& tile, const Paths& paths);
@@ -19,6 +21,10 @@ class TerrainRenderer {
 
   //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
   void RenderPicking() const;
+
+  void Render(TerrainInstanceData* terrain);
+
+  void RenderPicking(TerrainInstanceData* terrain) const;
 
   [[nodiscard]] glm::vec3 GetYPosition(int vertex_id) const;
 

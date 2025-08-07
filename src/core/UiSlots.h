@@ -3,6 +3,7 @@
 
 #include "Ui.h"
 #include "UiComplex.h"
+#include "../modes/UiTerrainWindows.h"
 
 #include "../common/ArbitraryGraph.h"
 #include "../common/TerrainGrid.h"
@@ -69,7 +70,7 @@ class IUiSlots : public UiBase {
 
   }*/
   void CreateGraph();
-  void SelectGraph(GLuint id);
+  virtual void SelectGraph(GLuint id);
   void RemoveGraph(GLuint id);
 
   void RenderGraph();
@@ -89,11 +90,11 @@ class IUiSlots : public UiBase {
   /// event handler (hover / press / release)
   IUiEventHandler* ui_event_handler_ = nullptr;
 
+  /// Render custom, but states show/hide pop-up edit window related to *this
+  //  IUiEdit* ui_edit_ = nullptr;
+
   /// graph data + edit window
   IGraph* graph_ = nullptr;// -- no interface, sry;(
-
-  /// Render custom, but states show/hide pop-up edit window related to *this
-//  IUiEdit* ui_edit_ = nullptr;
 
   // for shader bindings & mouse pos
   UiSharedResources& ui_shared_resources_;
@@ -113,6 +114,7 @@ enum class PressState {
 class UiSlotsTerrain final : public IUiSlots {
  public:
   UiSlotsTerrain(
+      Tile& cur_tile,
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       TextRenderer& text_renderer,
@@ -146,12 +148,16 @@ class UiSlotsTerrain final : public IUiSlots {
   void UpdateTransform(
       float x_translate, float y_translate, float scale) override;
 
-  void NextClickMode();
+  void SelectGraph(GLuint id) override;
 
+  void NextClickMode();
 
   void PressGraph(GLuint id) override;
 
  private:
+  std::vector<TerrainInstanceData> instances_;
+  int instances_size_;
+
   UiDynamicSprite handler_;
   UiDynamicSprite slider_;
   UiDynamicSprite back_;
@@ -172,9 +178,9 @@ class UiSlotsTerrain final : public IUiSlots {
 
   /// store here, pointers to base class, see explanation at base class
 
-  TerrainGrid graph_; // IGraph* for base
-
   UiEditTerrain ui_edit_; // IUiEdit* for base
+
+  TerrainGrid graph_; // IGraph* for base
 
   EditState edit_state_;
 

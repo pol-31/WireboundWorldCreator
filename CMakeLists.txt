@@ -89,6 +89,7 @@ add_executable(WireboundWorldCreator
         src/modes/UiTerrainWIndows.h
         src/core/Tile.cpp
         src/modes/TerrainNoiseData.h
+        src/modes/TerrainInstanceData.h
 
 )
 

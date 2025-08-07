@@ -6,10 +6,15 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glad/glad.h>
 
 #include "../modes/UiSharedResources.h"
 #include "IGraph.h"
+
+#include "../modes/TerrainNoiseData.h"
+#include "../modes/UiTerrainWIndows.h"
+#include "../modes/TerrainInstanceData.h"
 
 /// similar to ArbitraryGraph, but for terrain ui-slots
 
@@ -27,13 +32,16 @@ class TerrainGrid final : public IGraph {
     kSquare
   };
 
-  TerrainGrid(UiSharedResources& ui_shared_resources);
+  TerrainGrid(UiSharedResources& ui_shared_resources,
+              UiEditTerrain& ui_edit_terrain,
+              std::vector<TerrainInstanceData>& instances,
+              int& instances_size);
 
   void CreateGraph() override;
 
   void SelectGraph(int slot_id) override;
 
-  void RemoveGraph(int slot_id) override;
+  bool RemoveGraph(int slot_id) override;
 
   void Render(glm::vec2 mouse_pos) override;
 
@@ -75,20 +83,12 @@ class TerrainGrid final : public IGraph {
     return &instances_[instance_id].name;
   }
 
+  TerrainInstanceData* GetInstanceData();
+
   static constexpr size_t gMaxLayers = 10;
   static constexpr int gRadius = 10;
 
  private:
-  struct InstanceData : public IGraph::BaseInstanceData {
-    glm::vec3 scale = glm::vec3{1.0f};
-    glm::vec3 rotate = glm::vec3{0.0f};
-    glm::vec3 translate = glm::vec3{0.0f};
-    bool do_tiling = false;
-
-    // original size 1024 by 1024, so we could edit after saving
-    std::array<uint8_t, 1024 * 1024> heights;
-    Texture hmap; // TODO: class_TextureF
-  };
 
   void FormSquare(glm::vec2 mouse_pos);
 
@@ -147,12 +147,13 @@ class TerrainGrid final : public IGraph {
    * */
   //TODO: can't use due to stack limitations (1Mb)
 //  std::array<InstanceData, gMaxLayers> instances_;
-  std::vector<InstanceData> instances_;
-  int instances_size_ = 0;
+  std::vector<TerrainInstanceData>& instances_;
+  int& instances_size_;
 
 
-  int selected_slot_id_{-1};
+  int selected_slot_id_ = 0;
   UiSharedResources& ui_shared_resources_;
+  UiEditTerrain& ui_edit_terrain_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TERRAINGRID_H_

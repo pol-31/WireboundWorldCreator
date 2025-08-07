@@ -1,0 +1,14 @@
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(r32f, binding = 0) uniform image2D bottom_layer;
+layout(r32f, binding = 1) uniform readonly image2D top_layer;
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    float bottom = imageLoad(bottom_layer, coord).r;
+    float top = imageLoad(top_layer, coord).r;
+    float result = bottom + top;
+    imageStore(bottom_layer, coord, vec4(result));
+}

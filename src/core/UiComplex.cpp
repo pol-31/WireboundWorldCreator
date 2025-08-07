@@ -3,6 +3,7 @@
 #include "../common/UiDebugger.h"
 #include "../common/ShadersBinding.h"
 #include "../common/TextRenderer.h"
+#include "../common/Details.h"
 
 UiLoading::UiLoading(
     UiStaticSprite&& sprite0,
@@ -804,9 +805,9 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
 // returns "stop render"
 bool UiTabMenu::Render() {
   bool stop_show = Base::RenderBack(true);
-  if (!Base::BackIsReady()) {
-    return stop_show;
-  }
+//  if (!Base::BackIsReady()) {
+//    return stop_show;
+//  }
 
   ui_shared_resources_.static_sprite_shader_.Bind();
 
@@ -1095,16 +1096,12 @@ UiSettings::UiSettings(
     UiDynamicSprite&& resolution_label,
     UiDynamicSprite&& resolution_left,
     UiDynamicSprite&& resolution_right,
-    UiDynamicSprite&& resolution_slot,
     UiDynamicSprite&& resolution,
     UiToggle&& toggle_fullscreen,
-    UiDynamicSprite sensitivity_icon,
     UiSliderH2 sensitivity,
     UiDynamicSprite keyboard,
-    UiDynamicSprite&& sound_icon,
     UiSliderH2&& sound,
     UiToggle&& toggle_sound,
-    UiDynamicSprite&& music_icon,
     UiSliderH2&& music,
     UiToggle&& toggle_music,
     UiDynamicSprite&& tip_info_label,
@@ -1117,16 +1114,12 @@ UiSettings::UiSettings(
       resolution_label_(std::move(resolution_label)),
       resolution_left_(std::move(resolution_left)),
       resolution_right_(std::move(resolution_right)),
-      resolution_slot_(std::move(resolution_slot)),
       resolution_(std::move(resolution)),
       toggle_fullscreen_(std::move(toggle_fullscreen)),
-      sensitivity_icon_(std::move(sensitivity_icon)),
       sensitivity_(std::move(sensitivity)),
       keyboard_(std::move(keyboard)),
-      sound_icon_(std::move(sound_icon)),
       sound_(std::move(sound)),
       toggle_sound_(std::move(toggle_sound)),
-      music_icon_(std::move(music_icon)),
       music_(std::move(music)),
       toggle_music_(std::move(toggle_music)),
       tip_info_label_(std::move(tip_info_label)),
@@ -1143,25 +1136,17 @@ UiSettings::UiSettings(
       = sprite_.GetId();
   gUiComponents[resolution_right_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
-  gUiComponents[resolution_slot_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
   gUiComponents[resolution_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
   gUiComponents[toggle_fullscreen_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sensitivity_icon_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
   gUiComponents[sensitivity_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
   gUiComponents[keyboard_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
-  gUiComponents[sound_icon_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
   gUiComponents[sound_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
   gUiComponents[toggle_sound_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[music_icon_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
   gUiComponents[music_.GetId() - details::kIdOffsetUi].parent_id_
       = sprite_.GetId();
@@ -1184,16 +1169,12 @@ UiSettings::UiSettings(UiSettings&& other) noexcept
       resolution_label_(std::move(other.resolution_label_)),
       resolution_left_(std::move(other.resolution_left_)),
       resolution_right_(std::move(other.resolution_right_)),
-      resolution_slot_(std::move(other.resolution_slot_)),
       resolution_(std::move(other.resolution_)),
       toggle_fullscreen_(std::move(other.toggle_fullscreen_)),
-      sensitivity_icon_(std::move(other.sensitivity_icon_)),
       sensitivity_(std::move(other.sensitivity_)),
       keyboard_(std::move(other.keyboard_)),
-      sound_icon_(std::move(other.sound_icon_)),
       sound_(std::move(other.sound_)),
       toggle_sound_(std::move(other.toggle_sound_)),
-      music_icon_(std::move(other.music_icon_)),
       music_(std::move(other.music_)),
       toggle_music_(std::move(other.toggle_music_)),
       tip_info_label_(std::move(other.tip_info_label_)),
@@ -1210,26 +1191,22 @@ UiSettings::UiSettings(UiSettings&& other) noexcept
 
 // returns "stop render"
 bool UiSettings::Render() {
+  ui_shared_resources_.tex_ui_.Bind();
   bool stop_show = Base::RenderBack(hovered_);
-  if (!Base::BackIsReady()) {
-    return stop_show;
-  }
-
-  ui_shared_resources_.static_sprite_shader_.Bind();
+//  if (!Base::BackIsReady()) {
+//    return stop_show;
+//  }
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
   resolution_label_.SetParentTransform(Base::cur_transform_);
   resolution_left_.SetParentTransform(Base::cur_transform_);
   resolution_right_.SetParentTransform(Base::cur_transform_);
-  resolution_slot_.SetParentTransform(Base::cur_transform_);
   resolution_.SetParentTransform(Base::cur_transform_);
   toggle_fullscreen_.SetParentTransform(Base::cur_transform_);
-  sensitivity_icon_.SetParentTransform(Base::cur_transform_);
   sensitivity_.SetParentTransform(Base::cur_transform_);
   keyboard_.SetParentTransform(Base::cur_transform_);
-  sound_icon_.SetParentTransform(Base::cur_transform_);
   sound_.SetParentTransform(Base::cur_transform_);
   toggle_sound_.SetParentTransform(Base::cur_transform_);
-  music_icon_.SetParentTransform(Base::cur_transform_);
   music_.SetParentTransform(Base::cur_transform_);
   toggle_music_.SetParentTransform(Base::cur_transform_);
   tip_info_label_.SetParentTransform(Base::cur_transform_);
@@ -1241,16 +1218,12 @@ bool UiSettings::Render() {
 
   resolution_left_.Render();
   resolution_right_.Render();
-  resolution_slot_.Render();
   resolution_.Render();
   toggle_fullscreen_.Render();
-  sensitivity_icon_.Render();
   sensitivity_.Render(mouse_pos);
   keyboard_.Render();
-  sound_icon_.Render();
   sound_.Render(mouse_pos);
   toggle_sound_.Render();
-  music_icon_.Render();
   music_.Render(mouse_pos);
   toggle_music_.Render();
   tip_info_.Render();
@@ -1263,9 +1236,9 @@ bool UiSettings::Render() {
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
   ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(resolution_label_, "resolution", 1.0f, glm::vec2{0.0f});
+      ->RenderText(resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
   ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(tip_info_label_, "show tips", 1.0f, glm::vec2{0.0f});
+      ->RenderText(tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
 
   return stop_show;
 }
@@ -1279,16 +1252,12 @@ void UiSettings::RenderPicking() {
 
   resolution_left_.RenderPicking();
   resolution_right_.RenderPicking();
-  resolution_slot_.RenderPicking();
   resolution_.RenderPicking();
   toggle_fullscreen_.RenderPicking();
-  sensitivity_icon_.RenderPicking();
   sensitivity_.RenderPicking();
   keyboard_.RenderPicking();
-  sound_icon_.RenderPicking();
   sound_.RenderPicking();
   toggle_sound_.RenderPicking();
-  music_icon_.RenderPicking();
   music_.RenderPicking();
   toggle_music_.RenderPicking();
   tip_info_.RenderPicking();
@@ -1297,9 +1266,9 @@ void UiSettings::RenderPicking() {
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
 
   ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(resolution_label_, "resolution", 1.0f, glm::vec2{0.0f});
+      ->RenderTextPicking(resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
   ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(tip_info_label_, "show tips", 1.0f, glm::vec2{0.0f});
+      ->RenderTextPicking(tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
 }
 
 data::TextId UiSettings::Hover(int id) {
@@ -1338,16 +1307,12 @@ void UiSettings::UpdateTransform(
   resolution_label_.SetParentTransform(Base::cur_transform_);
   resolution_left_.SetParentTransform(Base::cur_transform_);
   resolution_right_.SetParentTransform(Base::cur_transform_);
-  resolution_slot_.SetParentTransform(Base::cur_transform_);
   resolution_.SetParentTransform(Base::cur_transform_);
   toggle_fullscreen_.SetParentTransform(Base::cur_transform_);
-  sensitivity_icon_.SetParentTransform(Base::cur_transform_);
   sensitivity_.SetParentTransform(Base::cur_transform_);
   keyboard_.SetParentTransform(Base::cur_transform_);
-  sound_icon_.SetParentTransform(Base::cur_transform_);
   sound_.SetParentTransform(Base::cur_transform_);
   toggle_sound_.SetParentTransform(Base::cur_transform_);
-  music_icon_.SetParentTransform(Base::cur_transform_);
   music_.SetParentTransform(Base::cur_transform_);
   toggle_music_.SetParentTransform(Base::cur_transform_);
   tip_info_label_.SetParentTransform(Base::cur_transform_);
@@ -1361,16 +1326,12 @@ void UiSettings::UpdateTransform(
   resolution_label_.UpdateTransform();
   resolution_left_.UpdateTransform();
   resolution_right_.UpdateTransform();
-  resolution_slot_.UpdateTransform();
   resolution_.UpdateTransform();
   toggle_fullscreen_.UpdateTransform();
-  sensitivity_icon_.UpdateTransform();
   sensitivity_.UpdateTransform();
   keyboard_.UpdateTransform();
-  sound_icon_.UpdateTransform();
   sound_.UpdateTransform();
   toggle_sound_.UpdateTransform();
-  music_icon_.UpdateTransform();
   music_.UpdateTransform();
   toggle_music_.UpdateTransform();
   tip_info_label_.UpdateTransform();
@@ -1862,1266 +1823,4 @@ void UiEditFences::UpdateTransform() {
   ];
   UpdateTransform(
       transform.translate.x, transform.translate.y, transform.scale);
-}
-
-UiEditTerrainNoise::UiEditTerrainNoise(
-    UiSharedResources& ui_shared_resources,
-    UiDynamicSprite&& config,
-    UiTextLabel&& text_name,
-    UiToggle&& toggle_invert,
-    UiToggle&& toggle_tiling,
-    UiSliderH2&& slider_strength)
-    : config_(std::move(config)),
-      text_name_(std::move(text_name)),
-      toggle_invert_(std::move(toggle_invert)),
-      toggle_tiling_(std::move(toggle_tiling)),
-      slider_strength_(std::move(slider_strength)),
-      ui_shared_resources_(ui_shared_resources) {}
-
-void UiEditTerrainNoise::Render() {
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  config_.Render();
-  toggle_invert_.Render();
-  toggle_tiling_.Render();
-  auto mouse_pos =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
-  slider_strength_.Render(mouse_pos);
-  // only after (due to internal shader & texture modification)
-  text_name_.Render();
-}
-
-void UiEditTerrainNoise::RenderPicking() {
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-  config_.RenderPicking();
-  toggle_invert_.RenderPicking();
-  toggle_tiling_.RenderPicking();
-  slider_strength_.RenderPicking();
-  // only after (due to internal shader & texture modification)
-  if (debug::gCtrlMode) {
-    text_name_.RenderPicking();
-  }
-}
-
-void UiEditTerrainNoise::SetParentId(int id) {
-  gUiComponents[config_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-  gUiComponents[toggle_invert_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-  gUiComponents[toggle_tiling_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-  gUiComponents[slider_strength_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-  gUiComponents[text_name_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-}
-
-void UiEditTerrainNoise::UpdateTransform() {
-  config_.UpdateTransform();
-  toggle_invert_.UpdateTransform();
-  toggle_tiling_.UpdateTransform();
-  slider_strength_.UpdateTransform();
-  text_name_.UpdateTransform();
-}
-
-UiEditTerrain::UiEditTerrain(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer,
-    UiDynamicSprite&& accept,
-    UiDynamicSprite&& name,
-    UiDynamicSprite&& name_back,
-    UiSlider2D&& color_palette,
-    UiSliderH2&& color_brightness,
-    UiDynamicSprite&& color_indicator,
-    UiDynamicSprite&& heightmap,
-    UiDynamicSprite&& random_generate)
-    : Base(std::move(sprite), size_scale, std::move(pin),
-           ui_shared_resources, window_queue),
-      accept_(std::move(accept)),
-      name_(std::move(name)),
-      name_back_(std::move(name_back)),
-      color_palette_(std::move(color_palette)),
-      color_brightness_(std::move(color_brightness)),
-      color_indicator_(std::move(color_indicator)),
-      tex_heightmap_("../assets/terrain/map_erosion_deposition.png", GL_RED),
-      heightmap_(std::move(heightmap)),
-      random_generate_(std::move(random_generate)),
-
-      text_noise_invert_({text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditLabelInvert, data::TextId::kNotYet}}),
-      text_noise_tiling_({text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise1TilingLabel, data::TextId::kNotYet}}),
-      text_noise_strength_({text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise1StrengthText, data::TextId::kNotYet}}),
-
-      noise1_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise1Config, data::TextId::kNotYet},
-              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise1Name, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise1InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise1TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise1StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1StrengthIcon, data::TextId::kNotYet}}),
-      noise2_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise2Config, data::TextId::kNotYet},
-              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise2Name, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise2InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise2TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise2StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2StrengthIcon, data::TextId::kNotYet}}),
-      noise3_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise3Config, data::TextId::kNotYet},
-              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise3Name, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise3InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise3TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise3StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3StrengthIcon, data::TextId::kNotYet}}),
-      noise4_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise4Config, data::TextId::kNotYet},
-              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise4Name, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise4InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise4TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise4StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4StrengthIcon, data::TextId::kNotYet}}),
-      noise5_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise5Config, data::TextId::kNotYet},
-              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise5Name, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise5InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise5TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise5StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5StrengthIcon, data::TextId::kNotYet}}),
-      noise6_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise6Config, data::TextId::kNotYet},
-              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise6Name, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise6InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise6TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise6StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6StrengthIcon, data::TextId::kNotYet}}),
-      noise7_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise7Config, data::TextId::kNotYet},
-              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise7Name, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise7InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise7TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise7StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7StrengthIcon, data::TextId::kNotYet}}),
-      noise8_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise8Config, data::TextId::kNotYet},
-              {text_renderer, 1.0f, glm::vec2{0.0f}, {data::VboIdMain::kTerrainEditNoise8Name, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise8InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise8TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise8StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8StrengthIcon, data::TextId::kNotYet}}),
-
-      noise_perlin_(text_renderer, sprite_.GetId()),
-      noise_cellular_(text_renderer, sprite_.GetId()),
-      noise_metaballs(text_renderer, sprite_.GetId()),
-      noise_fbm_grid(text_renderer, sprite_.GetId()),
-      noise_fbm_multi_(text_renderer, sprite_.GetId()),
-      noise_fbmd_perlin_(text_renderer, sprite_.GetId()),
-      noise_fbm_warp_(text_renderer, sprite_.GetId()),
-      noise_fmb_perlin_warp(text_renderer, sprite_.GetId()),
-
-      ui_event_handler_({
-          &pin_,
-          &noise1_.config_, &noise1_.toggle_invert_, &noise1_.toggle_tiling_, &noise1_.slider_strength_,
-          &noise2_.config_, &noise2_.toggle_invert_, &noise2_.toggle_tiling_, &noise2_.slider_strength_,
-          &noise3_.config_, &noise3_.toggle_invert_, &noise3_.toggle_tiling_, &noise3_.slider_strength_,
-          &noise4_.config_, &noise4_.toggle_invert_, &noise4_.toggle_tiling_, &noise4_.slider_strength_,
-          &noise5_.config_, &noise5_.toggle_invert_, &noise5_.toggle_tiling_, &noise5_.slider_strength_,
-          &noise6_.config_, &noise6_.toggle_invert_, &noise6_.toggle_tiling_, &noise6_.slider_strength_,
-          &noise7_.config_, &noise7_.toggle_invert_, &noise7_.toggle_tiling_, &noise7_.slider_strength_,
-          &noise8_.config_, &noise8_.toggle_invert_, &noise8_.toggle_tiling_, &noise8_.slider_strength_,
-          &accept_, &name_back_, &color_palette_,
-          &color_brightness_, &random_generate_
-      }),
-      ui_shared_resources_(ui_shared_resources) {
-  Init();
-  gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[name_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[name_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[color_palette_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[color_brightness_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[color_indicator_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[heightmap_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[random_generate_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[text_noise_invert_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[text_noise_tiling_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[text_noise_strength_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  noise1_.SetParentId(sprite_.GetId());
-  noise2_.SetParentId(sprite_.GetId());
-  noise3_.SetParentId(sprite_.GetId());
-  noise4_.SetParentId(sprite_.GetId());
-  noise5_.SetParentId(sprite_.GetId());
-  noise6_.SetParentId(sprite_.GetId());
-  noise7_.SetParentId(sprite_.GetId());
-  noise8_.SetParentId(sprite_.GetId());
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiWindowBase::UpdateTransform();
-  speed_ = 2.0f;
-}
-
-UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
-    : Base(std::move(other)),
-      accept_(std::move(other.accept_)),
-      name_(std::move(other.name_)),
-      name_back_(std::move(other.name_back_)),
-      color_palette_(std::move(other.color_palette_)),
-      color_brightness_(std::move(other.color_brightness_)),
-      color_indicator_(std::move(other.color_indicator_)),
-      tex_heightmap_(std::move(other.tex_heightmap_)),
-      heightmap_(std::move(other.heightmap_)),
-      random_generate_(std::move(other.random_generate_)),
-
-      text_noise_invert_(std::move(other.text_noise_invert_)),
-      text_noise_tiling_(std::move(other.text_noise_tiling_)),
-      text_noise_strength_(std::move(other.text_noise_strength_)),
-
-      noise1_(std::move(other.noise1_)),
-      noise2_(std::move(other.noise2_)),
-      noise3_(std::move(other.noise3_)),
-      noise4_(std::move(other.noise4_)),
-      noise5_(std::move(other.noise5_)),
-      noise6_(std::move(other.noise6_)),
-      noise7_(std::move(other.noise7_)),
-      noise8_(std::move(other.noise8_)),
-
-      noise_perlin_(std::move(other.noise_perlin_)),
-      noise_cellular_(std::move(other.noise_cellular_)),
-      noise_metaballs(std::move(other.noise_metaballs)),
-      noise_fbm_grid(std::move(other.noise_fbm_grid)),
-      noise_fbm_multi_(std::move(other.noise_fbm_multi_)),
-      noise_fbmd_perlin_(std::move(other.noise_fbmd_perlin_)),
-      noise_fbm_warp_(std::move(other.noise_fbm_warp_)),
-      noise_fmb_perlin_warp(std::move(other.noise_fmb_perlin_warp)),
-      ui_event_handler_({
-          &pin_,
-          &noise1_.config_, &noise1_.toggle_invert_, &noise1_.toggle_tiling_, &noise1_.slider_strength_,
-          &noise2_.config_, &noise2_.toggle_invert_, &noise2_.toggle_tiling_, &noise2_.slider_strength_,
-          &noise3_.config_, &noise3_.toggle_invert_, &noise3_.toggle_tiling_, &noise3_.slider_strength_,
-          &noise4_.config_, &noise4_.toggle_invert_, &noise4_.toggle_tiling_, &noise4_.slider_strength_,
-          &noise5_.config_, &noise5_.toggle_invert_, &noise5_.toggle_tiling_, &noise5_.slider_strength_,
-          &noise6_.config_, &noise6_.toggle_invert_, &noise6_.toggle_tiling_, &noise6_.slider_strength_,
-          &noise7_.config_, &noise7_.toggle_invert_, &noise7_.toggle_tiling_, &noise7_.slider_strength_,
-          &noise8_.config_, &noise8_.toggle_invert_, &noise8_.toggle_tiling_, &noise8_.slider_strength_,
-          &accept_, &name_back_, &color_palette_,
-          &color_brightness_, &random_generate_
-      }),
-      ui_shared_resources_(other.ui_shared_resources_) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
-
-data::TextId UiEditTerrain::Hover(int id) {
-  return ui_event_handler_.Hover(id);
-}
-
-bool UiEditTerrain::Press(int id) {
-  if (id == sprite_.GetId() || id == pin_.GetId()) {
-    return true;
-  }
-  if (!selected_noise_) {
-    if (id == accept_.GetId()) {
-      std::cout << "GENERATE TERRAIN" << std::endl;
-//      auto hmap = GenerateEmptyTerrainHmap();
-//      noise1_.GenerateNoiseHmap(); // generate only at init() and was_modified()
-//      noise1_.Apply(hmap); // here apply all
-      return true;
-    } else if (id == noise1_.config_.GetId()) {
-      selected_noise_ = &noise_perlin_;
-      return true;
-    } else if (id == noise2_.config_.GetId()) {
-      selected_noise_ = &noise_cellular_;
-      return true;
-    } else if (id == noise3_.config_.GetId()) {
-      selected_noise_ = &noise_metaballs;
-      return true;
-    } else if (id == noise4_.config_.GetId()) {
-      selected_noise_ = &noise_fbm_grid;
-      return true;
-    } else if (id == noise5_.config_.GetId()) {
-      selected_noise_ = &noise_fbm_multi_;
-      return true;
-    } else if (id == noise6_.config_.GetId()) {
-      selected_noise_ = &noise_fbmd_perlin_;
-      return true;
-    } else if (id == noise7_.config_.GetId()) {
-      selected_noise_ = &noise_fbm_warp_;
-      return true;
-    } else if (id == noise8_.config_.GetId()) {
-      selected_noise_ = &noise_fmb_perlin_warp;
-      return true;
-    }
-    return ui_event_handler_.Press(id);
-  }
-  return selected_noise_->Press(id);
-}
-
-void UiEditTerrain::Release() {
-  if (!selected_noise_) {
-    ui_event_handler_.Release();
-  } else {
-    selected_noise_->Release();
-  }
-}
-
-bool UiEditTerrain::Scroll(GLuint id, float yoffset) {
-  if (!selected_noise_) {
-    color_palette_.Scroll(id, yoffset) ||
-        color_brightness_.Scroll(id, yoffset);
-  } else {
-    selected_noise_->Scroll(id, yoffset);
-  }
-}
-
-bool UiEditTerrain::Render() {
-  auto mouse_pos =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
-  bool stop_show = Base::RenderBack(true);
-  if (!Base::BackIsReady()) {
-    return stop_show;
-  }
-  if (!selected_noise_) {
-   ui_shared_resources_.static_sprite_shader_.Bind();
-   accept_.Render();
-   name_back_.Render();
-   color_palette_.Render(mouse_pos);
-   color_brightness_.Render(mouse_pos);
-   //TODO: set indicator color
-   color_indicator_.Render();
-   tex_heightmap_.Bind();
-   heightmap_.Render();
-   ui_shared_resources_.tex_ui_.Bind();
-   random_generate_.Render();
-
-   color_palette_.RenderIcon();
-   color_brightness_.RenderIcon();
-
-   noise1_.Render();
-   noise2_.Render();
-   noise3_.Render();
-   noise4_.Render();
-   noise5_.Render();
-   noise6_.Render();
-   noise7_.Render();
-   noise8_.Render();
-
-   ui_shared_resources_.dynamic_sprite_shader_.Bind();
-
-   ui_shared_resources_.global_glfw_callback_data_.text_renderer
-       ->RenderText(name_, "name", 0.1f, glm::vec2{0.0f});
-   text_noise_invert_.Render();
-   text_noise_tiling_.Render();
-   text_noise_strength_.Render();
-  } else {
-    selected_noise_->Render(mouse_pos);
-  }
-  return false;
-}
-
-void UiEditTerrain::RenderPicking() {
-  RenderPickingBack();
-  if (!selected_noise_) {
-    ui_shared_resources_.static_sprite_picking_shader_.Bind();
-
-    accept_.RenderPicking();
-    name_back_.RenderPicking();
-    color_palette_.RenderPicking();
-    color_brightness_.RenderPicking();
-    //TODO: set indicator color
-    color_indicator_.RenderPicking();
-    heightmap_.RenderPicking();
-    random_generate_.RenderPicking();
-
-    noise1_.RenderPicking();
-    noise2_.RenderPicking();
-    noise3_.RenderPicking();
-    noise4_.RenderPicking();
-    noise5_.RenderPicking();
-    noise6_.RenderPicking();
-    noise7_.RenderPicking();
-    noise8_.RenderPicking();
-
-    ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-
-    ui_shared_resources_.global_glfw_callback_data_.text_renderer
-        ->RenderTextPicking(name_, "name", 0.1f, glm::vec2{0.0f});
-    text_noise_invert_.RenderPicking();
-    text_noise_tiling_.RenderPicking();
-    text_noise_strength_.RenderPicking();
-  } else {
-    selected_noise_->RenderPicking();
-  }
-}
-
-void UiEditTerrain::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  std::cout << "UPDATE" << std::endl;
-  sprite_.UpdateTransform();
-  pin_.UpdateTransform();
-
-  accept_.UpdateTransform();
-  name_.UpdateTransform();
-  name_back_.UpdateTransform();
-  color_palette_.UpdateTransform();
-  color_brightness_.UpdateTransform();
-  color_indicator_.UpdateTransform();
-  heightmap_.UpdateTransform();
-  random_generate_.UpdateTransform();
-
-  text_noise_invert_.UpdateTransform();
-  text_noise_tiling_.UpdateTransform();
-  text_noise_strength_.UpdateTransform();
-
-  noise1_.UpdateTransform();
-  noise2_.UpdateTransform();
-  noise3_.UpdateTransform();
-  noise4_.UpdateTransform();
-  noise5_.UpdateTransform();
-  noise6_.UpdateTransform();
-  noise7_.UpdateTransform();
-  noise8_.UpdateTransform();
-
-  noise_perlin_.UpdateTransform();
-  noise_cellular_.UpdateTransform();
-  noise_metaballs.UpdateTransform();
-  noise_fbm_grid.UpdateTransform();
-  noise_fbm_multi_.UpdateTransform();
-  noise_fbmd_perlin_.UpdateTransform();
-  noise_fbm_warp_.UpdateTransform();
-  noise_fmb_perlin_warp.UpdateTransform();
-}
-
-void UiEditTerrain::Generate() {
-  int width = tex_hmap_.GetWidth();
-  int height = tex_hmap_.GetHeight();
-
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_id_);
-  glViewport(0, 0, width, height);
-  glBindVertexArray(vao_id_);
-
-  std::vector<unsigned char> buffer(width * height);
-  std::cout << "CH0 (start)" << std::endl;
-
-  glm::vec2 resolution = glm::vec2{1024, 1024};
-  //TODO: generate separately
-
-  Texture layer;
-
-  layer = noise_perlin_.Generate(resolution, buffer, "hmap_perlin.png");
-  MergeLayers(
-      tex_hmap_, layer, !noise1_.toggle_invert_.IsOff(),
-      !noise1_.toggle_tiling_.IsOff(), noise1_.slider_strength_.GetProgress());
-
-  layer = noise_cellular_.Generate(resolution, buffer, "hmap_cellular.png");
-  MergeLayers(
-      tex_hmap_, layer, !noise2_.toggle_invert_.IsOff(),
-      !noise2_.toggle_tiling_.IsOff(), noise2_.slider_strength_.GetProgress());
-
-  layer = noise_metaballs.Generate(resolution, buffer, "hmap_metaballs.png");
-  MergeLayers(
-      tex_hmap_, layer, !noise3_.toggle_invert_.IsOff(),
-      !noise3_.toggle_tiling_.IsOff(), noise3_.slider_strength_.GetProgress());
-
-  layer = noise_fbm_grid.Generate(resolution, buffer, "hmap_fbm_grid.png");
-  MergeLayers(
-      tex_hmap_, layer, !noise4_.toggle_invert_.IsOff(),
-      !noise4_.toggle_tiling_.IsOff(), noise4_.slider_strength_.GetProgress());
-
-  layer = noise_fbm_multi_.Generate(resolution, buffer, "hmap_fbm_multi.png");
-  MergeLayers(
-      tex_hmap_, layer, !noise5_.toggle_invert_.IsOff(),
-      !noise5_.toggle_tiling_.IsOff(), noise5_.slider_strength_.GetProgress());
-
-  layer = noise_fbmd_perlin_.Generate(resolution, buffer, "hmap_fbm_perlin.png");
-  MergeLayers(
-      tex_hmap_, layer, !noise6_.toggle_invert_.IsOff(),
-      !noise6_.toggle_tiling_.IsOff(), noise6_.slider_strength_.GetProgress());
-
-  layer = noise_fbm_warp_.Generate(resolution, buffer, "hmap_fbm_warp.png");
-  MergeLayers(
-      tex_hmap_, layer, !noise7_.toggle_invert_.IsOff(),
-      !noise7_.toggle_tiling_.IsOff(), noise7_.slider_strength_.GetProgress());
-
-  layer = noise_fmb_perlin_warp.Generate(resolution, buffer, "hmap_fbm_perlin_warp.png");
-  MergeLayers(
-      tex_hmap_, layer, !noise8_.toggle_invert_.IsOff(),
-      !noise8_.toggle_tiling_.IsOff(), noise8_.slider_strength_.GetProgress());
-
-  tex_hmap_.Store("hmap_start.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-  std::cout << "Generation :: DONE" << std::endl;
-  terrain_.UpdateCpuData();
-}
-
-void UiEditTerrain::UpdateCpuData() {
-  tex_hmap_.Bind();
-  std::vector<unsigned char> height_map_data_ui(gTerrainWidth * gTerrainHeight);
-  glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE,
-                height_map_data_ui.data());
-  for (int y = 0; y < gTerrainHeight; ++y) {
-    for (int x = 0; x < gTerrainWidth; ++x) {
-      height_map_data_[y][x] =
-          height_map_data_ui[y * gTerrainWidth + x] / 255.0f;
-    }
-  }
-}
-
-void UiEditTerrain::Init() {
-  height_map_data_.resize(gTerrainHeight);
-  for (auto& row : height_map_data_) {
-    row.resize(gTerrainWidth);
-  }
-
-  float vertices[] = {
-      1.0f,  1.0f, 0.0f,
-      1.0f, -1.0f, 0.0f,
-      -1.0f, -1.0f, 0.0f,
-      -1.0f,  1.0f, 0.0f,
-  };
-  unsigned int indices[] = {
-      0, 1, 3,
-      1, 2, 3
-  };
-  glGenVertexArrays(1, &vao_id_);
-  glGenBuffers(1, &vbo_id_);
-  glGenBuffers(1, &ebo_id_);
-
-  glBindVertexArray(vao_id_);
-
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_id_);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_id_);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices),
-               indices, GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(0);
-
-  glGenTextures(1, &fbo_tex_id_);
-  glBindTexture(GL_TEXTURE_2D, fbo_tex_id_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, gTerrainWidth, gTerrainHeight,
-               0, GL_RED, GL_FLOAT, nullptr);
-
-  glGenFramebuffers(1, &fbo_id_);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_id_);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                         GL_TEXTURE_2D, fbo_tex_id_, 0);
-}
-
-void UiEditTerrain::DeInit() {
-  glDeleteBuffers(1, &vbo_id_);
-  glDeleteBuffers(1, &ebo_id_);
-  glDeleteTextures(1, &fbo_tex_id_);
-  glDeleteFramebuffers(1, &fbo_id_);
-  glDeleteVertexArrays(1, &vao_id_);
-}
-
-UiTerrainBake::UiTerrainBake(
-    Tile& cur_tile,
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer,
-    UiDynamicSprite&& accept,
-    UiDynamicSprite&& heightmap,
-    UiTextLabelId&& erosion_label,
-    UiDynamicSprite&& erosion_input,
-    UiTextLabelId&& weathering_label,
-    UiDynamicSprite&& weathering_input)
-    : Base(std::move(sprite), size_scale, std::move(pin),
-           ui_shared_resources, window_queue),
-      accept_(std::move(accept)),
-      tex_heightmap_("../assets/terrain/map_erosion_wear.png", GL_RED),
-      heightmap_(std::move(heightmap)),
-      erosion_label_(std::move(erosion_label)),
-      erosion_input_(std::move(erosion_input)),
-      weathering_label_(std::move(weathering_label)),
-      weathering_input_(std::move(weathering_input)),
-      ui_event_handler_({
-          &pin_, &accept_, &erosion_input_, &weathering_input_
-      }),
-      ui_shared_resources_(ui_shared_resources),
-
-      shader_gen_nmap_("../shaders/generate_shaders/NormalMap.comp"),
-      shader_gen_slope_map_("../shaders/generate_shaders/SlopeMap.comp"),
-      shader_gen_ao_map_("../shaders/generate_shaders/AoMap.comp"),
-      shader_perturbate_("../shaders/generate_shaders/Perturbate.comp"),
-
-      tex_hmap_(cur_tile.map_terrain_height),
-      tex_nmap_(cur_tile.map_terrain_normal),
-      tex_slope_map_(cur_tile.map_erosion_deposition),
-      tex_ao_map_(cur_tile.map_terrain_occlusion),
-      tex_splat_map_(cur_tile.map_terrain_cavity),
-
-      tex_erosion_thermal_map_(cur_tile.map_erosion_flow),
-      tex_erosion_hydraulic_map_(cur_tile.map_erosion_wear),
-
-      tex_water_accum_(cur_tile.map_terrain_wetness),
-      tex_water_flow_(cur_tile.map_water_flow) {
-  gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[heightmap_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[erosion_label_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[erosion_input_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[weathering_label_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[weathering_input_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiWindowBase::UpdateTransform();
-  speed_ = 2.0f;
-}
-
-UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
-    : Base(std::move(other)),
-      accept_(std::move(other.accept_)),
-      tex_heightmap_(std::move(other.tex_heightmap_)),
-      heightmap_(std::move(other.heightmap_)),
-      erosion_label_(std::move(other.erosion_label_)),
-      erosion_input_(std::move(other.erosion_input_)),
-      weathering_label_(std::move(other.weathering_label_)),
-      weathering_input_(std::move(other.weathering_input_)),
-      ui_event_handler_({
-          &pin_, &accept_, &erosion_input_, &weathering_input_
-      }),
-      ui_shared_resources_(other.ui_shared_resources_),
-
-      shader_gen_nmap_(std::move(other.shader_gen_nmap_)),
-      shader_gen_slope_map_(std::move(other.shader_gen_slope_map_)),
-      shader_gen_ao_map_(std::move(other.shader_gen_ao_map_)),
-      shader_perturbate_(std::move(other.shader_perturbate_)),
-
-      tex_hmap_(other.tex_hmap_),
-      tex_nmap_(other.tex_hmap_),
-      tex_slope_map_(other.tex_hmap_),
-      tex_ao_map_(other.tex_ao_map_),
-      tex_splat_map_(other.tex_splat_map_),
-
-      tex_erosion_thermal_map_(other.tex_erosion_thermal_map_),
-      tex_erosion_hydraulic_map_(other.tex_erosion_hydraulic_map_),
-
-      tex_water_accum_(other.tex_water_accum_),
-      tex_water_flow_(other.tex_water_flow_) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
-
-data::TextId UiTerrainBake::Hover(int id) {
-  return ui_event_handler_.Hover(id);
-}
-
-bool UiTerrainBake::Press(int id) {
-  return ui_event_handler_.Press(id);
-}
-
-void UiTerrainBake::Release() {
-  ui_event_handler_.Release();
-}
-
-bool UiTerrainBake::Scroll(GLuint id, float yoffset) {
-  return false;
-}
-
-bool UiTerrainBake::Render() {
-  bool stop_show = Base::RenderBack(true);
-  if (!Base::BackIsReady()) {
-    return stop_show;
-  }
-  ui_shared_resources_.static_sprite_shader_.Bind();
-
-  auto mouse_pos =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
-
-  accept_.Render();
-  tex_heightmap_.Bind();
-  heightmap_.Render();
-  ui_shared_resources_.tex_ui_.Bind();
-  erosion_input_.Render();
-  weathering_input_.Render();
-
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-
-  erosion_label_.Render();
-  weathering_label_.Render();
-  return false;
-}
-
-void UiTerrainBake::RenderPicking() {
-  RenderPickingBack();
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
-
-  accept_.RenderPicking();
-  heightmap_.RenderPicking();
-  erosion_input_.RenderPicking();
-  weathering_input_.RenderPicking();
-
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-  erosion_label_.RenderPicking();
-  weathering_label_.RenderPicking();
-}
-
-void UiTerrainBake::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  sprite_.UpdateTransform();
-  pin_.UpdateTransform();
-
-  accept_.UpdateTransform();
-  heightmap_.UpdateTransform();
-  erosion_label_.UpdateTransform();
-  erosion_input_.UpdateTransform();
-  weathering_label_.UpdateTransform();
-  weathering_input_.UpdateTransform();
-}
-
-void UiTerrainBake::ErodeWithFlow(
-    const std::vector<std::vector<glm::vec2>>& flow_dir,
-    const std::vector<std::vector<float>>& water_accum,
-    int cycles) {
-  glm::vec2 dim = glm::vec2(height_map_data_.size(), height_map_data_[0].size());
-  float dt = 1.2f;
-  float density = 1.0f;
-  float evapRate = 0.001f;
-  float depositionRate = 0.1f;
-  float minVol = 0.01f;
-  float friction = 0.05f;
-
-  for(int i = 0; i < cycles; i++) {
-    // Spawn droplet at a random position weighted by water accumulation to spawn more where water is abundant
-    glm::vec2 newpos;
-    {
-      // Example: choose position randomly, but biased by water_accum
-      // For simplicity, just random now
-      newpos = glm::vec2(rand() % (int)dim.x, rand() % (int)dim.y);
-    }
-
-    Particle drop(newpos);
-    drop.volume = water_accum[(int)newpos.y][(int)newpos.x];  // Use water accumulation as initial volume
-
-    while(drop.volume > minVol) {
-      glm::ivec2 ipos{static_cast<int>(drop.pos.x), static_cast<int>(drop.pos.y)};
-      if (ipos.x < 0 || ipos.x >= (int)dim.x || ipos.y < 0 || ipos.y >= (int)dim.y) {
-        break;
-      }
-
-      // Instead of updating speed by surface normal, move drop along flow_dir vector at current position
-      glm::vec2 dir = flow_dir[ipos.y][ipos.x];  // assuming [row][col] access
-      // Apply velocity along flow direction scaled by dt and drop volume and maybe some factor
-      drop.speed.x = dir.x * dt * drop.volume;
-      drop.speed.y = dir.y * dt * drop.volume;
-
-      drop.pos.x += drop.speed.x;
-      drop.pos.y += drop.speed.y;
-
-      // Compute sediment capacity difference as before
-      int x1 = ipos.x;
-      int y1 = ipos.y;
-      int x2 = (int)drop.pos.x;
-      int y2 = (int)drop.pos.y;
-
-      if (x2 < 0 || x2 >= (int)dim.x || y2 < 0 || y2 >= (int)dim.y) {
-        break;
-      }
-
-      float heightDiff = height_map_data_[y1][x1] - height_map_data_[y2][x2];
-      float maxSediment = drop.volume * glm::length(drop.speed) * std::max(0.0f, heightDiff);
-
-      float sdiff = maxSediment - drop.sediment;
-
-      // Deposit or erode sediment
-      drop.sediment += dt * depositionRate * sdiff;
-      height_map_data_[y1][x1] -= dt * drop.volume * depositionRate * sdiff;
-      height_map_data_[y1][x1] = std::max(0.0f, height_map_data_[y1][x1]);
-
-      // Evaporate
-      drop.volume *= (1.0f - dt * evapRate);
-    }
-  }
-}
-
-
-glm::vec3 UiTerrainBake::SurfaceNormal(int i, int j) {
-  //"Physical" Height scaling of the map
-  double scale = 16.0f * 16.0f;
-  /*
-    Note: Surface normal is computed in this way, because the square-grid
-    surface is meshed using triangles. To avoid spatial artifacts,
-    you need to weight properly with all neighbors.
-  */
-  i = std::clamp(i, 1, static_cast<int>(height_map_data_[0].size()) - 2);
-  j = std::clamp(j, 1, static_cast<int>(height_map_data_.size()) - 2);
-  glm::vec3 n = glm::normalize(glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i+1][j]), 1.0, 0.0)) * glm::vec3(0.15);  //Positive X
-  n += glm::normalize(glm::vec3(scale*(height_map_data_[i-1][j]-height_map_data_[i][j]), 1.0, 0.0)) * glm::vec3(0.15);  //Negative X
-  n += glm::normalize(glm::vec3(0.0, 1.0, scale*(height_map_data_[i][j]-height_map_data_[i][j+1]))) * glm::vec3(0.15);    //Positive Y
-  n += glm::normalize(glm::vec3(0.0, 1.0, scale*(height_map_data_[i][j-1]-height_map_data_[i][j]))) * glm::vec3(0.15);  //Negative Y
-
-  //Diagonals! (This removes the last spatial artifacts)
-  n += glm::normalize(
-           glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i+1][j+1])/sqrt(2), sqrt(2),scale*(height_map_data_[i][j]-height_map_data_[i+1][j+1])/sqrt(2))) * glm::vec3(0.1);    //Positive Y
-  n += glm::normalize(glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i+1][j-1])/sqrt(2), sqrt(2), scale*(height_map_data_[i][j]-height_map_data_[i+1][j-1])/sqrt(2))) * glm::vec3(0.1);    //Positive Y
-  n += glm::normalize(glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i-1][j+1])/sqrt(2), sqrt(2), scale*(height_map_data_[i][j]-height_map_data_[i-1][j+1])/sqrt(2))) * glm::vec3(0.1);    //Positive Y
-  n += glm::normalize(glm::vec3(scale*(height_map_data_[i][j]-height_map_data_[i-1][j-1])/sqrt(2), sqrt(2), scale*(height_map_data_[i][j]-height_map_data_[i-1][j-1])/sqrt(2))) * glm::vec3(0.1);    //Positive Y
-
-  return n;
-}
-
-void UiTerrainBake::ErodeWeathering(int cycles) {
-  //Size of the heightmap array
-  glm::vec2 dim = glm::vec2(gTerrainWidth, gTerrainHeight);
-  //Erosion Steps
-  //  int remaining = 200000;
-  //  int erosionstep = 1000;
-
-  //Particle Properties
-  float dt = 1.2;
-  float density = 1.0;  //This gives varying amounts of inertia and stuff...
-  float evapRate = 0.001;
-  //  float depositionRate = 1.0f;
-  float depositionRate = 0.1;
-
-  float minVol = 0.01;
-  float friction = 0.05;
-
-  for(int i = 0; i < cycles; i++){
-
-    //Spawn New Particle
-    glm::vec2 newpos = glm::vec2(rand()%(int)dim.x, rand()%(int)dim.y);
-    Particle drop(newpos);
-    std::cout << "cycle " << i << std::endl;
-
-    //As long as the droplet exists...
-    while(drop.volume > minVol){
-      glm::ivec2 ipos{static_cast<int>(drop.pos.x),
-                      static_cast<int>(drop.pos.y)};
-      //Floored Droplet Initial Position
-      //Surface Normal at Position
-      glm::vec3 n = SurfaceNormal(ipos.x, ipos.y);
-
-      //Accelerate particle using newtonian mechanics using the surface normal.
-      //F = ma, so a = F/m
-      drop.speed.x += n.x * dt/(drop.volume*density);
-      drop.speed.y += n.z * dt/(drop.volume*density);
-      drop.pos.x   += drop.speed.x;
-      drop.pos.y   += drop.speed.y;
-      drop.speed.x *= (1.0-dt*friction);       //Friction Factor
-      drop.speed.y *= (1.0-dt*friction);       //Friction Factor
-
-      if (!(drop.pos.x >= 0.0f && drop.pos.y >= 0.0f &&
-            drop.pos.x < dim.x && drop.pos.y < dim.y))
-        break;
-
-      //Compute sediment capacity difference
-      float maxsediment =
-          drop.volume * glm::length(drop.speed)
-          * (height_map_data_[ipos.x][ipos.y]
-             - height_map_data_[(int)drop.pos.x][(int)drop.pos.y]);
-      if(maxsediment < 0.0) maxsediment = 0.0;
-      float sdiff = maxsediment - drop.sediment;
-
-      //Act on the Heightmap and Droplet!
-      drop.sediment += dt*depositionRate*sdiff;
-      height_map_data_[ipos.x][ipos.y] -= dt*drop.volume*depositionRate*sdiff;
-      height_map_data_[ipos.x][ipos.y] =
-          std::max(0.0f, height_map_data_[ipos.x][ipos.y]);
-
-      //Evaporate the Droplet (Note: Proportional to Volume!
-      // Better: Use shape factor to make proportional to the area instead.)
-      drop.volume *= (1.0-dt*evapRate);
-    }
-  }
-}
-
-
-void UiTerrainBake::ProcessErosion(
-    const std::vector<std::vector<glm::vec2>>& flow_dir,
-    const std::vector<std::vector<float>>& water_accum,
-    int iterations) {
-  int height = height_map_data_.size();
-  int width = height_map_data_[0].size();
-
-  auto start_height_map_data = height_map_data_;
-
-  ErodeWithFlow(flow_dir, water_accum, iterations);
-
-  // Convert float -> uint8 for saving
-  std::vector<uint8_t> height_map_data_updated(width * height);
-  for (int i = 0; i < width; ++i) {
-    for (int j = 0; j < height; ++j) {
-      float acc = -height_map_data_[i][j] + start_height_map_data[i][j];
-      height_map_data_updated[i * width + j] =
-          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
-    }
-  }
-
-  tex_erosion_hydraulic_map_ = Texture(gTerrainWidth, gTerrainHeight,
-                                       GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
-  tex_erosion_hydraulic_map_.Bind();
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED,
-               GL_UNSIGNED_BYTE, height_map_data_updated.data());
-  tex_erosion_hydraulic_map_.Store("erosion_wear.png", 1, GL_RED,
-                                   GL_UNSIGNED_BYTE);
-
-  for (int i = 0; i < width; ++i) {
-    for (int j = 0; j < height; ++j) {
-      float acc = height_map_data_[i][j];
-      height_map_data_updated[i * width + j] = static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
-    }
-  }
-  tex_hmap_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8, GL_LINEAR,
-                      GL_CLAMP_TO_EDGE);
-  tex_hmap_.Bind();
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED,
-               GL_UNSIGNED_BYTE, height_map_data_updated.data());
-  tex_hmap_.Store("height_map_erosed.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-}
-
-void UiTerrainBake::ProcessThermalWeathering(
-    int iterations, float talus) {
-  int height = height_map_data_.size();
-  int width = height_map_data_[0].size();
-
-  auto start_height_map_data = height_map_data_;
-
-  ErodeWeathering(iterations);
-  //  RunThermalWeathering(height_map_data, 50, 0.2f);
-
-  // Convert float -> uint8 for saving
-  std::vector<uint8_t> height_map_data_updated(width * height);
-
-  for (int i = 0; i < width; ++i) {
-    for (int j = 0; j < height; ++j) {
-      float acc = height_map_data_[i][j] - start_height_map_data[i][j];
-      height_map_data_updated[i * width + j] =
-          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
-    }
-  }
-
-  tex_erosion_thermal_map_ = Texture(gTerrainWidth, gTerrainHeight,
-                                     GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
-  tex_erosion_thermal_map_.Bind();
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0,
-               GL_RED, GL_UNSIGNED_BYTE, height_map_data_updated.data());
-  tex_erosion_thermal_map_.Store("weathering_wear.png", 1,
-                                 GL_RED, GL_UNSIGNED_BYTE);
-
-  for (int i = 0; i < width; ++i) {
-    for (int j = 0; j < height; ++j) {
-      float acc = height_map_data_[i][j];
-      height_map_data_updated[i * width + j] =
-          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
-    }
-  }
-  tex_hmap_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8, GL_LINEAR,
-                      GL_CLAMP_TO_EDGE);
-  tex_hmap_.Bind();
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED,
-               GL_UNSIGNED_BYTE, height_map_data_updated.data());
-  tex_hmap_.Store("height_map_weathered.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-}
-
-void UiTerrainBake::GenerateSplatmap() {}
-
-void UiTerrainBake::GenerateNmap() {
-  shader_gen_nmap_.Bind();
-  glBindImageTexture(
-      0, tex_hmap_.GetId(), 0,
-      GL_FALSE, 0, GL_READ_ONLY, tex_hmap_.GetFormat());
-  glBindImageTexture(
-      1, tex_nmap_.GetId(), 0,
-      GL_FALSE, 0, GL_WRITE_ONLY, tex_nmap_.GetFormat());
-  glDispatchCompute(gTerrainWidth / 8, gTerrainHeight / 8, 1);
-  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  tex_nmap_.Store("normal_map.png", 2, GL_RG, GL_UNSIGNED_BYTE);
-}
-
-void UiTerrainBake::GenerateSlope() {
-  shader_gen_slope_map_.Bind();
-  glBindImageTexture(
-      0, tex_hmap_.GetId(), 0,
-      GL_FALSE, 0, GL_READ_ONLY, tex_hmap_.GetFormat());
-  glBindImageTexture(
-      1, tex_slope_map_.GetId(), 0,
-      GL_FALSE, 0, GL_WRITE_ONLY, tex_slope_map_.GetFormat());
-  glDispatchCompute(gTerrainWidth / 8, gTerrainHeight / 8, 1);
-  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  tex_slope_map_.Store("slope_map.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-}
-
-void UiTerrainBake::GenerateAo() {
-  shader_gen_ao_map_.Bind();
-  glBindImageTexture(
-      0, tex_hmap_.GetId(), 0,
-      GL_FALSE, 0, GL_READ_ONLY, tex_hmap_.GetFormat());
-  glBindImageTexture(
-      1, tex_ao_map_.GetId(), 0,
-      GL_FALSE, 0, GL_WRITE_ONLY, tex_ao_map_.GetFormat());
-  glDispatchCompute(gTerrainWidth / 8, gTerrainHeight / 8, 1);
-  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  tex_ao_map_.Store("ao_map.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-}
-
-void UiTerrainBake::Perturbate() {
-  Texture tex_hmap_new(gTerrainWidth, gTerrainHeight, GL_R8);
-  shader_perturbate_.Bind();
-  glBindImageTexture(
-      0, tex_hmap_.GetId(), 0,
-      GL_FALSE, 0, GL_READ_ONLY, tex_hmap_.GetFormat());
-  glBindImageTexture(
-      1, tex_hmap_new.GetId(), 0,
-      GL_FALSE, 0, GL_WRITE_ONLY, tex_hmap_new.GetFormat());
-  glDispatchCompute(gTerrainWidth / 8, gTerrainHeight / 8, 1);
-  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  tex_hmap_ = std::move(tex_hmap_new);
-  tex_hmap_.Store("tex_hmap_perturbated.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-}
-
-void UiTerrainBake::ComputeFlowMaps(
-    std::vector<std::vector<glm::vec2>>& flow_dir,
-    std::vector<std::vector<float>>& flow_accum) {
-  int height = height_map_data_.size();
-  int width = height_map_data_[0].size();
-
-  flow_dir.assign(height, std::vector<glm::vec2>(width, {0.0f, 0.0f}));
-  // Start with 1 unit of water
-  flow_accum.assign(height, std::vector<float>(width, 1.0f));
-
-  // Step 1: Flow direction
-  for (int y = 1; y < height - 1; ++y) {
-    for (int x = 1; x < width - 1; ++x) {
-      float h0 = height_map_data_[y][x];
-      float maxSlope = 0.0f;
-      glm::vec2 best = {0.0f, 0.0f};
-
-      for (int dy = -1; dy <= 1; ++dy) {
-        for (int dx = -1; dx <= 1; ++dx) {
-          if (dx == 0 && dy == 0) continue;
-
-          float h1 = height_map_data_[y + dy][x + dx];
-          float drop = h0 - h1;
-          float dist = std::sqrt(dx * dx + dy * dy);
-          float slope = drop / dist;
-
-          if (slope > maxSlope) {
-            maxSlope = slope;
-            best = { (float)dx, (float)dy };
-          }
-        }
-      }
-
-      float len = std::sqrt(best.x * best.x + best.y * best.y);
-      if (len > 0.0f)
-        flow_dir[y][x] = { best.x / len, best.y / len };
-    }
-  }
-
-  // Step 2: Flow accumulation (simple topological sort by descending height)
-  struct Cell {
-    int x, y;
-    float height;
-  };
-  std::vector<Cell> cells;
-  for (int y = 0; y < height; ++y)
-    for (int x = 0; x < width; ++x)
-      cells.push_back({x, y, height_map_data_[y][x]});
-
-  std::sort(cells.begin(), cells.end(), [](const Cell& a, const Cell& b) {
-    return a.height > b.height;
-  });
-
-  for (auto& cell : cells) {
-    int x = cell.x;
-    int y = cell.y;
-    int nx = x + std::round(flow_dir[y][x].x);
-    int ny = y + std::round(flow_dir[y][x].y);
-    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-      flow_accum[ny][nx] += 0.1f * flow_accum[y][x];
-    }
-  }
-}
-
-void UiTerrainBake::GenerateFlowMap(
-    std::vector<std::vector<glm::vec2>>& flow_dir,
-    std::vector<std::vector<float>>& flow_accum) {
-  int height = height_map_data_.size();
-  int width = height_map_data_[0].size();
-  ComputeFlowMaps(flow_dir, flow_accum);
-
-  //  int width = flow_accum[0].size();
-  //  int height = flow_accum.size();
-
-  // flow_dir: RGB -> (dx, dy, 0)
-  std::vector<float> flow_dir_data(width * height * 3);
-  for (int y = 0; y < height; ++y)
-    for (int x = 0; x < width; ++x) {
-      int idx = (y * width + x) * 3;
-      flow_dir_data[idx + 0] = flow_dir[y][x].x * 0.5f + 0.5f; // map [-1,1] to [0,1]
-      flow_dir_data[idx + 1] = flow_dir[y][x].y * 0.5f + 0.5f;
-      flow_dir_data[idx + 2] = 0.0f; // unused
-    }
-
-  // flow_accum: single channel
-  std::vector<float> flow_accum_data(width * height);
-  for (int y = 0; y < height; ++y) {
-    for (int x = 0; x < width; ++x) {
-      // tone-mapped
-
-      flow_accum_data[y * width + x] = std::log(1.0f + flow_accum[y][x]);
-    }
-  }
-
-  GLuint flowDirTex, flowAccumTex;
-
-  // Upload flowDirTex (RGB)
-  glGenTextures(1, &flowDirTex);
-  glBindTexture(GL_TEXTURE_2D, flowDirTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB,
-               GL_FLOAT, flow_dir_data.data());
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  // Upload flowAccumTex (R)
-  glGenTextures(1, &flowAccumTex);
-  glBindTexture(GL_TEXTURE_2D, flowAccumTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED,
-               GL_FLOAT, flow_accum_data.data());
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  // Convert float -> uint8 for saving
-  std::vector<uint8_t> flowDirData_u8(width * height * 3);
-  std::vector<uint8_t> flowAccumData_u8(width * height);
-
-  for (int i = 0; i < width * height; ++i) {
-    // Clamp and convert each channel
-    for (int c = 0; c < 3; ++c) {
-      float v = flow_dir_data[i * 3 + c];
-      flowDirData_u8[i * 3 + c] = static_cast<uint8_t>(std::clamp(v, 0.0f, 1.0f) * 255.0f);
-    }
-
-    float acc = flow_accum_data[i];
-    flowAccumData_u8[i] = static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
-  }
-
-
-  tex_water_flow_ = Texture(gTerrainWidth, gTerrainHeight, GL_RGB8,
-                            GL_LINEAR, GL_CLAMP_TO_EDGE);
-  tex_water_flow_.Bind();
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0,
-               GL_RGB, GL_UNSIGNED_BYTE, flowDirData_u8.data());
-  tex_water_flow_.Store("water_flow.png", 3, GL_RGB, GL_UNSIGNED_BYTE);
-
-  tex_water_accum_ = Texture(gTerrainWidth, gTerrainHeight, GL_R8,
-                             GL_LINEAR, GL_CLAMP_TO_EDGE);
-  tex_water_accum_.Bind();
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0,
-               GL_RED, GL_UNSIGNED_BYTE, flowAccumData_u8.data());
-  tex_water_accum_.Store("water_accum.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-}
-
-void UiTerrainBake::Bake(
-    int steps_thermal, int steps_weathering, float talus) {
-  Perturbate();
-  std::cout << "CH1" << std::endl;
-  UpdateCpuData();
-
-  std::vector<std::vector<glm::vec2>> flow_dir;
-  std::vector<std::vector<float>> flow_accum;
-  GenerateFlowMap(flow_dir, flow_accum);
-  std::cout << "CH4" << std::endl;
-
-  /// erosion & thermal weathering
-  //  ProcessErosion(flow_dir, flow_accum, steps_thermal);
-  ProcessErosion(flow_dir, flow_accum, 1000);
-  std::cout << "CH5" << std::endl;
-  UpdateCpuData();
-
-  //  ProcessThermalWeathering(steps_weathering, talus);
-  ProcessThermalWeathering(1000, 0.1f);
-  std::cout << "CH6" << std::endl;
-  UpdateCpuData();
-
-  GenerateNmap();
-  std::cout << "CH7" << std::endl;
-  GenerateSlope();
-  std::cout << "CH8" << std::endl;
-  GenerateAo();
-  std::cout << "CH9 (final)" << std::endl;
-
-  tex_hmap_.Store("hmap_end.png", 1, GL_RED, GL_UNSIGNED_BYTE);
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glViewport(0, 0, gWindowWidth, gWindowHeight);
-  glBindVertexArray(0);
-  std::cout << "Erosion :: DONE" << std::endl;
 }
