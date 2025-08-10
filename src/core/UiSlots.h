@@ -131,7 +131,9 @@ class UiSlotsTerrain final : public IUiSlots {
       UiDynamicSprite&& slot_back,
       UiDynamicSprite&& slot_color,
       UiDynamicSprite&& slot_remove,
-      UiDynamicSprite&& slot_selected);
+      UiDynamicSprite&& slot_selected,
+      const UiSliderV& slider_size,
+      const UiSliderV& slider_falloff);
 
   UiSlotsTerrain(UiSlotsTerrain&& other) noexcept;
   UiSlotsTerrain(const UiSlotsTerrain& other) = delete;

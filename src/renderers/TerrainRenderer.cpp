@@ -3,6 +3,8 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include "../io/Window.h"
 #include "../common/ShadersBinding.h"
 
@@ -10,11 +12,20 @@
 
 TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
     : tile_(tile),
-      shader_(paths.shader_terrain_vert, paths.shader_terrain_tesc,
-              paths.shader_terrain_tese, paths.shader_terrain_frag),
-      shader_picking_(paths.shader_terrain_vert, paths.shader_terrain_tesc,
-                      paths.shader_terrain_tese, paths.shader_terrain_picking_frag),
-      nmap_("../../ProvingGround\\cmake-build-debug\\normal_map.png", GL_RG8) {
+      shader_(
+          paths.shader_terrain_vert, paths.shader_terrain_tesc,
+          paths.shader_terrain_tese, paths.shader_terrain_frag),
+      shader_picking_(
+          paths.shader_terrain_vert, paths.shader_terrain_tesc,
+          paths.shader_terrain_tese, paths.shader_terrain_picking_frag),
+      nmap_("../../ProvingGround\\cmake-build-debug\\normal_map.png", GL_RG8),
+      shader_selection_(
+          paths.shader_terrain_vert, paths.shader_terrain_tesc,
+          "../shaders/TerrainSelection.tese",
+          "../shaders/TerrainSelection.frag"),
+      shader_wireframe_(
+          paths.shader_terrain_vert, "../shaders/TerrainWireframe.tesc",
+          paths.shader_terrain_tese, "../shaders/TerrainWireframe.frag") {
   Init();
 }
 
@@ -70,20 +81,42 @@ void TerrainRenderer::Render() {
 }
 
 void TerrainRenderer::Render(TerrainInstanceData* terrain) {
-  if(glfwGetKey(gWindow, GLFW_KEY_1)) {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  }
-  shader_.Bind();
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//  if(glfwGetKey(gWindow, GLFW_KEY_1)) {
+//  }
+  shader_wireframe_.Bind();
   glActiveTexture(GL_TEXTURE0);
   terrain->data.hmap.Bind();
   // NOT terrain->hmap.Bind();
   glActiveTexture(GL_TEXTURE1);
   tile_.map_terrain_ao.Bind();
 
+  glUniform3fv(1, 1, glm::value_ptr(terrain->color));
+
   glActiveTexture(GL_TEXTURE2);
   tile_.map_terrain_normal.Bind();
   glActiveTexture(GL_TEXTURE3);
   tile_.map_terrain_erosion_thermal.Bind();
+
+  glBindVertexArray(vao_);
+  glPatchParameteri(GL_PATCH_VERTICES, 4);
+  glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
+
+  //  glDrawArrays(GL_PATCHES, 0, patch_vertices.size());
+  glBindVertexArray(0);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+void TerrainRenderer::RenderSelection(
+    const Texture& selection_mask, glm::vec3 color) {
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); /// wireframe
+  shader_selection_.Bind();
+  glActiveTexture(GL_TEXTURE0);
+  tile_.map_terrain_height.Bind();
+  // NOT terrain->hmap.Bind();
+  glActiveTexture(GL_TEXTURE1);
+  selection_mask.Bind();
+  glUniform3fv(2, 1, glm::value_ptr(color));
 
   glBindVertexArray(vao_);
   glPatchParameteri(GL_PATCH_VERTICES, 4);
@@ -166,6 +199,11 @@ void TerrainRenderer::Init() {
   glUniform1i(1, 1); // material (temp)
   glUniform1i(2, 2); // normal
   glUniform1i(3, 3); // ao
+  shader_selection_.Bind();
+  glUniform1i(shader::kTerrainHeightMap, 0);
+  glUniform1i(1, 1); // selection mask
+  shader_wireframe_.Bind();
+  glUniform1i(shader::kTerrainHeightMap, 0);
   shader_picking_.Bind();
   glUniform1i(shader::kHeightMapPickingHeightMap, 0);
 }

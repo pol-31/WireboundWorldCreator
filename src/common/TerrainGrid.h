@@ -22,20 +22,18 @@
 // no Press {edit, select} state
 class TerrainGrid final : public IGraph {
  public:
-  // select modes (Shift-Ctrl modifiers):
-  // - by click - press : produces separate points
-  // - circle area - press / hold : produces std::vector<GLuint> on each update
-  // - square area - hold : produces std::vector<GLuint>
-  enum class SelectMode {
-    kCircle,
-    kSingle,
-    kSquare
-  };
-
   TerrainGrid(UiSharedResources& ui_shared_resources,
               UiEditTerrain& ui_edit_terrain,
               std::vector<TerrainInstanceData>& instances,
-              int& instances_size);
+              int& instances_size,
+              const UiSliderV& slider_size,
+              const UiSliderV& slider_falloff);
+
+  TerrainGrid(TerrainGrid&& other);
+
+  ~TerrainGrid() {
+    DeInit();
+  }
 
   void CreateGraph() override;
 
@@ -45,13 +43,9 @@ class TerrainGrid final : public IGraph {
 
   void Render(glm::vec2 mouse_pos) override;
 
-  void UpdateVertexBuffer();
-
-  std::set<GLuint> CursorOnGridRadius(GLuint point);
+  void RenderPicking();
 
   GLuint ProjectCursorOnGrid(glm::vec2 mouse_pos);
-
-  std::set<GLuint> FindSinglePath(glm::vec2 pos1, glm::vec2 pos2);
 
   void Press(glm::vec2 mouse_pos,
              bool shift_pressed, bool ctrl_pressed);
@@ -59,10 +53,6 @@ class TerrainGrid final : public IGraph {
   void Release() override;
 
   void Select(glm::vec2 mouse_pos);
-
-  void Select(GLuint id);
-
-  SelectMode FlipSelectMode();
 
   [[nodiscard]] int GetSize() const noexcept override;
 
@@ -89,71 +79,39 @@ class TerrainGrid final : public IGraph {
   static constexpr int gRadius = 10;
 
  private:
-
-  void FormSquare(glm::vec2 mouse_pos);
-
   void Init();
 
   void DeInit();
 
-  void UpdateSquareBuffer(glm::vec2 mouse_pos);
+  void ClearSelection();
+
+  bool start_is_end_ = true;
 
   /// according to fbo picking id's (storing differs)
   /// (no copy, single instance -> std::set)
   std::set<GLuint> selected_vertices_;
 
-  // we can modify only heights, that are related directly to vertex traits,
-  // so "selecting edges / faces" select vertices as well AND we don't need:
-//  std::set<GLuint> selected_edges_;
-//  std::set<GLuint> selected_faces_;
-
-  /// CREATE SECTION -- no new geometry
-  // no vertex creation - full terrain grid
-  // no edge creation - no graphs, works on select only
-  // no face creation - no graphs, works on select only
-
-  /// RENDER SECTION
-  // vertices only: draw selected in different color, GL_DRAW_POINTS
-  GLuint vao_;
-  GLuint vbo_;
-
-  GLuint square_vao_;
-  GLuint square_vbo_;
-
-  bool is_inside_convex_polygon(const glm::vec2& p);
-  void get_vertices_inside_convex_shape();
-
-  std::array<glm::vec2, 4> select_square_buffer_;
-
   /// SELECT SECTION
   bool pressed_ = false;
-
-  //TODO: __fix code__
-
-  // update only at the beginning of shape draw
-  // like bottom-left for kSquare
   glm::vec2 mouse_check_point_ = glm::vec2{0.0f};
 
-  SelectMode select_mode_;
-  // no Target {vertex, edge, face} - we have grid of points only
-
-  // -- ------ --- -- -- --- --- --- ---
-  // -- ------ --- -- -- --- --- --- ---
-
-  /*
-   * here we need:
-   * std::array data + int size
-   * std::move views on removing
-   * */
-  //TODO: can't use due to stack limitations (1Mb)
-//  std::array<InstanceData, gMaxLayers> instances_;
+  /// can't use std::array due to stack limitations (1Mb)
   std::vector<TerrainInstanceData>& instances_;
   int& instances_size_;
 
-
-  int selected_slot_id_ = 0;
+  int selected_slot_id_ = -1;
   UiSharedResources& ui_shared_resources_;
   UiEditTerrain& ui_edit_terrain_;
+
+  Texture tex_selection_;
+  Texture tex_potential_selection_;
+
+  const UiSliderV& slider_size_;
+  const UiSliderV& slider_falloff_;
+
+  UiDynamicSprite layer_;
+  Texture layer_tex_;
+  GLuint layer_fbo_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TERRAINGRID_H_

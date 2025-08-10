@@ -102,6 +102,8 @@ class UiEditTerrain final : public UiWindowAppear {
 
   NoiseTerrainData Generate();
 
+  void HideAll();
+
  private:
   void Init();
 

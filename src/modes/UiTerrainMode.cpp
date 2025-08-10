@@ -82,12 +82,14 @@ UiTerrainMode::UiTerrainMode(
       slider_size_(
           {data::VboIdMain::kTerrainSizeFill, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainSizeBack, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainSizeIcon, data::TextId::kNotYet}
+          {data::VboIdMain::kTerrainSizeIcon, data::TextId::kNotYet},
+          100.0f
           ),
       slider_falloff_(
           {data::VboIdMain::kTerrainFalloffFill, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainFalloffBack, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainFalloffIcon, data::TextId::kNotYet}
+          {data::VboIdMain::kTerrainFalloffIcon, data::TextId::kNotYet},
+          1.0f
           ),
       btn_bake_(data::VboIdMain::kTerrainBake, data::TextId::kNotYet,
                 [this]() {
@@ -136,7 +138,9 @@ UiTerrainMode::UiTerrainMode(
           {data::VboIdMain::kTerrainSlotsSlot, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainSlotsSlotColor, data::TextId::kNotYet},
           {data::VboIdMain::kTerrainSlotsRemove, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainSlotsSelected, data::TextId::kNotYet}),
+          {data::VboIdMain::kTerrainSlotsSelected, data::TextId::kNotYet},
+          slider_size_,
+          slider_falloff_),
       ui_event_handler_({
           &btn_update_, &slider_size_,
           &slider_falloff_, &toggle_flatten_, &btn_bake_, &slots_}) {}

@@ -22,6 +22,8 @@ class TerrainRenderer {
   //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
   void RenderPicking() const;
 
+  void RenderSelection(const Texture& selection_mask, glm::vec3 color);
+
   void Render(TerrainInstanceData* terrain);
 
   void RenderPicking(TerrainInstanceData* terrain) const;
@@ -41,6 +43,8 @@ class TerrainRenderer {
   GLuint vbo_quad_{0};
   GLuint vbo_ids_{0};
   Shader shader_;
+  Shader shader_selection_;
+  Shader shader_wireframe_;
   Shader shader_picking_;
   Texture nmap_;
 };

@@ -38,6 +38,7 @@ void WaterRenderer::UpdateOcean(OceanTraits traits) {
 }
 
 void WaterRenderer::Render() {
+  return;
   environment_.Update();
 #ifndef NDEBUG
   if (shader_.Update()) {

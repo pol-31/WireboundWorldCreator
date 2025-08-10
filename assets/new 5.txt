@@ -47,12 +47,26 @@ NEW ISSUES:
 - keyboard assign window (stones in position raisen not)
 - UiSlotsTerrain - btn RESET - to set default config
 - desaturate color indicator
-
+- noise layer sprite (left bottom corner) + рамочка
+- UiTerrainMode::slots remove edit/select, remove vertex/edge/face
 
 
 adjust sliders scale					(1)
 text input								(2)
 align ui
+slot color indicator & name (UiSlots gets from UiEditTerrain)
 noise scale-rotate-translate: somehow... TODO: THINK!!!
 selected-points interaction (up/down) TODO: THINK!!!
 
+selection color
+selection orientation fix
+MOVE selection
+
+
+commit: replace cpu by gpu vertices selection, remove square selection mode
+
+TODO:
+- G for vertices positioning, layer positioning through settings (idk) TODO
+- adjust sliders
+- menu modes toggles
+- UiWaterMode, make similar to UiTerrainMode ui-slots

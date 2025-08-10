@@ -377,6 +377,9 @@ void UiEditTerrain::UpdateHmap() {
   Texture32F hmap(details::gTerrainSize, GL_R32F);
   shader_sum_.Bind();
   for (int i = 0; i < instances_size_; ++i) {
+    if (!instances_[i].do_show) {
+      continue;
+    }
     glBindImageTexture(
         0, hmap.GetId(), 0,
         GL_FALSE, 0, GL_READ_WRITE, hmap.GetFormat());
@@ -699,6 +702,18 @@ void UiEditTerrain::MergeLayers(
   int size = details::gTerrainSize;
   glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+}
+
+void UiEditTerrain::HideAll() {
+  ForceHide();
+  noise_perlin_.ForceHide();
+  noise_cellular_.ForceHide();
+  noise_metaballs_.ForceHide();
+  noise_fbm_grid_.ForceHide();
+  noise_fbm_multi_.ForceHide();
+  noise_fbmd_perlin_.ForceHide();
+  noise_fbm_warp_.ForceHide();
+  noise_fmb_perlin_warp_.ForceHide();
 }
 
 void UiEditTerrain::Init() {

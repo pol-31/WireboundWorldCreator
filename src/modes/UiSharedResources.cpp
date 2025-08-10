@@ -32,6 +32,7 @@ UiSharedResources::UiSharedResources(
                             "../shaders/SelectSquare.frag"),
       hmap_shader_(paths.shader_sprite_dynamic_vert,
                    "../shaders/SpriteHmap.frag"),
+      shader_terrain_selection_("../shaders/DrawSelection.comp"),
       global_glfw_callback_data_(global_glfw_callback_data) {
   Init();
 }
@@ -107,6 +108,7 @@ void UiSharedResources::Init() {
 
   hmap_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
+
   glUseProgram(0);
   //  static_sprite_picking_shader_.Bind();
   //  glUniform1i(shader::kSpriteTexture, 0);

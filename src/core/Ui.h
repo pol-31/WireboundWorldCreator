@@ -712,7 +712,7 @@ class UiToggle2 final : public UiBase {
   }
 
   void Set(bool value) {
-    if (turned_off_ != value) {
+    if (turned_off_ == value) {
       Press();
     }
   }

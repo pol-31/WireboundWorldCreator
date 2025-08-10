@@ -299,6 +299,8 @@ class UiWindowBase : public UiBase {
 
   void Hide();
 
+  void ForceHide();
+
   void UpdateTransform() final;
 
   virtual bool Render() = 0;

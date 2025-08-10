@@ -46,6 +46,8 @@ class UiSharedResources {
 
   Shader menu_icon_shader_;
 
+  Shader shader_terrain_selection_;
+
   GlobalGlfwCallbackData& global_glfw_callback_data_;
 
  private:

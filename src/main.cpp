@@ -38,6 +38,7 @@
  * */
 
 int main(int argc, char* args[]) {
+  std::cout << "can't reach here" << std::endl;
   std::string world_map_path{};
   // TODO: подавився кісточкою
   /*if (argc == 3) {

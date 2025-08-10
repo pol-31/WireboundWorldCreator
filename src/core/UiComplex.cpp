@@ -546,6 +546,17 @@ void UiWindowBase::Hide() {
   progress_ = 0.0f;
 }
 
+void UiWindowBase::ForceHide() {
+  do_show_ = false;
+  if (window_queue_id_ == -1) {
+    return;
+  }
+  pin_.Set(false);
+  window_queue_.Erase(window_queue_id_);
+  window_queue_id_ = -1;
+  progress_ = 0.0f;
+}
+
 void UiWindowBase::UpdateTransform() {
   auto transform = debug::gUiTransforms[
       4 * (GetId() - details::kIdOffsetUi)

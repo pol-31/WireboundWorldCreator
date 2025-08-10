@@ -33,7 +33,7 @@ void main(void) {
     vec4 p2 = mix(gl_in[2].gl_Position, gl_in[3].gl_Position, gl_TessCoord.x);
     vec4 p = mix(p2, p1, gl_TessCoord.y);
 //    p.y += texture(tex_displacement, tc).r * 2.0f;
-    p.y += texture(tex_displacement, tc).r * dmap_depth / 8.0f + 3.7f;
+    p.y += texture(tex_displacement, tc).r * dmap_depth / 8.0f + 4.5f;
     gl_Position = camera.proj * camera.view * transform * p; //TODO: what about tesc?
     tes_out.tc = tc;
 }

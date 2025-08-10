@@ -618,7 +618,10 @@ UiSlotsTerrain::UiSlotsTerrain(
     UiDynamicSprite&& slot_back,
     UiDynamicSprite&& slot_color,
     UiDynamicSprite&& slot_remove,
-    UiDynamicSprite&& slot_selected)
+    UiDynamicSprite&& slot_selected,
+    const UiSliderV& slider_size,
+    const UiSliderV& slider_falloff
+    )
     : IUiSlots(slider.GetId(), ui_shared_resources),
       handler_(std::move(handler)),
       slider_(std::move(slider)),
@@ -640,7 +643,8 @@ UiSlotsTerrain::UiSlotsTerrain(
       slot_back_(std::move(slot_back)),
       slot_color_(std::move(slot_color)),
       slot_remove_(std::move(slot_remove)),
-      graph_(ui_shared_resources, ui_edit_, instances_, instances_size_),
+      graph_(ui_shared_resources, ui_edit_, instances_, instances_size_,
+             slider_size, slider_falloff),
       slot_selected_(std::move(slot_selected)),
       ui_edit_(
           cur_tile,
@@ -707,12 +711,6 @@ UiSlotsTerrain::UiSlotsTerrain(
 //  IUiSlots::ui_edit_ = &ui_edit_;
 
   IUiSlots::UpdateTransform();
-
-  CreateGraph();
-  sl_data_.Set(1.0f, handler_,
-               slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
-               graph_.GetSize());
-  SelectGraph(0);
 }
 
 UiSlotsTerrain::UiSlotsTerrain(UiSlotsTerrain&& other) noexcept
@@ -778,6 +776,7 @@ void UiSlotsTerrain::Render(glm::vec2 mouse_pos) {
     slot_back_.Render();
     slot_remove_.Render();
     slot_config_.Render();
+    toggle_slot_visible_.Set(!instances_[sl_data_.cur_slots_offset_ + i].do_show);
     toggle_slot_visible_.Render();
     slot_color_.Render();
 //    std::cout << "offset for " << sl_data_.slot_height_ << std::endl;
@@ -866,6 +865,8 @@ void UiSlotsTerrain::RenderPicking() {
     flip_point_edge_.RenderPicking();
   }
 
+  graph_.RenderPicking();
+
 //  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
 //      ->terrain.RenderPicking(graph_.GetInstanceData());
 
@@ -911,6 +912,8 @@ void UiSlotsTerrain::SelectGraph(GLuint id) {
 
 bool UiSlotsTerrain::Press(int id) {
   std::cout << "Press()" << std::endl;
+  auto slot_id = sl_data_.GetSlotId(
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
   if (id < details::kIdOffsetWater) {
     std::cout << "Add point #" << id << std::endl;
     std::cout << "Coordinates are: " << (id & 1023)
@@ -921,30 +924,29 @@ bool UiSlotsTerrain::Press(int id) {
     graph_.Press(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_,
                  shift_pressed, ctrl_pressed);
   } else if (id == slot_back_.GetId()) {
-    SelectGraph(sl_data_.GetSlotId(
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_));
+    SelectGraph(slot_id);
   } else if (id == slot_remove_.GetId()) {
-    std::cout << "-- slot remove (remove)" << std::endl;
-    auto removed_id = sl_data_.GetSlotId(
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-    if (graph_.GetSize() > 0) {
-      std::cout << "graph removed " << removed_id << std::endl;
-      bool smt_removed = graph_.RemoveGraph(removed_id);
-      if (smt_removed) {
-        ui_edit_.UpdateHmap();
-      }
-      sl_data_.UpdateRenderData(slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
-                                graph_.GetSize());
+    std::cout << "graph removed " << slot_id << std::endl;
+    if (slot_id == graph_.GetSlotId()) {
+      ui_edit_.HideAll();
     }
+    graph_.RemoveGraph(slot_id);
+    ui_edit_.UpdateHmap();
+    sl_data_.UpdateRenderData(
+        slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
+        graph_.GetSize());
   } else if (id == slot_config_.GetId()) {
-    SelectGraph(sl_data_.GetSlotId(
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_));
+    SelectGraph(slot_id);
     ui_edit_.Show();
+  } else if (id == toggle_slot_visible_.GetId()) {
+    instances_[slot_id].do_show = !instances_[slot_id].do_show;
+    ui_edit_.UpdateHmap();
   } else {
     bool handled = ui_event_handler_.Press(id);
     if (id == create_.GetId()) {
       std::cout << "-- slot create (create)" << std::endl;
       // instead of FocusOnSelected();
+      SelectGraph(instances_size_ - 1);
       sl_data_.Set(1.0f, handler_,
                    slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
                    graph_.GetSize());
@@ -981,7 +983,7 @@ void UiSlotsTerrain::NextClickMode() {
       edit_state_ = EditState::kVertices;
       break;
   }
-  graph_.FlipSelectMode(); // TODO: temp
+//  graph_.FlipSelectMode(); // TODO: temp
   flip_point_edge_.StopAnimation();
   switch (edit_state_) {
     case EditState::kVertices:

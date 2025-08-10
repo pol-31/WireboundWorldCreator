@@ -1,0 +1,36 @@
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16) in; // Adjust the workgroup size as needed
+
+layout(binding = 0, r8) uniform image2D tex_selection;
+
+layout(location = 0) uniform uvec2 pointA;    // The point to draw at (x, y) in the grid
+layout(location = 1) uniform uvec2 pointB;    // The point to draw at (x, y) in the grid
+layout(location = 2) uniform uint radius;    // The radius of the drawing
+layout(location = 3) uniform float falloff;  // The falloff value
+
+float PointLineSegmentDistance(vec2 p, vec2 a, vec2 b) {
+    vec2 ab = b - a;
+    vec2 ap = p - a;
+    float ab2 = dot(ab, ab);
+    float t = dot(ap, ab) / ab2;
+    t = clamp(t, 0.0, 1.0);
+    vec2 nearestPoint = a + t * ab;
+    return length(p - nearestPoint);
+}
+
+//TODO: ping pong is faster?
+
+void main() {
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    float distance = PointLineSegmentDistance(pixelCoord, pointA, pointB);
+    if (distance <= float(radius)) {
+        float factor = 1.0 - clamp(distance / float(radius), 0.0, 1.0);
+        float falloffFactor = mix(1.0, factor, falloff);
+
+        vec4 existing = imageLoad(tex_selection, pixelCoord);
+        float new = existing.r + pow(falloffFactor, 8);
+
+        imageStore(tex_selection, pixelCoord, vec4(new, new, new, 1.0));
+    }
+}

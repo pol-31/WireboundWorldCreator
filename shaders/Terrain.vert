@@ -3,7 +3,6 @@
 layout (location = 0) in vec2 in_patch_vertex; // 0..1 corner
 layout (location = 1) in uint vertex_id;
 
-
 out VS_OUT {
     vec2 tc;
 } vs_out;
