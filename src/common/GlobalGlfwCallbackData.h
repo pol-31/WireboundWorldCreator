@@ -5,6 +5,7 @@
 #include <glad/glad.h>
 
 #include "FixedSizeQueue.h"
+#include "../core/EventQueue.h"
 
 class CameraHandler;
 class TileRenderer;
@@ -13,6 +14,7 @@ class Menu;
 class PickingFramebuffer;
 class UiSharedResources;
 class TextRenderer;
+class UiRenderer;
 class WindowQueue;
 
 namespace debug {
@@ -34,7 +36,10 @@ struct GlobalGlfwCallbackData {
   debug::UiDebugger* ui_debugger{nullptr};
   UiSharedResources* ui_shared_resources{nullptr};
   TextRenderer* text_renderer{nullptr};
+  UiRenderer* ui_renderer{nullptr};
+
   WindowQueue* windows{nullptr};
+  EventQueue event_queue;
 
   glm::dvec2 cursor_pos_{0.0};
   glm::vec2 cursor_pos_tex_norm_{0.0f};

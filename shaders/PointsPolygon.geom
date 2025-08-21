@@ -3,11 +3,6 @@ layout(lines) in;
 layout(line_strip, max_vertices = 256) out;
 
 layout(location = 0) uniform sampler2D tex_displacement;
-layout(std140, binding = 1) uniform Matrices {
-    mat4 transform;
-    float dmap_depth;
-    float padding[3];
-};
 
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
@@ -37,8 +32,8 @@ void main() {
         vec2 pos = mix(pos0, pos1, t);
 
         vec4 final_pos = vec4(pos.x, 0.0f, pos.y, 1.0f);
-        final_pos.y = texture(tex_displacement, tc).r * dmap_depth;
-        gl_Position = camera.proj * camera.view * transform * final_pos;
+        final_pos.y = texture(tex_displacement, tc).r;
+        gl_Position = camera.proj * camera.view * /**transform * */final_pos;
         color_geom = color_vert[0];
         EmitVertex();
     }

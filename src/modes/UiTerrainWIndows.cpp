@@ -42,7 +42,7 @@ void UiEditTerrainNoise::RenderPicking() {
   slider_strength_.RenderPicking();
   hmap_.RenderPicking();
   // only after (due to internal shader & texture modification)
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     text_name_.RenderPicking();
   }
 }

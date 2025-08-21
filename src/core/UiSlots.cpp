@@ -415,7 +415,7 @@ void UiSlotsModels::RenderPicking() {
     slot_config_.SetTranslate(next_offset);
     toggle_slot_visible_.SetTranslate(next_offset);
     slot_color_.SetTranslate(next_offset);
-    if (debug::gCtrlMode && (selected_slot_id - sl_data_.cur_slots_offset_) == i) {
+    if (debug::gUiAltMode && (selected_slot_id - sl_data_.cur_slots_offset_) == i) {
       show_selected = true;
       selected_offset = next_offset;
     }
@@ -438,7 +438,7 @@ void UiSlotsModels::RenderPicking() {
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   // we should draw it last (on top of slots)
-  if (debug::gCtrlMode && show_selected) {
+  if (debug::gUiAltMode && show_selected) {
     slot_selected_.SetTranslate(selected_offset);
     slot_selected_.RenderPicking();
   }
@@ -447,7 +447,7 @@ void UiSlotsModels::RenderPicking() {
   create_.RenderPicking();
   flip_select_edit_back_.RenderPicking();
   flip_point_edge_back_.RenderPicking();
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     handler_.RenderPicking();
     //    flip_select_edit_.RenderPicking();
     //    flip_point_edge_.RenderPicking();
@@ -711,6 +711,7 @@ UiSlotsTerrain::UiSlotsTerrain(
 //  IUiSlots::ui_edit_ = &ui_edit_;
 
   IUiSlots::UpdateTransform();
+//  UpdateTransformUniform(); instances num == 0
 }
 
 UiSlotsTerrain::UiSlotsTerrain(UiSlotsTerrain&& other) noexcept
@@ -827,7 +828,7 @@ void UiSlotsTerrain::RenderPicking() {
     slot_config_.SetTranslate(next_offset);
     toggle_slot_visible_.SetTranslate(next_offset);
     slot_color_.SetTranslate(next_offset);
-    if (debug::gCtrlMode && (selected_slot_id - sl_data_.cur_slots_offset_) == i) {
+    if (debug::gUiAltMode && (selected_slot_id - sl_data_.cur_slots_offset_) == i) {
       show_selected = true;
       selected_offset = next_offset;
     }
@@ -850,7 +851,7 @@ void UiSlotsTerrain::RenderPicking() {
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   // we should draw it last (on top of slots)
-  if (debug::gCtrlMode && show_selected) {
+  if (debug::gUiAltMode && show_selected) {
     slot_selected_.SetTranslate(selected_offset);
     slot_selected_.RenderPicking();
   }
@@ -858,7 +859,7 @@ void UiSlotsTerrain::RenderPicking() {
 
   create_.RenderPicking();
   flip_point_edge_back_.RenderPicking();
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     handler_.RenderPicking();
     //    flip_select_edit_.RenderPicking();
     //    flip_point_edge_.RenderPicking();
@@ -908,6 +909,7 @@ void UiSlotsTerrain::SelectGraph(GLuint id) {
   graph_.SelectGraph(id);
   sl_data_.FocusOnSelected(id, graph_.GetSize(), handler_, slot_back_);
   ui_edit_.SetTerrainData(&graph_.GetInstanceData()->data); // TODO: legit?
+  UpdateTransformUniform();
 }
 
 bool UiSlotsTerrain::Press(int id) {
@@ -920,7 +922,7 @@ bool UiSlotsTerrain::Press(int id) {
               << " and " << (id >> 10) << std::endl;
     //TODO: if water/other subtract maybe...
     bool shift_pressed = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT);
-    bool ctrl_pressed = glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT);
+    bool ctrl_pressed = glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL);
     graph_.Press(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_,
                  shift_pressed, ctrl_pressed);
   } else if (id == slot_back_.GetId()) {
@@ -1018,3 +1020,45 @@ void UiSlotsTerrain::PressGraph(GLuint id) {
       break;
   }
 }
+
+void UiSlotsTerrain::TranslateSelected(glm::vec3 value) {
+  int slot_id = graph_.GetSlotId();
+  if (slot_id != -1) {
+    instances_[slot_id].translate = value * 100.0f;
+    UpdateTransformUniform();
+  } else {
+//    graph_.MoveSelected(value);
+  }
+}
+
+void UiSlotsTerrain::RotateSelected(glm::vec3 value) {
+  int slot_id = graph_.GetSlotId();
+  if (slot_id != -1) {
+    instances_[slot_id].rotate = value;
+    UpdateTransformUniform();
+  }
+}
+
+void UiSlotsTerrain::ScaleSelected(glm::vec3 value) {
+  int slot_id = graph_.GetSlotId();
+  if (slot_id != -1) {
+    instances_[slot_id].scale += value;
+    UpdateTransformUniform();
+  }
+}
+
+void UiSlotsTerrain::UpdateTransformUniform() {
+  glm::mat4 model = {1.0f};
+  int slot_id = graph_.GetSlotId();
+  model = glm::translate(model, instances_[slot_id].translate);
+  //TODO: use fast length (no square root)
+  model = glm::rotate(
+      model, glm::length(instances_[slot_id].rotate),
+      glm::normalize(instances_[slot_id].rotate));
+  float map_scale = ui_shared_resources_.global_glfw_callback_data_
+                        .tile_renderer->cur_tile_.map_scale;
+  model = glm::scale(model, instances_[slot_id].scale * map_scale);
+  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+      ->terrain.UpdateTransformUniform(model);
+}
+

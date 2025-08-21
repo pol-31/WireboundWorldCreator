@@ -25,13 +25,6 @@ layout(location = 14) uniform vec3 ambient_color = vec3(0.1, 0.1, 0.15);
 
 layout (location = 15) uniform sampler2D tex_terrain_height;
 
-layout(std140, binding = 1) uniform Matrices {
-    mat4 transform;
-    float dmap_depth;
-    // Adding padding to ensure 16-byte alignment as per std140 layout rules.
-    float padding[3];
-};
-
 in TES_OUT {
     vec2 tc;
 } fs_in;
@@ -73,10 +66,10 @@ void main() {
     jacobian += _ContactFoam * clamp(max(0.0, foam - depthDifference) * 5.0, 0.0, 1.0) * 0.9;
     float foam_add = mix(0, _FoamColor, jacobian * 1.0f);
 
-    float terrain_height = texture(tex_terrain_height, tc).r * dmap_depth / 2.0f + 2.0f;
+    float terrain_height = texture(tex_terrain_height, tc).r + 2.0f;
     float water_height = (texture(tex_displacement_near, scale_factor * tc / scale_near).g
     + texture(tex_displacement_mid, scale_factor * tc / scale_mid).g
-    + texture(tex_displacement_far, scale_factor * tc / scale_far).g) * dmap_depth * scale_factor
+    + texture(tex_displacement_far, scale_factor * tc / scale_far).g) * scale_factor
     + 4.0f;
 
     float height_difference = water_height - terrain_height;

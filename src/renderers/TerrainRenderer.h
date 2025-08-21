@@ -30,6 +30,8 @@ class TerrainRenderer {
 
   [[nodiscard]] glm::vec3 GetYPosition(int vertex_id) const;
 
+ void UpdateTransformUniform(glm::mat4 mat);
+
  private:
   void Init();
 
@@ -47,6 +49,10 @@ class TerrainRenderer {
   Shader shader_wireframe_;
   Shader shader_picking_;
   Texture nmap_;
+
+  GLuint border_vao_ = 0;
+  GLuint border_vbo_ = 0;
+  Shader border_shader_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_TERRAINRENDERER_H_

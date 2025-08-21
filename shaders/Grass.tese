@@ -2,13 +2,6 @@
 
 layout(quads, equal_spacing, ccw) in;
 
-layout(std140, binding = 1) uniform Matrices {
-  mat4 transform;
-  float dmap_depth;
-// Adding padding to ensure 16-byte alignment as per std140 layout rules.
-  float padding[3];
-};
-
 layout(binding = 0) uniform CameraBufferObject {
   mat4 view;
   mat4 proj;
@@ -52,5 +45,5 @@ void main() {
 
   tese_out.uv = vec2(u, v);
   tese_out.normal = normalize(cross(t0, t1));
-  gl_Position = camera.proj * camera.view * transform * vec4(p, 1.0);
+  gl_Position = camera.proj * camera.view * /**transform * */vec4(p, 1.0);
 }

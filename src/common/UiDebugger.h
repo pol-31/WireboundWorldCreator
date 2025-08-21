@@ -14,7 +14,7 @@
 
 namespace debug {
 
-extern bool gCtrlMode;
+extern bool gUiAltMode;
 
 void UiScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset);

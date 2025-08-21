@@ -20,14 +20,14 @@ TileRenderer::TileRenderer(const Paths& paths)
       roads(cur_tile_, paths),
       objects(cur_tile_, paths),
       placement(cur_tile_, paths) {
-  InitMapScaleUbo();
+//  InitMapScaleUbo();
 }
 
 TileRenderer::~TileRenderer() {
-  DeInitMapScaleUbo();
+//  DeInitMapScaleUbo();
 }
 
-void TileRenderer::ResetScale() {
+/*void TileRenderer::ResetScale() {
   map_scale_ = 1.0f;
   UpdateScale();
 }
@@ -40,7 +40,7 @@ void TileRenderer::UpScale() {
 void TileRenderer::DownScale() {
   map_scale_ /= details::kMapScaleFactor;
   UpdateScale();
-}
+}*/
 
 void TileRenderer::Render() {
   if (show_terrain_) {
@@ -145,6 +145,7 @@ std::vector<TileInfo> TileRenderer::LoadMap(std::string_view world_map) {
   return map;
 }
 
+/*
 void TileRenderer::InitMapScaleUbo() {
   // 64 for transform matrix (we modify only scale), float height map scale
   // and 3 other float for padding
@@ -176,4 +177,4 @@ void TileRenderer::UpdateScale() {
   transform = glm::scale(transform, glm::vec3(map_scale_, map_scale_, map_scale_));
   utility::UpdateUbo(map_scale_ubo_, 0, sizeof(glm::mat4),
                      glm::value_ptr(transform));
-}
+}*/

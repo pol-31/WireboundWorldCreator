@@ -156,6 +156,14 @@ class UiSlotsTerrain final : public IUiSlots {
 
   void PressGraph(GLuint id) override;
 
+  void TranslateSelected(glm::vec3 value);
+
+  void RotateSelected(glm::vec3 value);
+
+  void ScaleSelected(glm::vec3 value);
+
+ void UpdateTransformUniform();
+
  private:
   std::vector<TerrainInstanceData> instances_;
   int instances_size_;

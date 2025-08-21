@@ -2,13 +2,6 @@
 
 layout (location = 0) uniform sampler2D tex_displacement;
 
-layout(std140, binding = 1) uniform Matrices {
-    mat4 transform;
-    float dmap_depth;
-// Adding padding to ensure 16-byte alignment as per std140 layout rules.
-    float padding[3];
-};
-
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;

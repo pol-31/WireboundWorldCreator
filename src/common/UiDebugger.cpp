@@ -8,7 +8,7 @@
 
 namespace debug {
 
-bool gCtrlMode = false;
+bool gUiAltMode = false;
 
 std::array<LocalTransformLinear, data::gUiVboTransformSize / 3> gUiTransforms{};
 

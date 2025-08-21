@@ -25,6 +25,9 @@ extern float lastY;
 extern float gDeltaTime;
 extern float last_frame;
 
+extern double gEventMouseStartPosX;
+extern double gEventMouseStartPosY;
+
 extern int gWindowWidth;
 extern int gWindowHeight;
 extern float gResFactor;

@@ -138,6 +138,10 @@ class UiTopWindowBase : public UiBase {
 
   virtual data::TextId Hover(int id) = 0;
 
+  virtual void BtnEnter() {}
+
+  virtual void BtnEscape() {}
+
  protected:
   UiDynamicSprite desk_;
   // Cancel() if not important; otherwise skip
@@ -219,6 +223,10 @@ class UiConfirmation final : public UiTopWindowBase {
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
 
+  void SetText(std::string_view text);
+
+  void SetCallable(std::function<void()>&& callable);
+
  private:
   UiDynamicSprite text_;
   UiDynamicSprite btn_accept_;
@@ -228,6 +236,8 @@ class UiConfirmation final : public UiTopWindowBase {
       static_cast<int>(data::VboIdMain::kConfirmationDecline) -
       static_cast<int>(data::VboIdMain::kConfirmationDesk) + 1
       > ui_event_handler_;
+
+  std::function<void()> callable_;
 };
 
 class UiFile final : public UiTopWindowBase {
@@ -318,6 +328,16 @@ class UiWindowBase : public UiBase {
 
   [[nodiscard]] bool BackIsReady() const {
     return back_ready_;
+  }
+
+  virtual void BtnEnter() {
+    std::cout << "enter" << std::endl;
+    Hide();
+  }
+
+  virtual void BtnEscape() {
+    std::cout << "escape" << std::endl;
+    Hide();
   }
 
  protected:

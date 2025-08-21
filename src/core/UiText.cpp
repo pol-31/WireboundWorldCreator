@@ -39,7 +39,7 @@ void UiTextInput::Render() {
 
 void UiTextInput::RenderPicking() {
   back_.RenderPicking();
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     text_renderer_.RenderTextPicking(text_, &text_input_, scale_, translate_);
   }
 }

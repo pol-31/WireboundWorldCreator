@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 
 #include "../common/Texture.h"
+#include "../common/Details.h"
 
 struct TileInfo {
   // storing as string is convenient for CreateUnorderedMap() call,
@@ -67,6 +68,10 @@ struct TileInfo {
 
 /// contains all data for current tile
 struct Tile {
+  /// shared for tiles
+  float map_scale = 1.0f;
+
+  /// unique for each tile
   int pos_x;
   int pos_y;
   Texture32F map_terrain_height{}; // r32f
@@ -96,6 +101,14 @@ struct Tile {
   std::vector<uint8_t> water_heights_init_;
 
   explicit Tile(const TileInfo& tile_info);
+
+  void UpScale() {
+    map_scale *= details::kMapScaleFactor;
+  }
+
+  void DownScale() {
+    map_scale /= details::kMapScaleFactor;
+  }
 
   /* Can we compute only 9... why not - at least for grass and water yes:
    * 1 2 3 4 4 4 ...

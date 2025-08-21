@@ -18,11 +18,11 @@ class TileRenderer {
 
   ~TileRenderer();
 
-  void ResetScale();
+//  void ResetScale();
 
-  void UpScale();
+//  void UpScale();
 
-  void DownScale();
+//  void DownScale();
 
   void Render();
 
@@ -54,14 +54,14 @@ class TileRenderer {
  private:
   static std::vector<TileInfo> LoadMap(std::string_view world_map);
 
-  void InitMapScaleUbo();
+//  void InitMapScaleUbo();
 
-  void DeInitMapScaleUbo();
+//  void DeInitMapScaleUbo();
 
-  void UpdateScale();
+//  void UpdateScale();
 
-  GLuint map_scale_ubo_ = 0;
-  float map_scale_ = 1.0f;
+//  GLuint map_scale_ubo_ = 0;
+//  float map_scale_ = 1.0f;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_TILERENDERER_H_

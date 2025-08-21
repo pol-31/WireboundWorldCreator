@@ -37,6 +37,9 @@ class UiRenderer {
 
   void SetupGlobalData();
 
+  void AskForConfirmation(std::string_view text,
+                          std::function<void()>&& callable);
+
  private:
   void Init();
 

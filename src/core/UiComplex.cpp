@@ -119,7 +119,7 @@ void UiSlider2D::RenderIcon() {
 
 void UiSlider2D::RenderPicking() const {
   palette_.RenderPicking();
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     cursor_.RenderPicking();
   }
 }
@@ -360,8 +360,10 @@ void UiConfirmation::RenderPicking() {
 }
 
 void UiConfirmation::Press(int id) {
-  ui_event_handler_.Press(id);
-  if (id != shadow_.GetId() && id != desk_.GetId()) {
+//  ui_event_handler_.Press(id);
+  if (id == btn_accept_.GetId()) {
+    callable_();
+  } else if (id != shadow_.GetId() && id != desk_.GetId()) {
     Hide();
   }
 }
@@ -384,6 +386,14 @@ void UiConfirmation::UpdateTransform(
   btn_accept_.UpdateTransform();
   btn_decline_.UpdateTransform();
   text_.UpdateTransform();
+}
+
+void UiConfirmation::SetText(std::string_view text) {
+  std::cout << "text set? not implemented" << std::endl;
+}
+
+void UiConfirmation::SetCallable(std::function<void()>&& callable) {
+  callable_ = std::move(callable);
 }
 
 UiFile::UiFile(

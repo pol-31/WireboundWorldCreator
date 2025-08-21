@@ -127,8 +127,8 @@ UiRenderer::UiRenderer(
 
 void UiRenderer::Render(data::TextId description_id) {
 #ifndef NDEBUG
-  debug::gCtrlMode = glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
-  if (debug::gCtrlMode) {
+  debug::gUiAltMode = glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS;
+  if (debug::gUiAltMode) {
     // it's static, but... idk ui_debugger_.BindCallbacks() looks better
     debug::UiDebugger::BindCallbacks();
     ui_debugger_.ApplyAndReset();
@@ -138,7 +138,7 @@ void UiRenderer::Render(data::TextId description_id) {
     ui_debugger_.ApplyAndReset();
     ui_debugger_.Reset();
   }
-  debug_ui_prev_ = debug::gCtrlMode;
+  debug_ui_prev_ = debug::gUiAltMode;
 #endif // NDEBUG
 
   cur_mode_->Render();
@@ -255,4 +255,12 @@ void UiRenderer::SetupGlobalData() {
   ui_shared_resources_.global_glfw_callback_data_.ui_debugger = &ui_debugger_;
   ui_shared_resources_.global_glfw_callback_data_.ui_shared_resources = &ui_shared_resources_;
   ui_shared_resources_.global_glfw_callback_data_.text_renderer = &text_renderer_;
+  ui_shared_resources_.global_glfw_callback_data_.ui_renderer = this;
+}
+
+void UiRenderer::AskForConfirmation(
+    std::string_view text, std::function<void()>&& callable) {
+  ui_confirmation_.SetText(text);
+  ui_confirmation_.SetCallable(std::move(callable));
+  ui_confirmation_.Show();
 }

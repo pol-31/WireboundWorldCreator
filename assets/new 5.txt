@@ -49,24 +49,22 @@ NEW ISSUES:
 - desaturate color indicator
 - noise layer sprite (left bottom corner) + рамочка
 - UiTerrainMode::slots remove edit/select, remove vertex/edge/face
+- show pressed keys (top left corner: translate/scale/rotate x/y/z, etc...)
+- UiTopWindow --> SHADOW SPRITE
 
 
-adjust sliders scale					(1)
-text input								(2)
-align ui
 slot color indicator & name (UiSlots gets from UiEditTerrain)
-noise scale-rotate-translate: somehow... TODO: THINK!!!
-selected-points interaction (up/down) TODO: THINK!!!
-
-selection color
 selection orientation fix
-MOVE selection
-
-
-commit: replace cpu by gpu vertices selection, remove square selection mode
 
 TODO:
-- G for vertices positioning, layer positioning through settings (idk) TODO
-- adjust sliders
-- menu modes toggles
+- hotkeys idea_.kra (BEFORE OTHER MODES MODIFYING)
+- align ui
+- adjust sliders (can do only after "align ui")
+- text input
 - UiWaterMode, make similar to UiTerrainMode ui-slots
+
+TODO:
+- fix wireframe (somehow disappeared)
+- layer transform border (rotate -90+90, scale, translate as well)
+- flatten comp shader
+- render/show hmap after processing (transformation, tiling, invert, flatten/cut >90deg)

@@ -25,14 +25,17 @@ TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
           "../shaders/TerrainSelection.frag"),
       shader_wireframe_(
           paths.shader_terrain_vert, "../shaders/TerrainWireframe.tesc",
-          paths.shader_terrain_tese, "../shaders/TerrainWireframe.frag") {
+          paths.shader_terrain_tese, "../shaders/TerrainWireframe.frag"),
+      border_shader_(
+          "../shaders/TerrainBorder.vert", "../shaders/TerrainBorder.frag") {
   Init();
 }
 
 void TerrainRenderer::DeInit() {
-  GLuint vbos[] = {vbo_quad_, vbo_ids_};
-  glDeleteBuffers(2, vbos);
-  glDeleteVertexArrays(1, &vao_);
+  GLuint vbos[] = {vbo_quad_, vbo_ids_, border_vbo_};
+  glDeleteBuffers(3, vbos);
+  GLuint vaos[] = {vao_, border_vao_};
+  glDeleteVertexArrays(1, vaos);
 }
 
 void TerrainRenderer::Render() {
@@ -78,6 +81,15 @@ void TerrainRenderer::Render() {
   //  glDrawArrays(GL_PATCHES, 0, patch_vertices.size());
   glBindVertexArray(0);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+  /// render SUM-layer borders
+  border_shader_.Bind();
+  glBindVertexArray(border_vao_);
+  glm::mat4 model_mat = glm::scale(glm::mat4(1.0f), glm::vec3(64.0f * tile_.map_scale));
+  glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(model_mat));
+  glEnable(GL_CULL_FACE);
+  glDrawArrays(GL_TRIANGLES, 0, 36);
+  glDisable(GL_CULL_FACE);
 }
 
 void TerrainRenderer::Render(TerrainInstanceData* terrain) {
@@ -160,14 +172,26 @@ glm::vec3 TerrainRenderer::GetYPosition(int vertex_id) const {
   return {};
 }
 
+void TerrainRenderer::UpdateTransformUniform(glm::mat4 mat) {
+  shader_.Bind();
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(mat));
+//  shader_picking_;
+//  shader_selection_;
+//  shader_wireframe_;
+}
+
 void TerrainRenderer::Init() {
-  glGenVertexArrays(1, &vao_);
+  GLuint vaos[2];
+  glGenVertexArrays(2, vaos);
+  vao_ = vaos[0];
+  border_vao_ = vaos[1];
   glBindVertexArray(vao_);
 
-  GLuint vbos[2];
-  glGenBuffers(2, vbos);
+  GLuint vbos[3];
+  glGenBuffers(3, vbos);
   vbo_quad_ = vbos[0];
   vbo_ids_ = vbos[1];
+  border_vbo_ = vbos[2];
   glBindBuffer(GL_ARRAY_BUFFER, vbo_quad_);
 
   const float quad[] = {
@@ -191,6 +215,64 @@ void TerrainRenderer::Init() {
   glEnableVertexAttribArray(1);
   glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
   glVertexAttribDivisor(1, 1);
+
+  glBindVertexArray(0);
+
+  const float cube[] = {
+      -0.5f, -0.5f, -0.5f,
+      0.5f, -0.5f, -0.5f,
+      0.5f,  0.5f, -0.5f,
+      0.5f,  0.5f, -0.5f,
+      -0.5f,  0.5f, -0.5f,
+      -0.5f, -0.5f, -0.5f,
+
+      // Передняя грань
+      -0.5f, -0.5f,  0.5f,
+      0.5f,  0.5f,  0.5f,
+      0.5f, -0.5f,  0.5f,
+      0.5f,  0.5f,  0.5f,
+      -0.5f, -0.5f,  0.5f,
+      -0.5f,  0.5f,  0.5f,
+
+      // Грань слева
+      -0.5f,  0.5f,  0.5f,
+      -0.5f, -0.5f, -0.5f,
+      -0.5f,  0.5f, -0.5f,
+      -0.5f, -0.5f, -0.5f,
+      -0.5f,  0.5f,  0.5f,
+      -0.5f, -0.5f,  0.5f,
+
+      // Грань справа
+      0.5f,  0.5f,  0.5f,
+      0.5f,  0.5f, -0.5f,
+      0.5f, -0.5f, -0.5f,
+      0.5f, -0.5f, -0.5f,
+      0.5f, -0.5f,  0.5f,
+      0.5f,  0.5f,  0.5f,
+
+      // Нижняя грань
+      -0.5f, -0.5f, -0.5f,
+      0.5f, -0.5f,  0.5f,
+      0.5f, -0.5f, -0.5f,
+      0.5f, -0.5f,  0.5f,
+      -0.5f, -0.5f, -0.5f,
+      -0.5f, -0.5f,  0.5f,
+
+      // Верхняя грань
+      -0.5f,  0.5f, -0.5f,
+      0.5f,  0.5f, -0.5f,
+      0.5f,  0.5f,  0.5f,
+      0.5f,  0.5f,  0.5f,
+      -0.5f,  0.5f,  0.5f,
+      -0.5f,  0.5f, -0.5f,
+  };
+
+  glBindVertexArray(border_vao_);
+
+  glBindBuffer(GL_ARRAY_BUFFER, border_vbo_);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(cube), cube, GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
 
   glBindVertexArray(0);
 

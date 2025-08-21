@@ -35,6 +35,8 @@ void WireboundWorldCreator::RunRenderLoop() {
 
     global_data_.UpdateCursorPos();
 
+    global_data_.event_queue.Process();
+
     auto pressed_id = global_data_.GetIdByMousePos();
     auto description_id = ui_renderer_.Hover(pressed_id);
 

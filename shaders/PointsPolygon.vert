@@ -5,11 +5,6 @@ layout(location = 1) uniform uint selected_id_1;
 layout(location = 2) uniform uint selected_id_2;
 
 layout(location = 0) uniform sampler2D tex_displacement;
-layout(std140, binding = 1) uniform Matrices {
-    mat4 transform;
-    float dmap_depth;
-    float padding[3];
-};
 
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
@@ -36,8 +31,8 @@ void main() {
 
 
     vec4 final_pos = vec4(pos.x, 0.0f, pos.y, 1.0f);
-    final_pos.y = texture(tex_displacement, tc).r * dmap_depth / 8.0f + 3.7f;
-    gl_Position = camera.proj * camera.view * transform * final_pos;
+    final_pos.y = texture(tex_displacement, tc).r;
+    gl_Position = camera.proj * camera.view * /**transform * */final_pos;
 
 //    float t = float(in_vertex_id == selected_id_1 ||
 //                    in_vertex_id == selected_id_2);

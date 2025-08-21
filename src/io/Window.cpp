@@ -20,6 +20,9 @@ float lastY = static_cast<float>(gWindowHeight) / 2.0;
 float gDeltaTime = 0.0f;
 float last_frame = 0.0f;
 
+double gEventMouseStartPosX = 0.0;
+double gEventMouseStartPosY = 0.0;
+
 //TODO: bear out to another class/struct
 
 GLFWwindow* gWindow = nullptr;

@@ -10,6 +10,7 @@
 #include "../core/Tile.h"
 #include "../core/UiSlots.h"
 #include "../core/UiComplex.h"
+#include "../core/EventQueue.h"
 
 class UiTerrainMode final : public IUiMode {
  public:
@@ -53,6 +54,17 @@ class UiTerrainMode final : public IUiMode {
       static_cast<int>(data::VboIdMain::kTerrainSlotsFlipPointEdgeFace) -
       static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1
       > ui_event_handler_;
+
+  Event ev_translate_selected_;
+  Event ev_rotate_selected_;
+  Event ev_scale_selected_;
+  glm::vec3 ev_selected_dir_ = {1.0f, 0.0f, 0.0f}; // default: x
+
+  Event ev_scale_cursor_size_;
+  Event ev_scale_cursor_falloff_;
+
+  // intent uninit
+  float remembered_progress_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINMODE_H_

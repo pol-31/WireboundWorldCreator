@@ -13,6 +13,7 @@ WindowQueue::SizeType WindowQueue::PushBack(UiWindowBase* window) {
   for (int i = 0; i < windows_.size(); ++i) {
     if (!windows_[i]) {
       windows_[i] = window;
+      selected_id_ = i;
       return i;
     }
   }
@@ -21,6 +22,42 @@ WindowQueue::SizeType WindowQueue::PushBack(UiWindowBase* window) {
 
 void WindowQueue::Erase(WindowQueue::SizeType id) {
   windows_[id] = nullptr;
+  if (selected_id_ == id) {
+    selected_id_ = -1;
+  }
+}
+
+int WindowQueue::GetSize() const noexcept {
+  int counter = 0;
+  for (auto window : windows_) {
+    if (window) {
+      ++counter;
+    }
+  }
+  return counter;
+}
+
+
+// ---
+
+void WindowQueue::BtnEnter() {
+  if (top_window_) {
+    top_window_->BtnEnter();
+    return;
+  }
+  if (selected_id_ != -1) {
+    windows_[selected_id_]->BtnEnter();
+  }
+}
+
+void WindowQueue::BtnEscape() {
+  if (top_window_) {
+    top_window_->BtnEscape();
+    return;
+  }
+  if (selected_id_ != -1) {
+    windows_[selected_id_]->BtnEscape();
+  }
 }
 
 // ---
@@ -58,14 +95,18 @@ bool WindowQueue::Press(int id) {
   bool result = false;
   /// this way we won't Hide() new created
   auto windows_copy = windows_;
-  for (auto window : windows_copy) {
-    if (window) {
-      if (window->Press(id)) {
+  for (int i = 0; i < windows_copy.size(); ++i) {
+    if (windows_copy[i]) {
+      if (windows_copy[i]->Press(id)) {
         result = true;
-      } else if (!window->Pinned()) {
-        window->Hide();
+        selected_id_ = i;
+      } else if (!windows_copy[i]->Pinned()) {
+        windows_copy[i]->Hide();
       }
     }
+  }
+  if (!result) {
+    selected_id_ = -1;
   }
   return result;
 }

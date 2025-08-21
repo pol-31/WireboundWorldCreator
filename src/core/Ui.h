@@ -386,6 +386,8 @@ class UiSliderV final : public UiBase {
 
   [[nodiscard]] float GetProgress() const;
 
+  [[nodiscard]] float GetProgressUnscaled() const;
+
   void UpdateTransform(float x_translate, float y_translate,
                        float scale) override;
 
@@ -393,10 +395,13 @@ class UiSliderV final : public UiBase {
 
   void SetParentTransform(LocalTransform transform);
 
+  void Set(float progress);
+
+  void SetMouseDiff(float remembered_progress,
+                    glm::vec2 cursor_start, glm::vec2 cursor_end);
+
  private:
   void Set(glm::vec2 mouse_pos);
-
-  void Set(float progress);
 
   void UnHover();
 

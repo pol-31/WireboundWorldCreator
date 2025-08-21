@@ -5,6 +5,7 @@
 #include "../io/Cameras.h"
 #include "../common/PickingFramebuffer.h"
 #include "../core/TileRenderer.h"
+#include "../renderers/UiRenderer.h"
 
 void UiTerrainMode::ScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
@@ -22,10 +23,11 @@ void UiTerrainMode::ScrollCallback(
     return;
   }
   if (yoffset < 0.0f) {
-    global_data->tile_renderer->DownScale();
+    global_data->tile_renderer->cur_tile_.DownScale();
   } else {
-    global_data->tile_renderer->UpScale();
+    global_data->tile_renderer->cur_tile_.UpScale();
   }
+  terrain->slots_.UpdateTransformUniform();
 }
 
 void UiTerrainMode::MouseButtonCallback(
@@ -53,7 +55,80 @@ void UiTerrainMode::MouseButtonCallback(
 }
 
 void UiTerrainMode::KeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods) {}
+    GLFWwindow* window, int key, int scancode, int action, int mods) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
+  if (action == GLFW_PRESS) {
+    bool shift_pressed = (mods == GLFW_MOD_SHIFT);
+    bool ctrl_pressed = (mods == GLFW_MOD_CONTROL);
+    if (key == GLFW_KEY_W) {
+      global_data->camera->SetMoveForward();
+    } else if (key == GLFW_KEY_A) {
+      global_data->camera->SetMoveLeft();
+    } else if (key == GLFW_KEY_S) {
+      global_data->camera->SetMoveBackward();
+    } else if (key == GLFW_KEY_D) {
+      global_data->camera->SetMoveRight();
+    } else if (key == GLFW_KEY_ESCAPE) {
+      if (shift_pressed) {
+        glfwSetWindowShouldClose(window, true);
+      } else if (!global_data->windows->GetTopWindow() &&
+                 global_data->windows->GetSize() == 0) {
+        global_data->ui_renderer->AskForConfirmation("Exit?", []() {
+          glfwSetWindowShouldClose(gWindow, true);
+        });
+      } else {
+        global_data->windows->BtnEscape();
+      }
+    } else if (key == GLFW_KEY_ENTER) {
+      global_data->windows->BtnEnter();
+    } else if (key == GLFW_KEY_C) {
+      terrain->toggle_flatten_.Press();
+    } else if (key == GLFW_KEY_X) { // dir X
+      terrain->ev_selected_dir_ = glm::vec3{1.0f, 0.0f, 0.0f};
+    } else if (key == GLFW_KEY_Y) { // dir Y
+      terrain->ev_selected_dir_ = glm::vec3{0.0f, 1.0f, 0.0f};
+    } else if (key == GLFW_KEY_Z) { // dir Z
+      terrain->ev_selected_dir_ = glm::vec3{0.0f, 0.0f, 1.0f};
+    } else {
+      glfwGetCursorPos(gWindow, &gEventMouseStartPosX, &gEventMouseStartPosY);
+      if (key == GLFW_KEY_G) {
+        global_data->event_queue.Append(terrain->ev_translate_selected_);
+      } else if (key == GLFW_KEY_R) {
+        global_data->event_queue.Append(terrain->ev_rotate_selected_);
+      } else if (key == GLFW_KEY_T) {
+        global_data->event_queue.Append(terrain->ev_scale_selected_);
+      } else if (key == GLFW_KEY_V) {
+        terrain->remembered_progress_ = 1.0f - terrain->slider_size_.GetProgressUnscaled();
+        global_data->event_queue.Append(terrain->ev_scale_cursor_size_);
+      } else if (key == GLFW_KEY_F) {
+        terrain->remembered_progress_ = 1.0f - terrain->slider_falloff_.GetProgressUnscaled();
+        global_data->event_queue.Append(terrain->ev_scale_cursor_falloff_);
+      }
+    }
+  } else if (action == GLFW_RELEASE) {
+    if (key == GLFW_KEY_W) {
+      global_data->camera->SetMoveForward(0.0f);
+    } else if (key == GLFW_KEY_A) {
+      global_data->camera->SetMoveLeft(0.0f);
+    } else if (key == GLFW_KEY_S) {
+      global_data->camera->SetMoveBackward(0.0f);
+    } else if (key == GLFW_KEY_D) {
+      global_data->camera->SetMoveRight(0.0f);
+    } else if (key == GLFW_KEY_G) {
+      global_data->event_queue.Remove(terrain->ev_translate_selected_);
+    } else if (key == GLFW_KEY_R) {
+      global_data->event_queue.Remove(terrain->ev_rotate_selected_);
+    } else if (key == GLFW_KEY_T) {
+      global_data->event_queue.Remove(terrain->ev_scale_selected_);
+    } else if (key == GLFW_KEY_V) {
+      global_data->event_queue.Remove(terrain->ev_scale_cursor_size_);
+    } else if (key == GLFW_KEY_F) {
+      global_data->event_queue.Remove(terrain->ev_scale_cursor_falloff_);
+    }
+  }
+}
 
 UiTerrainMode::UiTerrainMode(
     UiSharedResources& ui_shared_resources,
@@ -143,13 +218,45 @@ UiTerrainMode::UiTerrainMode(
           slider_falloff_),
       ui_event_handler_({
           &btn_update_, &slider_size_,
-          &slider_falloff_, &toggle_flatten_, &btn_bake_, &slots_}) {}
+          &slider_falloff_, &toggle_flatten_, &btn_bake_, &slots_}),
+      ev_translate_selected_([this]() {
+        glm::vec2 cursor_diff =
+            this->ui_shared_resources_.global_glfw_callback_data_.cursor_pos_
+            - glm::dvec2{gEventMouseStartPosX, gEventMouseStartPosY};
+        this->slots_.TranslateSelected(
+            this->ev_selected_dir_ * (cursor_diff.y / gWindowHeight));
+      }),
+      ev_rotate_selected_([this]() {
+        glm::vec2 cursor_diff =
+            this->ui_shared_resources_.global_glfw_callback_data_.cursor_pos_
+            - glm::dvec2{gEventMouseStartPosX, gEventMouseStartPosY};
+        this->slots_.RotateSelected(
+            this->ev_selected_dir_ * (cursor_diff.y / gWindowHeight));
+      }),
+      ev_scale_selected_([this]() {
+        glm::vec2 cursor_diff =
+            this->ui_shared_resources_.global_glfw_callback_data_.cursor_pos_
+            - glm::dvec2{gEventMouseStartPosX, gEventMouseStartPosY};
+        this->slots_.ScaleSelected(
+            this->ev_selected_dir_ * (cursor_diff.y / gWindowHeight));
+      }),
+      ev_scale_cursor_size_([this]() {
+        slider_size_.SetMouseDiff(
+            remembered_progress_,
+            {gEventMouseStartPosX, gEventMouseStartPosY},
+            this->ui_shared_resources_.global_glfw_callback_data_.cursor_pos_);
+      }),
+      ev_scale_cursor_falloff_([this]() {
+        slider_falloff_.SetMouseDiff(
+            remembered_progress_,
+            {gEventMouseStartPosX, gEventMouseStartPosY},
+            this->ui_shared_resources_.global_glfw_callback_data_.cursor_pos_);
+      }) {}
 
 void UiTerrainMode::BindCallbacks() {
   glfwSetScrollCallback(gWindow, ScrollCallback);
   glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
-//  glfwSetKeyCallback(gWindow, KeyCallback);
-  glfwSetKeyCallback(gWindow, WasdKeyCallback);
+  glfwSetKeyCallback(gWindow, KeyCallback);
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(gWindow));
   global_data->camera->SetInspectCamera();

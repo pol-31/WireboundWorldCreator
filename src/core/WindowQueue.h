@@ -26,6 +26,14 @@ class WindowQueue {
 
   void Erase(SizeType id);
 
+  [[nodiscard]] int GetSize() const noexcept;
+
+  // ---
+
+  void BtnEnter();
+
+  void BtnEscape();
+
   // ---
 
   bool Render();
@@ -54,6 +62,8 @@ class WindowQueue {
   // edit, bake, settings, tips - can be pinned
   // confirmation, file - cannot be pinned
   UiTopWindowBase* top_window_ = nullptr;
+
+  int selected_id_ = -1;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_WINDOWQUEUE_H_

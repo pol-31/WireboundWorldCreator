@@ -5,13 +5,6 @@ layout (quads, equal_spacing, ccw) in;
 
 layout (location = 0) uniform sampler2D tex_displacement;
 
-layout(std140, binding = 1) uniform Matrices {
-    mat4 transform;
-    float dmap_depth;
-// Adding padding to ensure 16-byte alignment as per std140 layout rules.
-    float padding[3];
-};
-
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;
@@ -33,7 +26,7 @@ void main(void) {
     vec4 p2 = mix(gl_in[2].gl_Position, gl_in[3].gl_Position, gl_TessCoord.x);
     vec4 p = mix(p2, p1, gl_TessCoord.y);
 //    p.y += texture(tex_displacement, tc).r * 2.0f;
-    p.y += texture(tex_displacement, tc).r * dmap_depth / 8.0f + 4.5f;
-    gl_Position = camera.proj * camera.view * transform * p; //TODO: what about tesc?
+    p.y += texture(tex_displacement, tc).r + 0.7f;
+    gl_Position = camera.proj * camera.view * /**transform * */p; //TODO: what about tesc?
     tes_out.tc = tc;
 }

@@ -44,7 +44,9 @@ UiBase::UiBase(size_t ui_data_id, CallableType&& action)
       action_(std::move(action)) {}
 
 void UiBase::Press() {
-  action_();
+  if (action_) {
+    action_();
+  }
 }
 
 void UiBase::Release() {} // can change everything
@@ -412,7 +414,7 @@ void UiSliderV::RenderIcon() {
 
 void UiSliderV::RenderPicking() const {
   back_sprite_.RenderPicking();
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     glEnable(GL_SCISSOR_TEST);
     // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
     float y_ndc = centre_ - length_ / 2;
@@ -442,6 +444,13 @@ void UiSliderV::Set(float progress) {
   icon_sprite_.SetTranslate(translate);
 }
 
+void UiSliderV::SetMouseDiff(
+    float remembered_progress,
+    glm::vec2 cursor_start, glm::vec2 cursor_end) {
+  float diff = (cursor_start.y - cursor_end.y) / gWindowHeight;
+  Set(std::clamp(remembered_progress + diff, 0.0f, 1.0f));
+}
+
 data::TextId UiSliderV::Hover(std::uint32_t id) {
   return back_sprite_.Hover();
 }
@@ -463,6 +472,10 @@ bool UiSliderV::Scroll(GLuint id, float yoffset) {
 float UiSliderV::GetProgress() const {
   //TODO: make some *magic* with sprite and "return progress_;"
   return (1.0f - progress_) * scale_;
+}
+
+float UiSliderV::GetProgressUnscaled() const {
+  return 1.0f - progress_;
 }
 
 void UiSliderV::UpdateTransform(
@@ -560,7 +573,7 @@ void UiSliderH::RenderIcon() {
 
 void UiSliderH::RenderPicking() const {
   back_sprite_.RenderPicking();
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     glEnable(GL_SCISSOR_TEST);
     // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
     float x_ndc = centre_ - length_ / 2;
@@ -703,7 +716,7 @@ void UiSliderH3::RenderIcon() {
 
 void UiSliderH3::RenderPicking() const {
   back_sprite_.RenderPicking();
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     glEnable(GL_SCISSOR_TEST);
     // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
     float x_ndc = centre_ - length_ / 2;
@@ -839,7 +852,7 @@ void UiSliderH2::RenderIcon() {
 
 void UiSliderH2::RenderPicking() const {
   back_sprite_.RenderPicking();
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     glEnable(GL_SCISSOR_TEST);
     // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
     float x_ndc = centre_ - length_ / 2;
@@ -972,7 +985,7 @@ void UiToggle::RenderPicking() const {
 void UiToggle::Press() {
   turned_off_ = !turned_off_;
   progress_ = 0.0f;
-//  off_.Press();
+  off_.Press();
 }
 
 void UiToggle::UpdateTransform(
@@ -1052,14 +1065,14 @@ void UiToggle2::Render() {
 
 void UiToggle2::RenderPicking() const {
   off_.RenderPicking();
-  if (debug::gCtrlMode) {
+  if (debug::gUiAltMode) {
     on_.RenderPicking();
   }
 }
 
 void UiToggle2::Press() {
   turned_off_ = !turned_off_;
-//  off_.Press();
+  off_.Press();
 }
 
 data::TextId UiToggle2::Hover(std::uint32_t id) {

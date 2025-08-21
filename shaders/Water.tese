@@ -11,13 +11,6 @@ layout(location = 9) uniform float scale_near;
 layout(location = 10) uniform float scale_mid;
 layout(location = 11) uniform float scale_far;
 
-layout(std140, binding = 1) uniform Matrices {
-    mat4 transform;
-    float dmap_depth;
-// Adding padding to ensure 16-byte alignment as per std140 layout rules.
-    float padding[3];
-};
-
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;
@@ -42,9 +35,9 @@ void main(void) {
     vec4 p = mix(p2, p1, gl_TessCoord.y);
     p.rgb += (texture(tex_displacement_near, scale_factor * tc / scale_near).rgb
     + texture(tex_displacement_mid, scale_factor * tc / scale_mid).rgb
-    + texture(tex_displacement_far, scale_factor * tc / scale_far).rgb) * dmap_depth * scale_factor;
+    + texture(tex_displacement_far, scale_factor * tc / scale_far).rgb) * scale_factor;
     p.g += 4.0f;
 
-    gl_Position = camera.proj * camera.view * transform * p; //TODO: what about tesc?
+    gl_Position = camera.proj * camera.view * /**transform * */p; //TODO: what about tesc?
     tes_out.tc = tc;
 }
