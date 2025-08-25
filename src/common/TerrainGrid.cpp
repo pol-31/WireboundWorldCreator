@@ -18,7 +18,7 @@ TerrainGrid::TerrainGrid(
       tex_potential_selection_(details::gTerrainSize, details::gTerrainSize, GL_R8),
       slider_size_(slider_size),
       slider_falloff_(slider_falloff),\
-      layer_(data::VboIdMain::kSpareText1, data::TextId::kNotYet) {
+      layer_(data::VboIdMain::kSpareText1) {
   Init();
 }
 
@@ -98,7 +98,7 @@ void TerrainGrid::CreateGraph() {
     instance_data.type_id = 0; // TODO: unused
     instance_data.data = NoiseTerrainData{};
     // default scale, rotate, translate, do_tiling, do_invert
-    instance_data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
+//    instance_data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
     instance_data.heights.fill(0.0f);
     instances_[instances_size_++] = std::move(instance_data);
   }
@@ -158,22 +158,20 @@ void TerrainGrid::Render(glm::vec2 mouse_pos) {
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
 
-
-  glm::vec3 color = glm::vec3(0.8f, 0.8f, 0.1f);
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
-      ->terrain.RenderSelection(tex_potential_selection_, color);
-  //TODO: set color!
-  color = glm::vec3(0.2f, 0.2f, 0.8f);
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
-      ->terrain.RenderSelection(tex_selection_, color);
   if (selected_slot_id_ != -1) {
+    glm::vec3 color = glm::vec3(0.8f, 0.8f, 0.1f);
+    /// render selected layer dynamically (with transform)
+    color = glm::vec3(1.0f);
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+        ->terrain.RenderWireframe(&instances_[selected_slot_id_], color);
+
     glBindFramebuffer(GL_FRAMEBUFFER, layer_fbo_);
     glViewport(0, 0, gWindowWidth / 4, gWindowHeight / 4);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     ui_shared_resources_.global_glfw_callback_data_.tile_renderer
-        ->terrain.Render(&instances_[selected_slot_id_]);
+        ->terrain.RenderWireframe(&instances_[selected_slot_id_], color);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, gWindowWidth, gWindowHeight); /// restore
@@ -183,6 +181,14 @@ void TerrainGrid::Render(glm::vec2 mouse_pos) {
     glActiveTexture(GL_TEXTURE0);
     layer_tex_.Bind();
     layer_.Render();
+
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+        ->terrain.RenderSelection(&instances_[selected_slot_id_], tex_potential_selection_, color);
+    //TODO: set color!
+    color = glm::vec3(0.2f, 0.2f, 0.8f);
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+        ->terrain.RenderSelection(&instances_[selected_slot_id_], tex_selection_, color);
+
   }
 }
 

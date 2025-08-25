@@ -13,9 +13,9 @@ void UiPlacementMode::ScrollCallback(
       glfwGetWindowUserPointer(window));
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (yoffset < 0.0f) {
-    global_data->tile_renderer->DownScale();
+    global_data->tile_renderer->cur_tile_.DownScale();
   } else {
-    global_data->tile_renderer->UpScale();
+    global_data->tile_renderer->cur_tile_.UpScale();
   }
 }
 
@@ -56,24 +56,24 @@ UiPlacementMode::UiPlacementMode(
     : IUiMode(
           ui_shared_resources,
           window_queue,
-          {data::VboIdMain::kPlacementPlacementMode, data::TextId::kNotYet}),
-      btn_trees_(data::VboIdMain::kPlacementTrees, data::TextId::kNotYet),
-      btn_bushes_(data::VboIdMain::kPlacementBushes, data::TextId::kNotYet),
-      btn_tall_grass(data::VboIdMain::kPlacementTallGrass, data::TextId::kNotYet),
-      btn_undergrowth_(data::VboIdMain::kPlacementUndergrowth, data::TextId::kNotYet),
-      btn_change_mode_(data::VboIdMain::kPlacementChangeMode, data::TextId::kNotYet),
+          {data::VboIdMain::kPlacementPlacementMode}),
+      btn_trees_(data::VboIdMain::kPlacementTrees),
+      btn_bushes_(data::VboIdMain::kPlacementBushes),
+      btn_tall_grass(data::VboIdMain::kPlacementTallGrass),
+      btn_undergrowth_(data::VboIdMain::kPlacementUndergrowth),
+      btn_change_mode_(data::VboIdMain::kPlacementChangeMode),
       slider_color_(
-          {data::VboIdMain::kPlacementColorFill, data::TextId::kNotYet},
-          {data::VboIdMain::kPlacementColorBack, data::TextId::kNotYet},
-          {data::VboIdMain::kPlacementColorIcon, data::TextId::kNotYet}),
+          {data::VboIdMain::kPlacementColorFill},
+          {data::VboIdMain::kPlacementColorBack},
+          {data::VboIdMain::kPlacementColorIcon}),
       slider_size_(
-          {data::VboIdMain::kPlacementSizeFill, data::TextId::kNotYet},
-          {data::VboIdMain::kPlacementSizeBack, data::TextId::kNotYet},
-          {data::VboIdMain::kPlacementSizeIcon, data::TextId::kNotYet}),
+          {data::VboIdMain::kPlacementSizeFill},
+          {data::VboIdMain::kPlacementSizeBack},
+          {data::VboIdMain::kPlacementSizeIcon}),
       slider_falloff_(
-          {data::VboIdMain::kPlacementFalloffFill, data::TextId::kNotYet},
-          {data::VboIdMain::kPlacementFalloffBack, data::TextId::kNotYet},
-          {data::VboIdMain::kPlacementFalloffIcon, data::TextId::kNotYet}),
+          {data::VboIdMain::kPlacementFalloffFill},
+          {data::VboIdMain::kPlacementFalloffBack},
+          {data::VboIdMain::kPlacementFalloffIcon}),
       ui_event_handler_({
           &btn_trees_, &btn_bushes_, &btn_tall_grass, &btn_undergrowth_,
           &btn_change_mode_, &slider_color_, &slider_size_, &slider_falloff_}),
@@ -233,10 +233,6 @@ void UiPlacementMode::BindCallbacks() {
   //  glfwSetKeyCallback(gWindow, KeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
   BtnTrees();
-}
-
-data::TextId UiPlacementMode::Hover(std::uint32_t global_id) {
-  return data::TextId::kNone;
 }
 
 void UiPlacementMode::InitHeightMap(std::string_view path, Texture& texture) {

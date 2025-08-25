@@ -15,7 +15,6 @@ class UiFencesMode final : public IUiMode {
 
   void Render() override;
   void RenderPicking() override;
-  data::TextId Hover(std::uint32_t global_id) override;
 
   void BindCallbacks() override;
 

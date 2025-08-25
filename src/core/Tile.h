@@ -69,7 +69,7 @@ struct TileInfo {
 /// contains all data for current tile
 struct Tile {
   /// shared for tiles
-  float map_scale = 1.0f;
+  float map_scale = 64.0f;
 
   /// unique for each tile
   int pos_x;

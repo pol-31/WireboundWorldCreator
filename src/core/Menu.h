@@ -37,7 +37,7 @@ class Menu {
 
   void RenderPicking(bool show);
 
-  data::TextId Hover(bool show, uint32_t global_id);
+  void Hover();
 
   bool Press(uint32_t global_id);
 

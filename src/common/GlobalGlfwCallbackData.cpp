@@ -15,6 +15,10 @@ void GlobalGlfwCallbackData::UpdateCursorPos() {
   };
 }
 
-GLuint GlobalGlfwCallbackData::GetIdByMousePos() const {
-  return picking_fbo->GetIdByMousePos(cursor_pos_);
+void GlobalGlfwCallbackData::UpdateHoveredId() {
+  hovered_id = GetIdByMousePos(cursor_pos_tex_norm_);
+}
+
+GLuint GlobalGlfwCallbackData::GetIdByMousePos(glm::vec2 mouse_pos) const {
+  return picking_fbo->GetIdByMousePos(mouse_pos);
 }

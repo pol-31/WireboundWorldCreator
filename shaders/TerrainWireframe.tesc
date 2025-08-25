@@ -15,13 +15,15 @@ layout(binding = 0) uniform CameraBufferObject {
     mat4 proj;
 } camera;
 
+layout(location = 7) uniform mat4 transform;
+
 void main(void) {
     if (gl_InvocationID == 0) {
         // Step 1: transform the vertex to view space
-        vec4 ViewSpacePos00 = camera.view * /**transform * */gl_in[0].gl_Position;
-        vec4 ViewSpacePos01 = camera.view * /**transform * */gl_in[1].gl_Position;
-        vec4 ViewSpacePos10 = camera.view * /**transform * */gl_in[2].gl_Position;
-        vec4 ViewSpacePos11 = camera.view * /**transform * */gl_in[3].gl_Position;
+        vec4 ViewSpacePos00 = camera.view * transform * gl_in[0].gl_Position;
+        vec4 ViewSpacePos01 = camera.view * transform * gl_in[1].gl_Position;
+        vec4 ViewSpacePos10 = camera.view * transform * gl_in[2].gl_Position;
+        vec4 ViewSpacePos11 = camera.view * transform * gl_in[3].gl_Position;
 
         // Step 2: calculate the length of the view space vector to get the distance
         float Len00 = length(ViewSpacePos00.xyz);

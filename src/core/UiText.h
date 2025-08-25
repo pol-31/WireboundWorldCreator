@@ -11,8 +11,6 @@ class UiTextInput final : public UiBase {
  public:
   UiTextInput(
       TextRenderer& text_renderer,
-      float scale,
-      glm::vec2 translate,
       UiDynamicSprite&& back,
       UiDynamicSprite&& text);
 
@@ -29,12 +27,13 @@ class UiTextInput final : public UiBase {
 
   void Press() override;
 
-  data::TextId Hover(std::uint32_t id);
-
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override;
-
   void UpdateTransform() override;
+
+  void SetText(std::string_view text);
+
+  void SetText(const FixedSizeQueue<char, 64>& text);
+
+  /*void UpdateTransform() override;
 
   void SetParentTransform(LocalTransform transform);
 
@@ -54,16 +53,16 @@ class UiTextInput final : public UiBase {
 
   [[nodiscard]] glm::vec2 GetTextTranslate() const noexcept {
     return translate_;
-  }
+  }*/
 
  private:
-  UiDynamicSprite back_; // clickable area
-  UiDynamicSprite text_; // print text
+  friend class TextRenderer;
+  UiDynamicSprite back_; // print text (can be static, we don't set transform)
+//  UiDynamicSprite text_; // clickable area (dynamic - we set transform at render)
+  UiDynamicSprite text_;
 
-  TextRenderer& text_renderer_;
   FixedSizeQueue<char, 64> text_input_;
-  float scale_ = 1.0f;
-  glm::vec2 translate_ = glm::vec2{0.0f};
+  TextRenderer& text_renderer_;
 };
 
 class UiTextLabelBase : public UiBase {
@@ -71,7 +70,6 @@ class UiTextLabelBase : public UiBase {
   UiTextLabelBase(
       TextRenderer& text_renderer,
       float scale,
-      glm::vec2 translate,
       UiDynamicSprite&& text);
 
   UiTextLabelBase(UiTextLabelBase&& other) noexcept;
@@ -89,73 +87,36 @@ class UiTextLabelBase : public UiBase {
 
   void Press() override;
 
-  data::TextId Hover(std::uint32_t id);
-
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override;
-
   void UpdateTransform() override;
 
   void SetParentTransform(LocalTransform transform);
 
   void SetTranslate(glm::vec2 translate);
-
-  void SetTextScale(float scale) {
-    scale_ = scale;
+/*
+  void SetScale(float scale) {
+    scale_ = scale / ui_scale;
   }
 
-  void SetTextTranslate(glm::vec2 translate) {
-    translate_ = translate;
+  [[nodiscard]] float GetTranslate() const noexcept {
+    return ui_translate;
   }
 
-  [[nodiscard]] float GetTextScale() const noexcept {
-    return scale_;
-  }
-
-  [[nodiscard]] glm::vec2 GetTextTranslate() const noexcept {
-    return translate_;
-  }
+  [[nodiscard]] float GetScale() const noexcept {
+    return scale_ * ui_scale;
+  }*/
 
  protected:
   UiDynamicSprite text_;
   TextRenderer& text_renderer_;
   float scale_ = 1.0f;
-  glm::vec2 translate_ = glm::vec2{0.0f};
 };
 
-class UiTextLabel final : public UiTextLabelBase {
- public:
-  UiTextLabel(
-      TextRenderer& text_renderer,
-      float scale,
-      glm::vec2 translate,
-      UiDynamicSprite&& text);
-
-  UiTextLabel(UiTextLabel&& other) noexcept;
-
-  UiTextLabel(const UiTextLabel& other) = delete;
-
-  UiTextLabel& operator=(UiTextLabel&& other) = delete;
-  UiTextLabel& operator=(const UiTextLabel& other) = delete;
-
-  void Render();
-
-  void RenderPicking();
-
-  void SetText(std::string_view label) {
-    label_ = label;
-  }
-
- private:
-  std::string label_;
-};
-
+/// all static labels should be drawn using this class;
 class UiTextLabelId final : public UiTextLabelBase {
  public:
   UiTextLabelId(
       TextRenderer& text_renderer,
       float scale,
-      glm::vec2 translate,
       UiDynamicSprite&& text,
       data::TextId text_id);
 
@@ -176,6 +137,34 @@ class UiTextLabelId final : public UiTextLabelBase {
 
  private:
   data::TextId text_id_;
+};
+
+/// UiSlots
+class UiTextLabel final : public UiTextLabelBase {
+ public:
+  /// no text arg; text in the class supposed to change from time to time
+  UiTextLabel(
+      TextRenderer& text_renderer,
+      float scale,
+      UiDynamicSprite&& text);
+
+  UiTextLabel(UiTextLabel&& other) noexcept;
+
+  UiTextLabel(const UiTextLabel& other) = delete;
+
+  UiTextLabel& operator=(UiTextLabel&& other) = delete;
+  UiTextLabel& operator=(const UiTextLabel& other) = delete;
+
+  void Render();
+
+  void RenderPicking();
+
+  void SetText(std::string_view label) {
+    label_ = label;
+  }
+
+ private:
+  std::string label_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UITEXT_H_

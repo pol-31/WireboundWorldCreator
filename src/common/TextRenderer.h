@@ -11,6 +11,9 @@
 #include "Paths.h"
 #include "../core/Ui.h"
 #include "Font.h"
+#include "../core/UiText.h"
+
+class UiTextInput;
 
 /// usage of GL_A (no color & transparency - one channel serves for both)
 
@@ -28,26 +31,46 @@ class TextRenderer {
     kCentre
   };
 
-  TextRenderer(const Paths& paths,
-               UiDynamicSprite&& prerender_text_slot);
+  TextRenderer(
+      UiSharedResources& ui_shared_resources,
+      const Paths& paths,
+      UiDynamicSprite&& prerender_text_slot,
+      UiDynamicSprite&& sprite_shadow,
+      UiDynamicSprite&& sprite_cursor);
 
   ~TextRenderer();
 
   void AppendChar(int code);
 
-  void RemoveLastChar();
+  void BtnBackspace();
 
   /// binds its callbacks
-  void StartInput(UiDynamicSprite& text_slot,
-                  FixedSizeQueue<char, 64>* input_source);
+  void StartInput(UiTextInput* input_data);
 
   void StopInput();
+
+  void RenderInput();
+
+  void RenderText(UiDynamicSprite& text_slot,
+                  FixedSizeQueue<char, 64>* text);
+
+  void RenderTextSelected(UiDynamicSprite& text_slot,
+                          FixedSizeQueue<char, 64>* text);
+
+  /// no RenderPickingTextSelected - we don't "pick" it
+  void RenderPickingText(UiDynamicSprite& text_slot,
+                         FixedSizeQueue<char, 64>* text);
 
   /// runtime text, no prerender:  each symbol rendered as a separate sprite
   /// (todo; prerender to some point is still possible)
   void RenderText(UiDynamicSprite& text_slot, std::string_view text,
                   float scale, glm::vec2 position,
                   Alignment alignment = Alignment::kCentre);
+
+  void RenderText(UiDynamicSprite& text_slot, std::string_view text,
+                  Alignment alignment = Alignment::kCentre) {
+    RenderText(text_slot, text, 1.0f, glm::vec2{0.0f}, alignment);
+  }
 
   void RenderText(UiDynamicSprite& text_slot,
                   const FixedSizeQueue<char, 64>* text,
@@ -57,6 +80,11 @@ class TextRenderer {
   void RenderTextPicking(UiDynamicSprite& text_slot, std::string_view text,
                          float scale, glm::vec2 position,
                          Alignment alignment = Alignment::kCentre);
+
+  void RenderTextPicking(UiDynamicSprite& text_slot, std::string_view text,
+                         Alignment alignment = Alignment::kCentre) {
+    RenderTextPicking(text_slot, text, 1.0f, glm::vec2{0.0f}, alignment);
+  }
 
   void RenderTextPicking(UiDynamicSprite& text_slot,
                          const FixedSizeQueue<char, 64>* text,
@@ -78,6 +106,10 @@ class TextRenderer {
   void PrerenderModeText(int start, int end);
 
   void BindCallbacks();
+
+  [[nodiscard]] bool InputInProgress() const noexcept {
+    return input_in_progress_;
+  }
 
  private:
   static void CharCallback(GLFWwindow* window, unsigned int codepoint);
@@ -106,6 +138,9 @@ class TextRenderer {
 
   int CalculateLineLength(
       std::string_view text, const UiDynamicSprite& text_slot);
+
+  int CalculateLineLength(
+      FixedSizeQueue<char, 64>* text, const UiDynamicSprite& text_slot);
 
   void PrerenderImpl(
       int start, int end, Texture& texture,
@@ -136,6 +171,34 @@ class TextRenderer {
   FixedSizeQueue<char, 64>* input_source_ = nullptr;
 
   UiDynamicSprite prerender_text_slot_;
+
+  UiDynamicSprite sprite_shadow_;
+  UiDynamicSprite sprite_cursor_;
+
+
+  bool input_in_progress_ = false;
+  UiTextInput* input_data_ = nullptr;
+  // input to buffer, only then copy to input_data_'s buffer
+  FixedSizeQueue<char, 64> buffer_input_;
+
+  /// not string, still need calculate "non-selected offset"
+  int selected_start_ = 0;
+  int selected_end_ = 0;
+//  bool do_select_ = false; // same as selected_start != selected_end_
+//  int cursor_pos_ = 0; // same as selected_end_
+
+  static int GetWidth(int code);
+
+  void CalculateCursorPos(
+      UiDynamicSprite& text_slot, FixedSizeQueue<char, 64>* text);
+
+  void MoveCursor(int value);
+
+  int LeftCtrlDistance();
+
+  int RightCtrlDistance();
+
+  UiSharedResources& ui_shared_resources_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TEXTRENDERER_H_

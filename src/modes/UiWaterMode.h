@@ -18,7 +18,6 @@ class UiWaterMode final : public IUiMode {
 
   void Render() override;
   void RenderPicking() override;
-  data::TextId Hover(std::uint32_t global_id) override;
 
   /**
    * Lake: fill everything with height = max_height_ inside the polygon nd

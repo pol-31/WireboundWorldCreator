@@ -5,10 +5,41 @@ layout(local_size_x = 16, local_size_y = 16) in;
 layout(r32f, binding = 0) uniform image2D bottom_layer;
 layout(r32f, binding = 1) uniform readonly image2D top_layer;
 
+layout(location = 0) uniform mat4 transform;
+layout(location = 1) uniform bool invert;
+layout(location = 2) uniform float max_value;
+
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 uv = (vec2(coord) + 0.5) / vec2(imageSize(bottom_layer));
+    vec4 worldPos = vec4(uv, 0.0, 1.0);
+    vec4 localPos = transform * worldPos;
+    vec2 topUV = localPos.xy;
+
     float bottom = imageLoad(bottom_layer, coord).r;
-    float top = imageLoad(top_layer, coord).r;
-    float result = bottom + top;
+    float top = imageLoad(top_layer, ivec2(topUV)).r;
+
+    float old_height = imageLoad(top_layer, coord).r;
+    float olf_offset = length(topUV - uv)/** * 64.0f*/;
+    float extra_height = sqrt( old_height * old_height + olf_offset * olf_offset);
+    /**if (invert) {
+        top = max_value - top;
+    }*/
+
+//    ivec2 size = imageSize(bottom_layer);
+//    float dx = 1.0 / size.x; // distance per texel
+//    float dy = 1.0 / size.y;
+
+    // partial derivatives from transform matrix
+//    float slopeX = transform[2][0]; // dz/dx from model matrix
+//    float slopeY = transform[2][1]; // dz/dy from model matrix
+
+//    float extraHeight = slopeX * dx * coord.x + slopeY * dy * coord.y;
+    float result = /**bottom + top + */extra_height;// + extraHeight * 64.0f;
+
+    //TODO:
+    // tg angle = new height / coord
+    //result += tg(angle) * coord;
+
     imageStore(bottom_layer, coord, vec4(result));
 }

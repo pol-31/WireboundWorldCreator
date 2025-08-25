@@ -47,34 +47,16 @@ void UiEditTerrainNoise::RenderPicking() {
   }
 }
 
-void UiEditTerrainNoise::SetParentId(int id) {
-  gUiComponents[config_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-  gUiComponents[toggle_invert_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-  gUiComponents[toggle_tiling_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-  gUiComponents[slider_strength_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-  gUiComponents[text_name_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-  gUiComponents[hmap_.GetId() - details::kIdOffsetUi].parent_id_
-      = id;
-}
-
-void UiEditTerrainNoise::UpdateTransform() {
-  config_.UpdateTransform();
-  toggle_invert_.UpdateTransform();
-  toggle_tiling_.UpdateTransform();
-  slider_strength_.UpdateTransform();
-  text_name_.UpdateTransform();
-  hmap_.UpdateTransform();
-}
-
 void UiEditTerrainNoise::SetConfig(NoiseDataBase* terrain_data) {
   toggle_invert_.Set(terrain_data->do_invert);
   toggle_tiling_.Set(terrain_data->do_tiling);
   slider_strength_.SetValue(terrain_data->strength);
+}
+
+void UiEditTerrainNoise::AttachToHierarchy(UiHierarchy& hierarchy) {
+  hierarchy.AddNested(
+      &text_name_, &config_, &toggle_invert_,
+      &toggle_tiling_, &slider_strength_, &hmap_);
 }
 
 UiEditTerrain::UiEditTerrain(
@@ -107,149 +89,149 @@ UiEditTerrain::UiEditTerrain(
       random_generate_(std::move(random_generate)),
 
       text_noise_invert_({
-          text_renderer,0.05f, glm::vec2{0.0f},
-          {data::VboIdMain::kTerrainEditLabelInvert, data::TextId::kNotYet},
+          text_renderer,0.05f,
+          {data::VboIdMain::kTerrainEditLabelInvert},
           data::TextId::com}),
       text_noise_tiling_(
-          {text_renderer, 0.05f, glm::vec2{0.0f},
-           {data::VboIdMain::kTerrainEditLabelTiling, data::TextId::kNotYet},
+          {text_renderer, 0.05f,
+           {data::VboIdMain::kTerrainEditLabelTiling},
            data::TextId::com}),
       text_noise_strength_(
-          {text_renderer, 0.05f, glm::vec2{0.0f},
-           {data::VboIdMain::kTerrainEditLabelStrength, data::TextId::kNotYet},
+          {text_renderer, 0.05f,
+           {data::VboIdMain::kTerrainEditLabelStrength},
            data::TextId::com}),
 
       shader_merge_("../shaders/noise_shaders/MergeNoises.comp"),
       shader_sum_("../shaders/noise_shaders/SumNoises.comp"),
 
       noise1_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise1Config, data::TextId::kNotYet},
-              {text_renderer, 0.025f, glm::vec2{0.0f},
-               {data::VboIdMain::kTerrainEditNoise1Name, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainEditNoise1Config},
+              {text_renderer, 0.025f,
+               {data::VboIdMain::kTerrainEditNoise1Name},
                data::TextId::kPerlin},
-              {{data::VboIdMain::kTerrainEditNoise1InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise1TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise1StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise1StrengthIcon, data::TextId::kNotYet}},
-              {data::VboIdMain::kTerrainEditNoise1Hmap, data::TextId::kNotYet}),
+              {{data::VboIdMain::kTerrainEditNoise1InvertOff},
+               {data::VboIdMain::kTerrainEditNoise1InvertOn1},
+               {data::VboIdMain::kTerrainEditNoise1InvertOn2},
+               {data::VboIdMain::kTerrainEditNoise1InvertOn3}},
+              {{data::VboIdMain::kTerrainEditNoise1TilingOff},
+               {data::VboIdMain::kTerrainEditNoise1TilingOn1},
+               {data::VboIdMain::kTerrainEditNoise1TilingOn2},
+               {data::VboIdMain::kTerrainEditNoise1TilingOn3}},
+              {{data::VboIdMain::kTerrainEditNoise1StrengthArea},
+               {data::VboIdMain::kTerrainEditNoise1StrengthIcon}},
+              {data::VboIdMain::kTerrainEditNoise1Hmap}),
       noise2_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise2Config, data::TextId::kNotYet},
-              {text_renderer, 0.025f, glm::vec2{0.0f},
-               {data::VboIdMain::kTerrainEditNoise2Name, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainEditNoise2Config},
+              {text_renderer, 0.025f,
+               {data::VboIdMain::kTerrainEditNoise2Name},
                data::TextId::kCellular},
-              {{data::VboIdMain::kTerrainEditNoise2InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise2TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise2StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise2StrengthIcon, data::TextId::kNotYet}},
-              {data::VboIdMain::kTerrainEditNoise2Hmap, data::TextId::kNotYet}),
+              {{data::VboIdMain::kTerrainEditNoise2InvertOff},
+               {data::VboIdMain::kTerrainEditNoise2InvertOn1},
+               {data::VboIdMain::kTerrainEditNoise2InvertOn2},
+               {data::VboIdMain::kTerrainEditNoise2InvertOn3}},
+              {{data::VboIdMain::kTerrainEditNoise2TilingOff},
+               {data::VboIdMain::kTerrainEditNoise2TilingOn1},
+               {data::VboIdMain::kTerrainEditNoise2TilingOn2},
+               {data::VboIdMain::kTerrainEditNoise2TilingOn3}},
+              {{data::VboIdMain::kTerrainEditNoise2StrengthArea},
+               {data::VboIdMain::kTerrainEditNoise2StrengthIcon}},
+              {data::VboIdMain::kTerrainEditNoise2Hmap}),
       noise3_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise3Config, data::TextId::kNotYet},
-              {text_renderer, 0.025f, glm::vec2{0.0f},
-               {data::VboIdMain::kTerrainEditNoise3Name, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainEditNoise3Config},
+              {text_renderer, 0.025f,
+               {data::VboIdMain::kTerrainEditNoise3Name},
                data::TextId::kMetaballs},
-              {{data::VboIdMain::kTerrainEditNoise3InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise3TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise3StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise3StrengthIcon, data::TextId::kNotYet}},
-              {data::VboIdMain::kTerrainEditNoise3Hmap, data::TextId::kNotYet}),
+              {{data::VboIdMain::kTerrainEditNoise3InvertOff},
+               {data::VboIdMain::kTerrainEditNoise3InvertOn1},
+               {data::VboIdMain::kTerrainEditNoise3InvertOn2},
+               {data::VboIdMain::kTerrainEditNoise3InvertOn3}},
+              {{data::VboIdMain::kTerrainEditNoise3TilingOff},
+               {data::VboIdMain::kTerrainEditNoise3TilingOn1},
+               {data::VboIdMain::kTerrainEditNoise3TilingOn2},
+               {data::VboIdMain::kTerrainEditNoise3TilingOn3}},
+              {{data::VboIdMain::kTerrainEditNoise3StrengthArea},
+               {data::VboIdMain::kTerrainEditNoise3StrengthIcon}},
+              {data::VboIdMain::kTerrainEditNoise3Hmap}),
       noise4_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise4Config, data::TextId::kNotYet},
-              {text_renderer, 0.025f, glm::vec2{0.0f},
-               {data::VboIdMain::kTerrainEditNoise4Name, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainEditNoise4Config},
+              {text_renderer, 0.025f,
+               {data::VboIdMain::kTerrainEditNoise4Name},
                data::TextId::kFbmGrid},
-              {{data::VboIdMain::kTerrainEditNoise4InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise4TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise4StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise4StrengthIcon, data::TextId::kNotYet}},
-              {data::VboIdMain::kTerrainEditNoise4Hmap, data::TextId::kNotYet}),
+              {{data::VboIdMain::kTerrainEditNoise4InvertOff},
+               {data::VboIdMain::kTerrainEditNoise4InvertOn1},
+               {data::VboIdMain::kTerrainEditNoise4InvertOn2},
+               {data::VboIdMain::kTerrainEditNoise4InvertOn3}},
+              {{data::VboIdMain::kTerrainEditNoise4TilingOff},
+               {data::VboIdMain::kTerrainEditNoise4TilingOn1},
+               {data::VboIdMain::kTerrainEditNoise4TilingOn2},
+               {data::VboIdMain::kTerrainEditNoise4TilingOn3}},
+              {{data::VboIdMain::kTerrainEditNoise4StrengthArea},
+               {data::VboIdMain::kTerrainEditNoise4StrengthIcon}},
+              {data::VboIdMain::kTerrainEditNoise4Hmap}),
       noise5_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise5Config, data::TextId::kNotYet},
-              {text_renderer, 0.025f, glm::vec2{0.0f},
-               {data::VboIdMain::kTerrainEditNoise5Name, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainEditNoise5Config},
+              {text_renderer, 0.025f,
+               {data::VboIdMain::kTerrainEditNoise5Name},
                data::TextId::kFbmMulti},
-              {{data::VboIdMain::kTerrainEditNoise5InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise5TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise5StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise5StrengthIcon, data::TextId::kNotYet}},
-              {data::VboIdMain::kTerrainEditNoise5Hmap, data::TextId::kNotYet}),
+              {{data::VboIdMain::kTerrainEditNoise5InvertOff},
+               {data::VboIdMain::kTerrainEditNoise5InvertOn1},
+               {data::VboIdMain::kTerrainEditNoise5InvertOn2},
+               {data::VboIdMain::kTerrainEditNoise5InvertOn3}},
+              {{data::VboIdMain::kTerrainEditNoise5TilingOff},
+               {data::VboIdMain::kTerrainEditNoise5TilingOn1},
+               {data::VboIdMain::kTerrainEditNoise5TilingOn2},
+               {data::VboIdMain::kTerrainEditNoise5TilingOn3}},
+              {{data::VboIdMain::kTerrainEditNoise5StrengthArea},
+               {data::VboIdMain::kTerrainEditNoise5StrengthIcon}},
+              {data::VboIdMain::kTerrainEditNoise5Hmap}),
       noise6_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise6Config, data::TextId::kNotYet},
-              {text_renderer, 0.025f, glm::vec2{0.0f},
-               {data::VboIdMain::kTerrainEditNoise6Name, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainEditNoise6Config},
+              {text_renderer, 0.025f,
+               {data::VboIdMain::kTerrainEditNoise6Name},
                data::TextId::kFbmdPerlin},
-              {{data::VboIdMain::kTerrainEditNoise6InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise6TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise6StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise6StrengthIcon, data::TextId::kNotYet}},
-              {data::VboIdMain::kTerrainEditNoise6Hmap, data::TextId::kNotYet}),
+              {{data::VboIdMain::kTerrainEditNoise6InvertOff},
+               {data::VboIdMain::kTerrainEditNoise6InvertOn1},
+               {data::VboIdMain::kTerrainEditNoise6InvertOn2},
+               {data::VboIdMain::kTerrainEditNoise6InvertOn3}},
+              {{data::VboIdMain::kTerrainEditNoise6TilingOff},
+               {data::VboIdMain::kTerrainEditNoise6TilingOn1},
+               {data::VboIdMain::kTerrainEditNoise6TilingOn2},
+               {data::VboIdMain::kTerrainEditNoise6TilingOn3}},
+              {{data::VboIdMain::kTerrainEditNoise6StrengthArea},
+               {data::VboIdMain::kTerrainEditNoise6StrengthIcon}},
+              {data::VboIdMain::kTerrainEditNoise6Hmap}),
       noise7_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise7Config, data::TextId::kNotYet},
-              {text_renderer, 0.025f, glm::vec2{0.0f},
-               {data::VboIdMain::kTerrainEditNoise7Name, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainEditNoise7Config},
+              {text_renderer, 0.025f,
+               {data::VboIdMain::kTerrainEditNoise7Name},
                data::TextId::kFbmWarp},
-              {{data::VboIdMain::kTerrainEditNoise7InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise7TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise7StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise7StrengthIcon, data::TextId::kNotYet}},
-              {data::VboIdMain::kTerrainEditNoise7Hmap, data::TextId::kNotYet}),
+              {{data::VboIdMain::kTerrainEditNoise7InvertOff},
+               {data::VboIdMain::kTerrainEditNoise7InvertOn1},
+               {data::VboIdMain::kTerrainEditNoise7InvertOn2},
+               {data::VboIdMain::kTerrainEditNoise7InvertOn3}},
+              {{data::VboIdMain::kTerrainEditNoise7TilingOff},
+               {data::VboIdMain::kTerrainEditNoise7TilingOn1},
+               {data::VboIdMain::kTerrainEditNoise7TilingOn2},
+               {data::VboIdMain::kTerrainEditNoise7TilingOn3}},
+              {{data::VboIdMain::kTerrainEditNoise7StrengthArea},
+               {data::VboIdMain::kTerrainEditNoise7StrengthIcon}},
+              {data::VboIdMain::kTerrainEditNoise7Hmap}),
       noise8_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise8Config, data::TextId::kNotYet},
-              {text_renderer, 0.025f, glm::vec2{0.0f},
-               {data::VboIdMain::kTerrainEditNoise8Name, data::TextId::kNotYet},
+              {data::VboIdMain::kTerrainEditNoise8Config},
+              {text_renderer, 0.025f,
+               {data::VboIdMain::kTerrainEditNoise8Name},
                data::TextId::kFbmPerlinWarp},
-              {{data::VboIdMain::kTerrainEditNoise8InvertOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8InvertOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8InvertOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8InvertOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise8TilingOff, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8TilingOn1, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8TilingOn2, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8TilingOn3, data::TextId::kNotYet}},
-              {{data::VboIdMain::kTerrainEditNoise8StrengthArea, data::TextId::kNotYet},
-               {data::VboIdMain::kTerrainEditNoise8StrengthIcon, data::TextId::kNotYet}},
-              {data::VboIdMain::kTerrainEditNoise8Hmap, data::TextId::kNotYet}),
+              {{data::VboIdMain::kTerrainEditNoise8InvertOff},
+               {data::VboIdMain::kTerrainEditNoise8InvertOn1},
+               {data::VboIdMain::kTerrainEditNoise8InvertOn2},
+               {data::VboIdMain::kTerrainEditNoise8InvertOn3}},
+              {{data::VboIdMain::kTerrainEditNoise8TilingOff},
+               {data::VboIdMain::kTerrainEditNoise8TilingOn1},
+               {data::VboIdMain::kTerrainEditNoise8TilingOn2},
+               {data::VboIdMain::kTerrainEditNoise8TilingOn3}},
+              {{data::VboIdMain::kTerrainEditNoise8StrengthArea},
+               {data::VboIdMain::kTerrainEditNoise8StrengthIcon}},
+              {data::VboIdMain::kTerrainEditNoise8Hmap}),
 
       noise_perlin_(ui_shared_resources, window_queue, text_renderer),
       noise_cellular_(ui_shared_resources, window_queue, text_renderer),
@@ -277,39 +259,19 @@ UiEditTerrain::UiEditTerrain(
       instances_(instances),
       instances_size_(instances_size) {
   Init();
-  gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[name_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[name_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[color_palette_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[color_brightness_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[color_indicator_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[random_generate_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[text_noise_invert_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[text_noise_tiling_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[text_noise_strength_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  noise1_.SetParentId(sprite_.GetId());
-  noise2_.SetParentId(sprite_.GetId());
-  noise3_.SetParentId(sprite_.GetId());
-  noise4_.SetParentId(sprite_.GetId());
-  noise5_.SetParentId(sprite_.GetId());
-  noise6_.SetParentId(sprite_.GetId());
-  noise7_.SetParentId(sprite_.GetId());
-  noise8_.SetParentId(sprite_.GetId());
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &accept_, &name_,
+      &name_back_, &color_palette_, &color_brightness_,
+      &color_indicator_, &random_generate_, &text_noise_invert_,
+      &text_noise_tiling_, &text_noise_strength_);
+  noise1_.AttachToHierarchy(hierarchy_);
+  noise2_.AttachToHierarchy(hierarchy_);
+  noise3_.AttachToHierarchy(hierarchy_);
+  noise4_.AttachToHierarchy(hierarchy_);
+  noise5_.AttachToHierarchy(hierarchy_);
+  noise6_.AttachToHierarchy(hierarchy_);
+  noise7_.AttachToHierarchy(hierarchy_);
+  noise8_.AttachToHierarchy(hierarchy_);
   speed_ = 2.0f;
 }
 
@@ -365,12 +327,19 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
       ui_shared_resources_(other.ui_shared_resources_),
       instances_(other.instances_),
       instances_size_(other.instances_size_) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
-
-data::TextId UiEditTerrain::Hover(int id) {
-  return ui_event_handler_.Hover(id);
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &accept_, &name_,
+      &name_back_, &color_palette_, &color_brightness_,
+      &color_indicator_, &random_generate_, &text_noise_invert_,
+      &text_noise_tiling_, &text_noise_strength_);
+  noise1_.AttachToHierarchy(hierarchy_);
+  noise2_.AttachToHierarchy(hierarchy_);
+  noise3_.AttachToHierarchy(hierarchy_);
+  noise4_.AttachToHierarchy(hierarchy_);
+  noise5_.AttachToHierarchy(hierarchy_);
+  noise6_.AttachToHierarchy(hierarchy_);
+  noise7_.AttachToHierarchy(hierarchy_);
+  noise8_.AttachToHierarchy(hierarchy_);
 }
 
 void UiEditTerrain::UpdateHmap() {
@@ -379,6 +348,34 @@ void UiEditTerrain::UpdateHmap() {
   for (int i = 0; i < instances_size_; ++i) {
     if (!instances_[i].do_show) {
       continue;
+    }
+    //TODO: BUT>.... projection don't see displacement, flattening... idk should(?)
+    //TODO: rotation angle affects heights
+//    FlattenToHmap(instances_[i]);
+    glm::mat4 transform = glm::mat4{1.0f};
+    transform = glm::translate(transform, instances_[i].translate);
+    transform = glm::rotate(
+        transform, glm::length(instances_[i].rotate), glm::normalize(instances_[i].rotate));
+    float map_scale = ui_shared_resources_.global_glfw_callback_data_
+                          .tile_renderer->cur_tile_.map_scale;
+    transform = glm::scale(transform, instances_[i].scale * map_scale);
+    glUniformMatrix4fv(0, 1, false, glm::value_ptr(transform));
+    glUniform1i(1, static_cast<int>(instances_[i].do_invert));
+    instances_[i].data.hmap.Bind();
+    if (instances_[i].do_invert) {
+      std::vector<float> heights(details::gTerrainSize * details::gTerrainSize);
+      glGetTexImage(GL_TEXTURE_2D, 0, GL_R32F, GL_FLOAT, heights.data());
+      auto max_value = std::max_element(heights.begin(), heights.end());
+      glUniform1f(2, *max_value);
+    }
+    if (instances_[i].do_tiling) {
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    } else {
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+      float borderColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
+      glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
     }
     glBindImageTexture(
         0, hmap.GetId(), 0,
@@ -391,6 +388,7 @@ void UiEditTerrain::UpdateHmap() {
     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   }
+  //TODO: seems we don't need instance_[i].hmap, since we only sum it
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer
       ->cur_tile_.map_terrain_height = std::move(hmap);
 }
@@ -575,43 +573,6 @@ void UiEditTerrain::RenderPicking() {
   text_noise_strength_.RenderPicking();
 }
 
-void UiEditTerrain::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  std::cout << "UPDATE" << std::endl;
-  sprite_.UpdateTransform();
-  pin_.UpdateTransform();
-
-  accept_.UpdateTransform();
-  name_.UpdateTransform();
-  name_back_.UpdateTransform();
-  color_palette_.UpdateTransform();
-  color_brightness_.UpdateTransform();
-  color_indicator_.UpdateTransform();
-  random_generate_.UpdateTransform();
-
-  text_noise_invert_.UpdateTransform();
-  text_noise_tiling_.UpdateTransform();
-  text_noise_strength_.UpdateTransform();
-
-  noise1_.UpdateTransform();
-  noise2_.UpdateTransform();
-  noise3_.UpdateTransform();
-  noise4_.UpdateTransform();
-  noise5_.UpdateTransform();
-  noise6_.UpdateTransform();
-  noise7_.UpdateTransform();
-  noise8_.UpdateTransform();
-
-//  noise_perlin_.UpdateTransform();
-//  noise_cellular_.UpdateTransform();
-//  noise_metaballs.UpdateTransform();
-//  noise_fbm_grid.UpdateTransform();
-//  noise_fbm_multi_.UpdateTransform();
-//  noise_fbmd_perlin_.UpdateTransform();
-//  noise_fbm_warp_.UpdateTransform();
-//  noise_fmb_perlin_warp.UpdateTransform();
-}
-
 NoiseTerrainData UiEditTerrain::Generate() {
   glm::vec2 resolution = glm::vec2{details::gTerrainSize};
   NoiseTerrainData terrain_data;
@@ -773,9 +734,9 @@ UiTerrainBake::UiTerrainBake(
     TextRenderer& text_renderer,
     UiDynamicSprite&& accept,
     UiTextLabelId&& erosion_label,
-    UiDynamicSprite&& erosion_input,
+    UiTextInput&& erosion_input,
     UiTextLabelId&& weathering_label,
-    UiDynamicSprite&& weathering_input)
+    UiTextInput&& weathering_input)
     : Base(std::move(sprite), size_scale, std::move(pin),
            ui_shared_resources, window_queue),
       accept_(std::move(accept)),
@@ -783,15 +744,15 @@ UiTerrainBake::UiTerrainBake(
       erosion_input_(std::move(erosion_input)),
       weathering_label_(std::move(weathering_label)),
       weathering_input_(std::move(weathering_input)),
-      sprite_hmap_(data::VboIdMain::kTerrainBakeHmap, data::TextId::kNotYet),
-      sprite_nmap_(data::VboIdMain::kTerrainBakeNmap, data::TextId::kNotYet),
-      sprite_slopemap_(data::VboIdMain::kTerrainBakeSlopemap, data::TextId::kNotYet),
-      sprite_ao_(data::VboIdMain::kTerrainBakeAo, data::TextId::kNotYet),
-      sprite_splatmap_(data::VboIdMain::kTerrainBakeSplatmap, data::TextId::kNotYet),
-      sprite_erosion_thermal_(data::VboIdMain::kTerrainBakeErosionThermal, data::TextId::kNotYet),
-      sprite_erosion_hydraulic_(data::VboIdMain::kTerrainBakeErosionHydraulic, data::TextId::kNotYet),
-      sprite_water_accum_(data::VboIdMain::kTerrainBakeWaterAccum, data::TextId::kNotYet),
-      sprite_water_flow_(data::VboIdMain::kTerrainBakeWaterFlow, data::TextId::kNotYet),
+      sprite_hmap_(data::VboIdMain::kTerrainBakeHmap),
+      sprite_nmap_(data::VboIdMain::kTerrainBakeNmap),
+      sprite_slopemap_(data::VboIdMain::kTerrainBakeSlopemap),
+      sprite_ao_(data::VboIdMain::kTerrainBakeAo),
+      sprite_splatmap_(data::VboIdMain::kTerrainBakeSplatmap),
+      sprite_erosion_thermal_(data::VboIdMain::kTerrainBakeErosionThermal),
+      sprite_erosion_hydraulic_(data::VboIdMain::kTerrainBakeErosionHydraulic),
+      sprite_water_accum_(data::VboIdMain::kTerrainBakeWaterAccum),
+      sprite_water_flow_(data::VboIdMain::kTerrainBakeWaterFlow),
       ui_event_handler_({
           &pin_, &accept_, &erosion_input_, &weathering_input_
       }),
@@ -814,39 +775,12 @@ UiTerrainBake::UiTerrainBake(
       tex_erosion_hydraulic_map_(cur_tile.map_terrain_erosion_hydraulic),
       tex_water_accum_(cur_tile.map_water_accum),
       tex_water_flow_(cur_tile.map_water_flow) {
-  gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[erosion_label_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[erosion_input_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[weathering_label_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[weathering_input_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sprite_hmap_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sprite_nmap_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sprite_slopemap_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sprite_ao_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sprite_splatmap_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sprite_erosion_thermal_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sprite_erosion_hydraulic_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sprite_water_accum_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sprite_water_flow_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &accept_, &erosion_label_,
+      &erosion_input_, &weathering_label_, &weathering_input_,
+      &sprite_hmap_, &sprite_nmap_, &sprite_slopemap_,
+      &sprite_ao_, &sprite_splatmap_, &sprite_erosion_thermal_,
+      &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_);
   speed_ = 2.0f;
 }
 
@@ -889,15 +823,20 @@ UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
 
       tex_water_accum_(other.tex_water_accum_),
       tex_water_flow_(other.tex_water_flow_) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
-
-data::TextId UiTerrainBake::Hover(int id) {
-  return ui_event_handler_.Hover(id);
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &accept_, &erosion_label_,
+      &erosion_input_, &weathering_label_, &weathering_input_,
+      &sprite_hmap_, &sprite_nmap_, &sprite_slopemap_,
+      &sprite_ao_, &sprite_splatmap_, &sprite_erosion_thermal_,
+      &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_);
 }
 
 bool UiTerrainBake::Press(int id) {
+  if (id == erosion_input_.GetId()) {
+    ui_shared_resources_.global_glfw_callback_data_.text_renderer->StartInput(&erosion_input_);
+  } else if (id == weathering_input_.GetId()) {
+    ui_shared_resources_.global_glfw_callback_data_.text_renderer->StartInput(&weathering_input_);
+  }
   return ui_event_handler_.Press(id);
 }
 
@@ -947,7 +886,11 @@ bool UiTerrainBake::Render() {
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   accept_.Render();
+
   erosion_input_.Render();
+  // input resets (todo;)
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.tex_ui_.Bind();
   weathering_input_.Render();
 
   erosion_label_.Render();
@@ -976,30 +919,8 @@ void UiTerrainBake::RenderPicking() {
 
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   erosion_label_.RenderPicking();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   weathering_label_.RenderPicking();
-}
-
-void UiTerrainBake::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  sprite_.UpdateTransform();
-  pin_.UpdateTransform();
-
-  accept_.UpdateTransform();
-
-  sprite_hmap_.UpdateTransform();
-  sprite_nmap_.UpdateTransform();
-  sprite_slopemap_.UpdateTransform();
-  sprite_ao_.UpdateTransform();
-  sprite_splatmap_.UpdateTransform();
-  sprite_erosion_thermal_.UpdateTransform();
-  sprite_erosion_hydraulic_.UpdateTransform();
-  sprite_water_accum_.UpdateTransform();
-  sprite_water_flow_.UpdateTransform();
-
-  erosion_label_.UpdateTransform();
-  erosion_input_.UpdateTransform();
-  weathering_label_.UpdateTransform();
-  weathering_input_.UpdateTransform();
 }
 
 void UiTerrainBake::ErodeWithFlow(

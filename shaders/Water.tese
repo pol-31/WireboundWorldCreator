@@ -6,6 +6,7 @@ layout (quads, equal_spacing, ccw) in;
 layout(location = 0) uniform sampler2D tex_displacement_near;
 layout(location = 1) uniform sampler2D tex_displacement_mid;
 layout(location = 2) uniform sampler2D tex_displacement_far;
+layout(location = 16) uniform mat4 transform;
 
 layout(location = 9) uniform float scale_near;
 layout(location = 10) uniform float scale_mid;
@@ -38,6 +39,6 @@ void main(void) {
     + texture(tex_displacement_far, scale_factor * tc / scale_far).rgb) * scale_factor;
     p.g += 4.0f;
 
-    gl_Position = camera.proj * camera.view * /**transform * */p; //TODO: what about tesc?
+    gl_Position = camera.proj * camera.view * transform * p; //TODO: what about tesc?
     tes_out.tc = tc;
 }

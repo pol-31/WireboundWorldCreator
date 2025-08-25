@@ -2,16 +2,12 @@
 
 UiTextInput::UiTextInput(
     TextRenderer& text_renderer,
-    float scale,
-    glm::vec2 translate,
     UiDynamicSprite&& back,
     UiDynamicSprite&& text)
     : UiBase(back.GetId(), {}),
       text_renderer_(text_renderer),
       back_(std::move(back)),
       text_(std::move(text)),
-      scale_(scale),
-      translate_(translate),
       text_input_() {
   gUiComponents[text_.GetId() - details::kIdOffsetUi].parent_id_
       = back_.GetId();
@@ -25,8 +21,6 @@ UiTextInput::UiTextInput(UiTextInput&& other) noexcept
       text_renderer_(other.text_renderer_),
       back_(std::move(other.back_)),
       text_(std::move(other.text_)),
-      scale_(other.scale_),
-      translate_(other.translate_),
       text_input_(std::move(other.text_input_)) {
   gUiComponents[back_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
@@ -34,59 +28,75 @@ UiTextInput::UiTextInput(UiTextInput&& other) noexcept
 
 void UiTextInput::Render() {
   back_.Render();
-  text_renderer_.RenderText(text_, &text_input_, scale_, translate_);
+  text_renderer_.RenderText(text_, &text_input_);
 }
 
 void UiTextInput::RenderPicking() {
   back_.RenderPicking();
   if (debug::gUiAltMode) {
-    text_renderer_.RenderTextPicking(text_, &text_input_, scale_, translate_);
+    text_renderer_.RenderPickingText(text_, &text_input_);
   }
 }
 
 void UiTextInput::Press() {
   text_renderer_.BindCallbacks();
-  text_renderer_.StartInput(text_, &text_input_);
+//  text_renderer_.StartInput(text_, &text_input_);
 }
 
-data::TextId UiTextInput::Hover(std::uint32_t id) {
-  return back_.Hover();
-}
-
-void UiTextInput::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
+void UiTextInput::UpdateTransform() {
   back_.UpdateTransform();
   text_.UpdateTransform();
 }
 
-void UiTextInput::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
+void UiTextInput::SetText(std::string_view text) {
+  text_input_.Clear();
+  for (auto c : text) {
+    text_input_.PushBack(c);
+  }
+}
+void UiTextInput::SetText(const FixedSizeQueue<char, 64>& text) {
+  text_input_ = text;
 }
 
-void UiTextInput::SetParentTransform(LocalTransform transform) {
-  back_.SetParentTransform(transform);
-  text_.SetParentTransform(transform);
-}
-
-void UiTextInput::SetTranslate(glm::vec2 translate) {
-  back_.SetTranslate(translate);
-  text_.SetTranslate(translate);
-}
+// як я до цього прийшов: хочу скейл для тексту, але текст-компонентів багато.
+// або скейлить всі поодинці або додать скейл параметер АБО автоматизувать з UiBlock
+// що також вирішить проблему вирівнювання
+//class UiBlock {
+// public:
+//  UiBlock(UiDynamicSprite&& daddy, float scale)
+//      : daddy_(std::move(daddy)) {
+//    //TODO: set scale to daddy_
+//  }
+//
+//  void Attach(UiBase* component, glm::vec2 offset, float scale) {
+//    component->parent = id_;
+//    component->ui = this;
+//    component->transform = {offset, scale};
+//    components_.push_back(component);
+//  }
+//
+//  void Render() {
+//    if (debug::gUiAltMode) {
+//      daddy_.Render();
+//    }
+//    for (auto component : components_) {
+//      component->Render(); // TODO: some requires mouse pos
+//    }
+//  }
+//
+// private:
+//  UiDynamicSprite daddy_; // all other depends on this
+//  std::vector<UiBase*> components_;
+//};
 
 UiTextLabelBase::UiTextLabelBase(
     TextRenderer& text_renderer,
     float scale,
-    glm::vec2 translate,
     UiDynamicSprite&& text)
     : UiBase(text.GetId(), {}),
       text_renderer_(text_renderer),
       text_(std::move(text)),
-      scale_(scale),
-      translate_(translate) {
+      scale_(scale) {
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
   UpdateTransform();
@@ -96,29 +106,15 @@ UiTextLabelBase::UiTextLabelBase(UiTextLabelBase&& other) noexcept
     : UiBase(std::move(other)),
       text_renderer_(other.text_renderer_),
       text_(std::move(other.text_)),
-      scale_(other.scale_),
-      translate_(other.translate_) {
+      scale_(other.scale_) {
   gUiComponents[text_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
 }
 
 void UiTextLabelBase::Press() {}
 
-data::TextId UiTextLabelBase::Hover(std::uint32_t id) {
-  return text_.Hover();
-}
-
-void UiTextLabelBase::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  text_.UpdateTransform();
-}
-
 void UiTextLabelBase::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
+  text_.UpdateTransform();
 }
 
 void UiTextLabelBase::SetParentTransform(LocalTransform transform) {
@@ -129,35 +125,12 @@ void UiTextLabelBase::SetTranslate(glm::vec2 translate) {
   text_.SetTranslate(translate);
 }
 
-UiTextLabel::UiTextLabel(
-    TextRenderer& text_renderer,
-    float scale,
-    glm::vec2 translate,
-    UiDynamicSprite&& text)
-    : UiTextLabelBase(text_renderer, scale, translate, std::move(text)),
-      label_() {
-  UpdateTransform();
-}
-
-UiTextLabel::UiTextLabel(UiTextLabel&& other) noexcept
-    : UiTextLabelBase(std::move(other)),
-      label_(std::move(other.label_)) {}
-
-void UiTextLabel::Render() {
-  text_renderer_.RenderText(text_, label_, scale_, translate_);
-}
-
-void UiTextLabel::RenderPicking() {
-  text_renderer_.RenderTextPicking(text_, label_, scale_, translate_);
-}
-
 UiTextLabelId::UiTextLabelId(
     TextRenderer& text_renderer,
     float scale,
-    glm::vec2 translate,
     UiDynamicSprite&& text,
     data::TextId text_id)
-    : UiTextLabelBase(text_renderer, scale, translate, std::move(text)),
+    : UiTextLabelBase(text_renderer, scale, std::move(text)),
       text_id_(text_id) {
   UpdateTransform();
 }
@@ -172,4 +145,25 @@ void UiTextLabelId::Render() {
 
 void UiTextLabelId::RenderPicking() {
   text_renderer_.RenderMenuTextPicking(text_, text_id_);
+}
+
+UiTextLabel::UiTextLabel(
+    TextRenderer& text_renderer,
+    float scale,
+    UiDynamicSprite&& text)
+    : UiTextLabelBase(text_renderer, scale, std::move(text)),
+      label_() {
+  UpdateTransform();
+}
+
+UiTextLabel::UiTextLabel(UiTextLabel&& other) noexcept
+    : UiTextLabelBase(std::move(other)),
+      label_(std::move(other.label_)) {}
+
+void UiTextLabel::Render() {
+  text_renderer_.RenderText(text_, label_, scale_, glm::vec2{0.0f});
+}
+
+void UiTextLabel::RenderPicking() {
+  text_renderer_.RenderTextPicking(text_, label_, scale_, glm::vec2{0.0f});
 }

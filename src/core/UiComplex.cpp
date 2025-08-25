@@ -17,28 +17,25 @@ UiLoading::UiLoading(
     UiStaticSprite&& sprite80,
     UiStaticSprite&& sprite90,
     UiStaticSprite&& sprite100)
-    : UiBase(sprite0.GetId(), {}),
-      sprites_{
+    : sprites_{
           {std::move(sprite0), std::move(sprite10), std::move(sprite20),
            std::move(sprite30), std::move(sprite40), std::move(sprite50),
            std::move(sprite60), std::move(sprite70), std::move(sprite80),
-           std::move(sprite90), std::move(sprite100)}} {
-  for (const auto& sprite : sprites_) {
-    gUiComponents[sprite.GetId() - details::kIdOffsetUi].parent_id_
-        = sprites_[0].GetId();
-  }
-  // reset father to default
-  gUiComponents[sprites_[0].GetId() - details::kIdOffsetUi].parent_id_
-      = 0;
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
+           std::move(sprite90), std::move(sprite100)}},
+      hierarchy_(&sprites_[0]) {
+  hierarchy_ = UiHierarchy(
+      &sprites_[0], &sprites_[1], &sprites_[2], &sprites_[3],
+      &sprites_[4], &sprites_[5], &sprites_[6], &sprites_[7],
+      &sprites_[8], &sprites_[9], &sprites_[10]);
 }
 
 UiLoading::UiLoading(UiLoading&& other) noexcept
-    : UiBase(std::move(other)),
-      sprites_(std::move(other.sprites_)) {
-  gUiComponents[sprites_[0].GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+    : sprites_(std::move(other.sprites_)),
+      hierarchy_(std::move(other.hierarchy_)) {
+  hierarchy_ = UiHierarchy(
+      &sprites_[0], &sprites_[1], &sprites_[2], &sprites_[3],
+      &sprites_[4], &sprites_[5], &sprites_[6], &sprites_[7],
+      &sprites_[8], &sprites_[9], &sprites_[10]);
 }
 
 void UiLoading::Render(float progress) {
@@ -51,182 +48,28 @@ void UiLoading::RenderPicking() const {
   sprites_[0].RenderPicking();
 }
 
-void UiLoading::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  for (auto& sprite : sprites_) {
-    sprite.UpdateTransform();
-  }
-}
-
-void UiLoading::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
-}
-
-const float UiSlider2D::kTrackWidthFactor = 0.9f;
-const float UiSlider2D::kTrackHeightFactor = 0.8f;
-
-UiSlider2D::UiSlider2D(
-    UiDynamicSprite&& palette,
-    UiDynamicSprite&& cursor,
-    glm::vec2 scale)
-    : UiBase(palette.GetId(), {}),
-      palette_(std::move(palette)),
-      cursor_(std::move(cursor)),
-      length_({
-          kTrackWidthFactor *
-              (palette.GetRightBorder() - palette.GetLeftBorder()),
-          kTrackHeightFactor *
-              (palette.GetTopBorder() - palette.GetBottomBorder())}),
-      centre_({
-          (palette.GetRightBorder() + palette.GetLeftBorder()) / 2.0f,
-          (palette.GetTopBorder() + palette.GetBottomBorder()) / 2.0f}),
-      scale_(scale) {
-  gUiComponents[cursor_.GetId() - details::kIdOffsetUi].parent_id_
-      = palette_.GetId();
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UpdateTransform();
-}
-
-UiSlider2D::UiSlider2D(UiSlider2D&& other) noexcept
-    : UiBase(std::move(other)),
-      palette_(std::move(other.palette_)),
-      cursor_(std::move(other.cursor_)) {
-  progress_ = other.progress_;
-  pressed_ = other.pressed_;
-  centre_ = other.centre_;
-  length_ = other.length_;
-  scale_ = other.scale_;
-  gUiComponents[palette_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
-
-void UiSlider2D::Render(glm::vec2 mouse_pos) {
-  if (pressed_) {
-    SetMousePos(mouse_pos);
-  }
-  palette_.Render();
-  cursor_.Render();
-}
-
-void UiSlider2D::RenderIcon() {
-  cursor_.Render();
-}
-
-void UiSlider2D::RenderPicking() const {
-  palette_.RenderPicking();
-  if (debug::gUiAltMode) {
-    cursor_.RenderPicking();
-  }
-}
-
-void UiSlider2D::SetMousePos(glm::vec2 mouse_pos) {
-  glm::vec2 half_length_ = length_ / 2.0f;
-  glm::vec2 offset = glm::clamp(
-      mouse_pos - centre_, -half_length_, +half_length_);
-  progress_ = (offset + half_length_) / length_;
-  cursor_.SetTranslate(offset);
-}
-
-void UiSlider2D::SetProgress(glm::vec2 progress) {
-  progress_ = progress;
-  glm::vec2 half_length_ = length_ / 2.0f;
-  glm::vec2 offset = progress_ * length_ - half_length_;
-  cursor_.SetTranslate(offset);
-}
-
-data::TextId UiSlider2D::Hover(std::uint32_t id) {
-  return palette_.Hover();
-}
-
-bool UiSlider2D::Scroll(GLuint id, float yoffset) {
-  if (id != palette_.GetId() || id != cursor_.GetId()) {
-    return false;
-  }
-  glm::vec2 dir = centre_; // unf we can't, we don't have quick mouse pos
-  float factor = 0.01f * yoffset;
-  glm::vec2 progress = progress_;
-  if (glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-    progress.x = std::clamp(progress_.x + factor, 0.0f, 1.0f);
-  } else {
-    progress.y = std::clamp(progress_.y + factor, 0.0f, 1.0f);
-  }
-  SetProgress(progress);
-  return true;
-}
-
-glm::vec2 UiSlider2D::GetProgress() const {
-  return (glm::vec2{1.0f} - progress_) * scale_;
-}
-
-float UiSlider2D::GetProgressX() const {
-  return (1.0f - progress_.x) * scale_.x;
-}
-
-float UiSlider2D::GetProgressY() const {
-  return (1.0f - progress_.y) * scale_.y;
-}
-
-void UiSlider2D::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  palette_.UpdateTransform();
-  cursor_.UpdateTransform();
-  length_ =
-      {kTrackWidthFactor *
-           (palette_.GetRightBorder() - palette_.GetLeftBorder()),
-       kTrackHeightFactor *
-           (palette_.GetTopBorder() - palette_.GetBottomBorder())};
-  centre_ =
-      {(palette_.GetRightBorder() + palette_.GetLeftBorder()) / 2.0f,
-       (palette_.GetTopBorder() + palette_.GetBottomBorder()) / 2.0f};
-  glm::vec2 related_pos = progress_ * length_ - length_ / 2.0f + centre_;
-  SetMousePos(related_pos);
-}
-
-void UiSlider2D::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(transform.translate.x, transform.translate.y,
-                  transform.scale);
-}
-
-void UiSlider2D::SetParentTransform(LocalTransform transform) {
-  palette_.SetParentTransform(transform);
-  cursor_.SetParentTransform(transform);
-}
-
 UiTopWindowBase::UiTopWindowBase(
     UiDynamicSprite&& desk,
     UiDynamicSprite&& shadow,
     float size_scale,
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue)
-    : UiBase(desk.GetId(), {}),
-      desk_(std::move(desk)),
+    : desk_(std::move(desk)),
       shadow_(std::move(shadow)),
       size_scale_(size_scale),
       ui_shared_resources_(ui_shared_resources),
-      window_queue_(window_queue) {
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
+      window_queue_(window_queue),
+      hierarchy_(&desk_) {
   desk_.SetScale(size_scale);
 }
 
 UiTopWindowBase::UiTopWindowBase(UiTopWindowBase&& other) noexcept
-    : UiBase(std::move(other)),
-      desk_(std::move(other.desk_)),
+    : desk_(std::move(other.desk_)),
       shadow_(std::move(other.shadow_)),
       size_scale_(other.size_scale_),
       ui_shared_resources_(other.ui_shared_resources_),
-      window_queue_(other.window_queue_) {
-  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
+      window_queue_(other.window_queue_),
+      hierarchy_(std::move(other.hierarchy_)) {}
 
 void UiTopWindowBase::Show() {
   window_queue_.SetTopWindow(this);
@@ -234,14 +77,6 @@ void UiTopWindowBase::Show() {
 
 void UiTopWindowBase::Hide() {
   window_queue_.SetTopWindow(nullptr);
-}
-
-void UiTopWindowBase::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
 }
 
 UiCaution::UiCaution(
@@ -254,19 +89,13 @@ UiCaution::UiCaution(
     : UiTopWindowBase(std::move(desk), std::move(shadow), size_scale,
                       ui_shared_resources, window_queue),
       text_(std::move(text)) {
-  gUiComponents[text_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk_.GetId();
-
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiTopWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(&desk_, &shadow_, &text_);
 }
 
 UiCaution::UiCaution(UiCaution&& other) noexcept
     : Base(std::move(other)),
       text_(std::move(other.text_)) {
-  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+  hierarchy_ = UiHierarchy(&desk_, &shadow_, &text_);
 }
 
 bool UiCaution::Render() {
@@ -292,17 +121,6 @@ void UiCaution::Press(int id) {
 
 void UiCaution::Release() {}
 
-data::TextId UiCaution::Hover(int id) {
-  return data::TextId::kNone;
-}
-
-void UiCaution::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  desk_.UpdateTransform();
-  shadow_.UpdateTransform();
-  text_.UpdateTransform();
-}
-
 UiConfirmation::UiConfirmation(
     UiDynamicSprite&& desk,
     UiDynamicSprite&& shadow,
@@ -318,16 +136,8 @@ UiConfirmation::UiConfirmation(
       btn_decline_(std::move(btn_decline)),
       text_(std::move(text)),
       ui_event_handler_({&btn_accept_, &btn_decline_}) {
-  gUiComponents[btn_accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk_.GetId();
-  gUiComponents[btn_decline_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk_.GetId();
-  gUiComponents[text_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk_.GetId();
-
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiTopWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(
+      &desk_, &shadow_, &btn_accept_, &btn_decline_, &text_);
 }
 
 UiConfirmation::UiConfirmation(UiConfirmation&& other) noexcept
@@ -336,8 +146,8 @@ UiConfirmation::UiConfirmation(UiConfirmation&& other) noexcept
       btn_decline_(std::move(other.btn_decline_)),
       text_(std::move(other.text_)),
       ui_event_handler_({&btn_accept_, &btn_decline_}) {
-  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+  hierarchy_ = UiHierarchy(
+      &desk_, &shadow_, &btn_accept_, &btn_decline_, &text_);
 }
 
 bool UiConfirmation::Render() {
@@ -372,22 +182,6 @@ void UiConfirmation::Release() {
   ui_event_handler_.Release();
 }
 
-data::TextId UiConfirmation::Hover(int id) {
-  return ui_event_handler_.Hover(id);
-}
-
-void UiConfirmation::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  /// back
-  desk_.UpdateTransform();
-  shadow_.UpdateTransform();
-
-  /// children
-  btn_accept_.UpdateTransform();
-  btn_decline_.UpdateTransform();
-  text_.UpdateTransform();
-}
-
 void UiConfirmation::SetText(std::string_view text) {
   std::cout << "text set? not implemented" << std::endl;
 }
@@ -413,18 +207,8 @@ UiFile::UiFile(
       label_(std::move(label)),
       text_(std::move(text)),
       ui_event_handler_({&btn_accept_/*, &btn_decline_*/}) {
-  gUiComponents[btn_accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk_.GetId();
-  gUiComponents[btn_decline_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk_.GetId();
-  gUiComponents[label_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk_.GetId();
-  gUiComponents[text_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk_.GetId();
-
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiTopWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(
+      &desk_, &shadow_, &btn_accept_, &btn_decline_, &label_, &text_);
   label_.SetText("label");
 }
 
@@ -435,8 +219,8 @@ UiFile::UiFile(UiFile&& other) noexcept
       label_(std::move(other.label_)),
       text_(std::move(other.text_)),
       ui_event_handler_({&btn_accept_/*, &btn_decline_*/}) {
-  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+  hierarchy_ = UiHierarchy(
+      &desk_, &shadow_, &btn_accept_, &btn_decline_, &label_, &text_);
 }
 
 bool UiFile::Render() {
@@ -478,58 +262,32 @@ void UiFile::Release() {
   ui_event_handler_.Release();
 }
 
-data::TextId UiFile::Hover(int id) {
-  return ui_event_handler_.Hover(id);
-}
-
-void UiFile::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  /// back
-  desk_.UpdateTransform();
-  shadow_.UpdateTransform();
-
-  /// children
-  btn_accept_.UpdateTransform();
-  btn_decline_.UpdateTransform();
-  label_.UpdateTransform();
-  text_.UpdateTransform();
-}
-
 UiWindowBase::UiWindowBase(
     UiDynamicSprite&& sprite,
     float size_scale,
     UiToggle2&& pin,
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue)
-    : UiBase(sprite.GetId(), {}),
-      sprite_(std::move(sprite)),
+    : sprite_(std::move(sprite)),
       size_scale_(size_scale),
       pin_(std::move(pin)),
       ui_shared_resources_(ui_shared_resources),
       window_queue_(window_queue),
-      speed_(4.0f) {
-  gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
+      speed_(4.0f),
+      hierarchy_(&sprite_) {
   sprite_.SetScale(size_scale);
-  //todo; should be called after Derived ctor
-//  UpdateTransform();
 }
 
 UiWindowBase::UiWindowBase(UiWindowBase&& other) noexcept
-    : UiBase(std::move(other)),
-      sprite_(std::move(other.sprite_)),
+    : sprite_(std::move(other.sprite_)),
       size_scale_(other.size_scale_),
       pin_(std::move(other.pin_)),
       ui_shared_resources_(other.ui_shared_resources_),
       window_queue_(other.window_queue_),
       speed_(other.speed_),
       progress_(other.progress_),
-      back_ready_(other.back_ready_) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
+      back_ready_(other.back_ready_),
+      hierarchy_(std::move(other.hierarchy_)) {}
 
 UiWindowBase* UiWindowBase::GetWindowPtr() {
   return this;
@@ -565,14 +323,6 @@ void UiWindowBase::ForceHide() {
   window_queue_.Erase(window_queue_id_);
   window_queue_id_ = -1;
   progress_ = 0.0f;
-}
-
-void UiWindowBase::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
 }
 
 bool UiWindowBase::Pinned() const noexcept {
@@ -712,57 +462,14 @@ UiTabMenu::UiTabMenu(
           &save_data_,
           &load_data_,
       }) {
-  gUiComponents[btn_mode_terrain_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[btn_mode_water_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[btn_mode_roads_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[btn_mode_fences_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[btn_mode_placement_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[btn_mode_objects_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[btn_mode_biomes_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[btn_mode_tiles_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-
-  gUiComponents[toggle_terrain_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_water_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_roads_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_fences_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_placement_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_objects_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_biomes_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_tiles_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-
-  gUiComponents[btn_shader_wirebound_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_shaders_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-
-  gUiComponents[arrow_select_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[arrow_selected_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[save_data_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[load_data_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &btn_mode_terrain_, &btn_mode_water_,
+      &btn_mode_roads_, &btn_mode_fences_, &btn_mode_placement_,
+      &btn_mode_objects_, &btn_mode_biomes_, &btn_mode_tiles_,
+      &toggle_terrain_, &toggle_water_, &toggle_roads_, &toggle_fences_,
+      &toggle_placement_, &toggle_objects_, &toggle_biomes_, &toggle_tiles_,
+      &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_, &arrow_selected_,
+      &save_data_, &load_data_);
   speed_ = 2.0f;
 }
 
@@ -819,8 +526,14 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
           &save_data_,
           &load_data_,
       }) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &btn_mode_terrain_, &btn_mode_water_,
+      &btn_mode_roads_, &btn_mode_fences_, &btn_mode_placement_,
+      &btn_mode_objects_, &btn_mode_biomes_, &btn_mode_tiles_,
+      &toggle_terrain_, &toggle_water_, &toggle_roads_, &toggle_fences_,
+      &toggle_placement_, &toggle_objects_, &toggle_biomes_, &toggle_tiles_,
+      &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_, &arrow_selected_,
+      &save_data_, &load_data_);
 }
 
 // returns "stop render"
@@ -919,44 +632,6 @@ void UiTabMenu::Release() {
   ui_event_handler_.Release();
 }
 
-data::TextId UiTabMenu::Hover(int id) {
-  return ui_event_handler_.Hover(id);
-}
-
-void UiTabMenu::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  /// back
-  sprite_.UpdateTransform();
-  pin_.UpdateTransform();
-
-  /// children
-  btn_mode_terrain_.UpdateTransform();
-  btn_mode_water_.UpdateTransform();
-  btn_mode_roads_.UpdateTransform();
-  btn_mode_fences_.UpdateTransform();
-  btn_mode_placement_.UpdateTransform();
-  btn_mode_objects_.UpdateTransform();
-  btn_mode_biomes_.UpdateTransform();
-  btn_mode_tiles_.UpdateTransform();
-
-  toggle_terrain_.UpdateTransform();
-  toggle_water_.UpdateTransform();
-  toggle_roads_.UpdateTransform();
-  toggle_fences_.UpdateTransform();
-  toggle_placement_.UpdateTransform();
-  toggle_objects_.UpdateTransform();
-  toggle_biomes_.UpdateTransform();
-  toggle_tiles_.UpdateTransform();
-
-  btn_shader_wirebound_.UpdateTransform();
-  toggle_shaders_.UpdateTransform();
-
-  arrow_select_.UpdateTransform();
-  arrow_selected_.UpdateTransform();
-  save_data_.UpdateTransform();
-  load_data_.UpdateTransform();
-}
-
 void UiTabMenu::SetSelectedArrow(float angle) {
   arrow_selected_angle_ = angle;
 }
@@ -975,24 +650,19 @@ UiTipWindow::UiTipWindow(
     : UiWindowAppear(std::move(sprite), size_scale,
                      std::move(pin), ui_shared_resources,
                      window_queue),
-      text_(std::move(text)) {
-  gUiComponents[text_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiWindowBase::UpdateTransform();
+      text_(std::move(text)) { // 1
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &text_); // 2
   speed_ = 2.0f;
 }
 
 UiTipWindow::UiTipWindow(UiTipWindow&& other) noexcept
     : Base(std::move(other)),
       text_(std::move(other.text_)) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &text_);
 }
 
 bool UiTipWindow::Render() {
+  UpdateHoverState(ui_shared_resources_.global_glfw_callback_data_.hovered_id);
   bool stop_show = Base::RenderBack(hovered_);
   if (!Base::BackIsReady()) {
     return stop_show;
@@ -1022,23 +692,8 @@ bool UiTipWindow::Press(int id) {
 
 void UiTipWindow::Release() {}
 
-data::TextId UiTipWindow::Hover(int id) {
-  if (id >= sprite_.GetId() && id <= text_.GetId()) {
-    hovered_ = true;
-  } else {
-    hovered_ = false;
-  }
-  return data::TextId::kNone;
-}
-
-void UiTipWindow::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  /// back
-  sprite_.UpdateTransform();
-  pin_.UpdateTransform();
-
-  /// children
-  text_.UpdateTransform();
+void UiTipWindow::UpdateHoverState(int id) {
+  hovered_ = (id >= sprite_.GetId() && id <= text_.GetId());
 }
 
 void UiTipWindow::SetText(data::TextId text_id) {
@@ -1120,7 +775,6 @@ UiSettings::UiSettings(
     UiDynamicSprite&& resolution,
     UiToggle&& toggle_fullscreen,
     UiSliderH2 sensitivity,
-    UiDynamicSprite keyboard,
     UiSliderH2&& sound,
     UiToggle&& toggle_sound,
     UiSliderH2&& music,
@@ -1138,7 +792,6 @@ UiSettings::UiSettings(
       resolution_(std::move(resolution)),
       toggle_fullscreen_(std::move(toggle_fullscreen)),
       sensitivity_(std::move(sensitivity)),
-      keyboard_(std::move(keyboard)),
       sound_(std::move(sound)),
       toggle_sound_(std::move(toggle_sound)),
       music_(std::move(music)),
@@ -1148,41 +801,15 @@ UiSettings::UiSettings(
       toggle_tip_info_(std::move(toggle_tip_info)),
       ui_event_handler_({
           &pin_, &resolution_left_, &resolution_right_,
-          &toggle_fullscreen_, &sensitivity_, &keyboard_,
+          &toggle_fullscreen_, &sensitivity_,
           &sound_, &toggle_sound_, &music_, &toggle_music_,
           &tip_info_, &toggle_tip_info_}) {
-  gUiComponents[resolution_label_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[resolution_left_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[resolution_right_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[resolution_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_fullscreen_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sensitivity_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[keyboard_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[sound_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_sound_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[music_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_music_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[tip_info_label_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[tip_info_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_tip_info_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &resolution_label_, &resolution_left_,
+      &resolution_right_, &resolution_, &toggle_fullscreen_,
+      &sensitivity_, &sound_, &toggle_sound_,
+      &music_, &toggle_music_, &tip_info_label_, &tip_info_,
+      &toggle_tip_info_);
 }
 
 UiSettings::UiSettings(UiSettings&& other) noexcept
@@ -1193,7 +820,6 @@ UiSettings::UiSettings(UiSettings&& other) noexcept
       resolution_(std::move(other.resolution_)),
       toggle_fullscreen_(std::move(other.toggle_fullscreen_)),
       sensitivity_(std::move(other.sensitivity_)),
-      keyboard_(std::move(other.keyboard_)),
       sound_(std::move(other.sound_)),
       toggle_sound_(std::move(other.toggle_sound_)),
       music_(std::move(other.music_)),
@@ -1203,15 +829,20 @@ UiSettings::UiSettings(UiSettings&& other) noexcept
       toggle_tip_info_(std::move(other.toggle_tip_info_)),
       ui_event_handler_({
           &pin_, &resolution_left_, &resolution_right_,
-          &toggle_fullscreen_, &sensitivity_, &keyboard_,
+          &toggle_fullscreen_, &sensitivity_,
           &sound_, &toggle_sound_, &music_, &toggle_music_,
           &tip_info_, &toggle_tip_info_}) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &resolution_label_, &resolution_left_,
+      &resolution_right_, &resolution_, &toggle_fullscreen_,
+      &sensitivity_, &sound_, &toggle_sound_,
+      &music_, &toggle_music_, &tip_info_label_, &tip_info_,
+      &toggle_tip_info_);
 }
 
 // returns "stop render"
 bool UiSettings::Render() {
+  UpdateHoverState(ui_shared_resources_.global_glfw_callback_data_.hovered_id);
   ui_shared_resources_.tex_ui_.Bind();
   bool stop_show = Base::RenderBack(hovered_);
 //  if (!Base::BackIsReady()) {
@@ -1225,7 +856,6 @@ bool UiSettings::Render() {
   resolution_.SetParentTransform(Base::cur_transform_);
   toggle_fullscreen_.SetParentTransform(Base::cur_transform_);
   sensitivity_.SetParentTransform(Base::cur_transform_);
-  keyboard_.SetParentTransform(Base::cur_transform_);
   sound_.SetParentTransform(Base::cur_transform_);
   toggle_sound_.SetParentTransform(Base::cur_transform_);
   music_.SetParentTransform(Base::cur_transform_);
@@ -1242,7 +872,6 @@ bool UiSettings::Render() {
   resolution_.Render();
   toggle_fullscreen_.Render();
   sensitivity_.Render(mouse_pos);
-  keyboard_.Render();
   sound_.Render(mouse_pos);
   toggle_sound_.Render();
   music_.Render(mouse_pos);
@@ -1276,7 +905,6 @@ void UiSettings::RenderPicking() {
   resolution_.RenderPicking();
   toggle_fullscreen_.RenderPicking();
   sensitivity_.RenderPicking();
-  keyboard_.RenderPicking();
   sound_.RenderPicking();
   toggle_sound_.RenderPicking();
   music_.RenderPicking();
@@ -1292,14 +920,8 @@ void UiSettings::RenderPicking() {
       ->RenderTextPicking(tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
 }
 
-data::TextId UiSettings::Hover(int id) {
-  data::TextId hovered_id = ui_event_handler_.Hover(id);
-  if (hovered_id != data::TextId::kNone || id == Base::GetId()) {
-    hovered_ = true;
-  } else {
-    hovered_ = false;
-  }
-  return hovered_id;
+void UiSettings::UpdateHoverState(int id) {
+  hovered_ = (id >= sprite_.GetId() && id <= toggle_tip_info_.GetId());
 }
 
 bool UiSettings::Press(int id) {
@@ -1321,43 +943,6 @@ bool UiSettings::Scroll(GLuint id, float yoffset) {
   return music_.Scroll(id, yoffset) ||
          sound_.Scroll(id, yoffset) ||
          sensitivity_.Scroll(id, yoffset);
-}
-
-void UiSettings::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  resolution_label_.SetParentTransform(Base::cur_transform_);
-  resolution_left_.SetParentTransform(Base::cur_transform_);
-  resolution_right_.SetParentTransform(Base::cur_transform_);
-  resolution_.SetParentTransform(Base::cur_transform_);
-  toggle_fullscreen_.SetParentTransform(Base::cur_transform_);
-  sensitivity_.SetParentTransform(Base::cur_transform_);
-  keyboard_.SetParentTransform(Base::cur_transform_);
-  sound_.SetParentTransform(Base::cur_transform_);
-  toggle_sound_.SetParentTransform(Base::cur_transform_);
-  music_.SetParentTransform(Base::cur_transform_);
-  toggle_music_.SetParentTransform(Base::cur_transform_);
-  tip_info_label_.SetParentTransform(Base::cur_transform_);
-  tip_info_.SetParentTransform(Base::cur_transform_);
-  toggle_tip_info_.SetParentTransform(Base::cur_transform_);
-  /// back
-  sprite_.UpdateTransform();
-  pin_.UpdateTransform();
-
-  /// children
-  resolution_label_.UpdateTransform();
-  resolution_left_.UpdateTransform();
-  resolution_right_.UpdateTransform();
-  resolution_.UpdateTransform();
-  toggle_fullscreen_.UpdateTransform();
-  sensitivity_.UpdateTransform();
-  keyboard_.UpdateTransform();
-  sound_.UpdateTransform();
-  toggle_sound_.UpdateTransform();
-  music_.UpdateTransform();
-  toggle_music_.UpdateTransform();
-  tip_info_label_.UpdateTransform();
-  tip_info_.UpdateTransform();
-  toggle_tip_info_.UpdateTransform();
 }
 
 UiWaterLayerConfig::UiWaterLayerConfig(
@@ -1410,43 +995,12 @@ UiWaterLayerConfig::UiWaterLayerConfig(
           &pin_, &toggle_layer_, &scale_, &fetch_, &spread_blend_, &swell_,
           &peak_enhancement_, &short_waves_fade_, &lambda_
       }) {
-  gUiComponents[sprite_layer_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[text_layer_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[toggle_layer_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[scale_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[scale_text_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[fetch_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[fetch_text_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[spread_blend_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[spread_blend_text_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[swell_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[swell_text_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[peak_enhancement_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[peak_enhancement_text_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[short_waves_fade_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[short_waves_fade_text_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[lambda_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[lambda_text_.GetId() - details::kIdOffsetUi].parent_id_
-      = sprite_.GetId();
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &sprite_layer_, &text_layer_,
+      &toggle_layer_, &scale_, &scale_text_,
+      &fetch_, &fetch_text_, &spread_blend_, &spread_blend_text_,
+      &swell_, &swell_text_, &peak_enhancement_, &peak_enhancement_text_,
+      &short_waves_fade_, &short_waves_fade_text_, &lambda_, &lambda_text_);
 }
 
 UiWaterLayerConfig::UiWaterLayerConfig(UiWaterLayerConfig&& other) noexcept
@@ -1473,12 +1027,17 @@ UiWaterLayerConfig::UiWaterLayerConfig(UiWaterLayerConfig&& other) noexcept
           &pin_, &toggle_layer_, &scale_, &fetch_, &spread_blend_, &swell_,
           &peak_enhancement_, &short_waves_fade_, &lambda_
       }) {
-  gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &sprite_layer_, &text_layer_,
+      &toggle_layer_, &scale_, &scale_text_,
+      &fetch_, &fetch_text_, &spread_blend_, &spread_blend_text_,
+      &swell_, &swell_text_, &peak_enhancement_, &peak_enhancement_text_,
+      &short_waves_fade_, &short_waves_fade_text_, &lambda_, &lambda_text_);
 }
 
 // returns "stop render"
 bool UiWaterLayerConfig::Render() {
+  UpdateHoverState(ui_shared_resources_.global_glfw_callback_data_.hovered_id);
   bool stop_show = Base::RenderBack(hovered_);
   if (!Base::BackIsReady()) {
     return stop_show;
@@ -1589,14 +1148,8 @@ void UiWaterLayerConfig::Release() {
   ui_event_handler_.Release();
 }
 
-data::TextId UiWaterLayerConfig::Hover(int id) {
-  data::TextId hovered_id = ui_event_handler_.Hover(id);
-  if (hovered_id != data::TextId::kNone || id == Base::GetId()) {
-    hovered_ = true;
-  } else {
-    hovered_ = false;
-  }
-  return hovered_id;
+void UiWaterLayerConfig::UpdateHoverState(int id) {
+  hovered_ = (id >= sprite_.GetId() && id <= lambda_text_.GetId());
 }
 
 bool UiWaterLayerConfig::Scroll(GLuint id, float yoffset) {
@@ -1629,54 +1182,7 @@ OceanLayerTraits UiWaterLayerConfig::GetOceanLayerTraits() const {
   };
 }
 
-void UiWaterLayerConfig::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  sprite_layer_.SetParentTransform(Base::cur_transform_);
-  text_layer_.SetParentTransform(Base::cur_transform_);
-  toggle_layer_.SetParentTransform(Base::cur_transform_);
-  scale_.SetParentTransform(Base::cur_transform_);
-  scale_text_.SetParentTransform(Base::cur_transform_);
-  fetch_.SetParentTransform(Base::cur_transform_);
-  fetch_text_.SetParentTransform(Base::cur_transform_);
-  spread_blend_.SetParentTransform(Base::cur_transform_);
-  spread_blend_text_.SetParentTransform(Base::cur_transform_);
-  swell_.SetParentTransform(Base::cur_transform_);
-  swell_text_.SetParentTransform(Base::cur_transform_);
-  peak_enhancement_.SetParentTransform(Base::cur_transform_);
-  peak_enhancement_text_.SetParentTransform(Base::cur_transform_);
-  short_waves_fade_.SetParentTransform(Base::cur_transform_);
-  short_waves_fade_text_.SetParentTransform(Base::cur_transform_);
-  lambda_.SetParentTransform(Base::cur_transform_);
-  lambda_text_.SetParentTransform(Base::cur_transform_);
-
-  /// back
-  sprite_.UpdateTransform();
-  pin_.UpdateTransform();
-
-  /// children
-  sprite_layer_.UpdateTransform();
-  text_layer_.UpdateTransform();
-  toggle_layer_.UpdateTransform();
-  scale_.UpdateTransform();
-  scale_text_.UpdateTransform();
-  fetch_.UpdateTransform();
-  fetch_text_.UpdateTransform();
-  spread_blend_.UpdateTransform();
-  spread_blend_text_.UpdateTransform();
-  swell_.UpdateTransform();
-  swell_text_.UpdateTransform();
-  peak_enhancement_.UpdateTransform();
-  peak_enhancement_text_.UpdateTransform();
-  short_waves_fade_.UpdateTransform();
-  short_waves_fade_text_.UpdateTransform();
-  lambda_.UpdateTransform();
-  lambda_text_.UpdateTransform();
-}
-
-//IUiEdit::IUiEdit()
-//    : UiBase(data::VboIdMain::kSpareText2, {}, {}) {}
-
-
+//TODO: deprecated
 UiEditFences::UiEditFences(
     UiSharedResources& ui_shared_resources,
     UiDynamicSprite&& desk,
@@ -1754,10 +1260,6 @@ UiEditFences::UiEditFences(UiEditFences&& other) noexcept
       = static_cast<UiBase*>(this);
 }
 
-data::TextId UiEditFences::Hover(int id) {
-  return ui_event_handler_.Hover(id);
-}
-
 bool UiEditFences::Press(int id) {
   return ui_event_handler_.Press(id);
 }
@@ -1797,7 +1299,6 @@ void UiEditFences::Render() {
       ->RenderText(name_, "name", 1.0f, glm::vec2{0.0f});
   ui_shared_resources_.global_glfw_callback_data_.text_renderer
       ->RenderText(type_text_, "type", 1.0f, glm::vec2{0.0f});
-
 }
 
 void UiEditFences::RenderPicking() {
@@ -1821,27 +1322,4 @@ void UiEditFences::RenderPicking() {
   ui_shared_resources_.global_glfw_callback_data_.text_renderer
       ->RenderTextPicking(type_text_, "type", 1.0f, glm::vec2{0.0f});
 
-}
-
-void UiEditFences::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  desk_.UpdateTransform();
-  accept_.UpdateTransform();
-  name_.UpdateTransform();
-  name_back_.UpdateTransform();
-  color_palette_.UpdateTransform();
-  color_brightness_.UpdateTransform();
-  color_indicator_.UpdateTransform();
-  type_back_.UpdateTransform();
-  type_text_.UpdateTransform();
-  type_prev_.UpdateTransform();
-  type_next_.UpdateTransform();
-}
-
-void UiEditFences::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
 }

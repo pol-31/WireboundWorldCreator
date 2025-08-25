@@ -25,11 +25,9 @@ class UiRenderer {
              GlobalGlfwCallbackData& global_glfw_data_,
              TileRenderer& tile_renderer);
 
-  void Render(data::TextId description_id);
+  void Render();
 
-  data::TextId Hover(GLuint pressed_id);
-
-  void RenderPicking(data::TextId description_id);
+  void RenderPicking();
 
   void Parse();
 

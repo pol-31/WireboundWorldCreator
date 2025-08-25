@@ -11,7 +11,9 @@ UiRenderer::UiRenderer(
                    global_glfw_data_.cursor_pos_tex_norm_),
       windows_(),
       text_renderer_(
-          paths, {data::VboIdMain::kSpareText10, data::TextId::kNotYet}),
+          ui_shared_resources_,
+          paths, {data::VboIdMain::kSpareText10},
+          {data::VboIdMain::kSpareText9}, {data::VboIdMain::kSpareText8}),
       terrain_(ui_shared_resources_, windows_, text_renderer_, tile_renderer.cur_tile_),
       water_(ui_shared_resources_, windows_, paths),
       fences_(ui_shared_resources_, text_renderer_, windows_),
@@ -24,108 +26,107 @@ UiRenderer::UiRenderer(
             &water_, &roads_, &fences_, &placement_, &objects_, &biomes_,
             &tiles_, cur_mode_),
       ui_settings_(
-          {data::VboIdMain::kSettingsDesk, data::TextId::kNotYet},
+          {data::VboIdMain::kSettingsDesk},
           2.0f,
-          {{data::VboIdMain::kSettingsDeskPinBack, data::TextId::kNotYet, [](){}},
-           {data::VboIdMain::kSettingsDeskPinPoint, data::TextId::kNotYet}},
+          {{data::VboIdMain::kSettingsDeskPinBack, [](){}},
+           {data::VboIdMain::kSettingsDeskPinPoint}},
           ui_shared_resources_,
           windows_,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.2f, 0.0f}, 1.0f, 0.0f},
-          {data::VboIdMain::kSettingsResolutionLabel, data::TextId::kNotYet},
-          {data::VboIdMain::kSettingsResolutionLeft, data::TextId::kNotYet},
-          {data::VboIdMain::kSettingsResolutionRight, data::TextId::kNotYet},
-          {data::VboIdMain::kSettingsResolution, data::TextId::kNotYet},
-          {{data::VboIdMain::kSettingsFullScreenOff, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsFullScreenOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsFullScreenOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsFullScreenOn3, data::TextId::kNotYet}},
+          {data::VboIdMain::kSettingsResolutionLabel},
+          {data::VboIdMain::kSettingsResolutionLeft},
+          {data::VboIdMain::kSettingsResolutionRight},
+          {data::VboIdMain::kSettingsResolution},
+          {{data::VboIdMain::kSettingsFullScreenOff},
+           {data::VboIdMain::kSettingsFullScreenOn1},
+           {data::VboIdMain::kSettingsFullScreenOn2},
+           {data::VboIdMain::kSettingsFullScreenOn3}},
           UiSliderH2{
-              {data::VboIdMain::kSettingsSensitivityArea, data::TextId::kNotYet},
-              {data::VboIdMain::kSettingsSensitivityHandle, data::TextId::kNotYet},
+              {data::VboIdMain::kSettingsSensitivityArea},
+              {data::VboIdMain::kSettingsSensitivityHandle},
           },
-          {data::VboIdMain::kSettingsKeyboard, data::TextId::kNotYet},
           UiSliderH2{
-              {data::VboIdMain::kSettingsSoundArea, data::TextId::kNotYet},
-              {data::VboIdMain::kSettingsSoundHandle, data::TextId::kNotYet},
+              {data::VboIdMain::kSettingsSoundArea},
+              {data::VboIdMain::kSettingsSoundHandle},
           },
-          {{data::VboIdMain::kSettingsSoundOff, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsSoundOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsSoundOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsSoundOn3, data::TextId::kNotYet}},
+          {{data::VboIdMain::kSettingsSoundOff},
+           {data::VboIdMain::kSettingsSoundOn1},
+           {data::VboIdMain::kSettingsSoundOn2},
+           {data::VboIdMain::kSettingsSoundOn3}},
           UiSliderH2{
-              {data::VboIdMain::kSettingsMusicArea, data::TextId::kNotYet},
-              {data::VboIdMain::kSettingsMusicHandle, data::TextId::kNotYet},
+              {data::VboIdMain::kSettingsMusicArea},
+              {data::VboIdMain::kSettingsMusicHandle},
           },
-          {{data::VboIdMain::kSettingsMusicOff, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsMusicOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsMusicOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsMusicOn3, data::TextId::kNotYet}},
-          {data::VboIdMain::kSettingsTipInfoLabel, data::TextId::kNotYet},
-          {data::VboIdMain::kSettingsTipInfo, data::TextId::kNotYet},
-          {{data::VboIdMain::kSettingsTipInfoOff, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsTipInfoOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsTipInfoOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kSettingsTipInfoOn3, data::TextId::kNotYet}}
+          {{data::VboIdMain::kSettingsMusicOff},
+           {data::VboIdMain::kSettingsMusicOn1},
+           {data::VboIdMain::kSettingsMusicOn2},
+           {data::VboIdMain::kSettingsMusicOn3}},
+          {data::VboIdMain::kSettingsTipInfoLabel},
+          {data::VboIdMain::kSettingsTipInfo},
+          {{data::VboIdMain::kSettingsTipInfoOff},
+           {data::VboIdMain::kSettingsTipInfoOn1},
+           {data::VboIdMain::kSettingsTipInfoOn2},
+           {data::VboIdMain::kSettingsTipInfoOn3}}
           ),
       ui_confirmation_(
-          {data::VboIdMain::kConfirmationDesk, data::TextId::kNotYet},
-          {data::VboIdMain::kSpareText6, data::TextId::kNotYet},
+          {data::VboIdMain::kConfirmationDesk},
+          {data::VboIdMain::kSpareText6},
           1.0f,
           ui_shared_resources_,
           windows_,
-          {data::VboIdMain::kConfirmationAccept, data::TextId::kNotYet},
-          {data::VboIdMain::kConfirmationDecline, data::TextId::kNotYet},
-          {data::VboIdMain::kConfirmationTextLabel, data::TextId::kNotYet}
+          {data::VboIdMain::kConfirmationAccept},
+          {data::VboIdMain::kConfirmationDecline},
+          {data::VboIdMain::kConfirmationTextLabel}
           ),
       ui_caution_(
-          {data::VboIdMain::kSpareText7, data::TextId::kNotYet},
-          {data::VboIdMain::kSpareText4, data::TextId::kNotYet},
+          {data::VboIdMain::kSpareText7},
+          {data::VboIdMain::kSpareText4},
           1.0f,
           ui_shared_resources_,
           windows_,
-          {data::VboIdMain::kConfirmationTextLabel, data::TextId::kNotYet}
+          {data::VboIdMain::kConfirmationTextLabel}
           ),
       ui_file_(
-          {data::VboIdMain::kFileDesk, data::TextId::kNotYet},
-          {data::VboIdMain::kSpareText5, data::TextId::kNotYet},
+          {data::VboIdMain::kFileDesk},
+          {data::VboIdMain::kSpareText5},
           1.0f,
           ui_shared_resources_,
           windows_,
-          {data::VboIdMain::kFileAccept, data::TextId::kNotYet},
-          {data::VboIdMain::kRoadsEditAccept, data::TextId::kNotYet},
-          {text_renderer_, 1.0f, glm::vec2{0.0f},
-           {data::VboIdMain::kFileText, data::TextId::kNotYet}},
-          {text_renderer_, 1.0f, glm::vec2{0.0f},
-           {data::VboIdMain::kRoadsSlotsSlot, data::TextId::kNotYet},
-           {data::VboIdMain::kFileTextInput, data::TextId::kNotYet}}),
+          {data::VboIdMain::kFileAccept},
+          {data::VboIdMain::kRoadsEditAccept},
+          {text_renderer_, 1.0f,
+           {data::VboIdMain::kFileText}},
+          {text_renderer_,
+           {data::VboIdMain::kRoadsSlotsSlot},
+           {data::VboIdMain::kFileTextInput}}),
       ui_tip_(
-          {data::VboIdMain::kTipInfoDesk, data::TextId::kNotYet},
+          {data::VboIdMain::kTipInfoDesk},
           1.0f,
           {
-              {data::VboIdMain::kTipInfoDeskPinBack, data::TextId::kNotYet, [](){}},
-              {data::VboIdMain::kTipInfoDeskPinPoint, data::TextId::kNotYet},
+              {data::VboIdMain::kTipInfoDeskPinBack, [](){}},
+              {data::VboIdMain::kTipInfoDeskPinPoint},
           },
           ui_shared_resources_,
           windows_,
-          {data::VboIdMain::kTipInfoText, data::TextId::kNotYet}),
+          {data::VboIdMain::kTipInfoText}),
       ui_loading_(
-          {data::VboIdMain::kLoading0, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading1, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading2, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading3, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading4, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading5, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading6, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading7, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading8, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading9, data::TextId::kNotYet},
-          {data::VboIdMain::kLoading10, data::TextId::kNotYet}),
-      compass_({data::VboIdMain::kCompass, data::TextId::kNotYet}) {
+          {data::VboIdMain::kLoading0},
+          {data::VboIdMain::kLoading1},
+          {data::VboIdMain::kLoading2},
+          {data::VboIdMain::kLoading3},
+          {data::VboIdMain::kLoading4},
+          {data::VboIdMain::kLoading5},
+          {data::VboIdMain::kLoading6},
+          {data::VboIdMain::kLoading7},
+          {data::VboIdMain::kLoading8},
+          {data::VboIdMain::kLoading9},
+          {data::VboIdMain::kLoading10}),
+      compass_(data::VboIdMain::kCompass) {
   Init();
 }
 
-void UiRenderer::Render(data::TextId description_id) {
+void UiRenderer::Render() {
 #ifndef NDEBUG
   debug::gUiAltMode = glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS;
   if (debug::gUiAltMode) {
@@ -162,39 +163,15 @@ void UiRenderer::Render(data::TextId description_id) {
     } else {
       menu_.Hide();
       ui_settings_.Hide();
-//      ui_file_.Show();
-//      ui_file_.Hide();
       cur_mode_->BindCallbacks();
     }
   }
-
-  if (render_menu_) {
-//    text_renderer_.RenderMenuText(description_id);
-  } else {
-//    text_renderer_.RenderModeText(description_id);
+  if (text_renderer_.InputInProgress()) {
+    text_renderer_.RenderInput();
   }
 }
 
-data::TextId UiRenderer::Hover(GLuint pressed_id) {
-  data::TextId description_id;
-  description_id = cur_mode_->Hover(pressed_id);
-  if (description_id != data::TextId::kNone) {
-  }
-  /*description_id = menu_.Hover(render_menu_, pressed_id);
-  if (render_menu_) {
-    if (description_id == data::TextId::kNone) {
-      description_id = data::TextId::kMenu;
-    }
-  } else {
-    description_id = cur_mode_->Hover(pressed_id);
-    if (description_id != data::TextId::kNone) {
-    }
-  }*/
-   menu_.Hover(render_menu_, pressed_id);
-  return description_id;
-}
-
-void UiRenderer::RenderPicking(data::TextId description_id) {
+void UiRenderer::RenderPicking() {
   glBindVertexArray(ui_shared_resources_.vao_ui_);
 
   ui_shared_resources_.tex_ui_.Bind();
@@ -202,21 +179,6 @@ void UiRenderer::RenderPicking(data::TextId description_id) {
   compass_.RenderPicking();
 
   cur_mode_->RenderPicking();
-  if (description_id != data::TextId::kNone) {
-    //      text_renderer_.RenderModeTextPicking(description_id);
-  }
-  return;
-
-  menu_.RenderPicking(render_menu_);
-  if (description_id != data::TextId::kNone) {
-    //      text_renderer_.RenderMenuTextPicking(description_id);
-  }
-  if (!render_menu_) {
-    cur_mode_->RenderPicking();
-    if (description_id != data::TextId::kNone) {
-//      text_renderer_.RenderModeTextPicking(description_id);
-    }
-  }
 }
 
 void UiRenderer::Parse() {

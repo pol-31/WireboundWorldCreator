@@ -17,15 +17,6 @@ class IUiMode {
 
   virtual void Render() = 0;
   virtual void RenderPicking()= 0;
-  virtual data::TextId Hover(std::uint32_t global_id) = 0;
-
-#ifndef NDEBUG
-  virtual glm::uvec2 GetPrerenderTextIds() const noexcept {
-    return {0, 0};
-  }
-#else
-  virtual glm::uvec2 GetPrerenderTextIds() const noexcept = 0;
-#endif
 
   // glfw callbacks, e.g. mouse scroll, mouse & keyboard btn interaction
   virtual void BindCallbacks() = 0;
@@ -103,7 +94,6 @@ class IUiMode {
  protected:
   UiSharedResources& ui_shared_resources_;
 
-  // for Hover()
   WindowQueue& window_queue_;
 
   UiStaticSprite sprite_mode_;

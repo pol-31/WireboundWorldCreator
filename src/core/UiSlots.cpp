@@ -102,14 +102,6 @@ void IUiSlots::Release() {
   graph_->Release();
 }
 
-void IUiSlots::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(transform.translate.x, transform.translate.y,
-                  transform.scale);
-}
-
 /// as a decorator for graph_
 
 void IUiSlots::CreateGraph() {
@@ -141,9 +133,7 @@ UiSlotsModels::UiSlotsModels(
     UiDynamicSprite&& back,
     UiDynamicSprite&& create,
     data::VboIdMain flip_select_edit_back_vbo_texture,
-    data::TextId flip_select_edit_back_text_id,
     data::VboIdMain flip_point_edge_back_vbo_texture,
-    data::TextId flip_point_edge_back_text_id,
     UiDynamicSprite&& flip_select_edit_sprite,
     UiDynamicSprite&& flip_point_edge_sprite,
     UiDynamicSprite&& slot_name,
@@ -153,19 +143,17 @@ UiSlotsModels::UiSlotsModels(
     UiDynamicSprite&& slot_color,
     UiDynamicSprite&& slot_remove,
     UiDynamicSprite&& slot_selected)
-    : IUiSlots(slider.GetId(), ui_shared_resources),
+    : IUiSlots(back.GetId(), ui_shared_resources),
       handler_(std::move(handler)),
       slider_(std::move(slider)),
       back_(std::move(back)),
       create_(std::move(create)),
       flip_select_edit_back_(
-          flip_select_edit_back_vbo_texture, flip_select_edit_back_text_id,
-          [this]() {
+          flip_select_edit_back_vbo_texture, [this]() {
             this->NextSelectMode();
           }),
       flip_point_edge_back_(
-          flip_point_edge_back_vbo_texture, flip_point_edge_back_text_id,
-          [this]() {
+          flip_point_edge_back_vbo_texture, [this]() {
             this->NextClickMode();
           }),
       flip_select_edit_sprite_(std::move(flip_select_edit_sprite)),
@@ -188,70 +176,41 @@ UiSlotsModels::UiSlotsModels(
       graph_(ui_shared_resources),
       ui_edit_(
           ui_shared_resources,
-          {data::VboIdMain::kFencesEditDesk, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesEditAccept, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesEditName, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesEditNameBack, data::TextId::kNotYet},
+          {data::VboIdMain::kFencesEditDesk},
+          {data::VboIdMain::kFencesEditAccept},
+          {data::VboIdMain::kFencesEditName},
+          {data::VboIdMain::kFencesEditNameBack},
 
-          {{data::VboIdMain::kFencesColorPaletteHS, data::TextId::kNotYet},
-           {data::VboIdMain::kFencesColorColorCursor, data::TextId::kNotYet},
+          {{data::VboIdMain::kFencesColorPaletteHS},
+           {data::VboIdMain::kFencesColorColorCursor},
            glm::vec2{1.0f}},
-          {{data::VboIdMain::kFencesColorPaletteB, data::TextId::kNotYet},
-           {data::VboIdMain::kFencesColorBrightnessCursor, data::TextId::kNotYet},
+          {{data::VboIdMain::kFencesColorPaletteB},
+           {data::VboIdMain::kFencesColorBrightnessCursor},
            1.0f},
 
-          {data::VboIdMain::kFencesColorIndicator, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesTypeBack, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesTypeText, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesTypePrevious, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesTypeNext, data::TextId::kNotYet}),
+          {data::VboIdMain::kFencesColorIndicator},
+          {data::VboIdMain::kFencesTypeBack},
+          {data::VboIdMain::kFencesTypeText},
+          {data::VboIdMain::kFencesTypePrevious},
+          {data::VboIdMain::kFencesTypeNext}),
       ui_event_handler_({&create_, &flip_select_edit_back_,
                          &flip_point_edge_back_}),
       ui_shared_resources_(ui_shared_resources) {
-  gUiComponents[handler_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slider_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[create_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[flip_select_edit_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[flip_point_edge_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[flip_select_edit_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[flip_point_edge_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slot_name_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slot_config_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[toggle_slot_visible_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slot_color_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slot_remove_.GetId() - details::kIdOffsetUi].parent_id_
-      = slot_back_.GetId();
-  gUiComponents[slot_selected_.GetId() - details::kIdOffsetUi].parent_id_
-      = slot_back_.GetId();
-  gUiComponents[back_.GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-
+  /*hierarchy_ = UiHierarchy(
+      &back_, &handler_, &slider_, &create_, &flip_select_edit_back_,
+      &flip_point_edge_back_, &flip_select_edit_sprite_,
+      &flip_point_edge_sprite_);
+  hierarchy_.AddNested(
+      &slot_back_, &slot_name_, &slot_config_, &toggle_slot_visible_,
+      &slot_color_, &slot_remove_, &slot_selected_);*/
   sl_data_.length_ = sl_data_.kTrackLengthFactor
                      * (back_.GetTopBorder() - back_.GetBottomBorder());
   sl_data_.length_slots_ = sl_data_.kSlotsLengthFactor
                            * (back_.GetTopBorder() - back_.GetBottomBorder());
   sl_data_.centre_ = (back_.GetTopBorder() + back_.GetBottomBorder()) / 2.0f;
-
   IUiSlots::ui_event_handler_ = &ui_event_handler_;
   IUiSlots::graph_ = &graph_;
 //  IUiSlots::ui_edit_ = &ui_edit_;
-
-  IUiSlots::UpdateTransform();
 }
 
 UiSlotsModels::UiSlotsModels(UiSlotsModels&& other) noexcept
@@ -282,13 +241,15 @@ UiSlotsModels::UiSlotsModels(UiSlotsModels&& other) noexcept
       ui_event_handler_({&create_, &flip_select_edit_back_,
                          &flip_point_edge_back_}),
       ui_shared_resources_(other.ui_shared_resources_) {
-  gUiComponents[back_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+  /*hierarchy_ = UiHierarchy(
+      &back_, &handler_, &slider_, &create_, &flip_select_edit_back_,
+      &flip_point_edge_back_, &flip_select_edit_sprite_,
+      &flip_point_edge_sprite_, &slot_name_, &slot_config_,
+      &toggle_slot_visible_, &slot_back_, &slot_color_);
+  hierarchy_.AddNested(&slot_back_, &slot_remove_, &slot_selected_);*/
   IUiSlots::ui_event_handler_ = &ui_event_handler_;
   IUiSlots::graph_ = &graph_;
   //  IUiSlots::ui_edit_ = &ui_edit_;
-//  gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].ui
-//      = static_cast<UiBase*>(this);
 }
 
 void UiSlotsModels::Render(glm::vec2 mouse_pos) {
@@ -367,29 +328,10 @@ void UiSlotsModels::Render(glm::vec2 mouse_pos) {
  *
  * */
 
-void UiSlotsModels::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  back_.UpdateTransform();
-  handler_.UpdateTransform();
-  slider_.UpdateTransform();
-  create_.UpdateTransform();
-  flip_select_edit_back_.UpdateTransform();
-  flip_point_edge_back_.UpdateTransform();
-  flip_select_edit_sprite_.UpdateTransform();
-  flip_point_edge_sprite_.UpdateTransform();
-  slot_name_.UpdateTransform();
-  slot_back_.UpdateTransform();
-  slot_config_.UpdateTransform();
-  toggle_slot_visible_.UpdateTransform();
-  slot_color_.UpdateTransform();
-  slot_remove_.UpdateTransform();
-  slot_selected_.UpdateTransform();
-
-//  ui_edit_.UpdateTransform();
-
-  sl_data_.length_ = sl_data_.kTrackLengthFactor * scale *
+void UiSlotsModels::UpdateTransform() {
+  sl_data_.length_ = sl_data_.kTrackLengthFactor *
             (back_.GetTopBorder() - back_.GetBottomBorder());
-  sl_data_.length_slots_ = sl_data_.kSlotsLengthFactor * scale *
+  sl_data_.length_slots_ = sl_data_.kSlotsLengthFactor *
                   (back_.GetTopBorder() - back_.GetBottomBorder());
   sl_data_.centre_ = (back_.GetTopBorder() + back_.GetBottomBorder()) / 2.0f;
   float related_pos = sl_data_.progress_ * sl_data_.length_ - sl_data_.length_ / 2.0f + sl_data_.centre_;
@@ -605,100 +547,104 @@ UiSlotsTerrain::UiSlotsTerrain(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer,
-    UiDynamicSprite&& handler,
-    UiDynamicSprite&& slider,
-    UiDynamicSprite&& back,
-    UiDynamicSprite&& create,
-    data::VboIdMain flip_point_edge_back_vbo_texture,
-    data::TextId flip_point_edge_back_text_id,
-    UiDynamicSprite&& flip_point_edge_sprite,
-    UiDynamicSprite&& slot_name,
-    UiDynamicSprite&& slot_config,
-    UiToggle&& toggle_slot_visible,
-    UiDynamicSprite&& slot_back,
-    UiDynamicSprite&& slot_color,
-    UiDynamicSprite&& slot_remove,
-    UiDynamicSprite&& slot_selected,
     const UiSliderV& slider_size,
-    const UiSliderV& slider_falloff
-    )
-    : IUiSlots(slider.GetId(), ui_shared_resources),
-      handler_(std::move(handler)),
-      slider_(std::move(slider)),
-      back_(std::move(back)),
-      create_(std::move(create)),
+    const UiSliderV& slider_falloff)
+    : IUiSlots(static_cast<int>(data::VboIdMain::kTerrainSlotsBack),
+               ui_shared_resources),
+      handler_(data::VboIdMain::kTerrainSlotsHandler),
+      slider_(data::VboIdMain::kTerrainSlotsSlider),
+      back_(data::VboIdMain::kTerrainSlotsBack),
+      create_(data::VboIdMain::kTerrainSlotsCreate,
+              [this]() {
+                this->CreateGraph();
+                std::cout << "there input starts" << std::endl;
+                std::cout << "-- slot create (create)" << std::endl;
+                // instead of FocusOnSelected();
+                SelectGraph(instances_size_ - 1);
+                sl_data_.Set(1.0f, handler_,
+                             slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
+                             graph_.GetSize());
+              }),
       flip_point_edge_back_(
-          flip_point_edge_back_vbo_texture, flip_point_edge_back_text_id,
+          data::VboIdMain::kTerrainSlotsFlipPointEdgeFace_Back,
           [this]() {
             this->NextClickMode();
           }),
-      flip_point_edge_sprite_(std::move(flip_point_edge_sprite)),
+      flip_point_edge_sprite_(data::VboIdMain::kTerrainSlotsFlipPointEdgeFace),
       flip_point_edge_(
           flip_point_edge_sprite_,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f}, 1.0f, glm::pi<float>()}),
-      slot_name_(std::move(slot_name)),
-      slot_config_(std::move(slot_config)),
-      toggle_slot_visible_(std::move(toggle_slot_visible)),
-      slot_back_(std::move(slot_back)),
-      slot_color_(std::move(slot_color)),
-      slot_remove_(std::move(slot_remove)),
+      slot_name_(data::VboIdMain::kTerrainSlotsName),
+      slot_config_(data::VboIdMain::kTerrainSlotsConfig,
+                   [this]() {
+                     SelectGraph(GetSlotId());
+                     ui_edit_.Show();
+                   }),
+      toggle_slot_visible_(
+          {data::VboIdMain::kTerrainVisibleOff,
+           [this]() {
+             auto slot_id = GetSlotId();
+             instances_[slot_id].do_show = !instances_[slot_id].do_show;
+             ui_edit_.UpdateHmap();
+           }},
+          {data::VboIdMain::kTerrainVisibleOn1},
+          {data::VboIdMain::kTerrainVisibleOn2},
+          {data::VboIdMain::kTerrainVisibleOn3}),
+      slot_back_(data::VboIdMain::kTerrainSlotsSlot,
+                 [this]() {
+                   SelectGraph(GetSlotId());
+                 }),
+      slot_color_(data::VboIdMain::kTerrainSlotsSlotColor),
+      slot_remove_(data::VboIdMain::kTerrainSlotsRemove,
+                   [this]() {
+                     auto slot_id = GetSlotId();
+                     std::cout << "graph removed " << slot_id << std::endl;
+                     if (slot_id == graph_.GetSlotId()) {
+                       ui_edit_.HideAll();
+                     }
+                     graph_.RemoveGraph(slot_id);
+                     ui_edit_.UpdateHmap();
+                     sl_data_.UpdateRenderData(
+                         slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
+                         graph_.GetSize());
+                   }),
+      slot_selected_(data::VboIdMain::kTerrainSlotsSelected),
       graph_(ui_shared_resources, ui_edit_, instances_, instances_size_,
              slider_size, slider_falloff),
-      slot_selected_(std::move(slot_selected)),
       ui_edit_(
           cur_tile,
-          {data::VboIdMain::kTerrainEditDesk, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainEditDesk},
           1.0f,
-          {{data::VboIdMain::kTerrainEditDeskPinBack, data::TextId::kNotYet, []() {}},
-          {data::VboIdMain::kTerrainEditDeskPinPoint, data::TextId::kNotYet}},
+          {{data::VboIdMain::kTerrainEditDeskPinBack, []() {}},
+          {data::VboIdMain::kTerrainEditDeskPinPoint}},
           ui_shared_resources,
           window_queue,
           text_renderer,
-          {data::VboIdMain::kTerrainEditAccept, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainEditName, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainEditNameBack, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainEditAccept},
+          {data::VboIdMain::kTerrainEditName},
+          {data::VboIdMain::kTerrainEditNameBack},
 
-          {{data::VboIdMain::kTerrainColorPaletteHS, data::TextId::kNotYet},
-           {data::VboIdMain::kTerrainColorColorCursor, data::TextId::kNotYet},
+          {{data::VboIdMain::kTerrainColorPaletteHS},
+           {data::VboIdMain::kTerrainColorColorCursor},
            glm::vec2{1.0f}},
-          {{data::VboIdMain::kTerrainColorPaletteB, data::TextId::kNotYet},
-           {data::VboIdMain::kTerrainColorBrightnessCursor, data::TextId::kNotYet},
+          {{data::VboIdMain::kTerrainColorPaletteB},
+           {data::VboIdMain::kTerrainColorBrightnessCursor},
            1.0f},
-
-          {data::VboIdMain::kTerrainColorIndicator, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainEditRandomGeneration, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainColorIndicator},
+          {data::VboIdMain::kTerrainEditRandomGeneration},
           instances_, instances_size_),
-      ui_event_handler_({&create_, &flip_point_edge_back_}),
-      ui_shared_resources_(ui_shared_resources) {
-  gUiComponents[handler_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slider_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[create_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[flip_point_edge_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[flip_point_edge_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_.GetId();
-  gUiComponents[slot_name_.GetId() - details::kIdOffsetUi].parent_id_
-      = slot_back_.GetId();
-  gUiComponents[slot_config_.GetId() - details::kIdOffsetUi].parent_id_
-      = slot_back_.GetId();
-  gUiComponents[toggle_slot_visible_.GetId() - details::kIdOffsetUi].parent_id_
-      = slot_back_.GetId();
-  gUiComponents[slot_color_.GetId() - details::kIdOffsetUi].parent_id_
-      = slot_back_.GetId();
-  gUiComponents[slot_remove_.GetId() - details::kIdOffsetUi].parent_id_
-      = slot_back_.GetId();
-  gUiComponents[slot_selected_.GetId() - details::kIdOffsetUi].parent_id_
-      = slot_back_.GetId();
-  gUiComponents[back_.GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
+      ui_event_handler_({&create_, &flip_point_edge_back_, &slot_config_,
+                         &toggle_slot_visible_, &slot_back_, &slot_remove_}),
+      ui_shared_resources_(ui_shared_resources),
+      hierarchy_(&back_) {
+  hierarchy_ = UiHierarchy(
+      &back_, &handler_, &slider_, &create_, &flip_point_edge_back_,
+      &flip_point_edge_sprite_);
+  hierarchy_.AddNested(
+      &slot_back_, &slot_name_, &slot_config_, &toggle_slot_visible_,
+      &slot_color_, &slot_remove_, &slot_selected_);
+  gUiComponents[hierarchy_.parent_->GetId() - details::kIdOffsetUi].ui = this;
 
   sl_data_.length_ = sl_data_.kTrackLengthFactor
                      * (back_.GetTopBorder() - back_.GetBottomBorder());
@@ -709,9 +655,6 @@ UiSlotsTerrain::UiSlotsTerrain(
   IUiSlots::ui_event_handler_ = &ui_event_handler_;
   IUiSlots::graph_ = &graph_;
 //  IUiSlots::ui_edit_ = &ui_edit_;
-
-  IUiSlots::UpdateTransform();
-//  UpdateTransformUniform(); instances num == 0
 }
 
 UiSlotsTerrain::UiSlotsTerrain(UiSlotsTerrain&& other) noexcept
@@ -734,15 +677,19 @@ UiSlotsTerrain::UiSlotsTerrain(UiSlotsTerrain&& other) noexcept
       slot_selected_(std::move(other.slot_selected_)),
       graph_(std::move(other.graph_)),
       ui_edit_(std::move(other.ui_edit_)),
-      ui_event_handler_({&create_, &flip_point_edge_back_}),
-      ui_shared_resources_(other.ui_shared_resources_) {
-  gUiComponents[back_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+      ui_event_handler_({&create_, &flip_point_edge_back_, &slot_config_,
+                         &toggle_slot_visible_, &slot_back_, &slot_remove_}),
+      ui_shared_resources_(other.ui_shared_resources_),
+      hierarchy_(std::move(other.hierarchy_)) {
+  hierarchy_ = UiHierarchy(
+      &back_, &handler_, &slider_, &create_, &flip_point_edge_back_,
+      &flip_point_edge_sprite_);
+  hierarchy_.AddNested(
+      &slot_back_, &slot_name_, &slot_config_, &toggle_slot_visible_,
+      &slot_color_, &slot_remove_, &slot_selected_);
   IUiSlots::ui_event_handler_ = &ui_event_handler_;
   IUiSlots::graph_ = &graph_;
   //  IUiSlots::ui_edit_ = &ui_edit_;
-//  gUiComponents[slot_back_.GetId() - details::kIdOffsetUi].ui
-//      = static_cast<UiBase*>(this);
 }
 
 void UiSlotsTerrain::Render(glm::vec2 mouse_pos) {
@@ -875,33 +822,17 @@ void UiSlotsTerrain::RenderPicking() {
 //  ui_edit_.RenderPicking();
 }
 
-void UiSlotsTerrain::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
-  back_.UpdateTransform();
-  handler_.UpdateTransform();
-  slider_.UpdateTransform();
-  create_.UpdateTransform();
-  flip_point_edge_back_.UpdateTransform();
-  flip_point_edge_sprite_.UpdateTransform();
-  slot_name_.UpdateTransform();
-  slot_back_.UpdateTransform();
-  slot_config_.UpdateTransform();
-  toggle_slot_visible_.UpdateTransform();
-  slot_color_.UpdateTransform();
-  slot_remove_.UpdateTransform();
-  slot_selected_.UpdateTransform();
-
-  //  ui_edit_.UpdateTransform();
-
-  sl_data_.length_ = sl_data_.kTrackLengthFactor * scale *
+void UiSlotsTerrain::UpdateTransform() {
+  sl_data_.length_ = sl_data_.kTrackLengthFactor *
                      (back_.GetTopBorder() - back_.GetBottomBorder());
-  sl_data_.length_slots_ = sl_data_.kSlotsLengthFactor * scale *
+  sl_data_.length_slots_ = sl_data_.kSlotsLengthFactor *
                            (back_.GetTopBorder() - back_.GetBottomBorder());
   sl_data_.centre_ = (back_.GetTopBorder() + back_.GetBottomBorder()) / 2.0f;
   float related_pos = sl_data_.progress_ * sl_data_.length_ - sl_data_.length_ / 2.0f + sl_data_.centre_;
   sl_data_.Set({0.0f, related_pos}, handler_,
                slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
                graph_.GetSize());
+  hierarchy_.UpdateTransform();
 }
 
 void UiSlotsTerrain::SelectGraph(GLuint id) {
@@ -914,8 +845,6 @@ void UiSlotsTerrain::SelectGraph(GLuint id) {
 
 bool UiSlotsTerrain::Press(int id) {
   std::cout << "Press()" << std::endl;
-  auto slot_id = sl_data_.GetSlotId(
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
   if (id < details::kIdOffsetWater) {
     std::cout << "Add point #" << id << std::endl;
     std::cout << "Coordinates are: " << (id & 1023)
@@ -925,37 +854,9 @@ bool UiSlotsTerrain::Press(int id) {
     bool ctrl_pressed = glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL);
     graph_.Press(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_,
                  shift_pressed, ctrl_pressed);
-  } else if (id == slot_back_.GetId()) {
-    SelectGraph(slot_id);
-  } else if (id == slot_remove_.GetId()) {
-    std::cout << "graph removed " << slot_id << std::endl;
-    if (slot_id == graph_.GetSlotId()) {
-      ui_edit_.HideAll();
-    }
-    graph_.RemoveGraph(slot_id);
-    ui_edit_.UpdateHmap();
-    sl_data_.UpdateRenderData(
-        slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
-        graph_.GetSize());
-  } else if (id == slot_config_.GetId()) {
-    SelectGraph(slot_id);
-    ui_edit_.Show();
-  } else if (id == toggle_slot_visible_.GetId()) {
-    instances_[slot_id].do_show = !instances_[slot_id].do_show;
-    ui_edit_.UpdateHmap();
-  } else {
-    bool handled = ui_event_handler_.Press(id);
-    if (id == create_.GetId()) {
-      std::cout << "-- slot create (create)" << std::endl;
-      // instead of FocusOnSelected();
-      SelectGraph(instances_size_ - 1);
-      sl_data_.Set(1.0f, handler_,
-                   slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
-                   graph_.GetSize());
-    }
-    return handled;
+    return false;
   }
-  return true;
+  return ui_event_handler_.Press(id);
 }
 
 bool UiSlotsTerrain::Scroll(GLuint id, float yoffset) {
@@ -1024,7 +925,7 @@ void UiSlotsTerrain::PressGraph(GLuint id) {
 void UiSlotsTerrain::TranslateSelected(glm::vec3 value) {
   int slot_id = graph_.GetSlotId();
   if (slot_id != -1) {
-    instances_[slot_id].translate = value * 100.0f;
+    instances_[slot_id].translate = glm::clamp(value * 100.0f, glm::vec3(-2.0f), glm::vec3(2.0f));
     UpdateTransformUniform();
   } else {
 //    graph_.MoveSelected(value);
@@ -1034,7 +935,7 @@ void UiSlotsTerrain::TranslateSelected(glm::vec3 value) {
 void UiSlotsTerrain::RotateSelected(glm::vec3 value) {
   int slot_id = graph_.GetSlotId();
   if (slot_id != -1) {
-    instances_[slot_id].rotate = value;
+    instances_[slot_id].rotate += value;
     UpdateTransformUniform();
   }
 }
@@ -1062,3 +963,7 @@ void UiSlotsTerrain::UpdateTransformUniform() {
       ->terrain.UpdateTransformUniform(model);
 }
 
+int UiSlotsTerrain::GetSlotId() {
+  return sl_data_.GetSlotId(
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
+}

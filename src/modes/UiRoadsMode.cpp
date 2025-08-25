@@ -12,9 +12,9 @@ void UiRoadsMode::ScrollCallback(
       glfwGetWindowUserPointer(window));
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (yoffset < 0.0f) {
-    global_data->tile_renderer->DownScale();
+    global_data->tile_renderer->cur_tile_.DownScale();
   } else {
-    global_data->tile_renderer->UpScale();
+    global_data->tile_renderer->cur_tile_.UpScale();
   }
 }
 
@@ -76,10 +76,10 @@ UiRoadsMode::UiRoadsMode(
     : IUiMode(
           ui_shared_resources,
           window_queue,
-          {data::VboIdMain::kRoadsRoadsMode, data::TextId::kNotYet}),
-      btn_bake_asphalt_(data::VboIdMain::kRoadsAsphalt, data::TextId::kNotYet),
-      btn_bake_gravel_(data::VboIdMain::kRoadsGravel, data::TextId::kNotYet),
-      btn_bake_soil_(data::VboIdMain::kRoadsSoil, data::TextId::kNotYet) {}
+          {data::VboIdMain::kRoadsRoadsMode}),
+      btn_bake_asphalt_(data::VboIdMain::kRoadsAsphalt),
+      btn_bake_gravel_(data::VboIdMain::kRoadsGravel),
+      btn_bake_soil_(data::VboIdMain::kRoadsSoil) {}
 
 void UiRoadsMode::Render() {
   glActiveTexture(GL_TEXTURE0);
@@ -148,8 +148,4 @@ void UiRoadsMode::BindCallbacks() {
   glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
   //  glfwSetKeyCallback(gWindow, KeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
-}
-
-data::TextId UiRoadsMode::Hover(std::uint32_t global_id) {
-  return data::TextId::kNone;
 }

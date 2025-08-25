@@ -88,6 +88,7 @@ class UiDebugger {
   void Init();
 
   static std::vector<float> ParseConfigFile(std::string_view path);
+  static std::vector<float> ParseConfigFile4(std::string_view path);
 
   static void SerializeConfigFile(
       std::string_view path,

@@ -18,6 +18,11 @@ class FixedSizeQueue {
 
   FixedSizeQueue() : cur_size_(0) {}
 
+  FixedSizeQueue(const FixedSizeQueue<T, N>& other)
+      : cur_size_(other.cur_size_) {
+    std::copy(other.data_.begin(), other.data_.end(), data_.begin());
+  }
+
   SizeType PushBack(const T& value) {
     assert(cur_size_ < N && "Queue overflow");
     data_[cur_size_] = value;
@@ -27,6 +32,18 @@ class FixedSizeQueue {
   bool SafePushBack(const T& value) {
     if (cur_size_ < N) {
       data_[cur_size_++] = value;
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  bool SafeInsert(const T& value, int pos) {
+    if (cur_size_ < N) {
+      auto first = std::next(data_.begin(), pos);
+      auto last = std::next(data_.begin(), cur_size_++);
+      std::move(first, last, first + 1);
+      data_[pos] = value;
       return true;
     } else {
       return false;
@@ -68,6 +85,15 @@ class FixedSizeQueue {
     --cur_size_;
   }
 
+  void Erase(SizeType start, SizeType end) {
+    assert((start < cur_size_ || end < cur_size_) && "Index out of bounds");
+    auto first = std::next(data_.begin(), start);
+    auto last = std::next(data_.begin(), end);
+    int diff = end - start;
+    std::move(first + diff, last, first);
+    cur_size_ -= diff;
+  }
+
   Iterator begin() {
     return data_.begin();
   }
@@ -82,6 +108,10 @@ class FixedSizeQueue {
 
   ConstIterator cend() const {
     return std::next(data_.cbegin(), cur_size_);
+  }
+
+  T* data() {
+    return data_.data();
   }
 
  private:

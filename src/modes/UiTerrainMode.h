@@ -22,11 +22,8 @@ class UiTerrainMode final : public IUiMode {
 
   void Render() override;
   void RenderPicking() override;
-  data::TextId Hover(std::uint32_t global_id) override;
 
   void BindCallbacks() override;
-
-  glm::uvec2 GetPrerenderTextIds() const noexcept override;
 
  protected:
   static void ScrollCallback(

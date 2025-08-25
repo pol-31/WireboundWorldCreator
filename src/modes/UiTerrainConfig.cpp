@@ -21,48 +21,64 @@ TerrainNoisePerlin::TerrainNoisePerlin(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoisePerlinDesk, data::TextId::kNotYet},
+    : Base({data::VboIdMain::kTerrainNoisePerlinDesk},
            1.0f,
-           {{data::VboIdMain::kTerrainNoisePerlinPinBack, data::TextId::kNotYet, []() {}},
-            {data::VboIdMain::kTerrainNoisePerlinPinPoint, data::TextId::kNotYet}},
+           {{data::VboIdMain::kTerrainNoisePerlinPinBack, []() {}},
+            {data::VboIdMain::kTerrainNoisePerlinPinPoint}},
            ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoisePerlinSave, data::TextId::kNotYet},
-           {text_renderer, 0.05f, glm::vec2{0.0f},
-            {data::VboIdMain::kTerrainNoisePerlinName, data::TextId::kNotYet},
+           {data::VboIdMain::kTerrainNoisePerlinSave},
+           {text_renderer, 0.05f,
+            {data::VboIdMain::kTerrainNoisePerlinName},
             data::TextId::kScale}),
       slider_scale_x_(
-          {data::VboIdMain::kTerrainNoisePerlinScaleXArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoisePerlinScaleXIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoisePerlinScaleXArea},
+          {data::VboIdMain::kTerrainNoisePerlinScaleXIcon},
           20.0f
           ),
       slider_scale_y_(
-          {data::VboIdMain::kTerrainNoisePerlinScaleYArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoisePerlinScaleYIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoisePerlinScaleYArea},
+          {data::VboIdMain::kTerrainNoisePerlinScaleYIcon},
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoisePerlinScaleXText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoisePerlinScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoisePerlinScaleYText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoisePerlinScaleYText},
           data::TextId::kScaleY),
       slider_seed_(
-          {data::VboIdMain::kTerrainNoisePerlinSeedArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoisePerlinSeedIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoisePerlinSeedArea},
+          {data::VboIdMain::kTerrainNoisePerlinSeedIcon},
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoisePerlinSeedText, data::TextId::kNotYet}, data::TextId::kSeed) {
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoisePerlinSeedText}, data::TextId::kSeed) {
   sliders_ = {&slider_scale_x_, &slider_scale_y_, &slider_seed_};
   texts_ = {&text_scale_x_, &text_scale_y_, &text_seed_};
   ui_event_handler_ = {&btn_save_, &pin_, &slider_scale_x_,
                        &slider_scale_y_, &slider_seed_};
   shader_ = Shader("../shaders/noise_shaders/Perlin.comp");
-  SetParent(GetId());
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+}
+
+TerrainNoisePerlin::TerrainNoisePerlin(TerrainNoisePerlin&& other)
+    : Base(std::move(other)),
+      slider_scale_x_(std::move(other.slider_scale_x_)),
+      text_scale_x_(std::move(other.text_scale_x_)),
+      slider_scale_y_(std::move(other.slider_scale_y_)),
+      text_scale_y_(std::move(other.text_scale_y_)),
+      slider_seed_(std::move(other.slider_seed_)),
+      text_seed_(std::move(other.text_seed_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
 NoisePerlinData TerrainNoisePerlin::Generate(
@@ -95,55 +111,75 @@ TerrainNoiseCellular::TerrainNoiseCellular(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseCellularDesk, data::TextId::kNotYet},
+    : Base({data::VboIdMain::kTerrainNoiseCellularDesk},
            1.0f,
-           {{data::VboIdMain::kTerrainNoiseCellularPinBack, data::TextId::kNotYet, []() {}},
-            {data::VboIdMain::kTerrainNoiseCellularPinPoint, data::TextId::kNotYet}},
+           {{data::VboIdMain::kTerrainNoiseCellularPinBack, []() {}},
+            {data::VboIdMain::kTerrainNoiseCellularPinPoint}},
            ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseCellularSave, data::TextId::kNotYet},
-           {text_renderer, 0.05f, glm::vec2{0.0f},
-            {data::VboIdMain::kTerrainNoiseCellularName, data::TextId::kNotYet},
+           {data::VboIdMain::kTerrainNoiseCellularSave},
+           {text_renderer, 0.05f,
+            {data::VboIdMain::kTerrainNoiseCellularName},
             data::TextId::kScale}),
       slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseCellularScaleXArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseCellularScaleXIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseCellularScaleXArea},
+          {data::VboIdMain::kTerrainNoiseCellularScaleXIcon},
           20.0f
           ),
       slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseCellularScaleYArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseCellularScaleYIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseCellularScaleYArea},
+          {data::VboIdMain::kTerrainNoiseCellularScaleYIcon},
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseCellularScaleXText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseCellularScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseCellularScaleYText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseCellularScaleYText},
           data::TextId::kScaleY),
       slider_jitter_(
-          {data::VboIdMain::kTerrainNoiseCellularJitterArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseCellularJitterIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseCellularJitterArea},
+          {data::VboIdMain::kTerrainNoiseCellularJitterIcon},
           20.0f
           ),
       text_jitter_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseCellularJitterText, data::TextId::kNotYet}, data::TextId::kJitter),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseCellularJitterText}, data::TextId::kJitter),
       slider_seed_(
-          {data::VboIdMain::kTerrainNoiseCellularSeedArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseCellularSeedIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseCellularSeedArea},
+          {data::VboIdMain::kTerrainNoiseCellularSeedIcon},
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseCellularSeedText, data::TextId::kNotYet}, data::TextId::kSeed) {
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseCellularSeedText}, data::TextId::kSeed) {
   Base::sliders_ = {&slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
   Base::texts_ = {&text_scale_x_, &text_scale_y_, &text_jitter_, &text_seed_};
   Base::ui_event_handler_ = {&btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
   shader_ = Shader("../shaders/noise_shaders/Cellular.comp");
-  SetParent(GetId());
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_jitter_, &text_jitter_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+}
+
+TerrainNoiseCellular::TerrainNoiseCellular(TerrainNoiseCellular&& other)
+    : Base(std::move(other)),
+      slider_scale_x_(std::move(other.slider_scale_x_)),
+      text_scale_x_(std::move(other.text_scale_x_)),
+      slider_scale_y_(std::move(other.slider_scale_y_)),
+      text_scale_y_(std::move(other.text_scale_y_)),
+      slider_jitter_(std::move(other.slider_jitter_)),
+      text_jitter_(std::move(other.text_jitter_)),
+      slider_seed_(std::move(other.slider_seed_)),
+      text_seed_(std::move(other.text_seed_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_jitter_, &text_jitter_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
 NoiseCellularData TerrainNoiseCellular::Generate(
@@ -180,56 +216,76 @@ TerrainNoiseMetaballs::TerrainNoiseMetaballs(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseMetaballsDesk, data::TextId::kNotYet},
+    : Base({data::VboIdMain::kTerrainNoiseMetaballsDesk},
            1.0f,
-           {{data::VboIdMain::kTerrainNoiseMetaballsPinBack, data::TextId::kNotYet, []() {}},
-            {data::VboIdMain::kTerrainNoiseMetaballsPinPoint, data::TextId::kNotYet}},
+           {{data::VboIdMain::kTerrainNoiseMetaballsPinBack, []() {}},
+            {data::VboIdMain::kTerrainNoiseMetaballsPinPoint}},
            ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseMetaballsSave, data::TextId::kNotYet},
-           {text_renderer, 0.05f, glm::vec2{0.0f},
-            {data::VboIdMain::kTerrainNoiseMetaballsName, data::TextId::kNotYet},
+           {data::VboIdMain::kTerrainNoiseMetaballsSave},
+           {text_renderer, 0.05f,
+            {data::VboIdMain::kTerrainNoiseMetaballsName},
             data::TextId::kScale}),
       slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleXArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleXIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseMetaballsScaleXArea},
+          {data::VboIdMain::kTerrainNoiseMetaballsScaleXIcon},
           20.0f
           ),
       slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleYArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleYIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseMetaballsScaleYArea},
+          {data::VboIdMain::kTerrainNoiseMetaballsScaleYIcon},
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleXText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseMetaballsScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleYText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseMetaballsScaleYText},
           data::TextId::kScaleY),
       slider_jitter_(
-          {data::VboIdMain::kTerrainNoiseMetaballsJitterArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseMetaballsJitterIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseMetaballsJitterArea},
+          {data::VboIdMain::kTerrainNoiseMetaballsJitterIcon},
           20.0f
           ),
       text_jitter_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseMetaballsJitterText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseMetaballsJitterText},
           data::TextId::kJitter),
       slider_seed_(
-          {data::VboIdMain::kTerrainNoiseMetaballsSeedArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseMetaballsSeedIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseMetaballsSeedArea},
+          {data::VboIdMain::kTerrainNoiseMetaballsSeedIcon},
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseMetaballsSeedText, data::TextId::kNotYet}, data::TextId::kSeed) {
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseMetaballsSeedText}, data::TextId::kSeed) {
   Base::sliders_ = {&slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
   Base::texts_ = {&text_scale_x_, &text_scale_y_, &text_jitter_, &text_seed_};
   Base::ui_event_handler_ = {&btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
   shader_ = Shader("../shaders/noise_shaders/Metaballs.comp");
-  SetParent(GetId());
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_jitter_, &text_jitter_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+}
+
+TerrainNoiseMetaballs::TerrainNoiseMetaballs(TerrainNoiseMetaballs&& other)
+    : Base(std::move(other)),
+      slider_scale_x_(std::move(other.slider_scale_x_)),
+      text_scale_x_(std::move(other.text_scale_x_)),
+      slider_scale_y_(std::move(other.slider_scale_y_)),
+      text_scale_y_(std::move(other.text_scale_y_)),
+      slider_jitter_(std::move(other.slider_jitter_)),
+      text_jitter_(std::move(other.text_jitter_)),
+      slider_seed_(std::move(other.slider_seed_)),
+      text_seed_(std::move(other.text_seed_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_jitter_, &text_jitter_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
 NoiseMetaballsData TerrainNoiseMetaballs::Generate(
@@ -266,89 +322,89 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmGridDesk, data::TextId::kNotYet},
+    : Base({data::VboIdMain::kTerrainNoiseFbmGridDesk},
            1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmGridPinBack, data::TextId::kNotYet, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmGridPinPoint, data::TextId::kNotYet}},
+           {{data::VboIdMain::kTerrainNoiseFbmGridPinBack, []() {}},
+            {data::VboIdMain::kTerrainNoiseFbmGridPinPoint}},
            ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmGridSave, data::TextId::kNotYet},
-           {text_renderer, 0.05f, glm::vec2{0.0f},
-            {data::VboIdMain::kTerrainNoiseFbmGridName, data::TextId::kNotYet},
+           {data::VboIdMain::kTerrainNoiseFbmGridSave},
+           {text_renderer, 0.05f,
+            {data::VboIdMain::kTerrainNoiseFbmGridName},
             data::TextId::kScale}),
       slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleXArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleXIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmGridScaleXArea},
+          {data::VboIdMain::kTerrainNoiseFbmGridScaleXIcon},
           20.0f
           ),
       slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleYArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleYIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmGridScaleYArea},
+          {data::VboIdMain::kTerrainNoiseFbmGridScaleYIcon},
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleXText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmGridScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleYText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmGridScaleYText},
           data::TextId::kScaleY),
       slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmGridOctavesArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridOctavesIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmGridOctavesArea},
+          {data::VboIdMain::kTerrainNoiseFbmGridOctavesIcon},
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridOctavesText, data::TextId::kNotYet}, data::TextId::kOctaves),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmGridOctavesText}, data::TextId::kOctaves),
       slider_shift_(
-          {data::VboIdMain::kTerrainNoiseFbmGridShiftArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridShiftIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmGridShiftArea},
+          {data::VboIdMain::kTerrainNoiseFbmGridShiftIcon},
           20.0f
           ),
       text_shift_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridShiftText, data::TextId::kNotYet}, data::TextId::kShift),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmGridShiftText}, data::TextId::kShift),
       slider_gain_(
-          {data::VboIdMain::kTerrainNoiseFbmGridGainArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridGainIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmGridGainArea},
+          {data::VboIdMain::kTerrainNoiseFbmGridGainIcon},
           20.0f
           ),
       text_gain_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridGainText, data::TextId::kNotYet}, data::TextId::kGain),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmGridGainText}, data::TextId::kGain),
       slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmGridLacunarityArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridLacunarityIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmGridLacunarityArea},
+          {data::VboIdMain::kTerrainNoiseFbmGridLacunarityIcon},
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridLacunarityText, data::TextId::kNotYet}, data::TextId::kLacunarity),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmGridLacunarityText}, data::TextId::kLacunarity),
       slider_warp_strength_(
-          {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthArea},
+          {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthIcon},
           20.0f
           ),
       text_warp_strength_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthText, data::TextId::kNotYet}, data::TextId::kWarpStrength),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthText}, data::TextId::kWarpStrength),
       slider_octave_factor_(
-          {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorArea},
+          {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorIcon},
           20.0f
           ),
       text_octave_factor_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorText, data::TextId::kNotYet}, data::TextId::kOctaveFactor),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorText}, data::TextId::kOctaveFactor),
       slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmGridSeedArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmGridSeedIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmGridSeedArea},
+          {data::VboIdMain::kTerrainNoiseFbmGridSeedIcon},
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmGridSeedText, data::TextId::kNotYet}, data::TextId::kSeed) {
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmGridSeedText}, data::TextId::kSeed) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_, &slider_shift_,
       &slider_gain_, &slider_lacunarity_,
@@ -362,8 +418,48 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
       &slider_gain_, &slider_lacunarity_,
       &slider_warp_strength_, &slider_octave_factor_, &slider_seed_};
   shader_ = Shader("../shaders/noise_shaders/FbmGrid.comp");
-  SetParent(GetId());
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_shift_, &text_shift_);
+  hierarchy_.AddNested(&slider_gain_, &text_gain_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_warp_strength_, &text_warp_strength_);
+  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+}
+
+TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(TerrainNoiseFbmGrid&& other)
+    : Base(std::move(other)),
+      slider_scale_x_(std::move(other.slider_scale_x_)),
+      text_scale_x_(std::move(other.text_scale_x_)),
+      slider_scale_y_(std::move(other.slider_scale_y_)),
+      text_scale_y_(std::move(other.text_scale_y_)),
+      slider_octaves_(std::move(other.slider_octaves_)),
+      text_octaves_(std::move(other.text_octaves_)),
+      slider_shift_(std::move(other.slider_shift_)),
+      text_shift_(std::move(other.text_shift_)),
+      slider_gain_(std::move(other.slider_gain_)),
+      text_gain_(std::move(other.text_gain_)),
+      slider_lacunarity_(std::move(other.slider_lacunarity_)),
+      text_lacunarity_(std::move(other.text_lacunarity_)),
+      slider_warp_strength_(std::move(other.slider_warp_strength_)),
+      text_warp_strength_(std::move(other.text_warp_strength_)),
+      slider_octave_factor_(std::move(other.slider_octave_factor_)),
+      text_octave_factor_(std::move(other.text_octave_factor_)),
+      slider_seed_(std::move(other.slider_seed_)),
+      text_seed_(std::move(other.text_seed_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_shift_, &text_shift_);
+  hierarchy_.AddNested(&slider_gain_, &text_gain_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_warp_strength_, &text_warp_strength_);
+  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
 NoiseFbmGridData TerrainNoiseFbmGrid::Generate(
@@ -420,57 +516,57 @@ TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmMultiDesk, data::TextId::kNotYet},
+    : Base({data::VboIdMain::kTerrainNoiseFbmMultiDesk},
            1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmMultiPinBack, data::TextId::kNotYet, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmMultiPinPoint, data::TextId::kNotYet}},
+           {{data::VboIdMain::kTerrainNoiseFbmMultiPinBack, []() {}},
+            {data::VboIdMain::kTerrainNoiseFbmMultiPinPoint}},
            ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmMultiSave, data::TextId::kNotYet},
-           {text_renderer, 0.05f, glm::vec2{0.0f},
-            {data::VboIdMain::kTerrainNoiseFbmMultiName, data::TextId::kNotYet},
+           {data::VboIdMain::kTerrainNoiseFbmMultiSave},
+           {text_renderer, 0.05f,
+            {data::VboIdMain::kTerrainNoiseFbmMultiName},
             data::TextId::kScale}),
       slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleXArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleXIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmMultiScaleXArea},
+          {data::VboIdMain::kTerrainNoiseFbmMultiScaleXIcon},
           20.0f
           ),
       slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleYArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleYIcon, data::TextId::kNotYet},
+          {data::VboIdMain::kTerrainNoiseFbmMultiScaleYArea},
+          {data::VboIdMain::kTerrainNoiseFbmMultiScaleYIcon},
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleXText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmMultiScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleYText, data::TextId::kNotYet},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmMultiScaleYText},
           data::TextId::kScaleY),
       slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityArea, data::TextId::kNotYet},
-          {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityArea},
+          {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityIcon},
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityText, data::TextId::kNone}, data::TextId::kLacunarity),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityText}, data::TextId::kLacunarity),
       slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiOctavesArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmMultiOctavesIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmMultiOctavesArea},
+          {data::VboIdMain::kTerrainNoiseFbmMultiOctavesIcon},
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmMultiOctavesText, data::TextId::kNone}, data::TextId::kOctaves),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmMultiOctavesText}, data::TextId::kOctaves),
       slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiSeedArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmMultiSeedIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmMultiSeedArea},
+          {data::VboIdMain::kTerrainNoiseFbmMultiSeedIcon},
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmMultiSeedText, data::TextId::kNone}, data::TextId::kSeed) {
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmMultiSeedText}, data::TextId::kSeed) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_lacunarity_, &slider_octaves_, &slider_seed_};
   Base::texts_ = {
@@ -478,8 +574,32 @@ TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(
   Base::ui_event_handler_ = {
       &btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_lacunarity_, &slider_octaves_, &slider_seed_};
   shader_ = Shader("../shaders/noise_shaders/FbmMulti.comp");
-  SetParent(GetId());
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+}
+
+TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(TerrainNoiseFbmMulti&& other)
+    : Base(std::move(other)),
+      slider_scale_x_(std::move(other.slider_scale_x_)),
+      text_scale_x_(std::move(other.text_scale_x_)),
+      slider_scale_y_(std::move(other.slider_scale_y_)),
+      text_scale_y_(std::move(other.text_scale_y_)),
+      slider_lacunarity_(std::move(other.slider_lacunarity_)),
+      text_lacunarity_(std::move(other.text_lacunarity_)),
+      slider_octaves_(std::move(other.slider_octaves_)),
+      text_octaves_(std::move(other.text_octaves_)),
+      slider_seed_(std::move(other.slider_seed_)),
+      text_seed_(std::move(other.text_seed_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
 NoiseFbmMultiData TerrainNoiseFbmMulti::Generate(
@@ -520,90 +640,90 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmdPerlinDesk, data::TextId::kNotYet},
+    : Base({data::VboIdMain::kTerrainNoiseFbmdPerlinDesk},
            1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmdPerlinPinBack, data::TextId::kNotYet, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmdPerlinPinPoint, data::TextId::kNotYet}},
+           {{data::VboIdMain::kTerrainNoiseFbmdPerlinPinBack, []() {}},
+            {data::VboIdMain::kTerrainNoiseFbmdPerlinPinPoint}},
            ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmdPerlinSave, data::TextId::kNotYet},
-           {text_renderer, 0.05f, glm::vec2{0.0f},
-            {data::VboIdMain::kTerrainNoiseFbmdPerlinName, data::TextId::kNotYet},
+           {data::VboIdMain::kTerrainNoiseFbmdPerlinSave},
+           {text_renderer, 0.05f,
+            {data::VboIdMain::kTerrainNoiseFbmdPerlinName},
             data::TextId::kScale}),
       slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXArea},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXIcon},
           20.0f
           ),
       slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYArea},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYIcon},
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXText, data::TextId::kNone},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYText, data::TextId::kNone},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYText},
           data::TextId::kScaleY),
       slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesArea},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesIcon},
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesText, data::TextId::kNone}, data::TextId::kOctaves),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesText}, data::TextId::kOctaves),
       slider_gain_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinGainArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinGainIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinGainArea},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinGainIcon},
           20.0f
           ),
       text_gain_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinGainText, data::TextId::kNone}, data::TextId::kGain),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinGainText}, data::TextId::kGain),
       slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityArea},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityIcon},
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityText, data::TextId::kNone}, data::TextId::kLacunarity),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityText}, data::TextId::kLacunarity),
       slider_slopeness_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessArea},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessIcon},
           20.0f
           ),
       text_slopeness_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessText, data::TextId::kNone}, data::TextId::kSlopeness),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessText}, data::TextId::kSlopeness),
       slider_octave_factor_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorArea},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorIcon},
           20.0f
           ),
       text_octave_factor_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorText, data::TextId::kNone}, data::TextId::kOctaveFactor),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorText}, data::TextId::kOctaveFactor),
       slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedArea},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedIcon},
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedText, data::TextId::kNone}, data::TextId::kSeed),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedText}, data::TextId::kSeed),
       toggle_negative_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOff, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn1, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn2, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn3, data::TextId::kNone}
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOff},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn1},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn2},
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn3}
           ),
       text_negative_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeText, data::TextId::kNone}, data::TextId::kNegative) {
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeText}, data::TextId::kNegative) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
@@ -618,8 +738,48 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_};
   shader_ = Shader("../shaders/noise_shaders/FbmdPerlin.comp");
-  SetParent(GetId());
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_gain_, &text_gain_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
+  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
+}
+
+TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(TerrainNoiseFbmdPerlin&& other)
+    : Base(std::move(other)),
+      slider_scale_x_(std::move(other.slider_scale_x_)),
+      text_scale_x_(std::move(other.text_scale_x_)),
+      slider_scale_y_(std::move(other.slider_scale_y_)),
+      text_scale_y_(std::move(other.text_scale_y_)),
+      slider_octaves_(std::move(other.slider_octaves_)),
+      text_octaves_(std::move(other.text_octaves_)),
+      slider_gain_(std::move(other.slider_gain_)),
+      text_gain_(std::move(other.text_gain_)),
+      slider_lacunarity_(std::move(other.slider_lacunarity_)),
+      text_lacunarity_(std::move(other.text_lacunarity_)),
+      slider_slopeness_(std::move(other.slider_slopeness_)),
+      text_slopeness_(std::move(other.text_slopeness_)),
+      slider_octave_factor_(std::move(other.slider_octave_factor_)),
+      text_octave_factor_(std::move(other.text_octave_factor_)),
+      slider_seed_(std::move(other.slider_seed_)),
+      text_seed_(std::move(other.text_seed_)),
+      toggle_negative_(std::move(other.toggle_negative_)),
+      text_negative_(std::move(other.text_negative_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_gain_, &text_gain_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
+  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
 }
 
 NoiseFbmdPerlinData TerrainNoiseFbmdPerlin::Generate(
@@ -676,105 +836,105 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmWarpDesk, data::TextId::kNotYet},
+    : Base({data::VboIdMain::kTerrainNoiseFbmWarpDesk},
            1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmWarpPinBack, data::TextId::kNotYet, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmWarpPinPoint, data::TextId::kNotYet}},
+           {{data::VboIdMain::kTerrainNoiseFbmWarpPinBack, []() {}},
+            {data::VboIdMain::kTerrainNoiseFbmWarpPinPoint}},
            ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmWarpSave, data::TextId::kNotYet},
-           {text_renderer, 0.05f, glm::vec2{0.0f},
-            {data::VboIdMain::kTerrainNoiseFbmWarpName, data::TextId::kNotYet},
+           {data::VboIdMain::kTerrainNoiseFbmWarpSave},
+           {text_renderer, 0.05f,
+            {data::VboIdMain::kTerrainNoiseFbmWarpName},
             data::TextId::kScale}),
       slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleXArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleXIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmWarpScaleXArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpScaleXIcon},
           20.0f
           ),
       slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleYArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleYIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmWarpScaleYArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpScaleYIcon},
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleXText, data::TextId::kNone},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleYText, data::TextId::kNone},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpScaleYText},
           data::TextId::kScaleY),
       slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctavesArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctavesIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmWarpOctavesArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpOctavesIcon},
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctavesText, data::TextId::kNone}, data::TextId::kOctaves),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpOctavesText}, data::TextId::kOctaves),
       slider_gain_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpGainArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpGainIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmWarpGainArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpGainIcon},
           20.0f
           ),
       text_gain_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpGainText, data::TextId::kNone}, data::TextId::kGain),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpGainText}, data::TextId::kGain),
       slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityIcon},
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityText, data::TextId::kNone}, data::TextId::kLacunarity),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityText}, data::TextId::kLacunarity),
       slider_slopeness_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessIcon, data::TextId::kNone}
+          {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessIcon}
           ),
       text_slopeness_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessText, data::TextId::kNone}, data::TextId::kSlopeness),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessText}, data::TextId::kSlopeness),
       slider_octave_factor_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorIcon},
           20.0f
           ),
       text_octave_factor_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorText, data::TextId::kNone}, data::TextId::kOctaveFactor),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorText}, data::TextId::kOctaveFactor),
       slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpSeedArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpSeedIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmWarpSeedArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpSeedIcon},
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpSeedText, data::TextId::kNone}, data::TextId::kSeed),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpSeedText}, data::TextId::kSeed),
       slider_q_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpQArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpQIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmWarpQArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpQIcon},
           20.0f
           ),
       text_q_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpQText, data::TextId::kNone}, data::TextId::kQ),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpQText}, data::TextId::kQ),
       slider_r_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpRArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpRIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmWarpRArea},
+          {data::VboIdMain::kTerrainNoiseFbmWarpRIcon},
           20.0f
           ),
       text_r_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpRText, data::TextId::kNone}, data::TextId::kR),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpRText}, data::TextId::kR),
       toggle_negative_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOff, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn1, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn2, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn3, data::TextId::kNone}
+          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOff},
+          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn1},
+          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn2},
+          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn3}
           ),
       text_negative_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeText, data::TextId::kNone}, data::TextId::kNegative) {
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeText}, data::TextId::kNegative) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
@@ -789,8 +949,56 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
   shader_ = Shader("../shaders/noise_shaders/FbmWarp.comp");
-  SetParent(GetId());
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_gain_, &text_gain_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
+  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+  hierarchy_.AddNested(&slider_q_, &text_q_);
+  hierarchy_.AddNested(&slider_r_, &text_r_);
+  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
+}
+
+TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(TerrainNoiseFbmWarp&& other)
+    : Base(std::move(other)),
+      slider_scale_x_(std::move(other.slider_scale_x_)),
+      text_scale_x_(std::move(other.text_scale_x_)),
+      slider_scale_y_(std::move(other.slider_scale_y_)),
+      text_scale_y_(std::move(other.text_scale_y_)),
+      slider_octaves_(std::move(other.slider_octaves_)),
+      text_octaves_(std::move(other.text_octaves_)),
+      slider_gain_(std::move(other.slider_gain_)),
+      text_gain_(std::move(other.text_gain_)),
+      slider_lacunarity_(std::move(other.slider_lacunarity_)),
+      text_lacunarity_(std::move(other.text_lacunarity_)),
+      slider_slopeness_(std::move(other.slider_slopeness_)),
+      text_slopeness_(std::move(other.text_slopeness_)),
+      slider_octave_factor_(std::move(other.slider_octave_factor_)),
+      text_octave_factor_(std::move(other.text_octave_factor_)),
+      slider_seed_(std::move(other.slider_seed_)),
+      text_seed_(std::move(other.text_seed_)),
+      slider_q_(std::move(other.slider_q_)),
+      text_q_(std::move(other.text_q_)),
+      slider_r_(std::move(other.slider_r_)),
+      text_r_(std::move(other.text_r_)),
+      toggle_negative_(std::move(other.toggle_negative_)),
+      text_negative_(std::move(other.text_negative_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_gain_, &text_gain_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
+  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+  hierarchy_.AddNested(&slider_q_, &text_q_);
+  hierarchy_.AddNested(&slider_r_, &text_r_);
+  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
 }
 
 NoiseFbmWarpData TerrainNoiseFbmWarp::Generate(
@@ -855,106 +1063,106 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmPerlinWarpDesk, data::TextId::kNotYet},
+    : Base({data::VboIdMain::kTerrainNoiseFbmPerlinWarpDesk},
            1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmPerlinWarpPinBack, data::TextId::kNotYet, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmPerlinWarpPinPoint, data::TextId::kNotYet}},
+           {{data::VboIdMain::kTerrainNoiseFbmPerlinWarpPinBack, []() {}},
+            {data::VboIdMain::kTerrainNoiseFbmPerlinWarpPinPoint}},
            ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSave, data::TextId::kNotYet},
-           {text_renderer, 0.05f, glm::vec2{0.0f},
-            {data::VboIdMain::kTerrainNoiseFbmPerlinWarpName, data::TextId::kNotYet},
+           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSave},
+           {text_renderer, 0.05f,
+            {data::VboIdMain::kTerrainNoiseFbmPerlinWarpName},
             data::TextId::kScale}),
       slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXIcon},
           20.0f
           ),
       slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYIcon},
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXText, data::TextId::kNone},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYText, data::TextId::kNone},
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYText},
           data::TextId::kScaleY),
       slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesIcon},
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesText, data::TextId::kNone}, data::TextId::kOctaves),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesText}, data::TextId::kOctaves),
       slider_gain_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainIcon},
           20.0f
           ),
       text_gain_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainText, data::TextId::kNone}, data::TextId::kGain),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainText}, data::TextId::kGain),
       slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityIcon},
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityText, data::TextId::kNone}, data::TextId::kLacunarity),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityText}, data::TextId::kLacunarity),
       slider_slopeness_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessIcon},
           20.0f
           ),
       text_slopeness_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessText, data::TextId::kNone}, data::TextId::kSlopeness),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessText}, data::TextId::kSlopeness),
       slider_octave_factor_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorIcon},
           20.0f
           ),
       text_octave_factor_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorText, data::TextId::kNone}, data::TextId::kOctaveFactor),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorText}, data::TextId::kOctaveFactor),
       slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedIcon},
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedText, data::TextId::kNone}, data::TextId::kSeed),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedText}, data::TextId::kSeed),
       slider_q_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQIcon},
           20.0f
           ),
       text_q_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQText, data::TextId::kNone}, data::TextId::kQ),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQText}, data::TextId::kQ),
       slider_r_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRArea, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRIcon, data::TextId::kNone},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRArea},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRIcon},
           20.0f
           ),
       text_r_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRText, data::TextId::kNone}, data::TextId::kR),
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRText}, data::TextId::kR),
       toggle_negative_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOff, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn1, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn2, data::TextId::kNone},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn3, data::TextId::kNone}
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOff},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn1},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn2},
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn3}
           ),
       text_negative_(
-          text_renderer, 0.025f, glm::vec2{1.0f},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeText, data::TextId::kNone}, data::TextId::kNegative) {
+          text_renderer, 0.025f,
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeText}, data::TextId::kNegative) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
@@ -969,8 +1177,56 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
   shader_ = Shader("../shaders/noise_shaders/FbmPerlinWarp.comp");
-  SetParent(GetId());
-  UiWindowBase::UpdateTransform();
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_gain_, &text_gain_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
+  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+  hierarchy_.AddNested(&slider_q_, &text_q_);
+  hierarchy_.AddNested(&slider_r_, &text_r_);
+  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
+}
+
+TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(TerrainNoiseFbmPerlinWarp&& other)
+    : Base(std::move(other)),
+      slider_scale_x_(std::move(other.slider_scale_x_)),
+      text_scale_x_(std::move(other.text_scale_x_)),
+      slider_scale_y_(std::move(other.slider_scale_y_)),
+      text_scale_y_(std::move(other.text_scale_y_)),
+      slider_octaves_(std::move(other.slider_octaves_)),
+      text_octaves_(std::move(other.text_octaves_)),
+      slider_gain_(std::move(other.slider_gain_)),
+      text_gain_(std::move(other.text_gain_)),
+      slider_lacunarity_(std::move(other.slider_lacunarity_)),
+      text_lacunarity_(std::move(other.text_lacunarity_)),
+      slider_slopeness_(std::move(other.slider_slopeness_)),
+      text_slopeness_(std::move(other.text_slopeness_)),
+      slider_octave_factor_(std::move(other.slider_octave_factor_)),
+      text_octave_factor_(std::move(other.text_octave_factor_)),
+      slider_seed_(std::move(other.slider_seed_)),
+      text_seed_(std::move(other.text_seed_)),
+      slider_q_(std::move(other.slider_q_)),
+      text_q_(std::move(other.text_q_)),
+      slider_r_(std::move(other.slider_r_)),
+      text_r_(std::move(other.text_r_)),
+      toggle_negative_(std::move(other.toggle_negative_)),
+      text_negative_(std::move(other.text_negative_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
+  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
+  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
+  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
+  hierarchy_.AddNested(&slider_gain_, &text_gain_);
+  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
+  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
+  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
+  hierarchy_.AddNested(&slider_seed_, &text_seed_);
+  hierarchy_.AddNested(&slider_q_, &text_q_);
+  hierarchy_.AddNested(&slider_r_, &text_r_);
+  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
 }
 
 NoiseFbmPerlinWarpData TerrainNoiseFbmPerlinWarp::Generate(

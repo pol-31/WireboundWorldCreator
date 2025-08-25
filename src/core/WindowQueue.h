@@ -44,8 +44,6 @@ class WindowQueue {
 
   void Release();
 
-  data::TextId Hover(int id);
-
   bool Scroll(GLuint id, float yoffset);
 
   void SetTopWindow(UiTopWindowBase* window) {

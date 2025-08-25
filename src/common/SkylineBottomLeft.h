@@ -349,24 +349,44 @@ void StoreAtlas(const std::vector<Sprite>& sprites,
 }
 
 void StoreTexCoords(const std::vector<SpriteEntry>& sprite_entries,
-                    Vec2i size, std::string_view path) {
+                    Vec2i tex_size, std::string_view path) {
   std::ofstream file(path.data());
   if (!file.is_open()) {
     std::cerr << "Error: Could not open file: " << path << std::endl;
     return;
   }
 
-  float atlas_ratio = static_cast<float>(size.x) / static_cast<float>(size.y);
+  float atlas_ratio = 2.0f * static_cast<float>(tex_size.x) / static_cast<float>(tex_size.y);
   /*
    * // name
    * pos_x,pos_y,coord_x,coord_y x4 (rb-rt-lb-lt)
    * */
+  Vec2i size;
   std::ostringstream oss;
   for (const auto& s : sprite_entries) {
-    float sprite_ratio = static_cast<float>(s.sprite->width) / static_cast<float>(s.sprite->height);
-    Aabb aabb = s.sprite->aabb;
-    float width = 0.2f;
-    float height = width * atlas_ratio * sprite_ratio;
+    float sprite_ratio = 1.0f;
+    Aabb aabb;
+    // if no sprite - set -1;1 (full-screen)
+    aabb.left = 0.0f;
+    aabb.right = 1.0f;
+    aabb.top = 1.0f;
+    aabb.bottom = 0.0f;
+    float width = 2.0f;
+    float height = 2.0f;
+    if (s.sprite) {
+      sprite_ratio = static_cast<float>(s.sprite->width) / static_cast<float>(s.sprite->height);
+      aabb = s.sprite->aabb;
+      width = static_cast<float>(aabb.right - aabb.left) / (128.0f * 5.0f);
+      height = width * atlas_ratio / sprite_ratio;
+      size = tex_size;
+    } else {
+      size = {1, 1};
+    }
+    /*if (static_cast<float>(aabb.right) / size.x > 100.0f) {
+      std::cout << "smt wrong" << std::endl;
+    } else {
+      std::cout << "ok" << std::endl;
+    }*/
     float half_width = width / 2;
     float half_height = height / 2;
     oss << "// " << s.comment << '\n'
@@ -413,8 +433,8 @@ std::vector<SpriteEntry> ParseSpritesInfo(
       }
     }
     if (!sprite_entry.sprite) {
-      std::cerr << "specified wrong sprite path: " << entry_path << std::endl;
-      throw;
+      std::cerr << "no sprite path for: \"" << entry_path << "\", set full screen tex_coords" << std::endl;
+      sprite_entries.push_back(std::move(sprite_entry));
     }
     iss.str();
     iss.clear();

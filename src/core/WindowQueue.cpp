@@ -122,23 +122,11 @@ void WindowQueue::Release() {
   }
 }
 
-data::TextId WindowQueue::Hover(int id) {
-  if (top_window_) {
-    return top_window_->Hover(id);
-  }
-  data::TextId handled = data::TextId::kNone;
-  for (auto window : windows_) {
-    if (window && handled == data::TextId::kNone) {
-      handled = window->Hover(id);
-    }
-  }
-  return handled;
-}
-
 bool WindowQueue::Scroll(GLuint id, float yoffset) {
-  if (top_window_) {
+  /* no scrolls
+   * if (top_window_) {
     return top_window_->Scroll(id, yoffset);
-  }
+  }*/
   bool result = false;
   for (auto window : windows_) {
     if (window && !result) {

@@ -3,6 +3,9 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "../io/Window.h"
 #include "../common/ShadersBinding.h"
 
@@ -60,6 +63,10 @@ void WaterRenderer::Render() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
   shader_.Bind();
+  tile_.map_terrain_height.Bind();
+  glm::mat4 transform = glm::scale(
+      glm::mat4{1.0f}, glm::vec3{tile_.map_scale});
+  glUniformMatrix4fv(15, 1, false, glm::value_ptr(transform));
   ocean_->BindRenderData();
   glActiveTexture(GL_TEXTURE15);
   tile_.map_terrain_height.Bind();
@@ -78,6 +85,10 @@ void WaterRenderer::RenderPicking() const {
   // TODO: 1024 * 1024 as an offset from Details.h
   glUniform1ui(shader::kHeightMapPickingIdOffset,
                static_cast<unsigned int>(1024 * 1024));
+  tile_.map_terrain_height.Bind();
+  glm::mat4 transform = glm::scale(
+      glm::mat4{1.0f}, glm::vec3{tile_.map_scale});
+  glUniformMatrix4fv(15, 1, false, glm::value_ptr(transform));
   glBindVertexArray(vao_);
   glActiveTexture(GL_TEXTURE0);
   tile_.map_water_height.Bind();

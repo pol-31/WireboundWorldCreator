@@ -21,7 +21,7 @@ struct TerrainInstanceData : public IGraph::BaseInstanceData {
   bool do_invert = false;
 
   // including transformation & modifiers - final result
-  Texture32F hmap;
+//  Texture32F hmap;
   std::array<uint8_t, 1024 * 1024> heights;
 };
 

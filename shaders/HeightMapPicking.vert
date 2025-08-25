@@ -1,6 +1,7 @@
 #version 460 core
 
 layout(location = 0) uniform sampler2D tex_displacement;
+layout(location = 7) uniform mat4 transform;
 
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
@@ -28,7 +29,7 @@ void main(void) {
     vec4 p = vertices[gl_VertexID] + vec4(float(x - 512), 0.0,
     float(y - 512), 0.0) / 16.0f/** - vec4(0.5f, 0.0f, 0.5f, 0.0f)*/;
     p.y = texture(tex_displacement, tex_coords).r;
-    gl_Position = camera.proj * camera.view * /**transform * */p;
+    gl_Position = camera.proj * camera.view * transform * p;
 
     vert_id = uint(gl_InstanceID) + id_offset;
 }

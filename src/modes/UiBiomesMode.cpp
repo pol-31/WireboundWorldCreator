@@ -12,9 +12,9 @@ void UiBiomesMode::ScrollCallback(
       glfwGetWindowUserPointer(window));
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (yoffset < 0.0f) {
-    global_data->tile_renderer->DownScale();
+    global_data->tile_renderer->cur_tile_.DownScale();
   } else {
-    global_data->tile_renderer->UpScale();
+    global_data->tile_renderer->cur_tile_.UpScale();
   }
 }
 
@@ -48,29 +48,28 @@ UiBiomesMode::UiBiomesMode(
     : IUiMode(
           ui_shared_resources,
           window_queue,
-          {data::VboIdMain::kBiomesBiomesMode, data::TextId::kNotYet}),
-      btn_wind_(data::VboIdMain::kBiomesEditWindIcon, data::TextId::kNotYet,
+          {data::VboIdMain::kBiomesBiomesMode}),
+      btn_wind_(data::VboIdMain::kBiomesEditWindIcon,
                 [this]() {
                   this->BtnWind();
                 }),
-      btn_sun_(data::VboIdMain::kBiomesEditSunIcon, data::TextId::kNotYet,
+      btn_sun_(data::VboIdMain::kBiomesEditSunIcon,
                [this]() {
                  this->BtnSun();
                }),
-      btn_time_(data::VboIdMain::kBiomesEditTimeIcon, data::TextId::kNotYet,
+      btn_time_(data::VboIdMain::kBiomesEditTimeIcon,
                 [this]() {
                   this->BtnTime();
                 }),
       btn_precipitations_(data::VboIdMain::kBiomesEditPrecipitationIcon,
-                          data::TextId::kNotYet,
           [this]() {
             this->BtnPrecipitations();
           }),
-      btn_temperature_(data::VboIdMain::kBiomesEditTemperatureIcon, data::TextId::kNotYet,
+      btn_temperature_(data::VboIdMain::kBiomesEditTemperatureIcon,
           [this]() {
             this->BtnTemperature();
           }),
-      btn_clouds_(data::VboIdMain::kBiomesEditCloudIcon, data::TextId::kNotYet,
+      btn_clouds_(data::VboIdMain::kBiomesEditCloudIcon,
                   [this]() {
                     this->BtnClouds();
                   }),
@@ -141,8 +140,4 @@ void UiBiomesMode::BindCallbacks() {
   glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
   //  glfwSetKeyCallback(gWindow, KeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
-}
-
-data::TextId UiBiomesMode::Hover(std::uint32_t global_id) {
-  return data::TextId::kNone;
 }

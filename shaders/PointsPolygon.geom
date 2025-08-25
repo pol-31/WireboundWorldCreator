@@ -3,6 +3,7 @@ layout(lines) in;
 layout(line_strip, max_vertices = 256) out;
 
 layout(location = 0) uniform sampler2D tex_displacement;
+layout(location = 7) uniform mat4 transform;
 
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
@@ -33,7 +34,7 @@ void main() {
 
         vec4 final_pos = vec4(pos.x, 0.0f, pos.y, 1.0f);
         final_pos.y = texture(tex_displacement, tc).r;
-        gl_Position = camera.proj * camera.view * /**transform * */final_pos;
+        gl_Position = camera.proj * camera.view * transform * final_pos;
         color_geom = color_vert[0];
         EmitVertex();
     }

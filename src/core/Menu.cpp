@@ -65,129 +65,129 @@ Menu::Menu(
       /// TODO; more description
       /// first three are text, so not used as simple rendering, but only for text
       ui_tab_menu_(
-          {data::VboIdMain::kMenuDesk, data::TextId::kNotYet},
+          {data::VboIdMain::kMenuDesk},
           1.0f,
-          {{data::VboIdMain::kMenuDeskPinBack, data::TextId::kNotYet, [](){}},
-           {data::VboIdMain::kMenuDeskPinPoint, data::TextId::kNotYet}},
+          {{data::VboIdMain::kMenuDeskPinBack, [](){}},
+           {data::VboIdMain::kMenuDeskPinPoint}},
           ui_shared_resources_,
           window_queue,
-          {data::VboIdMain::kMenuTerrain, data::TextId::kMenuTerrain,
+          {data::VboIdMain::kMenuTerrain,
            [this]() {
              this->SetMode(0);
            }},
-          {data::VboIdMain::kMenuWater, data::TextId::kMenuWater,
+          {data::VboIdMain::kMenuWater,
            [this]() {
              this->SetMode(1);
            }},
-          {data::VboIdMain::kMenuRoads, data::TextId::kMenuRoads,
+          {data::VboIdMain::kMenuRoads,
            [this]() {
              this->SetMode(2);
            }},
-          {data::VboIdMain::kMenuFences, data::TextId::kMenuFences,
+          {data::VboIdMain::kMenuFences,
            [this]() {
              this->SetMode(3);
            }},
-          {data::VboIdMain::kMenuPlacement, data::TextId::kMenuPlacement,
+          {data::VboIdMain::kMenuPlacement,
            [this]() {
              this->SetMode(4);
            }},
-          {data::VboIdMain::kMenuObjects, data::TextId::kMenuObjects,
+          {data::VboIdMain::kMenuObjects,
            [this]() {
              this->SetMode(5);
            }},
-          {data::VboIdMain::kMenuBiomes, data::TextId::kMenuBiomes,
+          {data::VboIdMain::kMenuBiomes,
            [this]() {
              this->SetMode(6);
            }},
-          {data::VboIdMain::kMenuTiles, data::TextId::kMenuTiles,
+          {data::VboIdMain::kMenuTiles,
            [this]() {
              this->SetMode(7);
            }},
-          {{data::VboIdMain::kMenuTerrainOff, data::TextId::kNotYet,
+          {{data::VboIdMain::kMenuTerrainOff,
             [this]() {
               bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_terrain_;
               this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_terrain_ = !state;
             }},
-           {data::VboIdMain::kMenuTerrainOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuTerrainOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuTerrainOn3, data::TextId::kNotYet}
+           {data::VboIdMain::kMenuTerrainOn1},
+           {data::VboIdMain::kMenuTerrainOn2},
+           {data::VboIdMain::kMenuTerrainOn3}
           },
-          {{data::VboIdMain::kMenuWaterOff, data::TextId::kNotYet,
+          {{data::VboIdMain::kMenuWaterOff,
             [this]() {
               bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_water_;
               this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_water_ = !state;
             }},
-           {data::VboIdMain::kMenuWaterOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuWaterOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuWaterOn3, data::TextId::kNotYet}
+           {data::VboIdMain::kMenuWaterOn1},
+           {data::VboIdMain::kMenuWaterOn2},
+           {data::VboIdMain::kMenuWaterOn3}
           },
-          {{data::VboIdMain::kMenuRoadsOff, data::TextId::kNotYet,
+          {{data::VboIdMain::kMenuRoadsOff,
             [this]() {
               bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_roads_;
               this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_roads_ = !state;
             }},
-           {data::VboIdMain::kMenuRoadsOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuRoadsOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuRoadsOn3, data::TextId::kNotYet}
+           {data::VboIdMain::kMenuRoadsOn1},
+           {data::VboIdMain::kMenuRoadsOn2},
+           {data::VboIdMain::kMenuRoadsOn3}
           },
-          {{data::VboIdMain::kMenuFencesOff, data::TextId::kNotYet,
+          {{data::VboIdMain::kMenuFencesOff,
             [this]() {
               bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_fences_;
               this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_fences_ = !state;
             }},
-           {data::VboIdMain::kMenuFencesOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuFencesOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuFencesOn3, data::TextId::kNotYet}
+           {data::VboIdMain::kMenuFencesOn1},
+           {data::VboIdMain::kMenuFencesOn2},
+           {data::VboIdMain::kMenuFencesOn3}
           },
-          {{data::VboIdMain::kMenuPlacementOff, data::TextId::kNotYet,
+          {{data::VboIdMain::kMenuPlacementOff,
             [this]() {
               bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_placement_;
               this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_placement_ = !state;
             }},
-           {data::VboIdMain::kMenuPlacementOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuPlacementOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuPlacementOn3, data::TextId::kNotYet}
+           {data::VboIdMain::kMenuPlacementOn1},
+           {data::VboIdMain::kMenuPlacementOn2},
+           {data::VboIdMain::kMenuPlacementOn3}
           },
-          {{data::VboIdMain::kMenuObjectsOff, data::TextId::kNotYet,
+          {{data::VboIdMain::kMenuObjectsOff,
             [this]() {
               bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_objects_;
               this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_objects_ = !state;
             }},
-           {data::VboIdMain::kMenuObjectsOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuObjectsOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuObjectsOn3, data::TextId::kNotYet}
+           {data::VboIdMain::kMenuObjectsOn1},
+           {data::VboIdMain::kMenuObjectsOn2},
+           {data::VboIdMain::kMenuObjectsOn3}
           },
-          {{data::VboIdMain::kMenuBiomesOff, data::TextId::kNotYet,
+          {{data::VboIdMain::kMenuBiomesOff,
             [this]() {
               bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_biomes_;
               this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_biomes_ = !state;
             }},
-           {data::VboIdMain::kMenuBiomesOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuBiomesOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuBiomesOn3, data::TextId::kNotYet}
+           {data::VboIdMain::kMenuBiomesOn1},
+           {data::VboIdMain::kMenuBiomesOn2},
+           {data::VboIdMain::kMenuBiomesOn3}
           },
-          {{data::VboIdMain::kMenuTilesOff, data::TextId::kNotYet,
+          {{data::VboIdMain::kMenuTilesOff,
             [this]() {
               bool state = this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_tiles_;
               this->ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_tiles_ = !state;
             }},
-           {data::VboIdMain::kMenuTilesOn1, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuTilesOn2, data::TextId::kNotYet},
-           {data::VboIdMain::kMenuTilesOn3, data::TextId::kNotYet}
+           {data::VboIdMain::kMenuTilesOn1},
+           {data::VboIdMain::kMenuTilesOn2},
+           {data::VboIdMain::kMenuTilesOn3}
           },
-          {data::VboIdMain::kMenuShaderWirebound, data::TextId::kNotYet},
-          {{data::VboIdMain::kMenuShadersOff, data::TextId::kMenuTerrain,
+          {data::VboIdMain::kMenuShaderWirebound},
+          {{data::VboIdMain::kMenuShadersOff,
             [this]() {
               std::cout << "toggle shaders" << std::endl;
             }},
-           {data::VboIdMain::kMenuShadersOn1, data::TextId::kMenuTerrain},
-           {data::VboIdMain::kMenuShadersOn2, data::TextId::kMenuTerrain},
-           {data::VboIdMain::kMenuShadersOn3, data::TextId::kMenuTerrain}
+           {data::VboIdMain::kMenuShadersOn1},
+           {data::VboIdMain::kMenuShadersOn2},
+           {data::VboIdMain::kMenuShadersOn3}
           },
-          {data::VboIdMain::kMenuArrowSelect, data::TextId::kNotYet},
-          {data::VboIdMain::kMenuArrowSelected, data::TextId::kNotYet},
-          {data::VboIdMain::kMenuSave, data::TextId::kNotYet},
-          {data::VboIdMain::kMenuLoad, data::TextId::kNotYet}) {}
+          {data::VboIdMain::kMenuArrowSelect},
+          {data::VboIdMain::kMenuArrowSelected},
+          {data::VboIdMain::kMenuSave},
+          {data::VboIdMain::kMenuLoad}) {}
 
 void Menu::Show() {
   ui_tab_menu_.Show();
@@ -203,8 +203,6 @@ void Menu::SetMode(int id) {
       static_cast<float>(id) * 2.0f * glm::pi<float>() / 8.0f;
   ui_tab_menu_.SetSelectedArrow(arrow_selected_angle_);
   cur_mode_->BindCallbacks();
-  auto text_ids = cur_mode_->GetPrerenderTextIds();
-//  text_renderer_.PrerenderModeText(text_ids.x, text_ids.y);
 }
 
 void Menu::Render(bool show) {
@@ -231,22 +229,15 @@ void Menu::RenderPicking(bool show) {
   }
 }
 
-data::TextId Menu::Hover(bool show, uint32_t global_id) {
-  /*if (!show) {
-    return data::TextId::kNone;
-  }
-  auto hovered = ui_tab_menu_.Hover(global_id);
-  if (hovered == data::TextId::kNone) {
-    return data::TextId::kNone;
-  }*/
-  auto local_id = global_id - details::kIdOffsetUi;
+void Menu::Hover() {
+  auto local_id = ui_shared_resources_.global_glfw_callback_data_.hovered_id
+                  - details::kIdOffsetUi;
   if (local_id < 40) {
     // intentionally local_id as int
     arrow_select_angle_ =
         static_cast<float>(local_id / 5) * 2.0f * glm::pi<float>() / 8.0f;
     ui_tab_menu_.SetSelectArrow(arrow_select_angle_);
   }
-  return data::TextId::kNone;
 }
 
 bool Menu::Press(uint32_t global_id) {

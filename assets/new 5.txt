@@ -51,20 +51,35 @@ NEW ISSUES:
 - UiTerrainMode::slots remove edit/select, remove vertex/edge/face
 - show pressed keys (top left corner: translate/scale/rotate x/y/z, etc...)
 - UiTopWindow --> SHADOW SPRITE
+- remove sprite_keyboads (not going to reassign keys)
 
 
 slot color indicator & name (UiSlots gets from UiEditTerrain)
 selection orientation fix
 
 TODO:
-- hotkeys idea_.kra (BEFORE OTHER MODES MODIFYING)
-- align ui
-- adjust sliders (can do only after "align ui")
 - text input
+- align ui
+- UiTextInput !!!!!!!!! NO!, let's: remove modified_text, add shadow on top, text on top
+
+- adjust sliders (can do only after "align ui")
 - UiWaterMode, make similar to UiTerrainMode ui-slots
 
-TODO:
-- fix wireframe (somehow disappeared)
-- layer transform border (rotate -90+90, scale, translate as well)
-- flatten comp shader
+TODO(kept unresolved):
+- FlattenTerrain.comp shader
 - render/show hmap after processing (transformation, tiling, invert, flatten/cut >90deg)
+# apply transform to tex_coords?
+# flatten <90deg angles
+
+
+
++ Keyboard settings -> REMOVE
++ UiBase text description ->REMOVE
++ Remove Hover(), replace by Render() {if_mouse_pos_there}
++ UiTipWindow* description (still)
+
+-> text input (label & input -> UiInputText)
+
+TODO:
+1. terrain layer transform
+2. adjust noise gen params (broken because of unresolved terrain layer transform)

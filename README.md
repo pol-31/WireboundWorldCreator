@@ -20,7 +20,7 @@ Goal (borowed from [Water Rendering in Far Cry 5](https://www.youtube.com/watch?
 
 Current progress:
 
-![progress/July20.png](progress/July20.png)
+![progress/July20.png](static/progress.png)
 
 Ui scratch:
 

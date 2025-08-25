@@ -11,9 +11,15 @@
 #include "UiDebugger.h"
 
 TextRenderer::TextRenderer(
-    const Paths& paths, UiDynamicSprite&& prerender_text_slot)
+    UiSharedResources& ui_shared_resources,
+    const Paths& paths,
+    UiDynamicSprite&& prerender_text_slot,
+    UiDynamicSprite&& sprite_shadow,
+    UiDynamicSprite&& sprite_cursor)
     : tex_bitmap_("../assets/bmp_ascii_header.png", GL_RED),
       prerender_text_slot_(std::move(prerender_text_slot)),
+      sprite_shadow_(std::move(sprite_shadow)),
+      sprite_cursor_(std::move(sprite_cursor)),
 //    : tex_bitmap_("../assets/AsciiBitmap.png", GL_RED),
       tex_menu_(1024, 1024, GL_RED),
       tex_mode_(1024, 1024, GL_RED),
@@ -21,7 +27,8 @@ TextRenderer::TextRenderer(
           paths.shader_text_vert, paths.shader_text_frag),
       render_shader_picking_(
           paths.shader_text_vert, paths.shader_sprite_picking_frag),
-      scale_(0.5) {
+      scale_(0.5),
+      ui_shared_resources_(ui_shared_resources) {
   Init();
 }
 
@@ -144,7 +151,7 @@ void TextRenderer::SetupFramebuffer(
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-int GetWidth(int code) {
+int TextRenderer::GetWidth(int code) {
   float comp_width;
   if (code & 1) {
     comp_width = static_cast<float>((font::gWidths[code >> 1]) >> 4);
@@ -170,6 +177,21 @@ int TextRenderer::CalculateLineLength(
   return total_length * scale_ * ui_scale * 1024.0f / 78.0f;
 }
 
+int TextRenderer::CalculateLineLength(
+    FixedSizeQueue<char, 64>* text, const UiDynamicSprite& text_slot) {
+  int total_length = 0;
+  for (auto ch : *text) {
+    if (ch == '\n') {
+      break;
+    }
+    total_length += GetWidth(static_cast<int>(ch) - 32);
+  }
+  float ui_scale = debug::gUiTransforms[
+                       4 * (text_slot.GetId() - details::kIdOffsetUi)
+  ].scale;
+  return total_length * scale_ * ui_scale * 1024.0f / 78.0f;
+}
+
 void TextRenderer::PrerenderMenuText(int start, int end) {
   text_slot_ = &prerender_text_slot_;
   PrerenderImpl(start, end, tex_menu_, coords_menu_);
@@ -178,6 +200,140 @@ void TextRenderer::PrerenderMenuText(int start, int end) {
 void TextRenderer::PrerenderModeText(int start, int end) {
   PrerenderImpl(start, end, tex_mode_, coords_mode_);
 }
+
+// ---------------------
+// ---------------------
+// ---------------------
+
+//TODO: all input single-line
+void TextRenderer::RenderText(
+    UiDynamicSprite& text_slot, FixedSizeQueue<char, 64>* text) {
+  float symbol_height = font::gFullHeight * scale_ / 1024.0f;
+
+  glActiveTexture(GL_TEXTURE0);
+  tex_bitmap_.Bind();
+  render_shader_.Bind();
+  text_slot.SetScale(scale_);
+  float ui_scale = debug::gUiTransforms[
+                       4 * (text_slot.GetId() - details::kIdOffsetUi)
+  ].scale;
+  glm::vec2 next_pos{0.0f, symbol_height};
+
+  for (auto ch : *text) {
+    if (ch == '\n') {
+      std::cerr << "new_line skipped in RendeText(), remove it" << std::endl;
+      continue;
+    }
+    auto coords = GetGlyphCoords(ch);
+    auto coords_transform = CoordsToTransformMatrix(coords);
+    float symbol_width = scale_ * static_cast<float>(GetWidth(
+                                      static_cast<int>(ch) - 32)) / 1024.0f;
+
+    glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
+
+    text_slot.SetExtraScale(symbol_width / symbol_height);
+    symbol_width *= ui_scale * 1024.0f / 78.0f;
+
+    /// correct alignment (half prev, half next char)
+    next_pos.x += symbol_width / 2.0f;
+    text_slot.SetTranslate(next_pos);
+    next_pos.x += symbol_width / 2.0f;
+    text_slot.Render();
+  }
+
+  glUseProgram(0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void TextRenderer::RenderTextSelected(
+    UiDynamicSprite& text_slot, FixedSizeQueue<char, 64>* text) {
+  float symbol_height = font::gFullHeight * scale_ / 1024.0f;
+
+  glActiveTexture(GL_TEXTURE0);
+  tex_bitmap_.Bind();
+  render_shader_.Bind();
+  text_slot.SetScale(scale_);
+  float ui_scale = debug::gUiTransforms[
+                       4 * (text_slot.GetId() - details::kIdOffsetUi)
+  ].scale;
+  glm::vec2 next_pos{0.0f, symbol_height};
+
+  int start = std::min(selected_start_, selected_end_);
+  int end = std::max(selected_start_, selected_end_);
+
+  for (int i = 0; i < start; ++i) {
+    char ch = (*text)[i];
+    //TODO: if dbg
+    if (ch == '\n') {
+      throw "RenderTextSelected: remove \\n";
+    }
+    /// skip first
+    next_pos.x += static_cast<float>(GetWidth(static_cast<int>(ch) - 32));
+  }
+  next_pos.x *= scale_ * ui_scale / 78.0f;
+
+  for (int i = start; i < end; ++i) {
+    char ch = (*text)[i];
+    //TODO: if dbg
+    if (ch == '\n') {
+      throw "RenderTextSelected: remove \\n";
+    }
+
+    auto coords = GetGlyphCoords(ch);
+    auto coords_transform = CoordsToTransformMatrix(coords);
+    float symbol_width = scale_ * static_cast<float>(GetWidth(
+                                      static_cast<int>(ch) - 32)) / 1024.0f;
+
+    glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
+
+    text_slot.SetExtraScale(symbol_width / symbol_height);
+    symbol_width *= ui_scale * 1024.0f / 78.0f;
+
+    /// correct alignment (half prev, half next char)
+    next_pos.x += symbol_width / 2.0f;
+    text_slot.SetTranslate(next_pos);
+    next_pos.x += symbol_width / 2.0f;
+    text_slot.Render();
+  }
+
+  glUseProgram(0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void TextRenderer::RenderPickingText(
+    UiDynamicSprite& text_slot, FixedSizeQueue<char, 64>* text) {
+  /// picking for the first line is enough
+  float symbol_height = font::gFullHeight * scale_ / 1024.0f;
+
+  glActiveTexture(GL_TEXTURE0);
+  tex_bitmap_.Bind();
+  render_shader_picking_.Bind();
+
+  // not used
+  //  glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
+
+  text_slot.SetScale(scale_);
+
+  float ui_scale = debug::gUiTransforms[
+                       4 * (text_slot.GetId() - details::kIdOffsetUi)
+  ].scale;
+
+  glm::vec2 next_pos{0.0f, symbol_height};
+
+  // --- process line ---
+
+  float line_length = CalculateLineLength(text, text_slot) / 1024.0f;
+
+  // --- process char ---
+
+  text_slot.SetExtraScale(line_length * 78.0f / (symbol_height * 1024.0f));
+  text_slot.SetTranslate(next_pos);
+  text_slot.RenderPicking();
+
+  glUseProgram(0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 
 void TextRenderer::RenderText(
     UiDynamicSprite& text_slot, std::string_view text,
@@ -353,7 +509,7 @@ void TextRenderer::PrerenderImpl(
     coords.push_back(RenderPhrase(data::gText[i]));
   }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  texture.Store("prerenderedTexture.png", 1, GL_RED, GL_UNSIGNED_BYTE);
+  texture.Store("prerenderedTexture.png", 1, GL_RED);
 }
 
 // only 1-row text by now
@@ -414,29 +570,157 @@ glm::mat3 TextRenderer::CoordsToTransformMatrix(TextRenderer::Aabb aabb) {
 }
 
 void TextRenderer::AppendChar(int code) {
-  if (!input_source_) {
-    std::cerr << "no source for input" << std::endl;
-    return;
+//  if (!input_source_) {
+//    std::cerr << "no source for input" << std::endl;
+//    return;
+//  }
+  if (selected_start_ != selected_end_) {
+    buffer_input_.Erase(selected_start_, selected_end_);
   }
-  if (!input_source_->SafePushBack(static_cast<char>(code))) {
-    std::cerr << "input overflow: 64 max" << std::endl;
+  selected_end_ = selected_start_; // remove selection
+  if (!buffer_input_.SafeInsert(static_cast<char>(code), selected_end_)) {
+    std::cerr << "buffer_input_ overflow: 64 max" << std::endl;
+  } else {
+    ++selected_end_;
+    ++selected_start_;
   }
+//  std::cout << buffer_input_.Size() << std::endl;
 }
 
-void TextRenderer::RemoveLastChar() {
-  input_source_->SafePopBack();
+void TextRenderer::BtnBackspace() {
+  if (selected_start_ == selected_end_) {
+    if (selected_start_ == 0) {
+      return;
+    }
+    selected_start_ -= 1;
+  }
+  buffer_input_.Erase(selected_start_, selected_end_);
+  selected_end_ = selected_start_; // remove selection
 }
 
-void TextRenderer::StartInput(
-    UiDynamicSprite& text_slot,
-    FixedSizeQueue<char, 64>* input_source) {
+void TextRenderer::StartInput(UiTextInput* input_data) {
+  input_data_ = input_data;
+  /// select all
+  buffer_input_ = input_data->text_input_;
+  selected_start_ = 0;
+  selected_end_ = buffer_input_.Size();
   BindCallbacks();
-  input_source_ = input_source;
+  input_in_progress_ = true;
 }
 
 void TextRenderer::StopInput() {
-  input_source_ = nullptr;
+  input_data_->SetText(buffer_input_);
+  input_data_ = nullptr;
+  // NOTE: it could be only UiMode callbacks, so we could remember them (not menu, etc...)
+
+  (*ui_shared_resources_.global_glfw_callback_data_.cur_mode)->BindCallbacks();
+  input_in_progress_ = false;
 }
+
+void TextRenderer::RenderInput() {
+  /// blur background, render back
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  sprite_shadow_.Render();
+  input_data_->back_.Render();
+
+  /// render text & selected text
+  tex_bitmap_.Bind();
+  render_shader_.Bind();
+  render_shader_.Bind();
+  if (selected_start_ != selected_end_) {
+    // brightness location is 2
+    glUniform1f(1, 0.4f);
+    input_data_->SetText(buffer_input_);
+//    input_data_->SetText("selected text");
+    input_data_->Render();
+    render_shader_.Bind();
+    glUniform1f(1, 1.0f);
+    RenderTextSelected(input_data_->text_, &input_data_->text_input_);
+  } else {
+    glUniform1f(2, 1.0f);
+    input_data_->SetText(buffer_input_);
+    input_data_->Render();
+  }
+
+  /// render cursor
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  CalculateCursorPos(input_data_->text_, &input_data_->text_input_);
+  sprite_cursor_.Render(); // has it's position
+}
+
+void TextRenderer::CalculateCursorPos(
+  UiDynamicSprite& text_slot, FixedSizeQueue<char, 64>* text) {
+  float symbol_height = font::gFullHeight * scale_ / 1024.0f;
+  float ui_scale = debug::gUiTransforms[
+                       4 * (text_slot.GetId() - details::kIdOffsetUi)
+  ].scale;
+  glm::vec2 next_pos{0.0f, symbol_height};
+  for (int i = 0; i < selected_end_; ++i) {
+    char ch = (*text)[i];
+    //TODO: if dbg
+    if (ch == '\n') {
+      throw "RenderTextSelected: remove \\n";
+    }
+    /// skip first
+    next_pos.x += static_cast<float>(GetWidth(static_cast<int>(ch) - 32));
+  }
+  next_pos.x *= scale_ * ui_scale / 78.0f;
+  sprite_cursor_.SetTranslate(next_pos);
+}
+
+void TextRenderer::MoveCursor(int value) {
+  if (glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+    selected_end_ = std::clamp(
+        selected_end_ + value, 0, static_cast<int>(buffer_input_.Size() - 1));
+  } else {
+    if (selected_start_ == selected_end_) {
+      selected_start_ += value;
+      selected_end_ += value;std::cout << "start " << selected_start_
+                << "; end " << selected_end_ << std::endl;
+      return;
+    }
+    int set_value;
+    if (value < 0) {
+      set_value = std::min(selected_start_, selected_end_);
+    } else {
+      set_value = std::max(selected_start_, selected_end_);
+    }
+    selected_end_ = set_value;
+    selected_start_ = set_value;
+  }
+  std::cout << "start " << selected_start_
+            << "; end " << selected_end_ << std::endl;
+}
+
+int TextRenderer::LeftCtrlDistance() {
+  int dist = 0;
+  for (int i = selected_end_; i > 0; --i) {
+    auto code = static_cast<int>(buffer_input_[i]);
+    if (code < 97 || code > 122) {
+      break;
+    }
+    --dist;
+  }
+  return dist;
+}
+
+int TextRenderer::RightCtrlDistance() {
+  int dist = 0;
+  for (int i = selected_end_; i < buffer_input_.Size(); ++i) {
+    auto code = static_cast<int>(buffer_input_[i]);
+    if (code < 97 || code > 122) {
+      break;
+    }
+    ++dist;
+  }
+  return dist;
+}
+
+//TODO: Press()
+//TODO: RenderPicking()
+//TODO: callbacks
 
 void TextRenderer::BindCallbacks() {
   glfwSetCharCallback(gWindow, TextRenderer::CharCallback);
@@ -470,13 +754,27 @@ void TextRenderer::KeyCallback(
       || key == GLFW_KEY_ENTER) {
     glfwSetCharCallback(gWindow, nullptr);
     (*global_data->cur_mode)->BindCallbacks();
+    global_data->text_renderer->StopInput();
   } else if (key == GLFW_KEY_BACKSPACE) {
-    global_data->text_renderer->RemoveLastChar();
+    global_data->text_renderer->BtnBackspace();
+  } else if (key == GLFW_KEY_LEFT) {
+    int move_value = -1;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+      move_value = global_data->text_renderer->LeftCtrlDistance();
+    }
+    global_data->text_renderer->MoveCursor(move_value);
+  } else if (key == GLFW_KEY_RIGHT) {
+    int move_value = 1;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+      move_value = global_data->text_renderer->RightCtrlDistance();
+    }
+    global_data->text_renderer->MoveCursor(move_value);
   }
 }
 
 void TextRenderer::MouseButtonCallback(
     GLFWwindow* window, int button, int action, int mods) {
+  return;
   if (action == GLFW_PRESS) {
     auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
         glfwGetWindowUserPointer(window));

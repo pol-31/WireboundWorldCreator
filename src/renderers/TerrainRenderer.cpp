@@ -63,6 +63,9 @@ void TerrainRenderer::Render() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
   shader_.Bind();
+  glm::mat4 transform = glm::scale(glm::mat4{1.0f}, glm::vec3{tile_.map_scale});
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
+
   glActiveTexture(GL_TEXTURE0);
 
   tile_.map_terrain_height.Bind();
@@ -85,30 +88,33 @@ void TerrainRenderer::Render() {
   /// render SUM-layer borders
   border_shader_.Bind();
   glBindVertexArray(border_vao_);
-  glm::mat4 model_mat = glm::scale(glm::mat4(1.0f), glm::vec3(64.0f * tile_.map_scale));
+  glm::mat4 model_mat = glm::scale(glm::mat4(1.0f), glm::vec3(tile_.map_scale * 64.0f));
   glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(model_mat));
   glEnable(GL_CULL_FACE);
   glDrawArrays(GL_TRIANGLES, 0, 36);
   glDisable(GL_CULL_FACE);
 }
 
+//TODO: remove?
 void TerrainRenderer::Render(TerrainInstanceData* terrain) {
+  std::cerr << "TerrainRenderer::Render(terrain) unimplemented" << std::endl;
+}
+
+void TerrainRenderer::RenderWireframe(
+    TerrainInstanceData* terrain, glm::vec3 color) {
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-//  if(glfwGetKey(gWindow, GLFW_KEY_1)) {
-//  }
   shader_wireframe_.Bind();
   glActiveTexture(GL_TEXTURE0);
+//  terrain->hmap.Bind();
   terrain->data.hmap.Bind();
-  // NOT terrain->hmap.Bind();
-  glActiveTexture(GL_TEXTURE1);
-  tile_.map_terrain_ao.Bind();
+  glm::mat4 transform = glm::mat4{1.0f};
+  transform = glm::translate(transform, terrain->translate);
+  transform = glm::rotate(
+      transform, glm::length(terrain->rotate), glm::normalize(terrain->rotate));
+  transform = glm::scale(transform, terrain->scale * tile_.map_scale);
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
 
   glUniform3fv(1, 1, glm::value_ptr(terrain->color));
-
-  glActiveTexture(GL_TEXTURE2);
-  tile_.map_terrain_normal.Bind();
-  glActiveTexture(GL_TEXTURE3);
-  tile_.map_terrain_erosion_thermal.Bind();
 
   glBindVertexArray(vao_);
   glPatchParameteri(GL_PATCH_VERTICES, 4);
@@ -120,11 +126,18 @@ void TerrainRenderer::Render(TerrainInstanceData* terrain) {
 }
 
 void TerrainRenderer::RenderSelection(
+    TerrainInstanceData* terrain,
     const Texture& selection_mask, glm::vec3 color) {
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); /// wireframe
   shader_selection_.Bind();
   glActiveTexture(GL_TEXTURE0);
-  tile_.map_terrain_height.Bind();
+  terrain->data.hmap.Bind();
+  glm::mat4 transform = glm::mat4{1.0f};
+  transform = glm::translate(transform, terrain->translate);
+  transform = glm::rotate(
+      transform, glm::length(terrain->rotate), glm::normalize(terrain->rotate));
+  transform = glm::scale(transform, terrain->scale * tile_.map_scale);
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
   // NOT terrain->hmap.Bind();
   glActiveTexture(GL_TEXTURE1);
   selection_mask.Bind();
@@ -142,6 +155,8 @@ void TerrainRenderer::RenderSelection(
 //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
 void TerrainRenderer::RenderPicking() const {
   shader_picking_.Bind();
+  glm::mat4 transform = glm::scale(glm::mat4{1.0f}, glm::vec3{tile_.map_scale});
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
   glActiveTexture(GL_TEXTURE0);
   tile_.map_terrain_height.Bind();
   glBindVertexArray(vao_);
@@ -153,7 +168,13 @@ void TerrainRenderer::RenderPicking() const {
 void TerrainRenderer::RenderPicking(TerrainInstanceData* terrain) const {
   shader_picking_.Bind();
   glActiveTexture(GL_TEXTURE0);
-  terrain->hmap.Bind();
+  terrain->data.hmap.Bind();
+  glm::mat4 transform = glm::mat4{1.0f};
+  transform = glm::translate(transform, terrain->translate);
+  transform = glm::rotate(
+      transform, glm::length(terrain->rotate), glm::normalize(terrain->rotate));
+  transform = glm::scale(transform, terrain->scale * tile_.map_scale);
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
   glBindVertexArray(vao_);
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
@@ -219,6 +240,7 @@ void TerrainRenderer::Init() {
   glBindVertexArray(0);
 
   const float cube[] = {
+      // back
       -0.5f, -0.5f, -0.5f,
       0.5f, -0.5f, -0.5f,
       0.5f,  0.5f, -0.5f,
@@ -226,7 +248,7 @@ void TerrainRenderer::Init() {
       -0.5f,  0.5f, -0.5f,
       -0.5f, -0.5f, -0.5f,
 
-      // Передняя грань
+      // front
       -0.5f, -0.5f,  0.5f,
       0.5f,  0.5f,  0.5f,
       0.5f, -0.5f,  0.5f,
@@ -234,7 +256,7 @@ void TerrainRenderer::Init() {
       -0.5f, -0.5f,  0.5f,
       -0.5f,  0.5f,  0.5f,
 
-      // Грань слева
+      // left
       -0.5f,  0.5f,  0.5f,
       -0.5f, -0.5f, -0.5f,
       -0.5f,  0.5f, -0.5f,
@@ -242,7 +264,7 @@ void TerrainRenderer::Init() {
       -0.5f,  0.5f,  0.5f,
       -0.5f, -0.5f,  0.5f,
 
-      // Грань справа
+      // right
       0.5f,  0.5f,  0.5f,
       0.5f,  0.5f, -0.5f,
       0.5f, -0.5f, -0.5f,
@@ -250,7 +272,7 @@ void TerrainRenderer::Init() {
       0.5f, -0.5f,  0.5f,
       0.5f,  0.5f,  0.5f,
 
-      // Нижняя грань
+      // bottom
       -0.5f, -0.5f, -0.5f,
       0.5f, -0.5f,  0.5f,
       0.5f, -0.5f, -0.5f,
@@ -258,7 +280,7 @@ void TerrainRenderer::Init() {
       -0.5f, -0.5f, -0.5f,
       -0.5f, -0.5f,  0.5f,
 
-      // Верхняя грань
+      // top
       -0.5f,  0.5f, -0.5f,
       0.5f,  0.5f, -0.5f,
       0.5f,  0.5f,  0.5f,

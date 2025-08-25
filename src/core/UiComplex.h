@@ -5,10 +5,73 @@
 #include "UiText.h"
 #include "WindowQueue.h"
 
-//#include "../modes/UiTerrainConfig.h"
+// NEVER just std::move it, recreate it in all ctors
+/// hierarchy blocks; should be created at most derived ui components
+class UiHierarchy final : public UiBase {
+ public:
+  UiBase* parent_;
+  std::vector<UiBase*> components_;
+
+  /// due to base class UiBase
+  UiHierarchy() = delete;
+
+  /// parent hold id of the first component
+  //TODO: UiBase ctor params !!!
+  template<typename... Args>
+  UiHierarchy(UiBase* parent, Args... components)
+      : UiBase(parent),
+        parent_(parent),
+        components_{components...} {
+    auto parent_id = parent_->GetId();
+    for (auto component : components_) {
+      auto child_id = component->GetId();
+      gUiComponents[child_id - details::kIdOffsetUi].parent_id_ = parent_id;
+    }
+    gUiComponents[parent_id - details::kIdOffsetUi].ui = this;
+    UpdateTransform();
+  }
+
+  UiHierarchy(UiHierarchy&& other)
+      : UiBase(std::move(*this)),
+        parent_(other.parent_),
+        components_(std::move(other.components_)) {
+    gUiComponents[parent_->GetId() - details::kIdOffsetUi].ui = this;
+  }
+
+  // cannot remove it: Base class store ::hierarchy_, but
+  // can be initialized only from derived (not init list)
+  UiHierarchy& operator=(UiHierarchy&& other) {
+    parent_ = other.parent_;
+    components_ = std::move(other.components_);
+    gUiComponents[parent_->GetId() - details::kIdOffsetUi].ui = this;
+    return *this;
+  }
+
+  template<typename... Args>
+  void AddNested(UiBase* parent, Args... components) {
+    auto parent_id = parent->GetId();
+    int prev_size = components_.size();
+    components_.push_back(parent);
+    (components_.push_back(components), ...);
+    for (int i = prev_size; i < components_.size(); ++i) {
+      auto child_id = components_[i]->GetId();
+      gUiComponents[child_id - details::kIdOffsetUi].parent_id_ = parent_id;
+    }
+    gUiComponents[parent_id - details::kIdOffsetUi].parent_id_ = parent_->GetId();
+    gUiComponents[parent_id - details::kIdOffsetUi].ui = this;
+    UpdateTransform();
+  }
+
+  void UpdateTransform() override {
+    parent_->UpdateTransform();
+    for (auto component : components_) {
+      component->UpdateTransform();
+    }
+  }
+};
 
 /// loading only on the bottom of the screen (so use UiStaticSprite)
-class UiLoading final : public UiBase {
+class UiLoading {
  public:
   UiLoading(UiStaticSprite&& sprite0,
             UiStaticSprite&& sprite10,
@@ -32,82 +95,15 @@ class UiLoading final : public UiBase {
 
   void RenderPicking() const;
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
-  void UpdateTransform() override;
-
  private:
   std::array<UiStaticSprite, 11> sprites_;
-};
-
-//used for UiPalette, so X-axis is Hue, Y-asix is Saturation
-class UiSlider2D final : public UiBase {
- public:
-  UiSlider2D(UiDynamicSprite&& palette,
-             UiDynamicSprite&& cursor,
-             glm::vec2 scale = glm::vec2{1.0f});
-
-  UiSlider2D(UiSlider2D&& other) noexcept;
-  UiSlider2D(const UiSlider2D& other) = delete;
-
-  UiSlider2D& operator=(UiSlider2D&& other) = delete;
-  UiSlider2D& operator=(const UiSlider2D& other) = delete;
-
-  void Render(glm::vec2 mouse_pos);
-  void RenderIcon();
-
-  void RenderPicking() const;
-
-  [[nodiscard]] data::TextId Hover(std::uint32_t id);
-
-  void Press() override {
-    pressed_ = true;
-  }
-
-  void Release() override {
-    pressed_ = false;
-  }
-
-  bool Scroll(GLuint id, float yoffset) override;
-
-  [[nodiscard]] glm::vec2 GetProgress() const;
-
-  [[nodiscard]] float GetProgressX() const;
-
-  [[nodiscard]] float GetProgressY() const;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
-  void UpdateTransform() override;
-
-  void SetParentTransform(LocalTransform transform);
-
- private:
-  void SetMousePos(glm::vec2 mouse_pos);
-
-  void SetProgress(glm::vec2 progress);
-
-  UiDynamicSprite palette_;
-  UiDynamicSprite cursor_;
-
-  glm::vec2 progress_ = glm::vec2{0.0f};
-  bool pressed_ = false;
-  glm::vec2 centre_;
-  glm::vec2 length_;
-  glm::vec2 scale_;
-
-  static const float kTrackWidthFactor;
-  static const float kTrackHeightFactor;
+  UiHierarchy hierarchy_;
 };
 
 // cannot be pinned, cannot be hovered above,
 // single to interact - on very top; shadow all other
-class UiTopWindowBase : public UiBase {
+class UiTopWindowBase {
  public:
-  using UiBase::UpdateTransform;
-
   UiTopWindowBase(
       UiDynamicSprite&& desk,
       UiDynamicSprite&& shadow,
@@ -125,8 +121,6 @@ class UiTopWindowBase : public UiBase {
 
   void Hide();
 
-  void UpdateTransform() final;
-
   virtual bool Render() = 0;
 
   virtual void RenderPicking() = 0;
@@ -134,9 +128,7 @@ class UiTopWindowBase : public UiBase {
   virtual void Press(int id) = 0;
 
   // no override
-//  virtual void Release() = 0;
-
-  virtual data::TextId Hover(int id) = 0;
+  virtual void Release() = 0;
 
   virtual void BtnEnter() {}
 
@@ -151,8 +143,8 @@ class UiTopWindowBase : public UiBase {
 
   // for shader bindings, mask texture
   UiSharedResources& ui_shared_resources_;
-
   WindowQueue& window_queue_;
+  UiHierarchy hierarchy_;
 };
 
 class UiCaution final : public UiTopWindowBase {
@@ -180,11 +172,6 @@ class UiCaution final : public UiTopWindowBase {
   void Press(int id) override;
 
   void Release() override;
-
-  data::TextId Hover(int id) override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
 
  private:
   UiDynamicSprite text_;
@@ -217,11 +204,6 @@ class UiConfirmation final : public UiTopWindowBase {
   void Press(int id) override;
 
   void Release() override;
-
-  data::TextId Hover(int id) override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
 
   void SetText(std::string_view text);
 
@@ -269,11 +251,6 @@ class UiFile final : public UiTopWindowBase {
 
   void Release() override;
 
-  data::TextId Hover(int id) override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
  private:
   UiDynamicSprite btn_accept_;
   UiDynamicSprite btn_decline_;
@@ -287,10 +264,8 @@ class UiFile final : public UiTopWindowBase {
 };
 
 // single interactable window; can add few
-class UiWindowBase : public UiBase {
+class UiWindowBase {
  public:
-  using UiBase::UpdateTransform;
-
   UiWindowBase(UiDynamicSprite&& sprite,
                float size_scale,
                UiToggle2&& pin,
@@ -311,8 +286,6 @@ class UiWindowBase : public UiBase {
 
   void ForceHide();
 
-  void UpdateTransform() final;
-
   virtual bool Render() = 0;
 
   virtual void RenderPicking() = 0;
@@ -320,9 +293,11 @@ class UiWindowBase : public UiBase {
   virtual bool Press(int id) = 0;
 
   // no override
-//  virtual void Release() = 0;
+  virtual void Release() = 0;
 
-  virtual data::TextId Hover(int id) = 0;
+  virtual bool Scroll(GLuint id, float yoffset) {
+    return false;
+  }
 
   [[nodiscard]] bool Pinned() const noexcept;
 
@@ -356,12 +331,12 @@ class UiWindowBase : public UiBase {
   float speed_{0.5f};
   float progress_{0.0f};
   bool back_ready_{false};
+
+  UiHierarchy hierarchy_;
 };
 
 class UiWindowAppear : public UiWindowBase {
  public:
-  using UiBase::UpdateTransform;
-
   UiWindowAppear(UiDynamicSprite&& sprite,
                  float size_scale,
                  UiToggle2&& pin,
@@ -432,11 +407,6 @@ class UiTabMenu final : public UiWindowAppear {
 
   void Release() override;
 
-  data::TextId Hover(int id) override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
   void SetSelectedArrow(float angle);
 
   void SetSelectArrow(float angle);
@@ -503,12 +473,9 @@ class UiTipWindow final : public UiWindowAppear {
 
   void Release() override;
 
-  data::TextId Hover(int id) override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
   void SetText(data::TextId text_id);
+
+  void UpdateHoverState(int id);
 
  private:
   UiDynamicSprite text_;
@@ -519,8 +486,6 @@ class UiTipWindow final : public UiWindowAppear {
 /// only one scale allowed (no x or y scale)
 class UiWindowPopUp : public UiWindowBase {
  public:
-  using UiBase::UpdateTransform;
-
   UiWindowPopUp(UiDynamicSprite&& sprite,
                 float size_scale,
                 UiToggle2&& pin,
@@ -555,7 +520,6 @@ class UiWindowPopUp : public UiWindowBase {
   LocalTransform end_transform_;
 };
 
-
 class UiSettings final : public UiWindowPopUp {
  public:
   using Base = UiWindowPopUp;
@@ -574,7 +538,6 @@ class UiSettings final : public UiWindowPopUp {
       UiDynamicSprite&& resolution,
       UiToggle&& toggle_fullscreen,
       UiSliderH2 sensitivity,
-      UiDynamicSprite keyboard,
       UiSliderH2&& sound,
       UiToggle&& toggle_sound,
       UiSliderH2&& music,
@@ -598,12 +561,9 @@ class UiSettings final : public UiWindowPopUp {
 
   void Release() override;
 
-  data::TextId Hover(int id) override;
-
   bool Scroll(GLuint id, float yoffset) override;
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
+  void UpdateHoverState(int id);
 
  private:
   //todo; replace by component
@@ -616,8 +576,6 @@ class UiSettings final : public UiWindowPopUp {
 
   UiSliderH2 sensitivity_;
 
-  UiDynamicSprite keyboard_;
-
   UiSliderH2 sound_;
   UiToggle toggle_sound_;
 
@@ -627,7 +585,6 @@ class UiSettings final : public UiWindowPopUp {
   UiDynamicSprite tip_info_label_;
   UiDynamicSprite tip_info_;
   UiToggle toggle_tip_info_;
-
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kSettingsTipInfoOn3) -
@@ -682,14 +639,11 @@ class UiWaterLayerConfig final : public UiWindowPopUp {
 
   bool Press(int id) override;
 
-  data::TextId Hover(int id) override;
-
   bool Modified();
 
   OceanLayerTraits GetOceanLayerTraits() const;
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
+  void UpdateHoverState(int id);
 
  private:
   UiDynamicSprite sprite_layer_;
@@ -747,11 +701,9 @@ class UiEditFences final : public UiBase {
   UiEditFences& operator=(UiEditFences&& other) = delete;
   UiEditFences& operator=(const UiEditFences& other) = delete;
 
-  data::TextId Hover(int id);
-
   bool Press(int id);
 
-  void Release();
+  void Release() override;
 
   bool Scroll(GLuint id, float yoffset);
 
@@ -759,10 +711,7 @@ class UiEditFences final : public UiBase {
 
   void RenderPicking();
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
-  void UpdateTransform() override;
+  void UpdateTransform() {}
 
  private:
   UiDynamicSprite desk_;

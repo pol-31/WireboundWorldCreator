@@ -28,10 +28,8 @@ LocalTransformLinear GetParentDbgTransform(size_t id) {
   return transform;
 }
 
-UiBase::UiBase(data::VboIdMain vbo_texture, data::TextId text_id,
-           CallableType action)
-    : UiBase(data::GetUiData(vbo_texture, text_id),
-                 std::move(action)) {}
+UiBase::UiBase(data::VboIdMain vbo_texture, CallableType action)
+    : UiBase(data::GetUiData(vbo_texture), std::move(action)) {}
 
 UiBase::UiBase(data::UiData ui_data, CallableType&& action)
     : ui_data_id_(ui_data.id),
@@ -55,11 +53,6 @@ bool UiBase::Scroll(GLuint id, float yoffset) {
   return false;
 }
 
-/// one for all
-data::TextId UiBase::Hover() {
-  return GetTextId();
-}
-
 std::uint32_t UiBase::GetId() const {
   return ui_data_id_;
 }
@@ -68,13 +61,9 @@ std::size_t UiBase::GetVboOffset() const {
   return gUiComponents[ui_data_id_ - details::kIdOffsetUi].vbo_offset;
 }
 
-data::TextId UiBase::GetTextId() const {
-  return gUiComponents[ui_data_id_ - details::kIdOffsetUi].text_id;
-}
-
-UiDynamicSprite::UiDynamicSprite(data::VboIdMain vbo_texture, data::TextId text_id,
-    CallableType action)
-    : UiBase(vbo_texture, text_id, std::move(action)) {
+UiDynamicSprite::UiDynamicSprite(
+    data::VboIdMain vbo_texture, CallableType action)
+    : UiBase(vbo_texture, std::move(action)) {
   UpdateTransform();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
@@ -89,19 +78,10 @@ UiDynamicSprite::UiDynamicSprite(UiDynamicSprite&& other) noexcept
       static_cast<UiBase*>(this);
 }
 
-void UiDynamicSprite::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
+void UiDynamicSprite::UpdateTransform() {
   final_dbg_transform_ = GetParentDbgTransform(GetId());
   auto dbg_transform = debug::gUiTransforms[4 * (GetId() - details::kIdOffsetUi)];
   final_dbg_transform_.Apply(dbg_transform);
-}
-
-void UiDynamicSprite::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
 }
 
 float UiDynamicSprite::GetLeftBorder() const {
@@ -182,9 +162,9 @@ void UiDynamicSprite::RenderPicking() const {
 }
 
 
-UiStaticSprite::UiStaticSprite(data::VboIdMain vbo_texture, data::TextId text_id,
-    CallableType action)
-    : UiBase(vbo_texture, text_id, std::move(action)) {
+UiStaticSprite::UiStaticSprite(
+    data::VboIdMain vbo_texture, CallableType action)
+    : UiBase(vbo_texture, std::move(action)) {
   UpdateTransform();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
@@ -197,8 +177,7 @@ UiStaticSprite::UiStaticSprite(UiStaticSprite&& other) noexcept
       static_cast<UiBase*>(this);
 }
 
-void UiStaticSprite::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
+void UiStaticSprite::UpdateTransform() {
   auto parent_dbg_transform = GetParentDbgTransform(GetId());
   auto dbg_transform =
       debug::gUiTransforms[4 * (GetId() - details::kIdOffsetUi)];
@@ -208,14 +187,6 @@ void UiStaticSprite::UpdateTransform(
   transform = glm::scale(transform, parent_dbg_transform.scale
                                         * glm::vec2{gResFactor, 1.0f});
   final_transform_ = transform;
-}
-
-void UiStaticSprite::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
 }
 
 float UiStaticSprite::GetLeftBorder() const {
@@ -451,14 +422,6 @@ void UiSliderV::SetMouseDiff(
   Set(std::clamp(remembered_progress + diff, 0.0f, 1.0f));
 }
 
-data::TextId UiSliderV::Hover(std::uint32_t id) {
-  return back_sprite_.Hover();
-}
-
-void UiSliderV::UnHover() {
-  //TODO: set lower brightness?
-}
-
 bool UiSliderV::Scroll(GLuint id, float yoffset) {
   if (id > icon_sprite_.GetId() || id < fill_sprite_.GetId()) {
     return false;
@@ -478,24 +441,15 @@ float UiSliderV::GetProgressUnscaled() const {
   return 1.0f - progress_;
 }
 
-void UiSliderV::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
+void UiSliderV::UpdateTransform() {
   back_sprite_.UpdateTransform();
   fill_sprite_.UpdateTransform();
   icon_sprite_.UpdateTransform();
-  length_ = kTrackLengthFactor * scale *
+  length_ = kTrackLengthFactor *
             (back_sprite_.GetTopBorder() - back_sprite_.GetBottomBorder());
   centre_ = (back_sprite_.GetTopBorder() + back_sprite_.GetBottomBorder()) / 2.0f;
   float related_pos = progress_ * length_ - length_ / 2.0f + centre_;
   Set({0.0f, related_pos});
-}
-
-void UiSliderV::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(transform.translate.x, transform.translate.y,
-                  transform.scale);
 }
 
 void UiSliderV::SetParentTransform(LocalTransform transform) {
@@ -603,14 +557,6 @@ void UiSliderH::Set(float progress) {
   handler_sprite_.SetTranslate(translate);
 }
 
-data::TextId UiSliderH::Hover(std::uint32_t id) {
-  return back_sprite_.Hover();
-}
-
-void UiSliderH::UnHover() {
-  //TODO: set lower brightness?
-}
-
 bool UiSliderH::Scroll(GLuint id, float yoffset) {
   if (id > handler_sprite_.GetId() || id < fill_sprite_.GetId()) {
     return false;
@@ -626,24 +572,15 @@ float UiSliderH::GetProgress() const {
   return (1.0f - progress_) * scale_;
 }
 
-void UiSliderH::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
+void UiSliderH::UpdateTransform() {
   back_sprite_.UpdateTransform();
   fill_sprite_.UpdateTransform();
   handler_sprite_.UpdateTransform();
-  length_ = kTrackLengthFactor * scale *
+  length_ = kTrackLengthFactor *
             (back_sprite_.GetRightBorder() - back_sprite_.GetLeftBorder());
   centre_ = (back_sprite_.GetRightBorder() + back_sprite_.GetLeftBorder()) / 2.0f;
   float related_pos = progress_ * length_ - length_ / 2.0f + centre_;
   Set({related_pos, 0.0f});
-}
-
-void UiSliderH::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(transform.translate.x, transform.translate.y,
-                  transform.scale);
 }
 
 
@@ -746,14 +683,6 @@ void UiSliderH3::Set(float progress) {
   icon_sprite_.SetTranslate(translate);
 }
 
-data::TextId UiSliderH3::Hover(std::uint32_t id) {
-  return back_sprite_.Hover();
-}
-
-void UiSliderH3::UnHover() {
-  //TODO: set lower brightness?
-}
-
 bool UiSliderH3::Scroll(GLuint id, float yoffset) {
   if (id > icon_sprite_.GetId() || id < fill_sprite_.GetId()) {
     return false;
@@ -769,8 +698,7 @@ float UiSliderH3::GetProgress() const {
   return (1.0f - progress_) * scale_;
 }
 
-void UiSliderH3::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
+void UiSliderH3::UpdateTransform() {
   back_sprite_.UpdateTransform();
   fill_sprite_.UpdateTransform();
   icon_sprite_.UpdateTransform();
@@ -779,14 +707,6 @@ void UiSliderH3::UpdateTransform(
   centre_ = (back_sprite_.GetRightBorder() + back_sprite_.GetLeftBorder()) / 2.0f;
   float related_pos = progress_ * length_ - length_ / 2.0f + centre_;
   Set({related_pos, 0.0f});
-}
-
-void UiSliderH3::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(transform.translate.x, transform.translate.y,
-                  transform.scale);
 }
 
 
@@ -887,20 +807,12 @@ void UiSliderH2::Set(float progress) {
   icon_sprite_.SetTranslate(translate);
 }
 
-data::TextId UiSliderH2::Hover(std::uint32_t id) {
-  return back_sprite_.Hover();
-}
-
 void UiSliderH2::Press() {
   pressed_ = true;
 }
 
 void UiSliderH2::Release() {
   pressed_ = false;
-}
-
-void UiSliderH2::UnHover() {
-  //TODO: set lower brightness?
 }
 
 bool UiSliderH2::Scroll(GLuint id, float yoffset) {
@@ -918,8 +830,7 @@ float UiSliderH2::GetProgress() const {
   return (1.0f - progress_) * scale_;
 }
 
-void UiSliderH2::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
+void UiSliderH2::UpdateTransform() {
   back_sprite_.UpdateTransform();
   icon_sprite_.UpdateTransform();
   length_ = kTrackLengthFactor *
@@ -929,12 +840,125 @@ void UiSliderH2::UpdateTransform(
   Set({related_pos, 0.0f});
 }
 
-void UiSliderH2::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(transform.translate.x, transform.translate.y,
-                  transform.scale);
+const float UiSlider2D::kTrackWidthFactor = 0.9f;
+const float UiSlider2D::kTrackHeightFactor = 0.8f;
+
+UiSlider2D::UiSlider2D(
+    UiDynamicSprite&& palette,
+    UiDynamicSprite&& cursor,
+    glm::vec2 scale)
+    : UiBase(palette.GetId(), {}),
+      palette_(std::move(palette)),
+      cursor_(std::move(cursor)),
+      length_({
+          kTrackWidthFactor *
+              (palette.GetRightBorder() - palette.GetLeftBorder()),
+          kTrackHeightFactor *
+              (palette.GetTopBorder() - palette.GetBottomBorder())}),
+      centre_({
+          (palette.GetRightBorder() + palette.GetLeftBorder()) / 2.0f,
+          (palette.GetTopBorder() + palette.GetBottomBorder()) / 2.0f}),
+      scale_(scale) {
+  gUiComponents[cursor_.GetId() - details::kIdOffsetUi].parent_id_
+      = palette_.GetId();
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+  UpdateTransform();
+}
+
+UiSlider2D::UiSlider2D(UiSlider2D&& other) noexcept
+    : UiBase(std::move(other)),
+      palette_(std::move(other.palette_)),
+      cursor_(std::move(other.cursor_)) {
+  progress_ = other.progress_;
+  pressed_ = other.pressed_;
+  centre_ = other.centre_;
+  length_ = other.length_;
+  scale_ = other.scale_;
+  gUiComponents[palette_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+void UiSlider2D::Render(glm::vec2 mouse_pos) {
+  if (pressed_) {
+    SetMousePos(mouse_pos);
+  }
+  palette_.Render();
+  cursor_.Render();
+}
+
+void UiSlider2D::RenderIcon() {
+  cursor_.Render();
+}
+
+void UiSlider2D::RenderPicking() const {
+  palette_.RenderPicking();
+  if (debug::gUiAltMode) {
+    cursor_.RenderPicking();
+  }
+}
+
+void UiSlider2D::SetMousePos(glm::vec2 mouse_pos) {
+  glm::vec2 half_length_ = length_ / 2.0f;
+  glm::vec2 offset = glm::clamp(
+      mouse_pos - centre_, -half_length_, +half_length_);
+  progress_ = (offset + half_length_) / length_;
+  cursor_.SetTranslate(offset);
+}
+
+void UiSlider2D::SetProgress(glm::vec2 progress) {
+  progress_ = progress;
+  glm::vec2 half_length_ = length_ / 2.0f;
+  glm::vec2 offset = progress_ * length_ - half_length_;
+  cursor_.SetTranslate(offset);
+}
+
+bool UiSlider2D::Scroll(GLuint id, float yoffset) {
+  if (id != palette_.GetId() || id != cursor_.GetId()) {
+    return false;
+  }
+  glm::vec2 dir = centre_; // unf we can't, we don't have quick mouse pos
+  float factor = 0.01f * yoffset;
+  glm::vec2 progress = progress_;
+  if (glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+    progress.x = std::clamp(progress_.x + factor, 0.0f, 1.0f);
+  } else {
+    progress.y = std::clamp(progress_.y + factor, 0.0f, 1.0f);
+  }
+  SetProgress(progress);
+  return true;
+}
+
+glm::vec2 UiSlider2D::GetProgress() const {
+  return (glm::vec2{1.0f} - progress_) * scale_;
+}
+
+float UiSlider2D::GetProgressX() const {
+  return (1.0f - progress_.x) * scale_.x;
+}
+
+float UiSlider2D::GetProgressY() const {
+  return (1.0f - progress_.y) * scale_.y;
+}
+
+void UiSlider2D::UpdateTransform() {
+  palette_.UpdateTransform();
+  cursor_.UpdateTransform();
+  length_ =
+      {kTrackWidthFactor *
+           (palette_.GetRightBorder() - palette_.GetLeftBorder()),
+       kTrackHeightFactor *
+           (palette_.GetTopBorder() - palette_.GetBottomBorder())};
+  centre_ =
+      {(palette_.GetRightBorder() + palette_.GetLeftBorder()) / 2.0f,
+       (palette_.GetTopBorder() + palette_.GetBottomBorder()) / 2.0f};
+  glm::vec2 related_pos = progress_ * length_ - length_ / 2.0f + centre_;
+  SetMousePos(related_pos);
+}
+
+void UiSlider2D::SetParentTransform(LocalTransform transform) {
+  palette_.SetParentTransform(transform);
+  cursor_.SetParentTransform(transform);
 }
 
 UiToggle::UiToggle(
@@ -988,20 +1012,11 @@ void UiToggle::Press() {
   off_.Press();
 }
 
-void UiToggle::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
+void UiToggle::UpdateTransform() {
   off_.UpdateTransform();
   on1_.UpdateTransform();
   on2_.UpdateTransform();
   on3_.UpdateTransform();
-}
-
-void UiToggle::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
 }
 
 void UiToggle::UpdateState() {
@@ -1075,22 +1090,9 @@ void UiToggle2::Press() {
   off_.Press();
 }
 
-data::TextId UiToggle2::Hover(std::uint32_t id) {
-  return off_.Hover();
-}
-
-void UiToggle2::UpdateTransform(
-    float x_translate, float y_translate, float scale) {
+void UiToggle2::UpdateTransform() {
   off_.UpdateTransform();
   on_.UpdateTransform();
-}
-
-void UiToggle2::UpdateTransform() {
-  auto transform = debug::gUiTransforms[
-      4 * (GetId() - details::kIdOffsetUi)
-  ];
-  UpdateTransform(
-      transform.translate.x, transform.translate.y, transform.scale);
 }
 
 void UiToggle2::SetParentTransform(LocalTransform transform) {

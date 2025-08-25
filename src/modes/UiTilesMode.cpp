@@ -12,9 +12,9 @@ void UiTilesMode::ScrollCallback(
       glfwGetWindowUserPointer(window));
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (yoffset < 0.0f) {
-    global_data->tile_renderer->DownScale();
+    global_data->tile_renderer->cur_tile_.DownScale();
   } else {
-    global_data->tile_renderer->UpScale();
+    global_data->tile_renderer->cur_tile_.UpScale();
   }
 }
 
@@ -47,20 +47,20 @@ UiTilesMode::UiTilesMode(
     : IUiMode(
           ui_shared_resources,
           window_queue,
-          {data::VboIdMain::kTilesTilesMode, data::TextId::kNotYet}),
-      btn_up_(data::VboIdMain::kTilesUp, data::TextId::kNotYet,
+          {data::VboIdMain::kTilesTilesMode}),
+      btn_up_(data::VboIdMain::kTilesUp,
               [this]() {
                 std::cout << "btn_up" << std::endl;
               }),
-      btn_down_(data::VboIdMain::kTilesDown, data::TextId::kNotYet,
+      btn_down_(data::VboIdMain::kTilesDown,
                 [this]() {
                   std::cout << "btn_down" << std::endl;
                 }),
-      btn_left_(data::VboIdMain::kTilesLeft, data::TextId::kNotYet,
+      btn_left_(data::VboIdMain::kTilesLeft,
                 [this]() {
                   std::cout << "btn_left" << std::endl;
                 }),
-      btn_right_(data::VboIdMain::kTilesRight, data::TextId::kNotYet,
+      btn_right_(data::VboIdMain::kTilesRight,
                  [this]() {
                    std::cout << "btn_right" << std::endl;
                  }),
@@ -104,8 +104,4 @@ void UiTilesMode::BindCallbacks() {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(gWindow));
   global_data->camera->SetMapCamera();
-}
-
-data::TextId UiTilesMode::Hover(std::uint32_t global_id) {
-  return data::TextId::kNone;
 }

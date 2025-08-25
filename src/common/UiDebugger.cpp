@@ -1,6 +1,7 @@
 #include "UiDebugger.h"
 
 #include <cstring>
+#include <filesystem>
 
 #include "../common/GlobalGlfwCallbackData.h"
 #include "../core/Ui.h"
@@ -86,7 +87,7 @@ void UiDebugger::Init() {
       static_cast<GLsizeiptr>(data.size() * sizeof(float)),
       data.data());
   glBindBuffer(GL_ARRAY_BUFFER, 0);
-  data = ParseConfigFile(paths_.config_vbo_transform);
+  data = ParseConfigFile4(paths_.config_vbo_transform);
   std::memcpy(gUiTransforms.data(), data.data(), data.size() * sizeof(float));
   ForceUpdate();
 }
@@ -179,6 +180,47 @@ std::vector<float> UiDebugger::ParseConfigFile(
   return data;
 }
 
+std::vector<float> UiDebugger::ParseConfigFile4(
+    std::string_view path) {
+  std::ifstream config_file(path.data());
+  if (!config_file) {
+    throw std::runtime_error("Unable to open Ui VBO data");
+  }
+  std::vector<float> data;
+  data.reserve(100 * 16); // assume 100 ui components total
+  std::string line_buffer, entry_buffer;
+  std::istringstream line_stream;
+  // no trim for tabs/whitespaces, but we don't need it
+  while (std::getline(config_file, line_buffer)) {
+    line_stream.clear();
+    line_stream.str(line_buffer);
+    /// it's either:
+    /// 4 floats separated by commas: -0.15,0.2,0.0,1.0,
+    /// or
+    /// // comment starting with double slash
+    /// or
+    /// empty line
+    if (line_buffer[0] == '/' || line_buffer.empty()) {
+      continue;
+    }
+    try {
+      std::array<float, 3> transform;
+      for (int i = 0; i < 3; ++i) {
+        std::getline(line_stream, entry_buffer, ',');
+        transform[i] = std::stof(entry_buffer);
+      }
+      for (int i = 0; i < 4; ++i) {
+        data.push_back(transform[0]);
+        data.push_back(transform[1]);
+        data.push_back(transform[2]);
+      }
+    } catch (...) {
+      std::cerr << "unable to parse vbo config file " << path << std::endl;
+    }
+  }
+  return data;
+}
+
 void UiDebugger::SerializeConfigFile(
     std::string_view path,
     std::array<LocalTransformLinear, data::gUiVboTransformSize / 3> transforms) {
@@ -189,19 +231,27 @@ void UiDebugger::SerializeConfigFile(
   }
   std::ostringstream oss_file, oss_line;
   oss_file << "// should be applied to all transforms\n";
-  for (int i = 0; i < data::gUiVboTransformSize / 3; i += 4) {
+  for (int i = 0, j = 0; i < data::gUiVboTransformSize / 3; i += 4, ++j) {
+    oss_line << "// " << data::gVboIdMainText[j] << '\n';
     oss_line << std::to_string(transforms[i].translate.x) << ','
              << std::to_string(transforms[i].translate.y) << ','
              << std::to_string(transforms[i].scale) << ",\n"; // x4
     auto per_vertex_line = oss_line.str();
-    for (int j = 0; j < 4; ++j) {
-      oss_file << per_vertex_line;
-    }
-    oss_file << '\n';
+    oss_file << per_vertex_line;
+    //    for (int j = 0; j < 4; ++j) {
+    //      oss_file << per_vertex_line;
+    //    }
+    //    oss_file << '\n';
     oss_line.str("");
     oss_line.clear();
   }
   file << oss_file.str();
+  file.close();
+  std::filesystem::path path_backup{path};
+  path_backup.replace_filename(path_backup.stem().string() + "_backup.txt");
+  std::filesystem::remove(path_backup);
+  std::filesystem::copy_file(
+      path, path_backup, std::filesystem::copy_options::overwrite_existing);
 }
 
 void UiDebugger::TranslateToCursorPos() {
@@ -243,11 +293,9 @@ void UiDebugger::ApplyAndReset() {
   if (cur_ui_vbo_id_ == -1) {
     return;
   }
-  auto transform = gUiTransforms[GetVboOffset()];
   auto ui = gUiComponents[cur_ui_vbo_id_].ui;
   if (ui) {
-    ui->UpdateTransform(transform.translate.x, transform.translate.y,
-                       transform.scale);
+    ui->UpdateTransform();
   }
 //  cur_ui_vbo_id_ = -1;
 //  delta_transform_ = Transform{0.0f, 0.0f, 0.0f};

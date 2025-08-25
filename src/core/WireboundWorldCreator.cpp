@@ -34,19 +34,16 @@ void WireboundWorldCreator::RunRenderLoop() {
     cubemap_.Render();
 
     global_data_.UpdateCursorPos();
+    global_data_.UpdateHoveredId();
 
     global_data_.event_queue.Process();
 
-    auto pressed_id = global_data_.GetIdByMousePos();
-    auto description_id = ui_renderer_.Hover(pressed_id);
-
     tile_renderer_.Render();
-    ui_renderer_.Render(description_id);
+    ui_renderer_.Render();
 
     picking_fbo_.Bind();
-
     tile_renderer_.RenderPicking();
-    ui_renderer_.RenderPicking(description_id);
+    ui_renderer_.RenderPicking();
 
     glfwPollEvents();
     glfwSwapBuffers(gWindow);

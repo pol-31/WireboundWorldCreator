@@ -4,6 +4,7 @@
 layout (quads, equal_spacing, ccw) in;
 
 layout (location = 0) uniform sampler2D tex_displacement;
+layout(location = 7) uniform mat4 transform;
 
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
@@ -27,6 +28,6 @@ void main(void) {
     vec4 p = mix(p2, p1, gl_TessCoord.y);
 //    p.y += texture(tex_displacement, tc).r * 2.0f;
     p.y += texture(tex_displacement, tc).r + 0.7f;
-    gl_Position = camera.proj * camera.view * /**transform * */p; //TODO: what about tesc?
+    gl_Position = camera.proj * camera.view * transform * p; //TODO: what about tesc?
     tes_out.tc = tc;
 }

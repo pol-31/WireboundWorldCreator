@@ -12,9 +12,9 @@ void UiObjectsMode::ScrollCallback(
       glfwGetWindowUserPointer(window));
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (yoffset < 0.0f) {
-    global_data->tile_renderer->DownScale();
+    global_data->tile_renderer->cur_tile_.DownScale();
   } else {
-    global_data->tile_renderer->UpScale();
+    global_data->tile_renderer->cur_tile_.UpScale();
   }
 }
 
@@ -47,32 +47,32 @@ UiObjectsMode::UiObjectsMode(
     : IUiMode(
           ui_shared_resources,
           window_queue,
-          {data::VboIdMain::kObjectsObjectsMode, data::TextId::kNotYet}),
-      btn_mavka_(data::VboIdMain::kObjectsMavka, data::TextId::kNotYet,
+          {data::VboIdMain::kObjectsObjectsMode}),
+      btn_mavka_(data::VboIdMain::kObjectsMavka,
                 [this]() {
                   this->BtnMavka();
                 }),
-      btn_vodyaniy_(data::VboIdMain::kObjectsVodyaniy, data::TextId::kNotYet,
+      btn_vodyaniy_(data::VboIdMain::kObjectsVodyaniy,
                [this]() {
                  this->BtnVodyaniy();
                }),
-      btn_chugaister_(data::VboIdMain::kObjectsChugaister, data::TextId::kNotYet,
+      btn_chugaister_(data::VboIdMain::kObjectsChugaister,
                 [this]() {
                   this->BtnChugaister();
                 }),
-      btn_pedestal_(data::VboIdMain::kObjectsPedestal, data::TextId::kNotYet,
+      btn_pedestal_(data::VboIdMain::kObjectsPedestal,
           [this]() {
             this->BtnPedestal();
           }),
-      btn_campfire_(data::VboIdMain::kObjectsCampfire, data::TextId::kNotYet,
+      btn_campfire_(data::VboIdMain::kObjectsCampfire,
           [this]() {
             this->BtnCampfire();
           }),
-      btn_road_sign_(data::VboIdMain::kObjectsRoadSign, data::TextId::kNotYet,
+      btn_road_sign_(data::VboIdMain::kObjectsRoadSign,
                   [this]() {
                     this->BtnRoadSign();
                   }),
-      btn_human_(data::VboIdMain::kObjectsHuman, data::TextId::kNotYet,
+      btn_human_(data::VboIdMain::kObjectsHuman,
                   [this]() {
                     this->BtnHuman();
                   }),
@@ -149,9 +149,4 @@ void UiObjectsMode::BindCallbacks() {
   glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
   //  glfwSetKeyCallback(gWindow, KeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
-}
-
-data::TextId UiObjectsMode::Hover(std::uint32_t global_id) {
-  // NOT IMPLEMENTED
-  return data::TextId::kNone;
 }

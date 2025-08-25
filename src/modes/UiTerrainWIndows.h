@@ -25,16 +25,14 @@ class UiEditTerrainNoise {
   UiEditTerrainNoise& operator=(UiEditTerrainNoise&& other) = delete;
   UiEditTerrainNoise& operator=(const UiEditTerrainNoise& other) = delete;
 
-  /// no Press(), Release(), Hover() <- done in external ui_event_handler
+  /// no Press(), Release() <- done in external ui_event_handler
   void Render(const Texture32F& hmap_ref);
 
   void RenderPicking();
 
-  void SetParentId(int id);
-
-  void UpdateTransform();
-
   void SetConfig(NoiseDataBase* terrain_data);
+
+  void AttachToHierarchy(UiHierarchy& hierarchy);
 
   // public, for simpler external ui_event_handler adding
   UiDynamicSprite config_;
@@ -53,11 +51,11 @@ class UiEditTerrain final : public UiWindowAppear {
 
   UiEditTerrain(
       Tile& cur_tile,
-      UiDynamicSprite&& sprite,
-      float size_scale,
-      UiToggle2&& pin,
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue,
+      UiDynamicSprite&& sprite, // c
+      float size_scale,         // c
+      UiToggle2&& pin,          // w
+      UiSharedResources& ui_shared_resources, // c
+      WindowQueue& window_queue, // w
       TextRenderer& text_renderer,
       UiDynamicSprite&& accept,
       UiDynamicSprite&& name,
@@ -82,8 +80,6 @@ class UiEditTerrain final : public UiWindowAppear {
   // update base hmap (after modifying smt)
   void UpdateHmap();
 
-  data::TextId Hover(int id) override;
-
   bool Press(int id) override;
 
   void Release() override;
@@ -96,9 +92,6 @@ class UiEditTerrain final : public UiWindowAppear {
   void SetTerrainData(NoiseTerrainData* terrain_data);
 
   void RenderPicking() override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
 
   NoiseTerrainData Generate();
 
@@ -195,9 +188,9 @@ class UiTerrainBake final : public UiWindowAppear {
       TextRenderer& text_renderer,
       UiDynamicSprite&& accept,
       UiTextLabelId&& erosion_label,
-      UiDynamicSprite&& erosion_input,
+      UiTextInput&& erosion_input,
       UiTextLabelId&& weathering_label,
-      UiDynamicSprite&& weathering_input);
+      UiTextInput&& weathering_input);
 
   UiTerrainBake(UiTerrainBake&& other) noexcept;
   UiTerrainBake(const UiTerrainBake& other) = delete;
@@ -205,9 +198,7 @@ class UiTerrainBake final : public UiWindowAppear {
   UiTerrainBake& operator=(UiTerrainBake&& other) = delete;
   UiTerrainBake& operator=(const UiTerrainBake& other) = delete;
 
-  data::TextId Hover(int id) override;
-
-  bool Press(int id);
+  bool Press(int id) override;
 
   void Release() override;
 
@@ -216,9 +207,6 @@ class UiTerrainBake final : public UiWindowAppear {
   bool Render() override;
 
   void RenderPicking() override;
-
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
 
   void Bake(int steps_thermal, int steps_weathering, float talus);
 
@@ -272,10 +260,12 @@ class UiTerrainBake final : public UiWindowAppear {
 
   UiDynamicSprite accept_;
 
+//  UiTextInput erosion_input_;
+//  UiTextInput weathering_input_;
   UiTextLabelId erosion_label_;
-  UiDynamicSprite erosion_input_;
+  UiTextInput erosion_input_;
   UiTextLabelId weathering_label_;
-  UiDynamicSprite weathering_input_;
+  UiTextInput weathering_input_;
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kTerrainBakeHmap) -

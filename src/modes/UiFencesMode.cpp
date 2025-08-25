@@ -19,9 +19,9 @@ void UiFencesMode::ScrollCallback(
     return;
   }
   if (yoffset < 0.0f) {
-    global_data->tile_renderer->DownScale();
+    global_data->tile_renderer->cur_tile_.DownScale();
   } else {
-    global_data->tile_renderer->UpScale();
+    global_data->tile_renderer->cur_tile_.UpScale();
   }
 }
 
@@ -91,37 +91,36 @@ UiFencesMode::UiFencesMode(
     : IUiMode(
           ui_shared_resources,
           window_queue,
-          {data::VboIdMain::kFencesFencesMode, data::TextId::kNotYet}),
-      btn_bake_picket_(data::VboIdMain::kFencesPicket, data::TextId::kNotYet),
-      btn_bake_chain_linked_(data::VboIdMain::kFencesChainLink,
-                             data::TextId::kNotYet),
-      btn_bake_wooden_(data::VboIdMain::kFencesWooden, data::TextId::kNotYet),
-      btn_remove_(data::VboIdMain::kFencesFencesMode, data::TextId::kNotYet),
+          {data::VboIdMain::kFencesFencesMode}),
+      btn_bake_picket_(data::VboIdMain::kFencesPicket),
+      btn_bake_chain_linked_(data::VboIdMain::kFencesChainLink),
+      btn_bake_wooden_(data::VboIdMain::kFencesWooden),
+      btn_remove_(data::VboIdMain::kFencesFencesMode),
       slots_(
           ui_shared_resources_,
-          {data::VboIdMain::kFencesSlotsHandler, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesSlotsSlider, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesSlotsBack, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesSlotsCreate, data::TextId::kNotYet,
+          {data::VboIdMain::kFencesSlotsHandler},
+          {data::VboIdMain::kFencesSlotsSlider},
+          {data::VboIdMain::kFencesSlotsBack},
+          {data::VboIdMain::kFencesSlotsCreate,
            [this]() {
              this->slots_.CreateGraph();
              std::cout << "there input starts" << std::endl;
            }},
-          data::VboIdMain::kFencesSlotsFlipSelectEdit_Back, data::TextId::kNotYet,
-          data::VboIdMain::kFencesSlotsFlipPointEdgeFace_Back, data::TextId::kNotYet,
-          {data::VboIdMain::kFencesSlotsFlipSelectEdit, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesSlotsFlipPointEdgeFace, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesSlotsName, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesSlotsConfig, data::TextId::kNotYet},
-          {{data::VboIdMain::kFencesVisibleOff, data::TextId::kNotYet},
-              {data::VboIdMain::kFencesVisibleOn1, data::TextId::kNotYet},
-              {data::VboIdMain::kFencesVisibleOn2, data::TextId::kNotYet},
-              {data::VboIdMain::kFencesVisibleOn3, data::TextId::kNotYet},
+          data::VboIdMain::kFencesSlotsFlipSelectEdit_Back,
+          data::VboIdMain::kFencesSlotsFlipPointEdgeFace_Back,
+          {data::VboIdMain::kFencesSlotsFlipSelectEdit},
+          {data::VboIdMain::kFencesSlotsFlipPointEdgeFace},
+          {data::VboIdMain::kFencesSlotsName},
+          {data::VboIdMain::kFencesSlotsConfig},
+          {{data::VboIdMain::kFencesVisibleOff},
+              {data::VboIdMain::kFencesVisibleOn1},
+              {data::VboIdMain::kFencesVisibleOn2},
+              {data::VboIdMain::kFencesVisibleOn3},
           },
-          {data::VboIdMain::kFencesSlotsSlot, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesSlotsSlotColor, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesSlotsRemove, data::TextId::kNotYet},
-          {data::VboIdMain::kFencesSlotsSelected, data::TextId::kNotYet}),
+          {data::VboIdMain::kFencesSlotsSlot},
+          {data::VboIdMain::kFencesSlotsSlotColor},
+          {data::VboIdMain::kFencesSlotsRemove},
+          {data::VboIdMain::kFencesSlotsSelected}),
       ui_event_handler_({
           &btn_bake_picket_, &btn_bake_chain_linked_,
           &btn_bake_wooden_, &btn_remove_, &slots_}) {}
@@ -187,8 +186,4 @@ void UiFencesMode::BindCallbacks() {
   glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
   //  glfwSetKeyCallback(gWindow, KeyCallback);
   glfwSetKeyCallback(gWindow, WasdKeyCallback);
-}
-
-data::TextId UiFencesMode::Hover(std::uint32_t global_id) {
-  return data::TextId::kNone;
 }

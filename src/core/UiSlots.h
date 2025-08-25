@@ -52,14 +52,10 @@ class IUiSlots : public UiBase {
 
   void Release() override;
 
-  void UpdateTransform() override;
-
   /// interface virtual methods
   virtual void Render(glm::vec2 mouse_pos) = 0;
   virtual void RenderPicking() = 0;
   virtual bool Press(int id) = 0;
-  virtual void UpdateTransform(
-      float x_translate, float y_translate, float scale) = 0;
   virtual bool Scroll(GLuint id, float yoffset) = 0;
 
   /// as a decorator for graph_
@@ -87,7 +83,7 @@ class IUiSlots : public UiBase {
   /// slider
   UiSlotsSliderData sl_data_;
 
-  /// event handler (hover / press / release)
+  /// event handler (press / release)
   IUiEventHandler* ui_event_handler_ = nullptr;
 
   /// Render custom, but states show/hide pop-up edit window related to *this
@@ -118,20 +114,6 @@ class UiSlotsTerrain final : public IUiSlots {
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       TextRenderer& text_renderer,
-      UiDynamicSprite&& handler,
-      UiDynamicSprite&& slider,
-      UiDynamicSprite&& back,
-      UiDynamicSprite&& create,
-      data::VboIdMain flip_point_edge_back_vbo_texture,
-      data::TextId flip_point_edge_back_text_id,
-      UiDynamicSprite&& flip_point_edge_sprite,
-      UiDynamicSprite&& slot_name,
-      UiDynamicSprite&& slot_config,
-      UiToggle&& toggle_slot_visible,
-      UiDynamicSprite&& slot_back,
-      UiDynamicSprite&& slot_color,
-      UiDynamicSprite&& slot_remove,
-      UiDynamicSprite&& slot_selected,
       const UiSliderV& slider_size,
       const UiSliderV& slider_falloff);
 
@@ -147,8 +129,6 @@ class UiSlotsTerrain final : public IUiSlots {
   bool Scroll(GLuint id, float yoffset) override;
 
   bool Press(int id) override;
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override;
 
   void SelectGraph(GLuint id) override;
 
@@ -162,7 +142,11 @@ class UiSlotsTerrain final : public IUiSlots {
 
   void ScaleSelected(glm::vec3 value);
 
- void UpdateTransformUniform();
+  void UpdateTransformUniform();
+
+  int GetSlotId();
+
+  void UpdateTransform() override;
 
  private:
   std::vector<TerrainInstanceData> instances_;
@@ -200,6 +184,7 @@ class UiSlotsTerrain final : public IUiSlots {
       > ui_event_handler_; // IUiEventHandler for base
 
   UiSharedResources& ui_shared_resources_;
+  UiHierarchy hierarchy_;
 };
 
 class UiSlotsWater final : public IUiSlots {
@@ -218,9 +203,7 @@ class UiSlotsModels final : public IUiSlots {
       UiDynamicSprite&& back,
       UiDynamicSprite&& create,
       data::VboIdMain flip_select_edit_back_vbo_texture,
-      data::TextId flip_select_edit_back_text_id,
       data::VboIdMain flip_point_edge_back_vbo_texture,
-      data::TextId flip_point_edge_back_text_id,
       UiDynamicSprite&& flip_select_edit_sprite,
       UiDynamicSprite&& flip_point_edge_sprite,
       UiDynamicSprite&& slot_name,
@@ -243,15 +226,14 @@ class UiSlotsModels final : public IUiSlots {
   bool Scroll(GLuint id, float yoffset) override;
 
   bool Press(int id) override;
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override;
 
   void NextSelectMode();
 
   void NextClickMode();
 
-
   void PressGraph(GLuint id) override;
+
+  void UpdateTransform() override;
 
  private:
   UiDynamicSprite handler_;

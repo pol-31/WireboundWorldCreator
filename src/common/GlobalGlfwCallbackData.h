@@ -44,9 +44,13 @@ struct GlobalGlfwCallbackData {
   glm::dvec2 cursor_pos_{0.0};
   glm::vec2 cursor_pos_tex_norm_{0.0f};
 
+  GLuint hovered_id{0};
+
   void UpdateCursorPos();
 
-  [[nodiscard]] GLuint GetIdByMousePos() const;
+  void UpdateHoveredId();
+
+  [[nodiscard]] GLuint GetIdByMousePos(glm::vec2 mouse_pos) const;
 };
 
 #endif //WIREBOUNDWORLDCREATOR_SRC_GLOBALGLFWCALLBACKDATA_H_

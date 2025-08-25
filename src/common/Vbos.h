@@ -14,13 +14,12 @@ namespace data {
 struct UiData {
   int32_t id;
   std::size_t vbo_offset;
-  data::TextId text_id;
 
   // parent id to take transform from it
   std::size_t parent_id_{0};
 
   // useful for e.g. slider to update centre/length of interactive area
-  UiBase* ui{nullptr};
+  UiBase* ui = nullptr;
 };
 
 /// related to kUiVboDataMain
@@ -352,9 +351,9 @@ enum class VboIdMain {
   kTerrainEditNoise8Hmap,
 
   kTerrainNoisePerlinName,
-  kTerrainNoisePerlinDesk, // base
-  kTerrainNoisePerlinPinBack, // base
-  kTerrainNoisePerlinPinPoint, // base
+  kTerrainNoisePerlinDesk,
+  kTerrainNoisePerlinPinBack,
+  kTerrainNoisePerlinPinPoint,
   kTerrainNoisePerlinSave,
   kTerrainNoisePerlinScaleXText,
   kTerrainNoisePerlinScaleXArea,
@@ -1023,6 +1022,8 @@ inline constexpr int gVboIdSize =
     static_cast<int>(VboIdMain::kTotal)
     - static_cast<int>(VboIdMain::kMenuTerrain);
 
+extern const std::array<std::string_view, gVboIdSize> gVboIdMainText;
+
 #ifndef NDEBUG
 
 // before RELEASE all transform data should be converted to exact
@@ -1049,8 +1050,8 @@ inline constexpr std::size_t GetVboMainOffset(VboIdMain id) {
   return (static_cast<std::size_t>(id) - (details::kIdOffsetUi)) * 4; // TODO: 4?
 }
 
-inline UiData GetUiData(VboIdMain btn_type, data::TextId text_id) {
-  return {static_cast<int>(btn_type), GetVboMainOffset(btn_type), text_id, 0};
+inline UiData GetUiData(VboIdMain btn_type) {
+  return {static_cast<int>(btn_type), GetVboMainOffset(btn_type), 0, nullptr};
 }
 
 // We put all button data to the same vbo buffer;

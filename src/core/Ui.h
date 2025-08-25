@@ -35,20 +35,29 @@ LocalTransformLinear GetParentDbgTransform(size_t id);
 
 extern std::array<data::UiData, data::gVboIdSize> gUiComponents;
 
+//TODO: callable, text_id... under the question
+
 class UiBase {
  public:
   using CallableType = std::function<void()>;
 
-  UiBase(data::VboIdMain vbo_texture, data::TextId text_id,
-         CallableType action);
+  UiBase(data::VboIdMain vbo_texture, CallableType action);
 
   UiBase(size_t ui_data_id, CallableType&& action);
 
-  UiBase(UiBase&& other) noexcept = default;
-  UiBase(const UiBase& other) = delete;
 
-  UiBase& operator=(UiBase&& other) = delete;
-  UiBase& operator=(const UiBase& other) = delete;
+
+  ///
+  UiBase(UiBase* other) noexcept {
+    ui_data_id_ = other->ui_data_id_;
+  }
+  /// \param other
+
+  UiBase(UiBase&& other) noexcept = default;
+  UiBase(const UiBase& other) = default;
+
+  UiBase& operator=(UiBase&& other) = default;
+  UiBase& operator=(const UiBase& other) = default;
 
   /// different components have different params and shaders for Render()
   /// and RenderPicking(), therefore now we can't provide enough support
@@ -62,19 +71,11 @@ class UiBase {
 
   virtual bool Scroll(GLuint id, float yoffset);
 
-  /// non-virtual - one for all
-  data::TextId Hover();
-
-  virtual void UpdateTransform(
-      float x_translate, float y_translate, float scale) = 0;
-
   virtual void UpdateTransform() = 0;
 
   [[nodiscard]] std::uint32_t GetId() const;
 
   [[nodiscard]] std::size_t GetVboOffset() const;
-
-  [[nodiscard]] data::TextId GetTextId() const;
 
  private:
   UiBase(data::UiData ui_data, CallableType&& action);
@@ -86,13 +87,10 @@ class UiBase {
 class UiBasePad final : public UiBase {
  public:
   UiBasePad()
-      : UiBase(data::VboIdMain::kMenuTerrain, data::TextId::kNotYet, {}) {}
+      : UiBase(data::VboIdMain::kMenuTerrain, {}) {}
   void Press() override {
     std::cerr << "Pad was called, smt went wrong" << std::endl;
   }
-
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override {}
 
   void UpdateTransform() override {}
 };
@@ -102,8 +100,6 @@ class IUiEventHandler {
   virtual bool Press(int id) = 0;
 
   virtual void Release() = 0;
-
-  virtual data::TextId Hover(int id) = 0;
 
   virtual bool IsInRange(int id) = 0;
 };
@@ -127,6 +123,8 @@ class UiEventHandler final : public IUiEventHandler {
     if (id < start_ || id > end_) {
       return false;
     }
+    /// performance over the memory:
+    ///   creates dumps if ids empty, but hit exactly by id on Press()
     widgets_[id - start_]->Press();
     return true;
   }
@@ -135,13 +133,6 @@ class UiEventHandler final : public IUiEventHandler {
     for (auto widget : widgets_) {
       widget->Release();
     }
-  }
-
-  data::TextId Hover(int id) override {
-    if (id < start_ || id > end_) {
-      return data::TextId::kNone;
-    }
-    return widgets_[id - start_]->Hover();
   }
 
   bool IsInRange(int id) override {
@@ -185,8 +176,7 @@ class UiEventHandler final : public IUiEventHandler {
 
 class UiDynamicSprite : public UiBase {
  public:
-  UiDynamicSprite(data::VboIdMain vbo_texture, data::TextId text_id,
-                  CallableType action = {});
+  UiDynamicSprite(data::VboIdMain vbo_texture, CallableType action = {});
 
   UiDynamicSprite(UiDynamicSprite&& other) noexcept;
   UiDynamicSprite(const UiDynamicSprite& other) = delete;
@@ -234,9 +224,6 @@ class UiDynamicSprite : public UiBase {
   //TODO: inilne
   void RenderPicking() const;
 
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override;
-
   void UpdateTransform() override;
 
   [[nodiscard]] float GetLeftBorder() const;
@@ -265,8 +252,7 @@ class UiDynamicSprite : public UiBase {
 
 class UiStaticSprite : public UiBase {
  public:
-  UiStaticSprite(data::VboIdMain vbo_texture, data::TextId text_id,
-                 CallableType action = {});
+  UiStaticSprite(data::VboIdMain vbo_texture, CallableType action = {});
 
   UiStaticSprite(UiStaticSprite&& other) noexcept;
   UiStaticSprite(const UiStaticSprite& other) = delete;
@@ -280,9 +266,6 @@ class UiStaticSprite : public UiBase {
   /// bind the same shader 20 times, so this function don't bind shader
   //TODO: inilne
   void RenderPicking() const;
-
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override;
 
   void UpdateTransform() override;
 
@@ -372,8 +355,6 @@ class UiSliderV final : public UiBase {
 
   void RenderPicking() const;
 
-  [[nodiscard]] data::TextId Hover(std::uint32_t id);
-
   void Press() override {
     pressed_ = true;
   }
@@ -388,9 +369,6 @@ class UiSliderV final : public UiBase {
 
   [[nodiscard]] float GetProgressUnscaled() const;
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
   void UpdateTransform() override;
 
   void SetParentTransform(LocalTransform transform);
@@ -402,8 +380,6 @@ class UiSliderV final : public UiBase {
 
  private:
   void Set(glm::vec2 mouse_pos);
-
-  void UnHover();
 
   UiDynamicSprite fill_sprite_;
   UiDynamicSprite back_sprite_;
@@ -436,8 +412,6 @@ class UiSliderH final : public UiBase {
 
   void RenderPicking() const;
 
-  [[nodiscard]] data::TextId Hover(std::uint32_t id);
-
   void Press() override {
     pressed_ = true;
   }
@@ -459,9 +433,6 @@ class UiSliderH final : public UiBase {
 
   [[nodiscard]] float GetProgress() const;
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
   void UpdateTransform() override;
 
  private:
@@ -469,8 +440,6 @@ class UiSliderH final : public UiBase {
   void Set(glm::vec2 mouse_pos);
 
   void Set(float progress);
-
-  void UnHover();
 
   /// we want to use UiDynamicSprite only for handler_sprite_,
   /// BUT to use it in complex hierarhies we need all to be UiDynamicSprite
@@ -510,8 +479,6 @@ class UiSliderH3 final : public UiBase {
 
   void RenderPicking() const;
 
-  [[nodiscard]] data::TextId Hover(std::uint32_t id);
-
   void Press() override {
     pressed_ = true;
   }
@@ -533,9 +500,6 @@ class UiSliderH3 final : public UiBase {
 
   [[nodiscard]] float GetProgress() const;
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
   void UpdateTransform() override;
 
  private:
@@ -543,8 +507,6 @@ class UiSliderH3 final : public UiBase {
   void Set(glm::vec2 mouse_pos);
 
   void Set(float progress);
-
-  void UnHover();
 
   /// we want to use UiDynamicSprite only for handler_sprite_,
   /// BUT to use it in complex hierarhies we need all to be UiDynamicSprite
@@ -583,8 +545,6 @@ class UiSliderH2 final : public UiBase {
 
   void RenderPicking() const;
 
-  [[nodiscard]] data::TextId Hover(std::uint32_t id);
-
   void Press() override;
 
   void Release() override;
@@ -602,9 +562,6 @@ class UiSliderH2 final : public UiBase {
 
   [[nodiscard]] float GetProgress() const;
 
-  void UpdateTransform(float x_translate, float y_translate,
-                       float scale) override;
-
   void UpdateTransform() override;
 
   void SetValue(float value);
@@ -615,8 +572,6 @@ class UiSliderH2 final : public UiBase {
 
   void Set(float progress);
 
-  void UnHover();
-
   UiDynamicSprite back_sprite_;
   UiDynamicSprite icon_sprite_;
 
@@ -626,6 +581,62 @@ class UiSliderH2 final : public UiBase {
   float length_;
   float scale_{1.0f};
   static const float kTrackLengthFactor;
+};
+
+//used for UiPalette, so X-axis is Hue, Y-asix is Saturation
+class UiSlider2D final : public UiBase {
+ public:
+  UiSlider2D(UiDynamicSprite&& palette,
+             UiDynamicSprite&& cursor,
+             glm::vec2 scale = glm::vec2{1.0f});
+
+  UiSlider2D(UiSlider2D&& other) noexcept;
+  UiSlider2D(const UiSlider2D& other) = delete;
+
+  UiSlider2D& operator=(UiSlider2D&& other) = delete;
+  UiSlider2D& operator=(const UiSlider2D& other) = delete;
+
+  void Render(glm::vec2 mouse_pos);
+  void RenderIcon();
+
+  void RenderPicking() const;
+
+  void Press() override {
+    pressed_ = true;
+  }
+
+  void Release() override {
+    pressed_ = false;
+  }
+
+  bool Scroll(GLuint id, float yoffset) override;
+
+  [[nodiscard]] glm::vec2 GetProgress() const;
+
+  [[nodiscard]] float GetProgressX() const;
+
+  [[nodiscard]] float GetProgressY() const;
+
+  void UpdateTransform() override;
+
+  void SetParentTransform(LocalTransform transform);
+
+ private:
+  void SetMousePos(glm::vec2 mouse_pos);
+
+  void SetProgress(glm::vec2 progress);
+
+  UiDynamicSprite palette_;
+  UiDynamicSprite cursor_;
+
+  glm::vec2 progress_ = glm::vec2{0.0f};
+  bool pressed_ = false;
+  glm::vec2 centre_;
+  glm::vec2 length_;
+  glm::vec2 scale_;
+
+  static const float kTrackWidthFactor;
+  static const float kTrackHeightFactor;
 };
 
 /// You should pass action to off_ sprite (see Press());
@@ -645,13 +656,6 @@ class UiToggle final : public UiBase {
   void RenderPicking() const;
 
   void Press() override;
-
-  data::TextId Hover(std::uint32_t id) {
-    return off_.Hover();
-  }
-
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override;
 
   void UpdateTransform() override;
 
@@ -700,11 +704,6 @@ class UiToggle2 final : public UiBase {
   void RenderPicking() const;
 
   void Press() override;
-
-  data::TextId Hover(std::uint32_t id);
-
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override;
 
   void UpdateTransform() override;
 

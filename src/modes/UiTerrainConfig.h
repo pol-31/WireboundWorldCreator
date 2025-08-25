@@ -64,23 +64,6 @@ class TerrainNoiseBase : public UiWindowAppear {
     return handled;
   }
 
-  void UpdateTransform(
-      float x_translate, float y_translate, float scale) override {
-    sprite_.UpdateTransform();
-    pin_.UpdateTransform();
-    btn_save_.UpdateTransform();
-    for (auto slider : sliders_) {
-      slider->UpdateTransform();
-    }
-    for (auto toggle : toggles_) {
-      toggle->UpdateTransform();
-    }
-    for (auto text : texts_) {
-      text->UpdateTransform();
-    }
-    name_.UpdateTransform();
-  }
-
   bool Press(int id) override {
     return ui_event_handler_.Press(id);
   }
@@ -89,35 +72,7 @@ class TerrainNoiseBase : public UiWindowAppear {
     ui_event_handler_.Release();
   }
 
-  data::TextId Hover(int id) override {
-    return ui_event_handler_.Hover(id);
-  }
-
  protected:
-  void SetParent(GLuint parent_id) {
-    for (const auto slider :sliders_) {
-      gUiComponents[slider->GetId() - details::kIdOffsetUi].parent_id_
-          = parent_id;
-    }
-    for (const auto toggle : toggles_) {
-      gUiComponents[toggle->GetId() - details::kIdOffsetUi].parent_id_
-          = parent_id;
-    }
-    for (const auto text :texts_) {
-      gUiComponents[text->GetId() - details::kIdOffsetUi].parent_id_
-          = parent_id;
-    }
-    gUiComponents[pin_.GetId() - details::kIdOffsetUi].parent_id_
-        = parent_id;
-    gUiComponents[name_.GetId() - details::kIdOffsetUi].parent_id_
-        = parent_id;
-    gUiComponents[btn_save_.GetId() - details::kIdOffsetUi].parent_id_
-        = parent_id;
-    gUiComponents[sprite_.GetId() - details::kIdOffsetUi].ui
-        = static_cast<UiBase*>(this);
-    //TODO: move ctor
-  }
-
   UiTextLabelId name_;
   UiDynamicSprite btn_save_;
 
@@ -149,6 +104,8 @@ class TerrainNoisePerlin final
       WindowQueue& window_queue,
       TextRenderer& text_renderer);
 
+  TerrainNoisePerlin(TerrainNoisePerlin&& other);
+
   NoisePerlinData Generate(
       glm::vec2 resolution, std::string_view tex_name);
 
@@ -178,6 +135,8 @@ class TerrainNoiseCellular final
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       TextRenderer& text_renderer);
+
+  TerrainNoiseCellular(TerrainNoiseCellular&& other);
 
   NoiseCellularData Generate(
       glm::vec2 resolution, std::string_view tex_name);
@@ -211,6 +170,8 @@ class TerrainNoiseMetaballs final
       WindowQueue& window_queue,
       TextRenderer& text_renderer);
 
+  TerrainNoiseMetaballs(TerrainNoiseMetaballs&& other);
+
   NoiseMetaballsData Generate(
       glm::vec2 resolution, std::string_view tex_name);
 
@@ -242,6 +203,8 @@ class TerrainNoiseFbmGrid final
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       TextRenderer& text_renderer);
+
+  TerrainNoiseFbmGrid(TerrainNoiseFbmGrid&& other);
 
   NoiseFbmGridData Generate(
       glm::vec2 resolution, std::string_view tex_name);
@@ -285,6 +248,8 @@ class TerrainNoiseFbmMulti final
       WindowQueue& window_queue,
       TextRenderer& text_renderer);
 
+  TerrainNoiseFbmMulti(TerrainNoiseFbmMulti&& other);
+
   NoiseFbmMultiData Generate(
       glm::vec2 resolution, std::string_view tex_name);
 
@@ -318,6 +283,8 @@ class TerrainNoiseFbmdPerlin final
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       TextRenderer& text_renderer);
+
+  TerrainNoiseFbmdPerlin(TerrainNoiseFbmdPerlin&& other);
 
   NoiseFbmdPerlinData Generate(
       glm::vec2 resolution, std::string_view tex_name);
@@ -361,6 +328,8 @@ class TerrainNoiseFbmWarp final
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       TextRenderer& text_renderer);
+
+  TerrainNoiseFbmWarp(TerrainNoiseFbmWarp&& other);
 
   NoiseFbmWarpData Generate(
       glm::vec2 resolution, std::string_view tex_name);
@@ -408,6 +377,8 @@ class TerrainNoiseFbmPerlinWarp final
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       TextRenderer& text_renderer);
+
+  TerrainNoiseFbmPerlinWarp(TerrainNoiseFbmPerlinWarp&& other);
 
   NoiseFbmPerlinWarpData Generate(
       glm::vec2 resolution, std::string_view tex_name);
