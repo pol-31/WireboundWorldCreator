@@ -16,7 +16,7 @@ void GlobalGlfwCallbackData::UpdateCursorPos() {
 }
 
 void GlobalGlfwCallbackData::UpdateHoveredId() {
-  hovered_id = GetIdByMousePos(cursor_pos_tex_norm_);
+  hovered_id = GetIdByMousePos(cursor_pos_);
 }
 
 GLuint GlobalGlfwCallbackData::GetIdByMousePos(glm::vec2 mouse_pos) const {

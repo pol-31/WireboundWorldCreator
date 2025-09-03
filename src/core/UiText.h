@@ -23,6 +23,10 @@ class UiTextInput final : public UiBase {
 
   void Render();
 
+  void RenderTextNoScissors();
+
+  void RenderBack();
+
   void RenderPicking();
 
   void Press() override;
@@ -32,6 +36,20 @@ class UiTextInput final : public UiBase {
   void SetText(std::string_view text);
 
   void SetText(const FixedSizeQueue<char, 64>& text);
+
+  [[nodiscard]] float GetLeftBorder() const noexcept;
+
+  [[nodiscard]] float GetRightBorder() const noexcept;
+
+  void SetScissorArea();
+
+  void SetTextTranslate(glm::vec2 translate) {
+    translate_ = translate;
+  }
+
+  [[nodiscard]] glm::vec2 GetTextTranslate() const noexcept {
+    return translate_;
+  }
 
   /*void UpdateTransform() override;
 
@@ -63,6 +81,8 @@ class UiTextInput final : public UiBase {
 
   FixedSizeQueue<char, 64> text_input_;
   TextRenderer& text_renderer_;
+
+  glm::vec2 translate_;
 };
 
 class UiTextLabelBase : public UiBase {

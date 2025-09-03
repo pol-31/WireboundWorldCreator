@@ -41,7 +41,7 @@ class FixedSizeQueue {
   bool SafeInsert(const T& value, int pos) {
     if (cur_size_ < N) {
       auto first = std::next(data_.begin(), pos);
-      auto last = std::next(data_.begin(), cur_size_++);
+      auto last = std::next(data_.begin(), ++cur_size_);
       std::move(first, last, first + 1);
       data_[pos] = value;
       return true;
@@ -86,11 +86,14 @@ class FixedSizeQueue {
   }
 
   void Erase(SizeType start, SizeType end) {
-    assert((start < cur_size_ || end < cur_size_) && "Index out of bounds");
-    auto first = std::next(data_.begin(), start);
-    auto last = std::next(data_.begin(), end);
-    int diff = end - start;
-    std::move(first + diff, last, first);
+    assert((start >= 0 || end < cur_size_) && "Index out of bounds");
+    auto left_border = std::min(start, end);
+    auto right_border = std::max(start, end);
+    auto it_first = std::next(data_.begin(), left_border);
+    auto it_last = std::next(data_.begin(), right_border);
+    auto it_end = std::next(data_.begin(), cur_size_);
+    std::move(it_last, it_end, it_first);
+    int diff = right_border - left_border;
     cur_size_ -= diff;
   }
 

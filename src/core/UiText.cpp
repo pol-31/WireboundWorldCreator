@@ -28,13 +28,27 @@ UiTextInput::UiTextInput(UiTextInput&& other) noexcept
 
 void UiTextInput::Render() {
   back_.Render();
-  text_renderer_.RenderText(text_, &text_input_);
+  glEnable(GL_SCISSOR_TEST);
+  SetScissorArea();
+  text_renderer_.RenderText(text_, &text_input_, translate_);
+  glDisable(GL_SCISSOR_TEST);
+}
+
+void UiTextInput::RenderTextNoScissors() {
+  text_renderer_.RenderText(text_, &text_input_, translate_);
+}
+
+void UiTextInput::RenderBack() {
+  back_.Render();
 }
 
 void UiTextInput::RenderPicking() {
   back_.RenderPicking();
   if (debug::gUiAltMode) {
+    glEnable(GL_SCISSOR_TEST);
+    SetScissorArea();
     text_renderer_.RenderPickingText(text_, &text_input_);
+    glDisable(GL_SCISSOR_TEST);
   }
 }
 
@@ -56,6 +70,24 @@ void UiTextInput::SetText(std::string_view text) {
 }
 void UiTextInput::SetText(const FixedSizeQueue<char, 64>& text) {
   text_input_ = text;
+}
+
+float UiTextInput::GetLeftBorder() const noexcept {
+  return back_.GetLeftBorder();
+}
+
+float UiTextInput::GetRightBorder() const noexcept {
+  return back_.GetRightBorder();
+}
+
+void UiTextInput::SetScissorArea() {
+  // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
+  auto x_start =
+      int((back_.GetLeftBorder() + 1) * 0.5f * gWindowWidth);
+  auto x_length =
+      int((back_.GetRightBorder()
+           - back_.GetLeftBorder()) * 0.5f * gWindowWidth);
+  glScissor(x_start, 0, x_length, 4000);
 }
 
 // як я до цього прийшов: хочу скейл для тексту, але текст-компонентів багато.

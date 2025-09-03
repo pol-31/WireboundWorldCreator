@@ -44,6 +44,8 @@ class TextRenderer {
 
   void BtnBackspace();
 
+  void BtnDelete();
+
   /// binds its callbacks
   void StartInput(UiTextInput* input_data);
 
@@ -51,11 +53,14 @@ class TextRenderer {
 
   void RenderInput();
 
+  // need transform for (input text cursor scrolling/moving inside the limit)
   void RenderText(UiDynamicSprite& text_slot,
-                  FixedSizeQueue<char, 64>* text);
+                  FixedSizeQueue<char, 64>* text,
+                  glm::vec2 translate = glm::vec2{0.0f});
 
   void RenderTextSelected(UiDynamicSprite& text_slot,
-                          FixedSizeQueue<char, 64>* text);
+                          FixedSizeQueue<char, 64>* text,
+                          glm::vec2 translate);
 
   /// no RenderPickingTextSelected - we don't "pick" it
   void RenderPickingText(UiDynamicSprite& text_slot,
@@ -146,6 +151,10 @@ class TextRenderer {
       int start, int end, Texture& texture,
       std::vector<Aabb>& coords);
 
+  int CursorFromMousePos();
+
+  bool IsCursorOnInputLine();
+
   /// we don't need invalidation ids - rerender only *good amount of text,
   /// so it's 100% pre-rendered, so don't need active_ or even id_-s
 
@@ -183,9 +192,12 @@ class TextRenderer {
 
   /// not string, still need calculate "non-selected offset"
   int selected_start_ = 0;
-  int selected_end_ = 0;
-//  bool do_select_ = false; // same as selected_start != selected_end_
-//  int cursor_pos_ = 0; // same as selected_end_
+  int selected_end_ = 0; // cursor_pos as well
+  float show_offset_ = 0; // glScissor for cursor_pos (clipping)
+
+  bool smt_selected_ = true;
+
+  bool mouse_selection_ = false;
 
   static int GetWidth(int code);
 
@@ -194,9 +206,13 @@ class TextRenderer {
 
   void MoveCursor(int value);
 
+  // Unicode Text Segmentation rules (UAX #29)?
+  // of course not :D, check ' ' and '_' only
   int LeftCtrlDistance();
 
   int RightCtrlDistance();
+
+  void RemoveSelection();
 
   UiSharedResources& ui_shared_resources_;
 };

@@ -52,18 +52,9 @@ NEW ISSUES:
 - show pressed keys (top left corner: translate/scale/rotate x/y/z, etc...)
 - UiTopWindow --> SHADOW SPRITE
 - remove sprite_keyboads (not going to reassign keys)
+- remove kSpareText (yes, again)
 
 
-slot color indicator & name (UiSlots gets from UiEditTerrain)
-selection orientation fix
-
-TODO:
-- text input
-- align ui
-- UiTextInput !!!!!!!!! NO!, let's: remove modified_text, add shadow on top, text on top
-
-- adjust sliders (can do only after "align ui")
-- UiWaterMode, make similar to UiTerrainMode ui-slots
 
 TODO(kept unresolved):
 - FlattenTerrain.comp shader
@@ -71,15 +62,16 @@ TODO(kept unresolved):
 # apply transform to tex_coords?
 # flatten <90deg angles
 
+# Add to UiText ctors:
+int area_length,
+ing char_limit (for __std::vector area_char_limit)
 
-
-+ Keyboard settings -> REMOVE
-+ UiBase text description ->REMOVE
-+ Remove Hover(), replace by Render() {if_mouse_pos_there}
-+ UiTipWindow* description (still)
-
--> text input (label & input -> UiInputText)
 
 TODO:
+0. text input limit
 1. terrain layer transform
 2. adjust noise gen params (broken because of unresolved terrain layer transform)
+3. slot color indicator & name (UiSlots gets from UiEditTerrain)
+4. selection orientation fix
+5. UiFile, Parse / Serialize (load/save -> window, etc...)
+6. console? but for what
