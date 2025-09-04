@@ -4,6 +4,9 @@
 
 #include <algorithm>
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 ArbitraryGraph::ArbitraryGraph(
     UiSharedResources& ui_shared_resources)
     : ui_shared_resources_(ui_shared_resources) {
@@ -11,23 +14,23 @@ ArbitraryGraph::ArbitraryGraph(
 }
 
 void ArbitraryGraph::CreateGraph() {
-//  if (total_vertices_ >= gMaxPoints || total_edges_ >= gMaxPoints) {
-//    std::cerr << "Unable to add more graphs (data overflow)" << std::endl;
-//  } else {
-//    selected_slot_id_ = instances_.size();
-//    selected_ids_.clear();
-//    InstanceData instance_data;
-//    instance_data.name = FixedSizeQueue<char, 64>{};
-//    instance_data.color = glm::vec3{1.0f};
-//    instance_data.do_show = true;
-//    instance_data.type_id = -1;
-//    instance_data.vertices_offset = static_cast<int>(total_vertices_);
-//    instance_data.vertices_amount = 0;
-//    instance_data.edges_offset = static_cast<int>(total_edges_);
-//    instance_data.edges_amount = 0;
-//    instance_data.graph_id = selected_slot_id_;
-//    instances_.push_back(instance_data);
-//  }
+  if (total_vertices_ >= gMaxPoints || total_edges_ >= gMaxPoints) {
+    std::cerr << "Unable to add more graphs (data overflow)" << std::endl;
+  } else {
+    selected_slot_id_ = instances_.size();
+    selected_ids_.clear();
+    InstanceData instance_data;
+    instance_data.name = {};
+    instance_data.color = glm::vec4{0.0f, 0.0f, 0.0f, 1.0f};
+    instance_data.do_show = true;
+    instance_data.type_id = -1;
+    instance_data.vertices_offset = static_cast<int>(total_vertices_);
+    instance_data.vertices_amount = 0;
+    instance_data.edges_offset = static_cast<int>(total_edges_);
+    instance_data.edges_amount = 0;
+    instance_data.graph_id = selected_slot_id_;
+    instances_.push_back(instance_data);
+  }
 }
 
 void ArbitraryGraph::SelectGraph(int slot_id) {
@@ -88,7 +91,8 @@ void ArbitraryGraph::SelectGraph(int slot_id) {
 //  UpdateBuffers();
 }
 
-void ArbitraryGraph::RemoveGraph(int slot_id) {
+bool ArbitraryGraph::RemoveGraph(int slot_id) {
+  return false;
 //  if (slot_id >= instances_.size()) {
 //    throw "remove non-existent graph id";
 //  }
@@ -147,7 +151,7 @@ void ArbitraryGraph::RemoveGraph(int slot_id) {
 //  UpdateBuffers();
 }
 
-void ArbitraryGraph::Render() {
+void ArbitraryGraph::Render(glm::vec2 mouse_pos) {
   return;
   //TODO:
   //1. render all vertices/edges
@@ -156,6 +160,10 @@ void ArbitraryGraph::Render() {
   ui_shared_resources_.arbitrary_graph_shader_.Bind();
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_height.Bind();
+  glm::mat4 transform = glm::scale(
+      glm::mat4{1.0f}, glm::vec3{ui_shared_resources_.global_glfw_callback_data_
+                                 .tile_renderer->cur_tile_.map_scale});
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
   glBindVertexArray(points_vao_);
   glPointSize(5.0f);
   glDrawArrays(GL_POINTS, 0, total_vertices_);

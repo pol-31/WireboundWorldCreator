@@ -35,8 +35,9 @@ class UiRenderer {
 
   void SetupGlobalData();
 
-  void AskForConfirmation(std::string_view text,
-                          std::function<void()>&& callable);
+  //TODO: text should be prerendered in menu_prerender_texture by now
+  void AskForConfirmation(
+      data::TextId text, std::function<void()>&& callable);
 
  private:
   void Init();
@@ -62,7 +63,7 @@ class UiRenderer {
   Menu menu_;
   UiSettings ui_settings_;
   UiConfirmation ui_confirmation_;
-  UiCaution ui_caution_;
+//  UiCaution ui_caution_;
   UiFile ui_file_;
   UiTipWindow ui_tip_;
 

@@ -189,7 +189,7 @@ class UiConfirmation final : public UiTopWindowBase {
       WindowQueue& window_queue,
       UiDynamicSprite&& btn_accept,
       UiDynamicSprite&& btn_decline,
-      UiDynamicSprite&& text);
+      UiTextMenuId&& text);
 
   UiConfirmation(UiConfirmation&& other) noexcept;
   UiConfirmation(const UiConfirmation& other) = delete;
@@ -205,12 +205,16 @@ class UiConfirmation final : public UiTopWindowBase {
 
   void Release() override;
 
-  void SetText(std::string_view text);
+  void SetText(data::TextId text_id);
 
   void SetCallable(std::function<void()>&& callable);
 
+ void BtnEnter() override;
+
+ void BtnEscape() override;
+
  private:
-  UiDynamicSprite text_;
+  UiTextMenuId text_;
   UiDynamicSprite btn_accept_;
   UiDynamicSprite btn_decline_;
 
@@ -234,7 +238,7 @@ class UiFile final : public UiTopWindowBase {
       WindowQueue& window_queue,
       UiDynamicSprite&& btn_accept,
       UiDynamicSprite&& btn_decline,
-      UiTextLabel&& label,
+         UiText&& label,
       UiTextInput&& text);
 
   UiFile(UiFile&& other) noexcept;
@@ -254,7 +258,7 @@ class UiFile final : public UiTopWindowBase {
  private:
   UiDynamicSprite btn_accept_;
   UiDynamicSprite btn_decline_;
-  UiTextLabel label_;
+  UiText label_;
   UiTextInput text_;
 
   UiEventHandler<

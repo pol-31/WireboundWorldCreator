@@ -5,6 +5,27 @@ namespace data {
 // should be sorted by length locally for each sector, for prerender
 
 const std::array<std::string_view, gTotalText> gText = {
+    /// --- menu prerender ---
+    "menu Terrain",
+    "menu Water",
+    "menu Roads",
+    "menu Fences",
+    "menu Placement",
+    "menu Objects",
+    "menu Biomes",
+    "menu Tiles",
+    "menu",
+    "resolution",
+    "show tips",
+    "loading...",
+    "accepted",
+    "declined",
+    "Do you want to exit?",
+    "File exists, overwrite it?",
+    "New file will clear all unsaved data, continue?",
+    "Enter the path to load:",
+
+    /// --- kTerrainMode ---
     "scale",
     "scale X",
     "scale Y",
@@ -38,33 +59,21 @@ const std::array<std::string_view, gTotalText> gText = {
     "erosion",
     "weathering",
 
-    "menu Terrain",
-    "menu Water",
-    "menu Roads",
-    "menu Fences",
-    "menu Placement",
-    "menu Objects",
-    "menu Biomes",
-    "menu Tiles",
-    "menu",
-    "resolution",
-    "show tips",
-    "New game",
-    "Load game",
-    "Continue",
-    "Archive",
-    "Options",
-    "Credits",
-    "Quit",
-    "Loading",
-    "Copyright",
-    "https",
-    "github",
-    "com",
-    "Superman",
-    "Lamb of God",
-    "Pantera",
-    "Hatebreed",
+    "tiling",
+    "invert",
+    "strength",
+
+    /// --- kWaterMode ---
+    "scale",
+    "fetch",
+    "spread blend",
+    "swell",
+    "peak enhancement",
+    "short waves fade",
+    "lambda",
+    "layer 1",
+    "layer 2",
+    "layer 3"
 };
 
 } // namespace text

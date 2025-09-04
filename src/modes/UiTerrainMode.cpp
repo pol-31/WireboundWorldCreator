@@ -75,9 +75,10 @@ void UiTerrainMode::KeyCallback(
         glfwSetWindowShouldClose(window, true);
       } else if (!global_data->windows->GetTopWindow() &&
                  global_data->windows->GetSize() == 0) {
-        global_data->ui_renderer->AskForConfirmation("Exit?", []() {
-          glfwSetWindowShouldClose(gWindow, true);
-        });
+        global_data->ui_renderer->AskForConfirmation(
+            data::TextId::kConfirmationExit, []() {
+              glfwSetWindowShouldClose(gWindow, true);
+            });
       } else {
         global_data->windows->BtnEscape();
       }
@@ -180,13 +181,13 @@ UiTerrainMode::UiTerrainMode(
           window_queue,
           text_renderer,
           {data::VboIdMain::kTerrainBakeAccept},
-          {text_renderer, 0.05f,
+          {text_renderer,
            {data::VboIdMain::kTerrainBakeErosionStepLabel},
           data::TextId::kErosion},
           {text_renderer,
-                {data::VboIdMain::kTerrainBakeErosionStepInput},
-                {data::VboIdMain::kSpareText2}},
-          {text_renderer, 0.05f,
+           {data::VboIdMain::kTerrainBakeErosionStepInput},
+           {data::VboIdMain::kSpareText2}},
+          {text_renderer,
            {data::VboIdMain::kTerrainBakeWeatheringStepLabel},
            data::TextId::kWeathering},
           {text_renderer,
@@ -241,7 +242,18 @@ void UiTerrainMode::BindCallbacks() {
   global_data->camera->SetInspectCamera();
 }
 
+int UiTerrainMode::GetPrerenderTextIdStart() const noexcept {
+  return static_cast<int>(data::TextId::kScaleTerrain);
+}
+
+int UiTerrainMode::GetPrerenderTextIdEnd() const noexcept {
+  return static_cast<int>(data::TextId::kStrength) + 1;
+}
+
 void UiTerrainMode::Render() {
+  //TODO: should we call it RenderUi() and RenderTerrain()?
+  slots_.RenderGraph(); // should be first (terrain render before ui render)
+
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
@@ -278,8 +290,6 @@ void UiTerrainMode::Render() {
 
   ui_shared_resources_.tex_ui_.Bind();
   window_queue_.Render();
-
-  slots_.RenderGraph();
 }
 
 

@@ -290,9 +290,9 @@ void UiSlotsModels::Render(glm::vec2 mouse_pos) {
   }
   next_offset = sl_data_.start_slot_translate_;
   for (int i = 0; i < std::min(sl_data_.kSlotsNum, graphs_num - sl_data_.cur_slots_offset_); ++i) {
-    auto graph_name = graph_.GetNamePtr(i + sl_data_.cur_slots_offset_);
+    auto graph_name = graph_.GetNameRef(i + sl_data_.cur_slots_offset_);
     ui_shared_resources_.global_glfw_callback_data_.text_renderer->
-        RenderText(slot_name_, graph_name, 1.0f, next_offset);
+        RenderText(slot_name_, *graph_name, 1.0f, next_offset);
     next_offset.y -= sl_data_.slot_height_;
   }
 
@@ -371,9 +371,9 @@ void UiSlotsModels::RenderPicking() {
 
   next_offset = sl_data_.start_slot_translate_;
   for (int i = 0; i < std::min(sl_data_.kSlotsNum, graphs_num - sl_data_.cur_slots_offset_); ++i) {
-    auto graph_name = graph_.GetNamePtr(i + sl_data_.cur_slots_offset_);
+    auto graph_name = graph_.GetNameRef(i + sl_data_.cur_slots_offset_);
     ui_shared_resources_.global_glfw_callback_data_.text_renderer->
-        RenderTextPicking(slot_name_, graph_name, 1.0f, next_offset);
+        RenderTextPicking(slot_name_, *graph_name, 1.0f, next_offset);
     next_offset.y -= sl_data_.slot_height_;
   }
 
@@ -575,7 +575,7 @@ UiSlotsTerrain::UiSlotsTerrain(
           flip_point_edge_sprite_,
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f}, 1.0f, glm::pi<float>()}),
-      slot_name_(data::VboIdMain::kTerrainSlotsName),
+      slot_name_(text_renderer, data::VboIdMain::kTerrainSlotsName),
       slot_config_(data::VboIdMain::kTerrainSlotsConfig,
                    [this]() {
                      SelectGraph(GetSlotId());
@@ -726,15 +726,17 @@ void UiSlotsTerrain::Render(glm::vec2 mouse_pos) {
     slot_config_.Render();
     toggle_slot_visible_.Set(!instances_[sl_data_.cur_slots_offset_ + i].do_show);
     toggle_slot_visible_.Render();
+    auto graph_base_data = graph_.GetBaseInstanceData(i + sl_data_.cur_slots_offset_);
+    glUniform4fv(7, 1, glm::value_ptr(graph_base_data->color));
     slot_color_.Render();
-//    std::cout << "offset for " << sl_data_.slot_height_ << std::endl;
+    glm::vec4 color_white = glm::vec4{1.0f};
+    glUniform4fv(7, 1, glm::value_ptr(color_white)); // restore
     next_offset.y -= sl_data_.slot_height_;
   }
   next_offset = sl_data_.start_slot_translate_;
   for (int i = 0; i < std::min(sl_data_.kSlotsNum, graphs_num - sl_data_.cur_slots_offset_); ++i) {
-    auto graph_name = graph_.GetNamePtr(i + sl_data_.cur_slots_offset_);
-    ui_shared_resources_.global_glfw_callback_data_.text_renderer->
-        RenderText(slot_name_, graph_name, 1.0f, next_offset);
+    auto graph_name = graph_.GetNameRef(i + sl_data_.cur_slots_offset_);
+    slot_name_.Render(*graph_name, 1.0f, next_offset);
     next_offset.y -= sl_data_.slot_height_;
   }
 
@@ -789,9 +791,8 @@ void UiSlotsTerrain::RenderPicking() {
 
   next_offset = sl_data_.start_slot_translate_;
   for (int i = 0; i < std::min(sl_data_.kSlotsNum, graphs_num - sl_data_.cur_slots_offset_); ++i) {
-    auto graph_name = graph_.GetNamePtr(i + sl_data_.cur_slots_offset_);
-    ui_shared_resources_.global_glfw_callback_data_.text_renderer->
-        RenderTextPicking(slot_name_, graph_name, 1.0f, next_offset);
+    auto graph_name = graph_.GetNameRef(i + sl_data_.cur_slots_offset_);
+    slot_name_.RenderPicking(*graph_name, 1.0f, next_offset);
     next_offset.y -= sl_data_.slot_height_;
   }
 
@@ -839,7 +840,7 @@ void UiSlotsTerrain::SelectGraph(GLuint id) {
   std::cout << "-- slot back (selected)" << std::endl;
   graph_.SelectGraph(id);
   sl_data_.FocusOnSelected(id, graph_.GetSize(), handler_, slot_back_);
-  ui_edit_.SetTerrainData(&graph_.GetInstanceData()->data); // TODO: legit?
+  ui_edit_.SetTerrainData(graph_.GetInstanceData());
   UpdateTransformUniform();
 }
 

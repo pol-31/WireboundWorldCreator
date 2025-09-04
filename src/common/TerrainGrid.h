@@ -65,11 +65,11 @@ class TerrainGrid final : public IGraph {
     return &instances_[id];
   };
 
-  const FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) const override {
+  const std::string* GetNameRef(int instance_id) const override {
     return &instances_[instance_id].name;
   }
 
-  FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) override {
+  std::string* GetNameRef(int instance_id) override {
     return &instances_[instance_id].name;
   }
 

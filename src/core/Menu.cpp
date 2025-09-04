@@ -203,6 +203,7 @@ void Menu::SetMode(int id) {
       static_cast<float>(id) * 2.0f * glm::pi<float>() / 8.0f;
   ui_tab_menu_.SetSelectedArrow(arrow_selected_angle_);
   cur_mode_->BindCallbacks();
+  cur_mode_->PrerenderText();
 }
 
 void Menu::Render(bool show) {

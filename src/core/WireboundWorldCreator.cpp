@@ -86,6 +86,7 @@ void WireboundWorldCreator::Init(const Paths& paths) {
 
   ui_renderer_.Parse();
 
+  // here, not in Menu::Init(), where it would use uninitialised data
   global_data_.menu->SetMode(0);
 }
 

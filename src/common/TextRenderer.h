@@ -40,83 +40,58 @@ class TextRenderer {
 
   ~TextRenderer();
 
+  //TODO: make multiline
+  void RenderTextSelected(
+      UiDynamicSprite& text_slot, std::string_view text,
+      glm::vec2 translate);
+
+  void RenderText(
+      UiDynamicSprite& text_slot, std::string_view text,
+      float scale = 1.0f, glm::vec2 position = glm::vec2{0.0f},
+      Alignment alignment = Alignment::kCentre);
+
+  /// ALL picking use default dynamic sprite picking, so we don't even set it
+
+  void RenderTextPicking(
+      UiDynamicSprite& text_slot, std::string_view text,
+      float scale = 1.0f, glm::vec2 position = glm::vec2{0.0f},
+      Alignment alignment = Alignment::kCentre);
+
+  void RenderMenuText(UiDynamicSprite& text_slot, data::TextId id);
+
+  void RenderMenuTextPicking(UiDynamicSprite& text_slot);
+
+  void RenderModeText(UiDynamicSprite& text_slot, data::TextId id);
+
+  void RenderModeTextPicking(UiDynamicSprite& text_slot);
+
+  /// all prerendered text located together in data::TextId
+  void PrerenderMenuText(int start, int end);
+
+  void PrerenderModeText(int start, int end);
+
+  /// --- INPUT SECTION ---
+
+  void StartInput(UiTextInput* input_data);
+
+  void StopInput();
+
+  [[nodiscard]] bool InputInProgress() const noexcept {
+    return input_in_progress_;
+  }
+
   void AppendChar(int code);
 
   void BtnBackspace();
 
   void BtnDelete();
 
-  /// binds its callbacks
-  void StartInput(UiTextInput* input_data);
-
-  void StopInput();
-
   void RenderInput();
-
-  // need transform for (input text cursor scrolling/moving inside the limit)
-  void RenderText(UiDynamicSprite& text_slot,
-                  FixedSizeQueue<char, 64>* text,
-                  glm::vec2 translate = glm::vec2{0.0f});
-
-  void RenderTextSelected(UiDynamicSprite& text_slot,
-                          FixedSizeQueue<char, 64>* text,
-                          glm::vec2 translate);
-
-  /// no RenderPickingTextSelected - we don't "pick" it
-  void RenderPickingText(UiDynamicSprite& text_slot,
-                         FixedSizeQueue<char, 64>* text);
-
-  /// runtime text, no prerender:  each symbol rendered as a separate sprite
-  /// (todo; prerender to some point is still possible)
-  void RenderText(UiDynamicSprite& text_slot, std::string_view text,
-                  float scale, glm::vec2 position,
-                  Alignment alignment = Alignment::kCentre);
-
-  void RenderText(UiDynamicSprite& text_slot, std::string_view text,
-                  Alignment alignment = Alignment::kCentre) {
-    RenderText(text_slot, text, 1.0f, glm::vec2{0.0f}, alignment);
-  }
-
-  void RenderText(UiDynamicSprite& text_slot,
-                  const FixedSizeQueue<char, 64>* text,
-                  float scale, glm::vec2 position,
-                  Alignment alignment = Alignment::kCentre);
-
-  void RenderTextPicking(UiDynamicSprite& text_slot, std::string_view text,
-                         float scale, glm::vec2 position,
-                         Alignment alignment = Alignment::kCentre);
-
-  void RenderTextPicking(UiDynamicSprite& text_slot, std::string_view text,
-                         Alignment alignment = Alignment::kCentre) {
-    RenderTextPicking(text_slot, text, 1.0f, glm::vec2{0.0f}, alignment);
-  }
-
-  void RenderTextPicking(UiDynamicSprite& text_slot,
-                         const FixedSizeQueue<char, 64>* text,
-                         float scale, glm::vec2 position,
-                         Alignment alignment = Alignment::kCentre);
-
-  void RenderMenuText(
-      UiDynamicSprite& text_slot, data::TextId id, float scale);
-
-  void RenderMenuTextPicking(
-      UiDynamicSprite& text_slot, data::TextId id);
-
-  void RenderModeText(data::TextId id);
-
-  void RenderModeTextPicking(data::TextId id);
-
-  void PrerenderMenuText(int start, int end);
-
-  void PrerenderModeText(int start, int end);
 
   void BindCallbacks();
 
-  [[nodiscard]] bool InputInProgress() const noexcept {
-    return input_in_progress_;
-  }
-
  private:
+  /// --- CALLBACK SECTION ---
   static void CharCallback(GLFWwindow* window, unsigned int codepoint);
 
   static void ScrollCallback(
@@ -127,6 +102,18 @@ class TextRenderer {
 
   static void MouseButtonCallback(
       GLFWwindow* window, int button, int action, int mods);
+
+  /// --- PRERENDER SECTION ---
+
+  void RenderMenuModeText(
+      const Texture& tex_prerender,
+      const std::vector<TextRenderer::Aabb>& tex_coords,
+      UiDynamicSprite& text_slot, int id);
+
+  void RenderMenuModeTextPicking(
+      const Texture& tex_prerender, UiDynamicSprite& text_slot);
+
+  static int GetWidth(int code);
 
   static Aabb GetGlyphCoords(char ch);
 
@@ -144,19 +131,9 @@ class TextRenderer {
   int CalculateLineLength(
       std::string_view text, const UiDynamicSprite& text_slot);
 
-  int CalculateLineLength(
-      FixedSizeQueue<char, 64>* text, const UiDynamicSprite& text_slot);
-
   void PrerenderImpl(
       int start, int end, Texture& texture,
       std::vector<Aabb>& coords);
-
-  int CursorFromMousePos();
-
-  bool IsCursorOnInputLine();
-
-  /// we don't need invalidation ids - rerender only *good amount of text,
-  /// so it's 100% pre-rendered, so don't need active_ or even id_-s
 
   // left-top of previous, so start from the top
   glm::ivec2 fbo_cursor_{0, font::gSize};
@@ -170,39 +147,25 @@ class TextRenderer {
   std::vector<Aabb> coords_menu_;
   std::vector<Aabb> coords_mode_;
 
-  const float scale_{0.1f};
-
   Shader render_shader_;
   Shader render_shader_picking_;
 
   // where to read & write
   UiDynamicSprite* text_slot_ = nullptr;
-  FixedSizeQueue<char, 64>* input_source_ = nullptr;
 
   UiDynamicSprite prerender_text_slot_;
 
   UiDynamicSprite sprite_shadow_;
   UiDynamicSprite sprite_cursor_;
 
+  /// --- INPUT SECTION ---
 
-  bool input_in_progress_ = false;
-  UiTextInput* input_data_ = nullptr;
-  // input to buffer, only then copy to input_data_'s buffer
-  FixedSizeQueue<char, 64> buffer_input_;
+  int CursorFromMousePos();
 
-  /// not string, still need calculate "non-selected offset"
-  int selected_start_ = 0;
-  int selected_end_ = 0; // cursor_pos as well
-  float show_offset_ = 0; // glScissor for cursor_pos (clipping)
-
-  bool smt_selected_ = true;
-
-  bool mouse_selection_ = false;
-
-  static int GetWidth(int code);
+  bool IsCursorOnInputLine();
 
   void CalculateCursorPos(
-      UiDynamicSprite& text_slot, FixedSizeQueue<char, 64>* text);
+      UiDynamicSprite& text_slot, const std::string& text);
 
   void MoveCursor(int value);
 
@@ -213,6 +176,24 @@ class TextRenderer {
   int RightCtrlDistance();
 
   void RemoveSelection();
+
+  void TextInsert(std::string& buffer, char ch, int pos);
+
+  void TextErase(std::string& buffer, int pos_start, int pos_end);
+
+  bool input_in_progress_ = false;
+  UiTextInput* input_data_ = nullptr;
+  std::string buffer_input_; // input here, after input back to input_data_
+
+  /// not string, still need calculate "non-selected offset"
+  int selected_start_ = 0;
+  int selected_end_ = 0; // cursor_pos as well
+  float show_offset_ = 0; // glScissor for cursor_pos (clipping)
+
+  bool smt_selected_ = true;
+  bool mouse_selection_ = false;
+
+  /// --- END INPUT SECTION ---
 
   UiSharedResources& ui_shared_resources_;
 };

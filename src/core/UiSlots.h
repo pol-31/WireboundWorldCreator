@@ -73,8 +73,8 @@ class IUiSlots : public UiBase {
 
   [[nodiscard]] int GetSize() const noexcept;
 
-  FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) {
-    return graph_->GetNamePtr(instance_id);
+  std::string* GetNameRef(int instance_id) {
+    return graph_->GetNameRef(instance_id);
   }
 
   virtual void PressGraph(GLuint id) = 0;
@@ -161,7 +161,7 @@ class UiSlotsTerrain final : public IUiSlots {
   UiDynamicSprite flip_point_edge_sprite_;
   UiSpriteTransformation flip_point_edge_;
 
-  UiDynamicSprite slot_name_;
+  UiText slot_name_;
   UiDynamicSprite slot_config_;
   UiToggle toggle_slot_visible_;
 

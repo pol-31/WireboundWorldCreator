@@ -17,7 +17,7 @@ class TerrainNoiseBase : public UiWindowAppear {
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       UiDynamicSprite&& btn_save,
-      UiTextLabelId&& name)
+                   UiTextModeId&& name)
       : UiWindowAppear(std::move(sprite), size_scale, std::move(pin),
                        ui_shared_resources, window_queue),
         btn_save_(std::move(btn_save)),
@@ -73,7 +73,7 @@ class TerrainNoiseBase : public UiWindowAppear {
   }
 
  protected:
-  UiTextLabelId name_;
+  UiTextModeId name_;
   UiDynamicSprite btn_save_;
 
   //TODO:
@@ -82,7 +82,7 @@ class TerrainNoiseBase : public UiWindowAppear {
 
   std::array<UiSliderH2*, gSlidersNum> sliders_;
   std::array<UiToggle*, gTogglesNum> toggles_;
-  std::array<UiTextLabelId*, gTextNum> texts_;
+  std::array<UiTextModeId*, gTextNum> texts_;
 
   UiEventHandler<gWidgetsNum> ui_event_handler_;
   Shader shader_;
@@ -113,11 +113,11 @@ class TerrainNoisePerlin final
 
  private:
   UiSliderH2 slider_scale_x_;
-  UiTextLabelId text_scale_x_;
+  UiTextModeId text_scale_x_;
   UiSliderH2 slider_scale_y_;
-  UiTextLabelId text_scale_y_;
+  UiTextModeId text_scale_y_;
   UiSliderH2 slider_seed_;
-  UiTextLabelId text_seed_;
+  UiTextModeId text_seed_;
 };
 
 class TerrainNoiseCellular final
@@ -145,13 +145,13 @@ class TerrainNoiseCellular final
 
  private:
   UiSliderH2 slider_scale_x_;
-  UiTextLabelId text_scale_x_;
+  UiTextModeId text_scale_x_;
   UiSliderH2 slider_scale_y_;
-  UiTextLabelId text_scale_y_;
+  UiTextModeId text_scale_y_;
   UiSliderH2 slider_jitter_;
-  UiTextLabelId text_jitter_;
+  UiTextModeId text_jitter_;
   UiSliderH2 slider_seed_;
-  UiTextLabelId text_seed_;
+  UiTextModeId text_seed_;
 };
 
 class TerrainNoiseMetaballs final
@@ -179,13 +179,13 @@ class TerrainNoiseMetaballs final
 
  private:
   UiSliderH2 slider_scale_x_;
-  UiTextLabelId text_scale_x_;
+  UiTextModeId text_scale_x_;
   UiSliderH2 slider_scale_y_;
-  UiTextLabelId text_scale_y_;
+  UiTextModeId text_scale_y_;
   UiSliderH2 slider_jitter_;
-  UiTextLabelId text_jitter_;
+  UiTextModeId text_jitter_;
   UiSliderH2 slider_seed_;
-  UiTextLabelId text_seed_;
+  UiTextModeId text_seed_;
 };
 
 class TerrainNoiseFbmGrid final
@@ -213,23 +213,23 @@ class TerrainNoiseFbmGrid final
 
  private:
   UiSliderH2 slider_scale_x_;
-  UiTextLabelId text_scale_x_;
+  UiTextModeId text_scale_x_;
   UiSliderH2 slider_scale_y_;
-  UiTextLabelId text_scale_y_;
+  UiTextModeId text_scale_y_;
   UiSliderH2 slider_octaves_;
-  UiTextLabelId text_octaves_;
+  UiTextModeId text_octaves_;
   UiSliderH2 slider_shift_;
-  UiTextLabelId text_shift_;
+  UiTextModeId text_shift_;
   UiSliderH2 slider_gain_;
-  UiTextLabelId text_gain_;
+  UiTextModeId text_gain_;
   UiSliderH2 slider_lacunarity_;
-  UiTextLabelId text_lacunarity_;
+  UiTextModeId text_lacunarity_;
   UiSliderH2 slider_warp_strength_;
-  UiTextLabelId text_warp_strength_;
+  UiTextModeId text_warp_strength_;
   UiSliderH2 slider_octave_factor_;
-  UiTextLabelId text_octave_factor_;
+  UiTextModeId text_octave_factor_;
   UiSliderH2 slider_seed_;
-  UiTextLabelId text_seed_;
+  UiTextModeId text_seed_;
 };
 
 class TerrainNoiseFbmMulti final
@@ -257,15 +257,15 @@ class TerrainNoiseFbmMulti final
 
  private:
   UiSliderH2 slider_scale_x_;
-  UiTextLabelId text_scale_x_;
+  UiTextModeId text_scale_x_;
   UiSliderH2 slider_scale_y_;
-  UiTextLabelId text_scale_y_;
+  UiTextModeId text_scale_y_;
   UiSliderH2 slider_lacunarity_;
-  UiTextLabelId text_lacunarity_;
+  UiTextModeId text_lacunarity_;
   UiSliderH2 slider_octaves_;
-  UiTextLabelId text_octaves_;
+  UiTextModeId text_octaves_;
   UiSliderH2 slider_seed_;
-  UiTextLabelId text_seed_;
+  UiTextModeId text_seed_;
 };
 
 class TerrainNoiseFbmdPerlin final
@@ -293,24 +293,24 @@ class TerrainNoiseFbmdPerlin final
 
  private:
   UiSliderH2 slider_scale_x_;
-  UiTextLabelId text_scale_x_;
+  UiTextModeId text_scale_x_;
   UiSliderH2 slider_scale_y_;
-  UiTextLabelId text_scale_y_;
+  UiTextModeId text_scale_y_;
   UiSliderH2 slider_octaves_;
-  UiTextLabelId text_octaves_;
+  UiTextModeId text_octaves_;
   UiSliderH2 slider_gain_;
-  UiTextLabelId text_gain_;
+  UiTextModeId text_gain_;
   UiSliderH2 slider_lacunarity_;
-  UiTextLabelId text_lacunarity_;
+  UiTextModeId text_lacunarity_;
   UiSliderH2 slider_slopeness_;
-  UiTextLabelId text_slopeness_;
+  UiTextModeId text_slopeness_;
   UiSliderH2 slider_octave_factor_;
-  UiTextLabelId text_octave_factor_;
+  UiTextModeId text_octave_factor_;
   UiSliderH2 slider_seed_;
-  UiTextLabelId text_seed_;
+  UiTextModeId text_seed_;
 
   UiToggle toggle_negative_;
-  UiTextLabelId text_negative_;
+  UiTextModeId text_negative_;
 };
 
 class TerrainNoiseFbmWarp final
@@ -338,28 +338,28 @@ class TerrainNoiseFbmWarp final
 
  private:
   UiSliderH2 slider_scale_x_;
-  UiTextLabelId text_scale_x_;
+  UiTextModeId text_scale_x_;
   UiSliderH2 slider_scale_y_;
-  UiTextLabelId text_scale_y_;
+  UiTextModeId text_scale_y_;
   UiSliderH2 slider_octaves_;
-  UiTextLabelId text_octaves_;
+  UiTextModeId text_octaves_;
   UiSliderH2 slider_gain_;
-  UiTextLabelId text_gain_;
+  UiTextModeId text_gain_;
   UiSliderH2 slider_lacunarity_;
-  UiTextLabelId text_lacunarity_;
+  UiTextModeId text_lacunarity_;
   UiSliderH2 slider_slopeness_;
-  UiTextLabelId text_slopeness_;
+  UiTextModeId text_slopeness_;
   UiSliderH2 slider_octave_factor_;
-  UiTextLabelId text_octave_factor_;
+  UiTextModeId text_octave_factor_;
   UiSliderH2 slider_seed_;
-  UiTextLabelId text_seed_;
+  UiTextModeId text_seed_;
   UiSliderH2 slider_q_;
-  UiTextLabelId text_q_;
+  UiTextModeId text_q_;
   UiSliderH2 slider_r_;
-  UiTextLabelId text_r_;
+  UiTextModeId text_r_;
 
   UiToggle toggle_negative_;
-  UiTextLabelId text_negative_;
+  UiTextModeId text_negative_;
 };
 
 class TerrainNoiseFbmPerlinWarp final
@@ -387,28 +387,28 @@ class TerrainNoiseFbmPerlinWarp final
 
  private:
   UiSliderH2 slider_scale_x_;
-  UiTextLabelId text_scale_x_;
+  UiTextModeId text_scale_x_;
   UiSliderH2 slider_scale_y_;
-  UiTextLabelId text_scale_y_;
+  UiTextModeId text_scale_y_;
   UiSliderH2 slider_octaves_;
-  UiTextLabelId text_octaves_;
+  UiTextModeId text_octaves_;
   UiSliderH2 slider_gain_;
-  UiTextLabelId text_gain_;
+  UiTextModeId text_gain_;
   UiSliderH2 slider_lacunarity_;
-  UiTextLabelId text_lacunarity_;
+  UiTextModeId text_lacunarity_;
   UiSliderH2 slider_slopeness_;
-  UiTextLabelId text_slopeness_;
+  UiTextModeId text_slopeness_;
   UiSliderH2 slider_octave_factor_;
-  UiTextLabelId text_octave_factor_;
+  UiTextModeId text_octave_factor_;
   UiSliderH2 slider_seed_;
-  UiTextLabelId text_seed_;
+  UiTextModeId text_seed_;
   UiSliderH2 slider_q_;
-  UiTextLabelId text_q_;
+  UiTextModeId text_q_;
   UiSliderH2 slider_r_;
-  UiTextLabelId text_r_;
+  UiTextModeId text_r_;
 
   UiToggle toggle_negative_;
-  UiTextLabelId text_negative_;
+  UiTextModeId text_negative_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_

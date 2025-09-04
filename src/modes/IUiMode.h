@@ -5,6 +5,7 @@
 
 #include "../core/Ui.h"
 #include "../core/WindowQueue.h"
+#include "../common/TextRenderer.h"
 
 class IUiMode {
  public:
@@ -16,10 +17,24 @@ class IUiMode {
         sprite_mode_(std::move(sprite_mode)) {}
 
   virtual void Render() = 0;
-  virtual void RenderPicking()= 0;
+  virtual void RenderPicking() = 0;
 
   // glfw callbacks, e.g. mouse scroll, mouse & keyboard btn interaction
   virtual void BindCallbacks() = 0;
+
+  void PrerenderText() const noexcept {
+    ui_shared_resources_.global_glfw_callback_data_.text_renderer
+        ->PrerenderModeText(GetPrerenderTextIdStart(),
+                            GetPrerenderTextIdEnd());
+  }
+
+  virtual int GetPrerenderTextIdStart() const noexcept {
+    return 0;
+  }
+
+  virtual int GetPrerenderTextIdEnd() const noexcept {
+    return 0;
+  }
 
   virtual std::vector<std::string> Serialize() {
     /*std::ofstream file(path.data());

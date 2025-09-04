@@ -9,8 +9,8 @@
 class IGraph {
  public:
   struct BaseInstanceData {
-    FixedSizeQueue<char, 64> name;
-    glm::vec3 color;
+    std::string name;
+    glm::vec4 color;
     bool do_show;
 
     /// terrain: vertical layer
@@ -35,9 +35,9 @@ class IGraph {
 
   virtual BaseInstanceData* GetBaseInstanceData(int id) = 0;
 
-  virtual const FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) const = 0;
+  virtual const std::string* GetNameRef(int instance_id) const = 0;
 
-  virtual FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) = 0;
+  virtual std::string* GetNameRef(int instance_id) = 0;
 
   // "Arbitrary" do have them, "Terrain Grid" may not
 //  Create/Select/Remove vertex;

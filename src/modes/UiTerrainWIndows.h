@@ -12,8 +12,7 @@ class UiEditTerrainNoise {
  public:
   UiEditTerrainNoise(
       UiSharedResources& ui_shared_resources,
-      UiDynamicSprite&& config,
-      UiTextLabelId&& text_name,
+      UiDynamicSprite&& config, UiTextModeId&& text_name,
       UiToggle&& toggle_invert,
       UiToggle&& toggle_tiling,
       UiSliderH2&& slider_strength,
@@ -36,7 +35,7 @@ class UiEditTerrainNoise {
 
   // public, for simpler external ui_event_handler adding
   UiDynamicSprite config_;
-  UiTextLabelId text_name_;
+  UiTextModeId text_name_;
   UiToggle toggle_invert_;
   UiToggle toggle_tiling_;
   UiSliderH2 slider_strength_;
@@ -89,7 +88,7 @@ class UiEditTerrain final : public UiWindowAppear {
   bool Render() override;
 
   // can't use Render(terrain_data) because of must-have virtual-ness
-  void SetTerrainData(NoiseTerrainData* terrain_data);
+  void SetTerrainData(TerrainInstanceData* terrain_data);
 
   void RenderPicking() override;
 
@@ -115,8 +114,9 @@ class UiEditTerrain final : public UiWindowAppear {
   GLuint fbo_tex_id_;
 
   UiDynamicSprite accept_;
-  UiDynamicSprite name_;
-  UiDynamicSprite name_back_;
+  UiTextInput name_;
+//  UiDynamicSprite name_;
+//  UiDynamicSprite name_back_;
 
   UiSlider2D color_palette_;
   UiSliderH2 color_brightness_;
@@ -124,9 +124,9 @@ class UiEditTerrain final : public UiWindowAppear {
 
   UiDynamicSprite random_generate_;
 
-  UiTextLabelId text_noise_invert_;
-  UiTextLabelId text_noise_tiling_;
-  UiTextLabelId text_noise_strength_;
+  UiTextModeId text_noise_invert_;
+  UiTextModeId text_noise_tiling_;
+  UiTextModeId text_noise_strength_;
 
 //  Texture32F tex_perlin_;
 //  Texture32F tex_cellular_;
@@ -156,7 +156,7 @@ class UiEditTerrain final : public UiWindowAppear {
   TerrainNoiseFbmPerlinWarp noise_fmb_perlin_warp_;
 
   // we modify it here, non const
-  NoiseTerrainData* terrain_data_ = nullptr;
+  TerrainInstanceData* terrain_data_ = nullptr;
 
   Shader shader_merge_;
   Shader shader_sum_;
@@ -186,10 +186,8 @@ class UiTerrainBake final : public UiWindowAppear {
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       TextRenderer& text_renderer,
-      UiDynamicSprite&& accept,
-      UiTextLabelId&& erosion_label,
-      UiTextInput&& erosion_input,
-      UiTextLabelId&& weathering_label,
+      UiDynamicSprite&& accept, UiTextModeId&& erosion_label,
+      UiTextInput&& erosion_input, UiTextModeId&& weathering_label,
       UiTextInput&& weathering_input);
 
   UiTerrainBake(UiTerrainBake&& other) noexcept;
@@ -262,9 +260,9 @@ class UiTerrainBake final : public UiWindowAppear {
 
 //  UiTextInput erosion_input_;
 //  UiTextInput weathering_input_;
-  UiTextLabelId erosion_label_;
+  UiTextModeId erosion_label_;
   UiTextInput erosion_input_;
-  UiTextLabelId weathering_label_;
+  UiTextModeId weathering_label_;
   UiTextInput weathering_input_;
 
   UiEventHandler<

@@ -56,9 +56,9 @@ class ArbitraryGraph final : public IGraph {
 
   /// remove instances_[slot_id] from all buffers, as well as
   /// modify all offsets and edge vertices id (ebo buffer data)
-  void RemoveGraph(int slot_id) override;
+  bool RemoveGraph(int slot_id) override;
 
-  void Render() override;
+  void Render(glm::vec2 mouse_pos) override;
 
   /// -1 in case of non-selected
   [[nodiscard]] int GetSlotId() const noexcept override {
@@ -69,15 +69,15 @@ class ArbitraryGraph final : public IGraph {
     return instances_.size();
   }
 
-  const FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) const override {
+  const std::string* GetNameRef(int instance_id) const override {
     return &instances_[instance_id].name;
   }
 
-  FixedSizeQueue<char, 64>* GetNamePtr(int instance_id) override {
+  std::string* GetNameRef(int instance_id) override {
     return &instances_[instance_id].name;
   }
 
-  BaseInstanceData* GetBaseInstanceData(int id) {
+  BaseInstanceData* GetBaseInstanceData(int id) override {
     return static_cast<BaseInstanceData*>(&instances_[id]);
   }
 
@@ -150,117 +150,5 @@ class ArbitraryGraph final : public IGraph {
 
   // -- faces updated dynamically after adges modification;*/
 };
-
-
-/*
-class TerrainGraph {
- public:
-  enum class Target {
-    kVertex,
-    kEdge,
-    kFace
-  };
-  enum class Action {
-    kSelect,
-    kModify
-  };
-
-  void Render();
-
-  /// we could avoid render ids to fbo, but
-  /// this isn't a 3d-modeling program and we shouldn't have
-  /// a lot of faces of edges;
-  /// so here we choose fbo over math calculations
-  void RenderPicking() {
-    switch (target_) {
-      case Target::kVertex:
-        break;
-      case Target::kEdge:
-        RenderPickingEdge(); // GL_LINE? with picking_id (if works)
-        break;
-      case Target::kFace:
-        RenderPickingFace(); // GL_TRIANGLE_FAN with picking_id
-        break;
-    }
-  }
-  void Press(glm::vec2 mouse_pos) {
-    switch (target_) {
-      case Target::kVertex:
-        GLuint vertex_id = ProjectCursorOnGrid(mouse_pos);
-        PressVertex(vertex_id);
-        break;
-      case Target::kEdge:
-        GLuint edge_id = global_data->GetFboId(mouse_pos);
-        PressEdge(edge_id);
-        break;
-      case Target::kFace:
-        GLuint face_id = global_data->GetFboId(mouse_pos);
-        PressFace(face_id);
-        break;
-    }
-  }
-
-  void Remove() = 0;
-
-  void Drag() = 0;
-
- private:
-  void PressVertex(int vertex_id) {
-    if (!shift_pressed) {
-      selected_vertices_.clear();
-    }
-    selected_vertices_.push_back(vertex_id);
-    UpdateVertexBuffer();
-  }
-
-  */
-/* --- BUT! ---
-   * we can't add more vertices, BUT!
-   * we can add more edges & faces
-   * *//*
-
-
-  void PressEdge(int edge_id) {
-    if (!shift_pressed) {
-      selected_edges_.clear();
-    }
-    selected_edges_.push_back(edge_id);
-    UpdateEdgeBuffer();
-  }
-
-  void PressFace(int face_id) {
-    if (!shift_pressed) {
-      selected_faces_.clear();
-    }
-    selected_faces_.push_back(face_id);
-    UpdateFaceBuffer();
-  }
-
-  /// --- SELECT SECTION ---
-
-  // select type
-  Target target_;
-
-  // select for each type
-  /// according to fbo picking id's (storing differs)
-  /// (no copy, single instance -> std::set)
-  std::set<GLuint> selected_vertices_;
-
-  // we can modify only heights, that are related directly to vertex traits,
-  // so "selecting edges / faces" select vertices as well AND we don't need:
-  //  std::set<GLuint> selected_edges_;
-  //  std::set<GLuint> selected_faces_;
-
-  /// CREATE SECTION
-  // no vertex creation - full terrain grid
-  // no edge creation - no graphs, works on select only
-  // no face creation - no graphs, works on select only
-
-  /// RENDER SECTION
-  // vertices only: draw selected in different color, GL_DRAW_POINTS
-  GLuint vao_;
-  GLuint vbo_;
-};
-*/
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_ARBITRARYGRAPH_H_

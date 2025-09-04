@@ -129,7 +129,7 @@ UiConfirmation::UiConfirmation(
     WindowQueue& window_queue,
     UiDynamicSprite&& btn_accept,
     UiDynamicSprite&& btn_decline,
-    UiDynamicSprite&& text)
+    UiTextMenuId&& text)
     : UiTopWindowBase(std::move(desk), std::move(shadow), size_scale,
                       ui_shared_resources, window_queue),
       btn_accept_(std::move(btn_accept)),
@@ -156,7 +156,7 @@ bool UiConfirmation::Render() {
   shadow_.Render();
   btn_accept_.Render();
   btn_decline_.Render();
-  //  text_.Render();
+  text_.Render();
   return false;
 }
 
@@ -166,13 +166,13 @@ void UiConfirmation::RenderPicking() {
   shadow_.RenderPicking();
   btn_accept_.RenderPicking();
   btn_decline_.RenderPicking();
-  //  text_.RenderPicking();
+  text_.RenderPicking();
 }
 
 void UiConfirmation::Press(int id) {
 //  ui_event_handler_.Press(id);
   if (id == btn_accept_.GetId()) {
-    callable_();
+    callable_(); // TODO: but... why not bth_accept_.Press()... should do smt
   } else if (id != shadow_.GetId() && id != desk_.GetId()) {
     Hide();
   }
@@ -182,12 +182,21 @@ void UiConfirmation::Release() {
   ui_event_handler_.Release();
 }
 
-void UiConfirmation::SetText(std::string_view text) {
-  std::cout << "text set? not implemented" << std::endl;
+void UiConfirmation::SetText(data::TextId text_id) {
+  text_.SetText(text_id);
 }
 
 void UiConfirmation::SetCallable(std::function<void()>&& callable) {
   callable_ = std::move(callable);
+}
+
+void UiConfirmation::BtnEnter() {
+  callable_();
+}
+
+void UiConfirmation::BtnEscape() {
+  btn_decline_.Press();
+  Hide();
 }
 
 UiFile::UiFile(
@@ -197,8 +206,7 @@ UiFile::UiFile(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     UiDynamicSprite&& btn_accept,
-    UiDynamicSprite&& btn_decline,
-    UiTextLabel&& label,
+    UiDynamicSprite&& btn_decline, UiText&& label,
     UiTextInput&& text)
     : UiTopWindowBase(std::move(desk), std::move(shadow), size_scale,
                       ui_shared_resources, window_queue),

@@ -7,8 +7,30 @@
 namespace data {
 
 enum class TextId {
-  // terrain noise traits
-  kScale,
+  /// --- menu prerender (common for each mode) ---
+  kMenuTerrain,
+  kMenuWater,
+  kMenuRoads,
+  kMenuFences,
+  kMenuPlacement,
+  kMenuObjects,
+  kMenuBiomes,
+  kMenuTiles,
+  kMenu,
+
+  kResolution,
+  kShowTips,
+
+  kLoading,
+  kAccept,
+  kDecline,
+  kConfirmationExit,
+  kConfirmationFileOverwrite,
+  kConfirmationFileLoad,
+  kFileOpen,
+
+  /// --- kTerrainRender prerender ---
+  kScaleTerrain,
   kScaleX,
   kScaleY,
   kSeed,
@@ -41,36 +63,23 @@ enum class TextId {
   kErosion,
   kWeathering,
 
+  kTiling,
+  kInvert,
+  kStrength,
 
-  kMenuTerrain,
-  kMenuWater,
-  kMenuRoads,
-  kMenuFences,
-  kMenuPlacement,
-  kMenuObjects,
-  kMenuBiomes,
-  kMenuTiles,
-  kMenu,
+  /// --- kWaterMode prerender ---
+  kScaleWater, // scale for each mode to prerender section together
+  kFetch,
+  kSpreadBlend,
+  kSwell,
+  kPeakEnhancement,
+  kShortWavesFade,
+  kLambda,
+  kLayer1,
+  kLayer2,
+  kLayer3,
 
-  kResolution,
-  kShowTips,
-
-  Newgame,
-  Loadgame,
-  Continue,
-  Archive,
-  Options,
-  Credits,
-  Quit,
-  Loading,
-  Copyright,
-  https,
-  github,
-  com,
-  Superman,
-  LambofGod,
-  Pantera,
-  Hatebreed,
+  /// ---
 
   kTotal,
   kNotYet, // not yet done
@@ -78,7 +87,7 @@ enum class TextId {
 };
 
 inline constexpr int gTotalText = static_cast<int>(TextId::kTotal)
-                                  - static_cast<int>(TextId::kScale);
+                                  - static_cast<int>(TextId::kMenuTerrain);
 
 extern const std::array<std::string_view, gTotalText> gText;
 

@@ -786,7 +786,7 @@ void UiSliderH2::RenderPicking() const {
 
 void UiSliderH2::SetValue(float value) {
   /// deduced from GetProgress
-  Set(1.0f - value / scale_);
+  Set(value / scale_);
 }
 
 
@@ -827,7 +827,7 @@ bool UiSliderH2::Scroll(GLuint id, float yoffset) {
 
 float UiSliderH2::GetProgress() const {
   //TODO: make some *magic* with sprite and "return progress_;"
-  return (1.0f - progress_) * scale_;
+  return progress_ * scale_;
 }
 
 void UiSliderH2::UpdateTransform() {
@@ -934,11 +934,11 @@ glm::vec2 UiSlider2D::GetProgress() const {
 }
 
 float UiSlider2D::GetProgressX() const {
-  return (1.0f - progress_.x) * scale_.x;
+  return progress_.x * scale_.x;
 }
 
 float UiSlider2D::GetProgressY() const {
-  return (1.0f - progress_.y) * scale_.y;
+  return progress_.y * scale_.y;
 }
 
 void UiSlider2D::UpdateTransform() {

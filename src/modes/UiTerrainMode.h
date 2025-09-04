@@ -21,9 +21,14 @@ class UiTerrainMode final : public IUiMode {
       Tile& cur_tile);
 
   void Render() override;
+
   void RenderPicking() override;
 
   void BindCallbacks() override;
+
+  int GetPrerenderTextIdStart() const noexcept override;
+
+  int GetPrerenderTextIdEnd() const noexcept override;
 
  protected:
   static void ScrollCallback(

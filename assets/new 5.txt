@@ -53,7 +53,11 @@ NEW ISSUES:
 - UiTopWindow --> SHADOW SPRITE
 - remove sprite_keyboads (not going to reassign keys)
 - remove kSpareText (yes, again)
-
+- draw cursor sprite
+- generate k*Text tex coords with 0.5 size scale
+- replace UiTextInput back sprite
+- "shadow" sprite for text, confirmation, etc...
+- add menu "mode name" text
 
 
 TODO(kept unresolved):
@@ -62,16 +66,16 @@ TODO(kept unresolved):
 # apply transform to tex_coords?
 # flatten <90deg angles
 
-# Add to UiText ctors:
-int area_length,
-ing char_limit (for __std::vector area_char_limit)
-
+x inverted
+z = height
+y = y, inverted (not height)
 
 TODO:
-0. text input limit
-1. terrain layer transform
-2. adjust noise gen params (broken because of unresolved terrain layer transform)
-3. slot color indicator & name (UiSlots gets from UiEditTerrain)
-4. selection orientation fix
+2. terrain layer transform
+3. adjust noise gen params (broken because of unresolved terrain layer transform)
+4. selection orientation fix, transform orientation fix
 5. UiFile, Parse / Serialize (load/save -> window, etc...)
 6. console? but for what
+7. add countour with stencil test for ALL sprites, the op GLFW_PRESS move it slightly down
+8. group position & scale, so 1 modification in test.txt modifies all similar objects
+  example: kTerrainEditNoise1-8 Noise x position, name-gear-hmap-etc... y position

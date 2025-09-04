@@ -77,25 +77,25 @@ UiRenderer::UiRenderer(
           windows_,
           {data::VboIdMain::kConfirmationAccept},
           {data::VboIdMain::kConfirmationDecline},
-          {data::VboIdMain::kConfirmationTextLabel}
+          {text_renderer_, data::VboIdMain::kConfirmationTextLabel}
           ),
-      ui_caution_(
-          {data::VboIdMain::kSpareText7},
-          {data::VboIdMain::kSpareText4},
+      /*ui_caution_(
+          {data::VboIdMain::kSpareText5},
+          {data::VboIdMain::kSpareText5},
           1.0f,
           ui_shared_resources_,
           windows_,
-          {data::VboIdMain::kConfirmationTextLabel}
-          ),
+          {data::VboIdMain::kSpareText5}
+          ),*/
       ui_file_(
           {data::VboIdMain::kFileDesk},
-          {data::VboIdMain::kSpareText5},
+          {data::VboIdMain::kSpareText7},
           1.0f,
           ui_shared_resources_,
           windows_,
           {data::VboIdMain::kFileAccept},
           {data::VboIdMain::kRoadsEditAccept},
-          {text_renderer_, 1.0f,
+          {text_renderer_,
            {data::VboIdMain::kFileText}},
           {text_renderer_,
            {data::VboIdMain::kRoadsSlotsSlot},
@@ -206,7 +206,9 @@ void UiRenderer::Serialize() {
 }
 
 void UiRenderer::Init() {
-  text_renderer_.PrerenderMenuText(0, 58);
+  text_renderer_.PrerenderMenuText(
+      static_cast<int>(data::TextId::kMenuTerrain),
+      static_cast<int>(data::TextId::kFileOpen) + 1);
   ui_debugger_.ForceUpdate();
 }
 
@@ -221,8 +223,8 @@ void UiRenderer::SetupGlobalData() {
 }
 
 void UiRenderer::AskForConfirmation(
-    std::string_view text, std::function<void()>&& callable) {
-  ui_confirmation_.SetText(text);
+    data::TextId text_id, std::function<void()>&& callable) {
+  ui_confirmation_.SetText(text_id);
   ui_confirmation_.SetCallable(std::move(callable));
   ui_confirmation_.Show();
 }

@@ -27,9 +27,9 @@ TerrainNoisePerlin::TerrainNoisePerlin(
             {data::VboIdMain::kTerrainNoisePerlinPinPoint}},
            ui_shared_resources, window_queue,
            {data::VboIdMain::kTerrainNoisePerlinSave},
-           {text_renderer, 0.05f,
+           {text_renderer,
             {data::VboIdMain::kTerrainNoisePerlinName},
-            data::TextId::kScale}),
+            data::TextId::kScaleTerrain}),
       slider_scale_x_(
           {data::VboIdMain::kTerrainNoisePerlinScaleXArea},
           {data::VboIdMain::kTerrainNoisePerlinScaleXIcon},
@@ -41,11 +41,11 @@ TerrainNoisePerlin::TerrainNoisePerlin(
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoisePerlinScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoisePerlinScaleYText},
           data::TextId::kScaleY),
       slider_seed_(
@@ -54,7 +54,7 @@ TerrainNoisePerlin::TerrainNoisePerlin(
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoisePerlinSeedText}, data::TextId::kSeed) {
   sliders_ = {&slider_scale_x_, &slider_scale_y_, &slider_seed_};
   texts_ = {&text_scale_x_, &text_scale_y_, &text_seed_};
@@ -117,9 +117,9 @@ TerrainNoiseCellular::TerrainNoiseCellular(
             {data::VboIdMain::kTerrainNoiseCellularPinPoint}},
            ui_shared_resources, window_queue,
            {data::VboIdMain::kTerrainNoiseCellularSave},
-           {text_renderer, 0.05f,
+           {text_renderer,
             {data::VboIdMain::kTerrainNoiseCellularName},
-            data::TextId::kScale}),
+            data::TextId::kScaleTerrain}),
       slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseCellularScaleXArea},
           {data::VboIdMain::kTerrainNoiseCellularScaleXIcon},
@@ -131,11 +131,11 @@ TerrainNoiseCellular::TerrainNoiseCellular(
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseCellularScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseCellularScaleYText},
           data::TextId::kScaleY),
       slider_jitter_(
@@ -144,7 +144,7 @@ TerrainNoiseCellular::TerrainNoiseCellular(
           20.0f
           ),
       text_jitter_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseCellularJitterText}, data::TextId::kJitter),
       slider_seed_(
           {data::VboIdMain::kTerrainNoiseCellularSeedArea},
@@ -152,7 +152,7 @@ TerrainNoiseCellular::TerrainNoiseCellular(
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseCellularSeedText}, data::TextId::kSeed) {
   Base::sliders_ = {&slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
   Base::texts_ = {&text_scale_x_, &text_scale_y_, &text_jitter_, &text_seed_};
@@ -222,9 +222,9 @@ TerrainNoiseMetaballs::TerrainNoiseMetaballs(
             {data::VboIdMain::kTerrainNoiseMetaballsPinPoint}},
            ui_shared_resources, window_queue,
            {data::VboIdMain::kTerrainNoiseMetaballsSave},
-           {text_renderer, 0.05f,
+           {text_renderer,
             {data::VboIdMain::kTerrainNoiseMetaballsName},
-            data::TextId::kScale}),
+            data::TextId::kScaleTerrain}),
       slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseMetaballsScaleXArea},
           {data::VboIdMain::kTerrainNoiseMetaballsScaleXIcon},
@@ -236,11 +236,11 @@ TerrainNoiseMetaballs::TerrainNoiseMetaballs(
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseMetaballsScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseMetaballsScaleYText},
           data::TextId::kScaleY),
       slider_jitter_(
@@ -249,7 +249,7 @@ TerrainNoiseMetaballs::TerrainNoiseMetaballs(
           20.0f
           ),
       text_jitter_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseMetaballsJitterText},
           data::TextId::kJitter),
       slider_seed_(
@@ -258,7 +258,7 @@ TerrainNoiseMetaballs::TerrainNoiseMetaballs(
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseMetaballsSeedText}, data::TextId::kSeed) {
   Base::sliders_ = {&slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
   Base::texts_ = {&text_scale_x_, &text_scale_y_, &text_jitter_, &text_seed_};
@@ -328,9 +328,9 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
             {data::VboIdMain::kTerrainNoiseFbmGridPinPoint}},
            ui_shared_resources, window_queue,
            {data::VboIdMain::kTerrainNoiseFbmGridSave},
-           {text_renderer, 0.05f,
+           {text_renderer,
             {data::VboIdMain::kTerrainNoiseFbmGridName},
-            data::TextId::kScale}),
+            data::TextId::kScaleTerrain}),
       slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmGridScaleXArea},
           {data::VboIdMain::kTerrainNoiseFbmGridScaleXIcon},
@@ -342,11 +342,11 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmGridScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmGridScaleYText},
           data::TextId::kScaleY),
       slider_octaves_(
@@ -355,7 +355,7 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmGridOctavesText}, data::TextId::kOctaves),
       slider_shift_(
           {data::VboIdMain::kTerrainNoiseFbmGridShiftArea},
@@ -363,7 +363,7 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
           20.0f
           ),
       text_shift_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmGridShiftText}, data::TextId::kShift),
       slider_gain_(
           {data::VboIdMain::kTerrainNoiseFbmGridGainArea},
@@ -371,7 +371,7 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
           20.0f
           ),
       text_gain_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmGridGainText}, data::TextId::kGain),
       slider_lacunarity_(
           {data::VboIdMain::kTerrainNoiseFbmGridLacunarityArea},
@@ -379,7 +379,7 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmGridLacunarityText}, data::TextId::kLacunarity),
       slider_warp_strength_(
           {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthArea},
@@ -387,7 +387,7 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
           20.0f
           ),
       text_warp_strength_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthText}, data::TextId::kWarpStrength),
       slider_octave_factor_(
           {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorArea},
@@ -395,7 +395,7 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
           20.0f
           ),
       text_octave_factor_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorText}, data::TextId::kOctaveFactor),
       slider_seed_(
           {data::VboIdMain::kTerrainNoiseFbmGridSeedArea},
@@ -403,7 +403,7 @@ TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmGridSeedText}, data::TextId::kSeed) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_, &slider_shift_,
@@ -522,9 +522,9 @@ TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(
             {data::VboIdMain::kTerrainNoiseFbmMultiPinPoint}},
            ui_shared_resources, window_queue,
            {data::VboIdMain::kTerrainNoiseFbmMultiSave},
-           {text_renderer, 0.05f,
+           {text_renderer,
             {data::VboIdMain::kTerrainNoiseFbmMultiName},
-            data::TextId::kScale}),
+            data::TextId::kScaleTerrain}),
       slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmMultiScaleXArea},
           {data::VboIdMain::kTerrainNoiseFbmMultiScaleXIcon},
@@ -536,11 +536,11 @@ TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmMultiScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmMultiScaleYText},
           data::TextId::kScaleY),
       slider_lacunarity_(
@@ -549,7 +549,7 @@ TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityText}, data::TextId::kLacunarity),
       slider_octaves_(
           {data::VboIdMain::kTerrainNoiseFbmMultiOctavesArea},
@@ -557,7 +557,7 @@ TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmMultiOctavesText}, data::TextId::kOctaves),
       slider_seed_(
           {data::VboIdMain::kTerrainNoiseFbmMultiSeedArea},
@@ -565,7 +565,7 @@ TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmMultiSeedText}, data::TextId::kSeed) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_lacunarity_, &slider_octaves_, &slider_seed_};
@@ -646,9 +646,9 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
             {data::VboIdMain::kTerrainNoiseFbmdPerlinPinPoint}},
            ui_shared_resources, window_queue,
            {data::VboIdMain::kTerrainNoiseFbmdPerlinSave},
-           {text_renderer, 0.05f,
+           {text_renderer,
             {data::VboIdMain::kTerrainNoiseFbmdPerlinName},
-            data::TextId::kScale}),
+            data::TextId::kScaleTerrain}),
       slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXArea},
           {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXIcon},
@@ -660,11 +660,11 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYText},
           data::TextId::kScaleY),
       slider_octaves_(
@@ -673,7 +673,7 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesText}, data::TextId::kOctaves),
       slider_gain_(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinGainArea},
@@ -681,7 +681,7 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
           20.0f
           ),
       text_gain_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmdPerlinGainText}, data::TextId::kGain),
       slider_lacunarity_(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityArea},
@@ -689,7 +689,7 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityText}, data::TextId::kLacunarity),
       slider_slopeness_(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessArea},
@@ -697,7 +697,7 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
           20.0f
           ),
       text_slopeness_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessText}, data::TextId::kSlopeness),
       slider_octave_factor_(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorArea},
@@ -705,7 +705,7 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
           20.0f
           ),
       text_octave_factor_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorText}, data::TextId::kOctaveFactor),
       slider_seed_(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedArea},
@@ -713,7 +713,7 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedText}, data::TextId::kSeed),
       toggle_negative_(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOff},
@@ -722,7 +722,7 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
           {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn3}
           ),
       text_negative_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeText}, data::TextId::kNegative) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
@@ -842,9 +842,9 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
             {data::VboIdMain::kTerrainNoiseFbmWarpPinPoint}},
            ui_shared_resources, window_queue,
            {data::VboIdMain::kTerrainNoiseFbmWarpSave},
-           {text_renderer, 0.05f,
+           {text_renderer,
             {data::VboIdMain::kTerrainNoiseFbmWarpName},
-            data::TextId::kScale}),
+            data::TextId::kScaleTerrain}),
       slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmWarpScaleXArea},
           {data::VboIdMain::kTerrainNoiseFbmWarpScaleXIcon},
@@ -856,11 +856,11 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpScaleYText},
           data::TextId::kScaleY),
       slider_octaves_(
@@ -869,7 +869,7 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpOctavesText}, data::TextId::kOctaves),
       slider_gain_(
           {data::VboIdMain::kTerrainNoiseFbmWarpGainArea},
@@ -877,7 +877,7 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           20.0f
           ),
       text_gain_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpGainText}, data::TextId::kGain),
       slider_lacunarity_(
           {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityArea},
@@ -885,14 +885,14 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityText}, data::TextId::kLacunarity),
       slider_slopeness_(
           {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessArea},
           {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessIcon}
           ),
       text_slopeness_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessText}, data::TextId::kSlopeness),
       slider_octave_factor_(
           {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorArea},
@@ -900,7 +900,7 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           20.0f
           ),
       text_octave_factor_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorText}, data::TextId::kOctaveFactor),
       slider_seed_(
           {data::VboIdMain::kTerrainNoiseFbmWarpSeedArea},
@@ -908,7 +908,7 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpSeedText}, data::TextId::kSeed),
       slider_q_(
           {data::VboIdMain::kTerrainNoiseFbmWarpQArea},
@@ -916,7 +916,7 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           20.0f
           ),
       text_q_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpQText}, data::TextId::kQ),
       slider_r_(
           {data::VboIdMain::kTerrainNoiseFbmWarpRArea},
@@ -924,7 +924,7 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           20.0f
           ),
       text_r_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpRText}, data::TextId::kR),
       toggle_negative_(
           {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOff},
@@ -933,7 +933,7 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn3}
           ),
       text_negative_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmWarpNegativeText}, data::TextId::kNegative) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
@@ -1069,9 +1069,9 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
             {data::VboIdMain::kTerrainNoiseFbmPerlinWarpPinPoint}},
            ui_shared_resources, window_queue,
            {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSave},
-           {text_renderer, 0.05f,
+           {text_renderer,
             {data::VboIdMain::kTerrainNoiseFbmPerlinWarpName},
-            data::TextId::kScale}),
+            data::TextId::kScaleTerrain}),
       slider_scale_x_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXArea},
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXIcon},
@@ -1083,11 +1083,11 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           20.0f
           ),
       text_scale_x_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXText},
           data::TextId::kScaleX),
       text_scale_y_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYText},
           data::TextId::kScaleY),
       slider_octaves_(
@@ -1096,7 +1096,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           20.0f
           ),
       text_octaves_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesText}, data::TextId::kOctaves),
       slider_gain_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainArea},
@@ -1104,7 +1104,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           20.0f
           ),
       text_gain_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainText}, data::TextId::kGain),
       slider_lacunarity_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityArea},
@@ -1112,7 +1112,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           20.0f
           ),
       text_lacunarity_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityText}, data::TextId::kLacunarity),
       slider_slopeness_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessArea},
@@ -1120,7 +1120,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           20.0f
           ),
       text_slopeness_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessText}, data::TextId::kSlopeness),
       slider_octave_factor_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorArea},
@@ -1128,7 +1128,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           20.0f
           ),
       text_octave_factor_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorText}, data::TextId::kOctaveFactor),
       slider_seed_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedArea},
@@ -1136,7 +1136,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           20.0f
           ),
       text_seed_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedText}, data::TextId::kSeed),
       slider_q_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQArea},
@@ -1144,7 +1144,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           20.0f
           ),
       text_q_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQText}, data::TextId::kQ),
       slider_r_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRArea},
@@ -1152,7 +1152,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           20.0f
           ),
       text_r_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRText}, data::TextId::kR),
       toggle_negative_(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOff},
@@ -1161,7 +1161,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn3}
           ),
       text_negative_(
-          text_renderer, 0.025f,
+          text_renderer,
           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeText}, data::TextId::kNegative) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_,

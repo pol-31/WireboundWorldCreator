@@ -92,8 +92,8 @@ void TerrainGrid::CreateGraph() {
     selected_slot_id_ = instances_size_;
     ClearSelection();
     TerrainInstanceData instance_data;
-    instance_data.name = FixedSizeQueue<char, 64>{};
-    instance_data.color = glm::vec3{1.0f};
+    instance_data.name = {};
+    instance_data.color = glm::vec4{0.0f, 0.0f, 0.0f, 1.0f};
     instance_data.do_show = true;
     instance_data.type_id = 0; // TODO: unused
     instance_data.data = NoiseTerrainData{};
@@ -188,7 +188,6 @@ void TerrainGrid::Render(glm::vec2 mouse_pos) {
     color = glm::vec3(0.2f, 0.2f, 0.8f);
     ui_shared_resources_.global_glfw_callback_data_.tile_renderer
         ->terrain.RenderSelection(&instances_[selected_slot_id_], tex_selection_, color);
-
   }
 }
 
