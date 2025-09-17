@@ -1,6 +1,7 @@
 #include "UiTerrainWIndows.h"
 
 #include "../core/TileRenderer.h"
+#include "../common/OpenGlUtility.h"
 
 UiEditTerrainNoise::UiEditTerrainNoise(
     UiSharedResources& ui_shared_resources,
@@ -100,8 +101,12 @@ UiEditTerrain::UiEditTerrain(
            {data::VboIdMain::kTerrainEditLabelStrength},
            data::TextId::kStrength}),
 
-      shader_merge_("../shaders/noise_shaders/MergeNoises.comp"),
-      shader_sum_("../shaders/noise_shaders/SumNoises.comp"),
+      shader_merge_noises_("../shaders/noise_shaders/MergeNoises.comp"),
+      shader_flatten_prep_("../shaders/generate_shaders/FlattenPrep.comp"),
+      shader_flatten_step_("../shaders/generate_shaders/FlattenStep.comp"),
+      shader_flatten_merge_("../shaders/generate_shaders/FlattenMerge.comp"),
+
+      tex_mesh_(details::gTerrainSize, GL_RGBA32F),
 
       noise1_(ui_shared_resources,
               {data::VboIdMain::kTerrainEditNoise1Config},
@@ -289,8 +294,12 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
       text_noise_tiling_(std::move(other.text_noise_tiling_)),
       text_noise_strength_(std::move(other.text_noise_strength_)),
 
-      shader_merge_(std::move(other.shader_merge_)),
-      shader_sum_(std::move(other.shader_sum_)),
+      shader_merge_noises_(std::move(other.shader_merge_noises_)),
+      shader_flatten_prep_(std::move(other.shader_flatten_prep_)),
+      shader_flatten_step_(std::move(other.shader_flatten_step_)),
+      shader_flatten_merge_(std::move(other.shader_flatten_merge_)),
+
+      tex_mesh_(std::move(other.tex_mesh_)),
 
       noise1_(std::move(other.noise1_)),
       noise2_(std::move(other.noise2_)),
@@ -340,53 +349,115 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
   noise8_.AttachToHierarchy(hierarchy_);
 }
 
+int UiEditTerrain::CalculateGradientId(const glm::vec3& rotation) {
+  std::array<glm::vec3, 4> corners = {
+      glm::vec3{-0.5f, -0.5f, 0.0f},
+      glm::vec3{0.5f, -0.5f, 0.0f},
+      glm::vec3{0.5f, 0.5f, 0.0f},
+      glm::vec3{-0.5f, 0.5f, 0.0f}
+  };
+  glm::mat4 R(1.0f);
+  R = glm::rotate(R, rotation.x, glm::vec3(1, 0, 0));
+  R = glm::rotate(R, rotation.y, glm::vec3(0, 1, 0));
+  R = glm::rotate(R, rotation.z, glm::vec3(0, 0, 1));
+  float h[4];
+  for (int i = 0; i < 4; ++i) {
+    h[i] = glm::vec3(R * glm::vec4(corners[i], 1.0f)).z;
+  }
+  float left = (h[0] + h[3]) * 0.5f;
+  float right = (h[1] + h[2]) * 0.5f;
+  float bottom = (h[0] + h[1]) * 0.5f;
+  float top = (h[2] + h[3]) * 0.5f;
+  glm::vec2 slope(right - left, top - bottom);
+  int dx = (slope.x > 0.1f) - (slope.x < -0.1f);
+  int dy = (slope.y > 0.1f) - (slope.y < -0.1f);
+  int id = (dy + 1) * 3 + (dx + 1);
+  // 0 1 2    0 7 6
+  // 3 4 5 -> 1 -1 5 (gpu has slightly different ids
+  // 6 7 8    2 3 4
+  int shader_id[] = {0, 7, 6, 1, -1, 5, 2, 3, 4};
+  return shader_id[id];
+}
+
 void UiEditTerrain::UpdateHmap() {
+  using namespace utility;
   Texture32F hmap(details::gTerrainSize, GL_R32F);
-  shader_sum_.Bind();
+  int size = details::gTerrainSize;
+  hmap.Bind();
+  float color_black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+  glClearTexImage(hmap.GetId(), 0, GL_RED, GL_FLOAT, color_black);
+
+  //TODO: skip selected layer, then show as a wireframe on top
+
   for (int i = 0; i < instances_size_; ++i) {
     if (!instances_[i].do_show) {
       continue;
     }
-    //TODO: BUT>.... projection don't see displacement, flattening... idk should(?)
-    //TODO: rotation angle affects heights
-//    FlattenToHmap(instances_[i]);
+//    if (terrain_data_->data.hmap.GetId() == instances_[i].data.hmap.GetId()) {
+//      continue;
+//    }
+    glClearTexImage(tex_mesh_.GetId(), 0, GL_RGBA, GL_FLOAT, color_black);
+    /// --- hmap to mesh section ---
+    shader_flatten_prep_.Bind();
     glm::mat4 transform = glm::mat4{1.0f};
     transform = glm::translate(transform, instances_[i].translate);
-    transform = glm::rotate(
-        transform, glm::length(instances_[i].rotate), glm::normalize(instances_[i].rotate));
-//    float map_scale = ui_shared_resources_.global_glfw_callback_data_
-//                          .tile_renderer->cur_tile_.map_scale;
-//    transform = glm::scale(transform, instances_[i].scale * map_scale);
+    auto rotation = glm::radians(instances_[i].rotate);
+    transform = glm::rotate(transform, rotation.x, glm::vec3(1,0,0));
+    transform = glm::rotate(transform, rotation.y, glm::vec3(0,1,0));
+    transform = glm::rotate(transform, rotation.z, glm::vec3(0,0,1));
+    transform = glm::scale(transform, instances_[i].scale); // don't need map_scale
+
     glUniformMatrix4fv(0, 1, false, glm::value_ptr(transform));
     glUniform1i(1, static_cast<int>(instances_[i].do_invert));
-    instances_[i].data.hmap.Bind();
-    if (instances_[i].do_invert) {
-      std::vector<float> heights(details::gTerrainSize * details::gTerrainSize);
-      glGetTexImage(GL_TEXTURE_2D, 0, GL_R32F, GL_FLOAT, heights.data());
-      auto max_value = std::max_element(heights.begin(), heights.end());
-      glUniform1f(2, *max_value);
-    }
-    if (false/*instances_[i].do_tiling*/) {
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    } else {
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-      float borderColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
-      glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    }
-    glBindImageTexture(
-        0, hmap.GetId(), 0,
-        GL_FALSE, 0, GL_READ_WRITE, hmap.GetFormat());
-    glBindImageTexture(
-        1, instances_[i].data.hmap.GetId(), 0,
-        GL_FALSE, 0, GL_READ_ONLY, instances_[i].data.hmap.GetFormat());
+    glUniform1i(2, static_cast<int>(instances_[i].do_tiling));
+    BindImageTexture(0, instances_[i].data.hmap, GL_READ_ONLY);
+    BindImageTexture(1, tex_mesh_, GL_WRITE_ONLY);
+    glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    UnBindImageTexture(0, instances_[i].data.hmap, GL_READ_ONLY);
+    UnBindImageTexture(1, tex_mesh_, GL_WRITE_ONLY);
 
-    int size = details::gTerrainSize;
+    /// --- flattening section ---
+    /*int gradient_id = CalculateGradientId(instances_[i].rotate);
+    if (false && gradient_id != -1) {
+      shader_flatten_step_.Bind();
+      GLuint changed_prev = -1;
+      GLuint changed = 0;
+      BindImageTexture(0, tex_mesh_, GL_READ_WRITE);
+      glUniform1i(3, gradient_id);
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_atomic_modified_);
+      while (changed_prev != changed) {
+        glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        changed_prev = changed;
+        glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(GLuint), &changed);
+        std::cout << changed << " __" << std::endl;
+      }
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+      UnBindImageTexture(0, tex_mesh_, GL_READ_WRITE);
+    }*/
+
+    /// --- merge section ---
+    shader_flatten_merge_.Bind();
+    glm::mat4 inverseTransform = glm::inverse(transform);
+
+    glm::vec4 test1 = inverseTransform * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    glm::vec4 test2 = inverseTransform * glm::vec4(-32.0f, 0.0f, 0.0f, 1.0f);
+    glm::vec4 test3 = inverseTransform * glm::vec4(-32.0f, 0.0f, -32.0f, 1.0f);
+    glm::vec4 test4 = inverseTransform * glm::vec4(0.0f, 0.0f, 32.0f, 1.0f);
+    glm::vec4 test5 = inverseTransform * glm::vec4(-32.0f, 0.0f, 32.0f, 1.0f);
+    glm::vec4 test6 = inverseTransform * glm::vec4(32.0f, 0.0f, 0.0f, 1.0f);
+
+
+    glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(inverseTransform));
+    BindImageTexture(0, hmap, GL_READ_WRITE);
+    BindImageTexture(1, tex_mesh_, GL_READ_ONLY);
     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    UnBindImageTexture(0, hmap, GL_READ_WRITE);
+    UnBindImageTexture(1, tex_mesh_, GL_READ_ONLY);
   }
-  //TODO: seems we don't need instance_[i].hmap, since we only sum it
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer
       ->cur_tile_.map_terrain_height = std::move(hmap);
 }
@@ -632,6 +703,8 @@ NoiseTerrainData UiEditTerrain::Generate() {
       terrain_data.hmap.GetId(), GL_TEXTURE_2D, 0, 0, 0, 0,
       tex_hmap_.GetId(), GL_TEXTURE_2D, 0, 0, 0, 0,
       details::gTerrainSize, details::gTerrainSize, 1);
+  tex_hmap_.Store("hmap_generated_.png", 1, GL_RED);
+
   return terrain_data;
 }
 
@@ -644,7 +717,7 @@ void UiEditTerrain::MergeLayers(
   std::cout << "merged with " << noise.slider_strength_.GetProgress()
             << ' ' << std::boolalpha << noise_data->do_invert
             << ' ' << noise_data->do_tiling << std::endl;
-  shader_merge_.Bind();
+  shader_merge_noises_.Bind();
   glUniform1i(0, static_cast<int>(noise_data->do_invert));
   //TODO: as well as transform_matrix:
 //  glUniform1i(1, static_cast<int>(noise_data->do_tiling));
@@ -711,11 +784,21 @@ void UiEditTerrain::Init() {
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_id_);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                          GL_TEXTURE_2D, fbo_tex_id_, 0);
+
+  /// ssbo
+  glGenBuffers(1, &ssbo_atomic_modified_);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_atomic_modified_);
+  GLuint zero = 0;
+  glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GLuint),
+               &zero, GL_DYNAMIC_DRAW);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_atomic_modified_);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
 void UiEditTerrain::DeInit() {
   glDeleteBuffers(1, &vbo_id_);
   glDeleteBuffers(1, &ebo_id_);
+  glDeleteBuffers(1, &ssbo_atomic_modified_);
   glDeleteTextures(1, &fbo_tex_id_);
   glDeleteFramebuffers(1, &fbo_id_);
   glDeleteVertexArrays(1, &vao_id_);
@@ -1333,7 +1416,7 @@ void UiTerrainBake::UpdateCpuData() {
 
 void UiTerrainBake::Bake(
     int steps_thermal, int steps_weathering, float talus) {
-  Perturbate();
+//  Perturbate();
   std::cout << "CH1" << std::endl;
   UpdateCpuData();
 
@@ -1343,13 +1426,11 @@ void UiTerrainBake::Bake(
   std::cout << "CH4" << std::endl;
 
   /// erosion & thermal weathering
-    ProcessErosion(flow_dir, flow_accum, steps_thermal);
-//  ProcessErosion(flow_dir, flow_accum, 1000);
+//    ProcessErosion(flow_dir, flow_accum, steps_thermal);
   std::cout << "CH5" << std::endl;
   UpdateCpuData();
 
-    ProcessThermalWeathering(steps_weathering, talus);
-//  ProcessThermalWeathering(1000, 0.1f);
+//    ProcessThermalWeathering(steps_weathering, talus);
   std::cout << "CH6" << std::endl;
   UpdateCpuData();
 

@@ -104,6 +104,8 @@ class UiEditTerrain final : public UiWindowAppear {
   void MergeLayers(Texture32F& bottom_layer, Texture32F& top_layer,
                    NoiseDataBase* noise_data, const UiEditTerrainNoise& noise);
 
+  static int CalculateGradientId(const glm::vec3& rotation);
+
   Texture32F& tex_hmap_;
   std::vector<GLfloat>& hmap_heights_;
 
@@ -112,6 +114,8 @@ class UiEditTerrain final : public UiWindowAppear {
   GLuint ebo_id_;
   GLuint fbo_id_;
   GLuint fbo_tex_id_;
+
+  GLuint ssbo_atomic_modified_;
 
   UiDynamicSprite accept_;
   UiTextInput name_;
@@ -158,8 +162,12 @@ class UiEditTerrain final : public UiWindowAppear {
   // we modify it here, non const
   TerrainInstanceData* terrain_data_ = nullptr;
 
-  Shader shader_merge_;
-  Shader shader_sum_;
+  Shader shader_merge_noises_;
+  Shader shader_flatten_prep_;
+  Shader shader_flatten_step_;
+  Shader shader_flatten_merge_;
+
+  Texture32F tex_mesh_;
 
 //  ITerrainNoise* selected_noise_ = nullptr;
 

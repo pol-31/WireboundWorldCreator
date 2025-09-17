@@ -85,6 +85,10 @@ class TerrainGrid final : public IGraph {
 
   void ClearSelection();
 
+  void UpdateMousePotentialSelection(glm::vec2 mouse_pos);
+
+  void UpdateDownScaledWireframe();
+
   bool start_is_end_ = true;
 
   /// according to fbo picking id's (storing differs)

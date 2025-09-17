@@ -91,7 +91,7 @@ void UiTerrainMode::KeyCallback(
     } else if (key == GLFW_KEY_Y) { // dir Y
       terrain->ev_selected_dir_ = glm::vec3{0.0f, 1.0f, 0.0f};
     } else if (key == GLFW_KEY_Z) { // dir Z
-      terrain->ev_selected_dir_ = glm::vec3{0.0f, 0.0f, 1.0f};
+      terrain->ev_selected_dir_ = glm::vec3{0.0f, 0.0f, -1.0f};
     } else {
       glfwGetCursorPos(gWindow, &gEventMouseStartPosX, &gEventMouseStartPosY);
       if (key == GLFW_KEY_G) {

@@ -586,7 +586,7 @@ UiSlotsTerrain::UiSlotsTerrain(
            [this]() {
              auto slot_id = GetSlotId();
              instances_[slot_id].do_show = !instances_[slot_id].do_show;
-             ui_edit_.UpdateHmap();
+//             ui_edit_.UpdateHmap();
            }},
           {data::VboIdMain::kTerrainVisibleOn1},
           {data::VboIdMain::kTerrainVisibleOn2},
@@ -837,6 +837,13 @@ void UiSlotsTerrain::UpdateTransform() {
 }
 
 void UiSlotsTerrain::SelectGraph(GLuint id) {
+/*  if (id == graph_.GetSlotId()) {
+    graph_.SelectGraph(-1); // TODO: graph::DeSelect()
+    ui_edit_.SetTerrainData(graph_.GetInstanceData());
+    UpdateTransformUniform();
+    ui_edit_.UpdateHmap(); // TODO: at some point we have terrain_data as nullptr
+    return;
+  }*/
   std::cout << "-- slot back (selected)" << std::endl;
   graph_.SelectGraph(id);
   sl_data_.FocusOnSelected(id, graph_.GetSize(), handler_, slot_back_);
@@ -923,10 +930,14 @@ void UiSlotsTerrain::PressGraph(GLuint id) {
   }
 }
 
+//TODO: angles (input number), axis combinations, etc... (like in Blender)
+
 void UiSlotsTerrain::TranslateSelected(glm::vec3 value) {
   int slot_id = graph_.GetSlotId();
   if (slot_id != -1) {
-    instances_[slot_id].translate = glm::clamp(value * 100.0f, glm::vec3(-2.0f), glm::vec3(2.0f));
+    auto prev_value = instances_[slot_id].translate;
+    instances_[slot_id].translate = glm::clamp(
+        prev_value + value * 100.0f, glm::vec3(-200.0f), glm::vec3(200.0f));
     UpdateTransformUniform();
   } else {
 //    graph_.MoveSelected(value);
@@ -950,18 +961,22 @@ void UiSlotsTerrain::ScaleSelected(glm::vec3 value) {
 }
 
 void UiSlotsTerrain::UpdateTransformUniform() {
-  glm::mat4 model = {1.0f};
   int slot_id = graph_.GetSlotId();
-  model = glm::translate(model, instances_[slot_id].translate);
-  //TODO: use fast length (no square root)
-  model = glm::rotate(
-      model, glm::length(instances_[slot_id].rotate),
-      glm::normalize(instances_[slot_id].rotate));
-  float map_scale = ui_shared_resources_.global_glfw_callback_data_
-                        .tile_renderer->cur_tile_.map_scale;
-  model = glm::scale(model, instances_[slot_id].scale * map_scale);
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
-      ->terrain.UpdateTransformUniform(model);
+  if (slot_id == -1) {
+    return;
+  }
+  // skip, no effects
+//  glm::mat4 model = {1.0f};
+//  float map_scale = ui_shared_resources_.global_glfw_callback_data_
+//                        .tile_renderer->cur_tile_.map_scale;
+//  model = glm::scale(model, instances_[slot_id].scale * map_scale);
+//  //TODO: use fast length (no square root)
+//  model = glm::rotate(
+//      model, glm::length(instances_[slot_id].rotate),
+//      glm::normalize(instances_[slot_id].rotate));
+//  model = glm::translate(model, instances_[slot_id].translate);
+//  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+//      ->terrain.UpdateTransformUniform(model);
 }
 
 int UiSlotsTerrain::GetSlotId() {

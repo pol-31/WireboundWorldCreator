@@ -1,0 +1,51 @@
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+// race cond: lower height perceived, but we ignore.
+// all changes go only up (height comparing and assigned, not summed)
+layout(rgba32f, binding = 0) uniform image2D mesh;
+
+layout(location = 3) uniform int gradient; // describe direction (0-8)
+
+layout(binding = 0, std430) buffer ChangeFlag {
+    uint changed;
+};
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(mesh);
+    // ccw swept order (started from lt corner),
+    // 0 7 6     8 7 6
+    // 1 x 5 and 9 x 5 (cycled, so 10 total)
+    // 2 3 4     2 3 4
+    int dx[] = {-1, -1, -1, 0, 1, 1, 1, 0, -1, -1};
+    int dy[] = {1, 0, -1, -1, -1, 0, 1, 1, 1, 0};
+    vec4 value_centre = imageLoad(mesh, coord);
+
+    // because grid is 3x3, we check only 3 cells,
+    // can be optimized for sure
+    for (int i = gradient; i < 3; ++i) {
+        ivec2 new_coord = (coord + ivec2(dx[i], dy[i]) + size) & (size - 1); // wrap
+        vec4 value_border = imageLoad(mesh, new_coord);
+
+        // .y means height; the height shouldn't overcome next cell,
+        // if there were height of 0
+        // here centre as an "overlapper"
+        if (value_border.x < value_centre.x ||
+            value_border.z < value_centre.z) {
+            value_border.y = max(value_border.y, value_centre.y);
+            imageStore(mesh, new_coord, value_border);
+            atomicAdd(changed, 1);
+        }
+
+        // conditioning alternative (gpt) (atomicAdd's missing)
+/**
+        vec2 diff = vec2(value_centre.x - value_border.x,
+        value_centre.z - value_border.z);
+        // mask = 1.0 if either x or z is smaller
+        float mask = float(any(greaterThan(diff, vec2(0.0))));
+        value_border.y = mix(value_border.y, max(value_border.y, value_centre.y), mask);
+*/
+    }
+}

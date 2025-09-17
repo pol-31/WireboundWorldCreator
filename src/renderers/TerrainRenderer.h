@@ -27,7 +27,7 @@ class TerrainRenderer {
 
   void Render(TerrainInstanceData* terrain);
 
-  void RenderWireframe(TerrainInstanceData* terrain, glm::vec3 color);
+  void RenderWireframe(TerrainInstanceData* terrain);
 
   void RenderPicking(TerrainInstanceData* terrain) const;
 

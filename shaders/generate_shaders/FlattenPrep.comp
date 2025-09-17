@@ -1,0 +1,34 @@
+#version 460 core
+
+    layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(r32f, binding = 0) uniform readonly image2D hmap;
+layout(rgba32f, binding = 1) uniform writeonly image2D mesh;
+
+layout(location = 0) uniform mat4 transform;
+layout(location = 1) uniform bool invert;
+layout(location = 2) uniform bool tiling;
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    float height = imageLoad(hmap, coord).r;
+    ivec2 size = imageSize(hmap); // power of two
+
+    //TODO: use C++ matrix transformations instead
+    vec4 value = transform * vec4(coord.x / 16.0f - 32.0f, 0.0f, coord.y / 16.0f - 32.0f, 1.0f);
+        value = vec4((value.x + 32.0f) * 16.0f, value.y + height, (value.z + 32.0f) * 16.0f, value.w);
+//    vec4 value = transform * vec4(coord.x, 0.0f, coord.y, 1.0f);
+//    value = vec4(value.x, value.y + height, value.z, value.w);
+
+//    if (tiling) {
+//        value.xz = vec2(ivec2(value.xz) & (size - 1));  // wrap
+//    } else {
+//        value.xz = clamp(value.xz, vec2(0.0), vec2(size - 1)); // clamp
+//    }
+
+    if (invert) {
+        value.y = -value.y;
+    }
+
+    imageStore(mesh, coord, value);
+}

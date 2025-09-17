@@ -39,15 +39,6 @@ void TerrainRenderer::DeInit() {
 }
 
 void TerrainRenderer::Render() {
-  if (shader_.Update()) {
-    shader_.Bind();
-    glUniform1i(shader::kTerrainHeightMap, 0);
-    glUniform1i(1, 1); // material (temp)
-    glUniform1i(2, 2); // normal
-    glUniform1i(3, 3); // ao
-    shader_picking_.Bind();
-    glUniform1i(shader::kTerrainHeightMap, 0);
-  }
 #ifndef NDEBUG
   if (shader_.Update()) {
     shader_.Bind();
@@ -100,18 +91,19 @@ void TerrainRenderer::Render(TerrainInstanceData* terrain) {
   std::cerr << "TerrainRenderer::Render(terrain) unimplemented" << std::endl;
 }
 
-void TerrainRenderer::RenderWireframe(
-    TerrainInstanceData* terrain, glm::vec3 color) {
+void TerrainRenderer::RenderWireframe(TerrainInstanceData* terrain) {
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   shader_wireframe_.Bind();
   glActiveTexture(GL_TEXTURE0);
 //  terrain->hmap.Bind();
   terrain->data.hmap.Bind();
   glm::mat4 transform = glm::mat4{1.0f};
+  transform = glm::scale(transform, glm::vec3(tile_.map_scale));
   transform = glm::translate(transform, terrain->translate);
-  transform = glm::rotate(
-      transform, glm::length(terrain->rotate), glm::normalize(terrain->rotate));
-  transform = glm::scale(transform, terrain->scale * tile_.map_scale);
+  transform = glm::rotate(transform, glm::radians(terrain->rotate.x), glm::vec3(1,0,0));
+  transform = glm::rotate(transform, glm::radians(terrain->rotate.y), glm::vec3(0,1,0));
+  transform = glm::rotate(transform, glm::radians(terrain->rotate.z), glm::vec3(0,0,1));
+  transform = glm::scale(transform, terrain->scale);
   glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
 
   glUniform3fv(1, 1, glm::value_ptr(terrain->color));
@@ -133,10 +125,10 @@ void TerrainRenderer::RenderSelection(
   glActiveTexture(GL_TEXTURE0);
   terrain->data.hmap.Bind();
   glm::mat4 transform = glm::mat4{1.0f};
-  transform = glm::translate(transform, terrain->translate);
-  transform = glm::rotate(
-      transform, glm::length(terrain->rotate), glm::normalize(terrain->rotate));
   transform = glm::scale(transform, terrain->scale * tile_.map_scale);
+  transform = glm::rotate(
+      transform, glm::length(terrain->rotate) - 1, glm::normalize(terrain->rotate));
+  transform = glm::translate(transform, terrain->translate);
   glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
   // NOT terrain->hmap.Bind();
   glActiveTexture(GL_TEXTURE1);
@@ -170,10 +162,10 @@ void TerrainRenderer::RenderPicking(TerrainInstanceData* terrain) const {
   glActiveTexture(GL_TEXTURE0);
   terrain->data.hmap.Bind();
   glm::mat4 transform = glm::mat4{1.0f};
-  transform = glm::translate(transform, terrain->translate);
-  transform = glm::rotate(
-      transform, glm::length(terrain->rotate), glm::normalize(terrain->rotate));
   transform = glm::scale(transform, terrain->scale * tile_.map_scale);
+  transform = glm::rotate(
+      transform, glm::length(terrain->rotate) - 1, glm::normalize(terrain->rotate));
+  transform = glm::translate(transform, terrain->translate);
   glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
   glBindVertexArray(vao_);
   glPatchParameteri(GL_PATCH_VERTICES, 4);

@@ -58,17 +58,8 @@ NEW ISSUES:
 - replace UiTextInput back sprite
 - "shadow" sprite for text, confirmation, etc...
 - add menu "mode name" text
+- UiSlotsTerrain button "Reload ALL"
 
-
-TODO(kept unresolved):
-- FlattenTerrain.comp shader
-- render/show hmap after processing (transformation, tiling, invert, flatten/cut >90deg)
-# apply transform to tex_coords?
-# flatten <90deg angles
-
-x inverted
-z = height
-y = y, inverted (not height)
 
 TODO:
 2. terrain layer transform
@@ -79,3 +70,23 @@ TODO:
 7. add countour with stencil test for ALL sprites, the op GLFW_PRESS move it slightly down
 8. group position & scale, so 1 modification in test.txt modifies all similar objects
   example: kTerrainEditNoise1-8 Noise x position, name-gear-hmap-etc... y position
+9. pivot point
+10. loading... event (generationm, exit)
+11. move X, Y, Z, XY, XZ, YZ, XYZ (possible?) + clamping
+12. not just the red cube, but draw e.g. smoke transparent texture
+
+--- ---------------------------------------------------------------------------- ---
+TODO:
+- select/deselect for layer (remove from flattening selected)
+
+instance pointer as a member is a bad idea: instances stored in a vector... it relocate
+visible on off layer
+
+та просто кут збільшений і все, йомайо там валідна дата
+--- SOLUTION is temporary, but I can't... bug with rotation (lag behind / ahead) ---
+--- ---------------------------------------------------------------------------- ---
+
+SKIP 2, 3, 9
+Let's fix 4, 11
+
+Let's state, where x/y/z and draw the orientation + maybe 3d model orientation.... yes
