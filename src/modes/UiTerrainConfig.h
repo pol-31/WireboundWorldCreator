@@ -6,8 +6,8 @@
 
 Texture32F GenAndSave(std::string_view tex_name);
 
-template <size_t gSlidersNum, size_t gTogglesNum,
-          size_t gTextNum, size_t gWidgetsNum>
+/// all configs are sliders (no toggles, etc...)
+template <size_t gConfigsNum, size_t gWidgetsNum>
 class TerrainNoiseBase : public UiWindowAppear {
  public:
   TerrainNoiseBase(
@@ -31,9 +31,6 @@ class TerrainNoiseBase : public UiWindowAppear {
     for (auto slider : sliders_) {
       slider->Render(mouse_pos);
     }
-    for (auto toggle : toggles_) {
-      toggle->Render();
-    }
     for (auto text : texts_) {
       text->Render();
     }
@@ -46,9 +43,6 @@ class TerrainNoiseBase : public UiWindowAppear {
     btn_save_.RenderPicking();
     for (auto slider : sliders_) {
       slider->RenderPicking();
-    }
-    for (auto toggle : toggles_) {
-      toggle->RenderPicking();
     }
     for (auto text : texts_) {
       text->RenderPicking();
@@ -80,9 +74,8 @@ class TerrainNoiseBase : public UiWindowAppear {
 //  UiDynamicSprite hmap_;
 //  Texture32F& hmap_ref_;
 
-  std::array<UiSliderH2*, gSlidersNum> sliders_;
-  std::array<UiToggle*, gTogglesNum> toggles_;
-  std::array<UiTextModeId*, gTextNum> texts_;
+  std::array<UiSliderH2*, gConfigsNum> sliders_;
+  std::array<UiTextModeId*, gConfigsNum> texts_;
 
   UiEventHandler<gWidgetsNum> ui_event_handler_;
   Shader shader_;
@@ -90,12 +83,12 @@ class TerrainNoiseBase : public UiWindowAppear {
 
 class TerrainNoisePerlin final
     : public TerrainNoiseBase<
-          3, 0, 3,
+          3,
           static_cast<int>(data::VboIdMain::kTerrainNoisePerlinSeedIcon)
               - static_cast<int>(data::VboIdMain::kTerrainNoisePerlinDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      3, 0, 3,
+      3,
       static_cast<int>(data::VboIdMain::kTerrainNoisePerlinSeedIcon)
           - static_cast<int>(data::VboIdMain::kTerrainNoisePerlinDesk)>;
 
@@ -122,12 +115,12 @@ class TerrainNoisePerlin final
 
 class TerrainNoiseCellular final
     : public TerrainNoiseBase<
-          4, 0, 4,
+          4,
           static_cast<int>(data::VboIdMain::kTerrainNoiseCellularSeedIcon)
               - static_cast<int>(data::VboIdMain::kTerrainNoiseCellularDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      4, 0, 4,
+      4,
       static_cast<int>(data::VboIdMain::kTerrainNoiseCellularSeedIcon)
           - static_cast<int>(data::VboIdMain::kTerrainNoiseCellularDesk)>;
 
@@ -156,12 +149,12 @@ class TerrainNoiseCellular final
 
 class TerrainNoiseMetaballs final
     : public TerrainNoiseBase<
-          4, 0, 4,
+          4,
           static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsSeedIcon)
               - static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      4, 0, 4,
+      4,
       static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsSeedIcon)
           - static_cast<int>(data::VboIdMain::kTerrainNoiseMetaballsDesk)>;
 
@@ -190,12 +183,12 @@ class TerrainNoiseMetaballs final
 
 class TerrainNoiseFbmGrid final
     : public TerrainNoiseBase<
-          9, 0, 9,
+          9,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridSeedIcon)
               - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      9, 0, 9,
+      9,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridSeedIcon)
           - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmGridDesk)>;
 
@@ -234,12 +227,12 @@ class TerrainNoiseFbmGrid final
 
 class TerrainNoiseFbmMulti final
     : public TerrainNoiseBase<
-          5, 0, 5,
+          5,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiSeedIcon)
               - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      5, 0, 5,
+      5,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiSeedIcon)
           - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmMultiDesk)>;
 
@@ -270,12 +263,12 @@ class TerrainNoiseFbmMulti final
 
 class TerrainNoiseFbmdPerlin final
     : public TerrainNoiseBase<
-          8, 1, 9,
+          8,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinSeedIcon)
               - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      8, 1, 9,
+      8,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinSeedIcon)
           - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmdPerlinDesk)>;
 
@@ -308,19 +301,16 @@ class TerrainNoiseFbmdPerlin final
   UiTextModeId text_octave_factor_;
   UiSliderH2 slider_seed_;
   UiTextModeId text_seed_;
-
-  UiToggle toggle_negative_;
-  UiTextModeId text_negative_;
 };
 
 class TerrainNoiseFbmWarp final
     : public TerrainNoiseBase<
-          10, 1, 11,
+          10,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpRIcon)
               - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      10, 1, 11,
+      10,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpRIcon)
           - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmWarpDesk)>;
 
@@ -357,19 +347,16 @@ class TerrainNoiseFbmWarp final
   UiTextModeId text_q_;
   UiSliderH2 slider_r_;
   UiTextModeId text_r_;
-
-  UiToggle toggle_negative_;
-  UiTextModeId text_negative_;
 };
 
 class TerrainNoiseFbmPerlinWarp final
     : public TerrainNoiseBase<
-          10, 1, 11,
+          10,
           static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpRIcon)
               - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpDesk)> {
  public:
   using Base = TerrainNoiseBase<
-      10, 1, 11,
+      10,
       static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpRIcon)
           - static_cast<int>(data::VboIdMain::kTerrainNoiseFbmPerlinWarpDesk)>;
 
@@ -406,9 +393,6 @@ class TerrainNoiseFbmPerlinWarp final
   UiTextModeId text_q_;
   UiSliderH2 slider_r_;
   UiTextModeId text_r_;
-
-  UiToggle toggle_negative_;
-  UiTextModeId text_negative_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_

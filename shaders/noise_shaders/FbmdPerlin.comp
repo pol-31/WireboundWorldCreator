@@ -14,7 +14,7 @@ layout (location = 6) uniform float gain;
 layout (location = 7) uniform float lacunarity;
 layout (location = 8) uniform float slopeness;
 layout (location = 9) uniform float octave_factor;
-layout (location = 10) uniform bool negative;
+//layout (location = 10) uniform bool negative;
 layout (location = 11) uniform float seed;
 
 
@@ -326,7 +326,7 @@ vec3 perlinNoised(vec2 pos, vec2 scale, float rotation, float seed)
 // @return x = value of the noise, range: [-1, inf], yz = derivative of the noise, range: [-1, 1]
 vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, mat2 transform,
                 float gain, vec2 lacunarity, float slopeness, float octaveFactor,
-                bool negative, float seed)
+                float seed)
 {
     // fbm implementation based on Inigo Quilez
     float amplitude = gain;
@@ -340,7 +340,8 @@ vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, mat2 transform,
     {
         vec3 n = perlinNoised(p / frequency, frequency, transform, seed);
         derivative += n.yz;
-        n.x = negative ? n.x : n.x * 0.5 + 0.5;
+        // always negative (in app we can move it up/down)
+//        n.x = negative ? n.x : n.x * 0.5 + 0.5;
         n *= amplitude;
         value.x += n.x / (1.0 + mix(0.0, dot(derivative, derivative), slopeness));
         value.yz += n.yz;
@@ -365,6 +366,6 @@ void main() {
     float height = fbmdPerlin(
         uv, vec2(scale_x, scale_y), octaves, shift,
         transform, gain, vec2(lacunarity), slopeness,
-        octave_factor, negative, seed).x;
+        octave_factor, seed).x;
     imageStore(out_texture, coord, vec4(height));
 }

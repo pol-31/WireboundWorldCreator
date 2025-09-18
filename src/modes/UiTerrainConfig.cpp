@@ -1,12 +1,8 @@
 #include "UiTerrainConfig.h"
 
-//TODO: ubo?
+//TODO: UBOs?
 
 Texture32F GenAndSave(std::string_view tex_name) {
-  // YOU MUST: bind shader, set uniforms
-  // YOU MUST: bind shader, set uniforms
-  // YOU MUST: bind shader, set uniforms
-
   int size = details::gTerrainSize;
   Texture32F height_map(size, GL_R32F);
   glBindImageTexture(0, height_map.GetId(), 0, GL_FALSE, 0,
@@ -714,25 +710,15 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
           ),
       text_seed_(
           text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedText}, data::TextId::kSeed),
-      toggle_negative_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOff},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn1},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn2},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeOn3}
-          ),
-      text_negative_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinNegativeText}, data::TextId::kNegative) {
+          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedText}, data::TextId::kSeed) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_};
-  Base::toggles_ = {&toggle_negative_};
   Base::texts_ = {
       &text_scale_x_, &text_scale_y_, &text_octaves_,
       &text_gain_, &text_lacunarity_, &text_slopeness_,
-      &text_octave_factor_, &text_seed_, &text_negative_};
+      &text_octave_factor_, &text_seed_};
   Base::ui_event_handler_ = {
       &btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
@@ -747,7 +733,6 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
   hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
   hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
   hierarchy_.AddNested(&slider_seed_, &text_seed_);
-  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
 }
 
 TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(TerrainNoiseFbmdPerlin&& other)
@@ -767,9 +752,7 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(TerrainNoiseFbmdPerlin&& other)
       slider_octave_factor_(std::move(other.slider_octave_factor_)),
       text_octave_factor_(std::move(other.text_octave_factor_)),
       slider_seed_(std::move(other.slider_seed_)),
-      text_seed_(std::move(other.text_seed_)),
-      toggle_negative_(std::move(other.toggle_negative_)),
-      text_negative_(std::move(other.text_negative_)) {
+      text_seed_(std::move(other.text_seed_)) {
   hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
   hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
   hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
@@ -779,7 +762,6 @@ TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(TerrainNoiseFbmdPerlin&& other)
   hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
   hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
   hierarchy_.AddNested(&slider_seed_, &text_seed_);
-  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
 }
 
 NoiseFbmdPerlinData TerrainNoiseFbmdPerlin::Generate(
@@ -793,7 +775,6 @@ NoiseFbmdPerlinData TerrainNoiseFbmdPerlin::Generate(
   data.slopeness = slider_slopeness_.GetProgress();
   data.octave_factor = slider_octave_factor_.GetProgress();
   data.seed = slider_seed_.GetProgress();
-  data.negative = static_cast<int>(!toggle_negative_.IsOff());
   shader_.Bind();
   //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- FbmdPerlin noise --- ---" << std::endl;
@@ -805,7 +786,6 @@ NoiseFbmdPerlinData TerrainNoiseFbmdPerlin::Generate(
             << ' ' << data.slopeness
             << ' ' << data.octave_factor
             << ' ' << data.seed
-            << ' ' << data.negative
             << std::endl;
   glUniform1f(1, data.scale_x);
   glUniform1f(2, data.scale_y);
@@ -815,7 +795,6 @@ NoiseFbmdPerlinData TerrainNoiseFbmdPerlin::Generate(
   glUniform1f(8, data.slopeness);
   glUniform1f(9, data.octave_factor);
   glUniform1f(11, data.seed);
-  glUniform1i(10, data.negative);
   data.hmap = GenAndSave(tex_name);
   return data;
 }
@@ -829,7 +808,6 @@ void TerrainNoiseFbmdPerlin::SetConfig(const NoiseFbmdPerlinData& config) {
   slider_slopeness_.SetValue(config.slopeness);
   slider_octave_factor_.SetValue(config.octave_factor);
   slider_seed_.SetValue(config.seed);
-  toggle_negative_.Set(static_cast<bool>(config.negative));
 }
 
 TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
@@ -925,25 +903,15 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
           ),
       text_r_(
           text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpRText}, data::TextId::kR),
-      toggle_negative_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOff},
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn1},
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn2},
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeOn3}
-          ),
-      text_negative_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpNegativeText}, data::TextId::kNegative) {
+          {data::VboIdMain::kTerrainNoiseFbmWarpRText}, data::TextId::kR) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
-  Base::toggles_ = {&toggle_negative_};
   Base::texts_ = {
       &text_scale_x_, &text_scale_y_, &text_octaves_,
       &text_gain_, &text_lacunarity_, &text_slopeness_,
-      &text_octave_factor_, &text_seed_, &text_q_, &text_r_, &text_negative_};
+      &text_octave_factor_, &text_seed_, &text_q_, &text_r_};
   Base::ui_event_handler_ = {
       &btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
@@ -960,7 +928,6 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
   hierarchy_.AddNested(&slider_seed_, &text_seed_);
   hierarchy_.AddNested(&slider_q_, &text_q_);
   hierarchy_.AddNested(&slider_r_, &text_r_);
-  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
 }
 
 TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(TerrainNoiseFbmWarp&& other)
@@ -984,9 +951,7 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(TerrainNoiseFbmWarp&& other)
       slider_q_(std::move(other.slider_q_)),
       text_q_(std::move(other.text_q_)),
       slider_r_(std::move(other.slider_r_)),
-      text_r_(std::move(other.text_r_)),
-      toggle_negative_(std::move(other.toggle_negative_)),
-      text_negative_(std::move(other.text_negative_)) {
+      text_r_(std::move(other.text_r_)) {
   hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
   hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
   hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
@@ -998,7 +963,6 @@ TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(TerrainNoiseFbmWarp&& other)
   hierarchy_.AddNested(&slider_seed_, &text_seed_);
   hierarchy_.AddNested(&slider_q_, &text_q_);
   hierarchy_.AddNested(&slider_r_, &text_r_);
-  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
 }
 
 NoiseFbmWarpData TerrainNoiseFbmWarp::Generate(
@@ -1014,7 +978,6 @@ NoiseFbmWarpData TerrainNoiseFbmWarp::Generate(
   data.seed = slider_seed_.GetProgress();
   data.q = slider_q_.GetProgress();
   data.r = slider_r_.GetProgress();
-  data.negative = static_cast<int>(!toggle_negative_.IsOff());
   shader_.Bind();
   //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- FbmWarp noise --- ---" << std::endl;
@@ -1028,7 +991,6 @@ NoiseFbmWarpData TerrainNoiseFbmWarp::Generate(
             << ' ' << data.seed
             << ' ' << data.q
             << ' ' << data.r
-            << ' ' << data.negative
             << std::endl;
   glUniform1f(1, data.scale_x);
   glUniform1f(2, data.scale_y);
@@ -1040,7 +1002,6 @@ NoiseFbmWarpData TerrainNoiseFbmWarp::Generate(
   glUniform1f(12, data.seed);
   glUniform1f(13, data.q);
   glUniform1f(14, data.r);
-  glUniform1i(11, data.negative);
   data.hmap = GenAndSave(tex_name);
   return data;
 }
@@ -1056,7 +1017,6 @@ void TerrainNoiseFbmWarp::SetConfig(const NoiseFbmWarpData& config) {
   slider_seed_.SetValue(config.seed);
   slider_q_.SetValue(config.q);
   slider_r_.SetValue(config.r);
-  toggle_negative_.Set(static_cast<bool>(config.negative));
 }
 
 TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
@@ -1153,25 +1113,15 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
           ),
       text_r_(
           text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRText}, data::TextId::kR),
-      toggle_negative_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOff},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn1},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn2},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeOn3}
-          ),
-      text_negative_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpNegativeText}, data::TextId::kNegative) {
+          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRText}, data::TextId::kR) {
   Base::sliders_ = {
       &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
       &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
-  Base::toggles_ = {&toggle_negative_};
   Base::texts_ = {
       &text_scale_x_, &text_scale_y_, &text_octaves_,
       &text_gain_, &text_lacunarity_, &text_slopeness_,
-      &text_octave_factor_, &text_seed_, &text_q_, &text_r_, &text_negative_};
+      &text_octave_factor_, &text_seed_, &text_q_, &text_r_};
   Base::ui_event_handler_ = {
       &btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
       &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
@@ -1188,7 +1138,6 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
   hierarchy_.AddNested(&slider_seed_, &text_seed_);
   hierarchy_.AddNested(&slider_q_, &text_q_);
   hierarchy_.AddNested(&slider_r_, &text_r_);
-  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
 }
 
 TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(TerrainNoiseFbmPerlinWarp&& other)
@@ -1212,9 +1161,7 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(TerrainNoiseFbmPerlinWarp&&
       slider_q_(std::move(other.slider_q_)),
       text_q_(std::move(other.text_q_)),
       slider_r_(std::move(other.slider_r_)),
-      text_r_(std::move(other.text_r_)),
-      toggle_negative_(std::move(other.toggle_negative_)),
-      text_negative_(std::move(other.text_negative_)) {
+      text_r_(std::move(other.text_r_)) {
   hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
   hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
   hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
@@ -1226,7 +1173,6 @@ TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(TerrainNoiseFbmPerlinWarp&&
   hierarchy_.AddNested(&slider_seed_, &text_seed_);
   hierarchy_.AddNested(&slider_q_, &text_q_);
   hierarchy_.AddNested(&slider_r_, &text_r_);
-  hierarchy_.AddNested(&toggle_negative_, &text_negative_);
 }
 
 NoiseFbmPerlinWarpData TerrainNoiseFbmPerlinWarp::Generate(
@@ -1242,7 +1188,6 @@ NoiseFbmPerlinWarpData TerrainNoiseFbmPerlinWarp::Generate(
   data.seed = slider_seed_.GetProgress();
   data.q = slider_q_.GetProgress();
   data.r = slider_r_.GetProgress();
-  data.negative = static_cast<int>(!toggle_negative_.IsOff());
   shader_.Bind();
   //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- FbmPerlinWarp noise --- ---" << std::endl;
@@ -1256,7 +1201,6 @@ NoiseFbmPerlinWarpData TerrainNoiseFbmPerlinWarp::Generate(
             << ' ' << data.seed
             << ' ' << data.q
             << ' ' << data.r
-            << ' ' << data.negative
             << std::endl;
   glUniform1f(1, data.scale_x);
   glUniform1f(2, data.scale_y);
@@ -1268,7 +1212,6 @@ NoiseFbmPerlinWarpData TerrainNoiseFbmPerlinWarp::Generate(
   glUniform1f(12, data.seed);
   glUniform1f(13, data.q);
   glUniform1f(14, data.r);
-  glUniform1i(11, data.negative);
   data.hmap = GenAndSave(tex_name);
   return data;
 }
@@ -1284,5 +1227,4 @@ void TerrainNoiseFbmPerlinWarp::SetConfig(const NoiseFbmPerlinWarpData& config) 
   slider_seed_.SetValue(config.seed);
   slider_q_.SetValue(config.q);
   slider_r_.SetValue(config.r);
-  toggle_negative_.Set(static_cast<bool>(config.negative));
 }

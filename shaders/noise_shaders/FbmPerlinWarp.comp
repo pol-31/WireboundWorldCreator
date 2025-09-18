@@ -15,7 +15,7 @@ layout (location = 7) uniform float gain;
 layout (location = 8) uniform float lacunarity;
 layout (location = 9) uniform float slopeness;
 layout (location = 10) uniform float octave_factor;
-layout (location = 11) uniform bool negative;
+//layout (location = 11) uniform bool negative;
 layout (location = 12) uniform float seed;
 layout (location = 13) uniform float q;
 layout (location = 14) uniform float r;
@@ -405,10 +405,9 @@ vec3 perlinNoised(vec2 pos, vec2 scale, float rotation, float seed)
 // @param lacunarity Frequency of the fbm, must be integer for tileable results, range: [1, 32], default: 2.0
 // @param slopeness Slope intensity of the derivatives, range: [0, 1], default: 0.25
 // @param octaveFactor The octave intensity factor, the lower the more pronounced the lower octaves will be, range: [-1, 1], default: 0.0
-// @param negative If true use a negative range for the noise values, will result in more contrast, range: [false, true]
 // @param seed Seed to randomize result, range: [0, inf], default: 0.0
 // @return x = value of the noise, range: [-1, inf], yz = derivative of the noise, range: [-1, 1]
-vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, mat2 transform, float gain, vec2 lacunarity, float slopeness, float octaveFactor, bool negative, float seed)
+vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, mat2 transform, float gain, vec2 lacunarity, float slopeness, float octaveFactor, float seed)
 {
     // fbm implementation based on Inigo Quilez
     float amplitude = gain;
@@ -422,7 +421,8 @@ vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, mat2 transform, f
     {
         vec3 n = perlinNoised(p / frequency, frequency, transform, seed);
         derivative += n.yz;
-        n.x = negative ? n.x : n.x * 0.5 + 0.5;
+        // always negative (in app we can move it up/down)
+//        n.x = negative ? n.x : n.x * 0.5 + 0.5;
         n *= amplitude;
         value.x += n.x / (1.0 + mix(0.0, dot(derivative, derivative), slopeness));
         value.yz += n.yz;
@@ -435,11 +435,11 @@ vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, mat2 transform, f
 
     return value;
 }
-vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, float axialShift, float gain, vec2 lacunarity, float slopeness, float octaveFactor, bool negative, float seed)
+vec3 fbmdPerlin(vec2 pos, vec2 scale, int octaves, vec2 shift, float axialShift, float gain, vec2 lacunarity, float slopeness, float octaveFactor, float seed)
 {
     vec2 cosSin = vec2(cos(axialShift), sin(axialShift));
     mat2 transform = mat2(cosSin.x, cosSin.y, -cosSin.y, cosSin.x) * mat2(0.8, -0.6, 0.6, 0.8);
-    return fbmdPerlin(pos, scale, octaves, shift, transform, gain, lacunarity, slopeness, octaveFactor, negative, seed);
+    return fbmdPerlin(pos, scale, octaves, shift, transform, gain, lacunarity, slopeness, octaveFactor, seed);
 }
 
 // FBM implementation using Perlin noise, can also be used to create ridges based on the mode used.
@@ -512,21 +512,20 @@ float fbmPerlin(vec2 pos, vec2 scale, int octaves, float shift, float axialShift
 // @param lacunarity Frequency of the fbm, must be integer for tileable results, range: [1, 32]
 // @param slopeness Slope intensity of the derivatives, range: [0, 1], default: 0.5
 // @param phase Phase to rotated the noise gradients, range: [0, PI]
-// @param negative If true use a negative range for the noise values, range: [false, true]
 // @param seed Seed to randomize result, range: [0, inf], default: 0.0
-float fbmPerlinWarp(vec2 pos, vec2 scale, vec2 factors, int octaves, vec4 shifts, float timeShift, float gain, vec2 lacunarity, float slopeness, float octaveFactor, bool negative, float seed,
+float fbmPerlinWarp(vec2 pos, vec2 scale, vec2 factors, int octaves, vec4 shifts, float timeShift, float gain, vec2 lacunarity, float slopeness, float octaveFactor, float seed,
                       vec2 q, vec2 r)
 {
     float qfactor = factors.x;
     float rfactor = factors.y;
-    q.x = fbmdPerlin(pos, scale, octaves, vec2(0.0), timeShift, gain, lacunarity, slopeness, octaveFactor, negative, seed).x;
-    q.y = fbmdPerlin(pos, scale, octaves, vec2(shifts.x), timeShift, gain, lacunarity, slopeness, octaveFactor, negative, seed).x;
+    q.x = fbmdPerlin(pos, scale, octaves, vec2(0.0), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
+    q.y = fbmdPerlin(pos, scale, octaves, vec2(shifts.x), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
 
     vec2 np = pos + qfactor * q;
-    r.x = fbmdPerlin(np, scale, octaves, vec2(shifts.y), timeShift, gain, lacunarity, slopeness, octaveFactor, negative, seed).x;
-    r.y = fbmdPerlin(np, scale, octaves, vec2(shifts.z), timeShift, gain, lacunarity, slopeness, octaveFactor, negative, seed).x;
+    r.x = fbmdPerlin(np, scale, octaves, vec2(shifts.y), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
+    r.y = fbmdPerlin(np, scale, octaves, vec2(shifts.z), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
 
-    return fbmdPerlin(pos + r * rfactor, scale, octaves, vec2(shifts.w), timeShift, gain, lacunarity, slopeness, octaveFactor, negative, seed).x;
+    return fbmdPerlin(pos + r * rfactor, scale, octaves, vec2(shifts.w), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
 }
 
 void main() {
@@ -541,6 +540,6 @@ void main() {
     float height = fbmPerlinWarp(
         uv, vec2(scale_x, scale_y), factors, octaves, shifts, time_shift,
         gain, vec2(lacunarity), slopeness,
-        octave_factor, negative, seed, vec2(q), vec2(r));
+        octave_factor, seed, vec2(q), vec2(r));
     imageStore(out_texture, coord, vec4(height));
 }

@@ -15,7 +15,7 @@ layout (location = 7) uniform float gain;
 layout (location = 8) uniform float lacunarity;
 layout (location = 9) uniform float slopeness;
 layout (location = 10) uniform float octave_factor;
-layout (location = 11) uniform bool negative;
+//layout (location = 11) uniform bool negative;
 layout (location = 12) uniform float seed;
 layout (location = 13) uniform float q;
 layout (location = 14) uniform float r;
@@ -465,19 +465,23 @@ float metaballs(vec2 pos, vec2 scale, float jitter, float phase, float width, fl
 // @param phase Phase to rotated the noise gradients, range: [0, PI]
 // @param negative If true use a negative range for the noise values, range: [false, true]
 // @param seed Seed to randomize result, range: [0, inf], default: 0.0
-float fbmWarp(vec2 pos, vec2 scale, vec2 factors, int octaves, vec4 shifts, float timeShift, float gain, vec2 lacunarity, float slopeness, float octaveFactor, bool negative, float seed,
+float fbmWarp(vec2 pos, vec2 scale, vec2 factors, int octaves, vec4 shifts, float timeShift, float gain, vec2 lacunarity, float slopeness, float octaveFactor, float seed,
               vec2 q, vec2 r)
 {
     float qfactor = factors.x;
     float rfactor = factors.y;
     q.x = fbmd(pos, scale, octaves, vec2(0.0), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
     q.y = fbmd(pos, scale, octaves, vec2(shifts.x), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
-    q = negative ? q * 2.0 - 1.0 : q;
+    // always negative (in app we can move it up/down)
+//    q = negative ? q * 2.0 - 1.0 : q;
+    q = q * 2.0 - 1.0;
 
     vec2 np = pos + qfactor * q;
     r.x = fbmd(np, scale, octaves, vec2(shifts.y), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
     r.y = fbmd(np, scale, octaves, vec2(shifts.z), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
-    r = negative ? r * 2.0 - 1.0 : r;
+    // always negative (in app we can move it up/down)
+//    r = negative ? r * 2.0 - 1.0 : r;
+    r = r * 2.0 - 1.0;
 
     return fbmd(pos + r * rfactor, scale, octaves, vec2(shifts.w), timeShift, gain, lacunarity, slopeness, octaveFactor, seed).x;
 }
@@ -494,6 +498,6 @@ void main() {
     float height = fbmWarp(
         uv, vec2(scale_x, scale_y), factors, octaves, shifts, time_shift,
         gain, vec2(lacunarity), slopeness,
-        octave_factor, negative, seed, vec2(q), vec2(r));
+        octave_factor, seed, vec2(q), vec2(r));
     imageStore(out_texture, coord, vec4(height));
 }

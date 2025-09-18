@@ -3,8 +3,6 @@
 
 #include "../common/Texture.h"
 
-// param "negative" int, not bool (OpenGL provides glUniform1i only)
-
 struct NoiseDataBase {
   float strength = 0.0f;
   bool do_tiling = true;
@@ -66,7 +64,6 @@ struct NoiseFbmdPerlinData : public NoiseDataBase {
   float slopeness;
   float octave_factor;
   float seed;
-  int negative;
 };
 
 struct NoiseFbmWarpData : public NoiseDataBase {
@@ -81,7 +78,6 @@ struct NoiseFbmWarpData : public NoiseDataBase {
   float seed;
   float q;
   float r;
-  int negative;
 };
 
 struct NoiseFbmPerlinWarpData : public NoiseDataBase {
@@ -96,7 +92,6 @@ struct NoiseFbmPerlinWarpData : public NoiseDataBase {
   float seed;
   float q;
   float r;
-  int negative;
 };
 
 struct NoiseTerrainData {
