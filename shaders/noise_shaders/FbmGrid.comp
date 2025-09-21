@@ -3,20 +3,15 @@ layout (local_size_x = 16, local_size_y = 16) in;
 
 layout(r32f, binding = 0) uniform writeonly image2D out_texture;
 
-//layout (location = 0) uniform vec2 resolution;
-
-layout (location = 1) uniform float scale_x;
-layout (location = 2) uniform float scale_y;
-layout (location = 3) uniform int octaves;
-layout (location = 4) uniform float shift;
-//layout (location = 5) uniform float time_shift;
-layout (location = 6) uniform float gain;
-layout (location = 7) uniform float lacunarity;
-//layout (location = 8) uniform vec3 translate;
-layout (location = 9) uniform float warp_strength;
-layout (location = 10) uniform float octave_factor;
-layout (location = 11) uniform float seed;
-
+layout (location = 0) uniform float scale_x;
+layout (location = 1) uniform float scale_y;
+layout (location = 2) uniform int octaves;
+layout (location = 3) uniform float shift;
+layout (location = 4) uniform float gain;
+layout (location = 5) uniform float lacunarity;
+layout (location = 6) uniform float warp_strength;
+layout (location = 7) uniform float octave_factor;
+layout (location = 8) uniform float seed;
 
 uint ihash1D(uint q)
 {
