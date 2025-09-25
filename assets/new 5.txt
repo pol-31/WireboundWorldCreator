@@ -1,92 +1,147 @@
+------------------------------------------------------------------
+------------------------------------------------------------------
+------------------------------------------------------------------
+
+POTENTIAL FIXES:
+- do we need WindowQueue both for global data and IUiEdit modes?
+- How to represent terrain in 3d? Yes, let's represent it with voxels (discretize dx/dy/dz)
+
+IDEAS:
+- idea to make "BorderCube" as a recursive hop texture
+- window dissappearing by fire
+- UiSlots back sprite decorate with paper "cracks" or "burns"
+
+UNRESOLVED:
+- mode keyboard manual
+
+----------------------------------------------
+----------------------------------------------
+----------------------------------------------
+
+OLD ISSUES:
 + label field for each: kTerrainEditScaleXText
 + error line below
 + SliderH2 - bigger handle(icon), modify arae (remove embedded handle/icons)
-------------------------------------------------------------------
-------------------------------------------------------------------
-------------------------------------------------------------------
 
-07.09
-do we need WindowQueue both for global data and IUiEdit modes?
-window dissappearing by fire
-
-How to represent terrain in 3d? correct:layers, BUT how to be with mountain climbing?
-okay, NO abcose angles - ONLY heightmap, but layered on Y.
-SO: ArbitraryGraph.h
-
-
-TODO:
-BUG
-NEW
-- sliders scale
----> terrain layers (each store all noises settings) Add/Remove updated basic cur_tile_.hmap_
----> group & align (no pain preferred)
-- description relevance?
-PURGATORY (useless / temp imposs)
-
-
-
-
-//TODO:
-// 1. line: O-O-O-O-O
-// - each one has 1 parent (let't take most left)
-// - each one has {float_scale, glm::vec2 offset}
-// this way NO INTERNAL TRANSFORM (via Ctrl button)
-// TODO: how to get it: parse ../assets/VboTransform.txt...
-//
-// OR... let's skip it for now.
-
-----------------------------------------------
-----------------------------------------------
-----------------------------------------------
 NEW ISSUES:
-- UiConfirmation (caution, file, etc...) shadow + text sprites (FREE ALL kSpareText)
-- UiSliderV2 for noise config window (take sprites from in UiSlots)
-- TextRenderer::prerender_text_slot
-- Noise config (separate windows): hmap sprites
-- Bake config: texture's names (Texture32F& + UiDynamicSprite)
-- keyboard assign window (stones in position raisen not)
-- UiSlotsTerrain - btn RESET - to set default config
-- desaturate color indicator
-- noise layer sprite (left bottom corner) + рамочка
-- UiTerrainMode::slots remove edit/select, remove vertex/edge/face
-- show pressed keys (top left corner: translate/scale/rotate x/y/z, etc...)
-- UiTopWindow --> SHADOW SPRITE
-- remove sprite_keyboads (not going to reassign keys)
-- remove kSpareText (yes, again)
-- draw cursor sprite
-- generate k*Text tex coords with 0.5 size scale
-- replace UiTextInput back sprite
-- "shadow" sprite for text, confirmation, etc...
-- add menu "mode name" text
-- UiSlotsTerrain button "Reload ALL"
++ UiConfirmation (caution, file, etc...) shadow + text sprites (FREE ALL kSpareText)
++ UiSliderV2 for noise config window
++ TextRenderer::prerender_text_slot
++ Bake config: texture's names (Texture32F& + UiDynamicSprite)
++ noise layer sprite (left bottom corner) + рамочка
++ UiTerrainMode::slots remove edit/select, remove vertex/edge/face
++ sprite (big/small) show pressed keys (top left corner: translate/scale/rotate x/y/z, etc...)
++ UiTopWindow --> SHADOW SPRITE (fbmd shader + texture for RenderPicking())
++ remove kSpareText (yes, again)
++ draw pivot sprite
+- generate k*Text tex coords with 0.25 size scale
++ replace UiTextInput back sprite (now short, medium, long, longlong-for_console)
++ add menu "mode name" text
++ update compass
++ DropDownSlot instead of.. idk.. don't remember
++ TopWindowDesk
++ update Wirebound sprite
++ erosion text+label+back
 
+Due to WindowQueue structure all internal sprites are DynamicSprite and
+  use glm::mat3 transform in the shader:
++ now 1 window  with vector<UiSlider2> window-SideSlider (but can make just one?)
+kTerrainWindowNoiseName;;
+kTerrainWindowNoiseDesk;EditBackDesk.png;
+kTerrainWindowNoisePinBack;PinOff.png;
+kTerrainWindowNoisePinPoint;PinOn.png;
+kTerrainWindowNoiseSave;Save.png;
+kTerrainWindowNoiseSliderText;;
+kTerrainWindowNoiseSliderArea;Slider_HorBackShort2.png;
+kTerrainWindowNoiseSliderIcon;Slider_HorBackShort2_Handle.png;
++ now 1 row instead of 8 noises
+kTerrainEditNoiseConfig;Gear.png;
+kTerrainEditNoiseName;;
+kTerrainEditNoiseInvertOff;CheckBoxOff.png;
+kTerrainEditNoiseInvertOn1;CheckBoxOn1.png;
+kTerrainEditNoiseInvertOn2;CheckBoxOn2.png;
+kTerrainEditNoiseInvertOn3;CheckBoxOn3.png;
+kTerrainEditNoiseTilingOff;CheckBoxOff.png;
+kTerrainEditNoiseTilingOn1;CheckBoxOn1.png;
+kTerrainEditNoiseTilingOn2;CheckBoxOn2.png;
+kTerrainEditNoiseTilingOn3;CheckBoxOn3.png;
+kTerrainEditNoiseStrengthArea;Slider_HorBackShort2.png;
+kTerrainEditNoiseStrengthIcon;Slider_HorBackShort2_Handle.png;
+kTerrainEditNoiseHmap;;
++ now 1 row per bake hmap (bake config window)
+kTerrainBakeHmap;;
+kTerrainBakeHmapName;;
+kTerrainBakeNmap;;
+kTerrainBakeNmapName;;
+kTerrainBakeAo;;
+kTerrainBakeAoName;;
+kTerrainBakeSlopemap;;
+kTerrainBakeSlopemapName;;
+kTerrainBakeSplatmap;;
+kTerrainBakeSplatmapName;;
+kTerrainBakeErosionThermal;;
+kTerrainBakeErosionThermalName;;
+kTerrainBakeErosionHydraulic;;
+kTerrainBakeErosionHydraulicName;;
+kTerrainBakeWaterAccum;;
+kTerrainBakeWaterAccumName;;
+kTerrainBakeWaterFlow;;
+kTerrainBakeWaterFlowName;;
 
 TODO:
-2. terrain layer transform
-3. adjust noise gen params (broken because of unresolved terrain layer transform)
-4. selection orientation fix, transform orientation fix
-5. UiFile, Parse / Serialize (load/save -> window, etc...)
-6. console? but for what
-7. add countour with stencil test for ALL sprites, the op GLFW_PRESS move it slightly down
-8. group position & scale, so 1 modification in test.txt modifies all similar objects
+1. Ui.h/.cpp sliders (make it good)
+2. UiSlider2Ref (not actual ui component, but like phost, has ref value, no sprites to own)
+3. UiTerrainConfig.h
+4. UiTerrainWIndow.h UiEditTerrain + rename it finally to UiTerrainWindow.h
+5. UITerrainWindow.h UiTerrainBake_class hmap+texture
+6. don't forget to UiDebugger: parse->parse4 to save everything (somehow automatize)
+7. UiSlider2Ref -> we have 1 window for all + slider as in UiSlots
+
+TODO:
+2. terrain layer transform (broken rotation, skip for now)
+3. terrain layer transform pivot (broken rotation, skip for now)
+4. adjust noise gen params (broken because of unresolved terrain layer transform)
+5. terrain orientation fix (selection) + render (billboarding)
+6. UiFile, Parse / Serialize (load/save -> window, etc...)
+7. console? but for what (player speed)
+8. add countour with stencil test for ALL sprites, the op GLFW_PRESS move it slightly down
+9. group position & scale, so 1 modification in test.txt modifies all similar objects
   example: kTerrainEditNoise1-8 Noise x position, name-gear-hmap-etc... y position
-9. pivot point
 10. loading... event (generationm, exit)
 11. move X, Y, Z, XY, XZ, YZ, XYZ (possible?) + clamping
-12. not just the red cube, but draw e.g. smoke transparent texture
+13. wrong Y-Z (inverted), do not allow z>90 angles (anyway flatten them)
+15. pressed btns - one text slot? separated with "spaceship" rel to bsck_sprite
+16. set Wirebound ico (as for window)
 
---- ---------------------------------------------------------------------------- ---
-TODO:
-- select/deselect for layer (remove from flattening selected)
 
-instance pointer as a member is a bad idea: instances stored in a vector... it relocate
-visible on off layer
+NEW ISSUES:
+- rename kTerrainWindowNoiseSlider (handler/slider + area)
+- uniform borders sp_handle_ and sp_track_
+  if (id > sp_handle_.GetId() || id < sp_track_.GetId()) {
+    return false;
+  }
+  if (id > sp_handle_.GetId() || id < sp_fill_.GetId()) {
+    return false;
+  }
+- rename to "config", slider confusion btw
+  kTerrainWindowNoiseSliderText,
+  kTerrainWindowNoiseSliderArea,
+  kTerrainWindowNoiseSliderIcon,
 
-та просто кут збільшений і все, йомайо там валідна дата
---- SOLUTION is temporary, but I can't... bug with rotation (lag behind / ahead) ---
---- ---------------------------------------------------------------------------- ---
 
-SKIP 2, 3, 9
-Let's fix 4, 11
 
-Let's state, where x/y/z and draw the orientation + maybe 3d model orientation.... yes
+
+menu arrow fix
+noise gen fix (not only perlin with hardcoded values)
+billboard-ing
+pivot point
+menu mode text
+pressed buttons
+
+
+
+wireframe: don't take into consideration map_scale, uniform positions,
+also render lines (GL_LINES) for better. Clamp to layer border?
+Render sprites and clamp? idk
+pivot: can't be hovered; uniform scale, 3d pos. Basically rendering the sprite,
+without rotation/scaling. But still need mvp matrix...

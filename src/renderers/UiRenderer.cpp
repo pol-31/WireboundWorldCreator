@@ -3,8 +3,10 @@
 #include "../io/Cameras.h"
 
 UiRenderer::UiRenderer(
-    const Paths& paths, GlobalGlfwCallbackData& global_glfw_data_,
-    TileRenderer& tile_renderer)
+    const Paths& paths,
+    GlobalGlfwCallbackData& global_glfw_data_,
+    TileRenderer& tile_renderer,
+    const CameraHandler* camera)
     : ui_shared_resources_(paths, global_glfw_data_),
       ui_debugger_(paths, ui_shared_resources_.vbo_ui_,
                    ui_shared_resources_.vbo_ui_transform_,
@@ -12,8 +14,8 @@ UiRenderer::UiRenderer(
       windows_(),
       text_renderer_(
           ui_shared_resources_,
-          paths, {data::VboIdMain::kSpareText10},
-          {data::VboIdMain::kSpareText9}, {data::VboIdMain::kSpareText8}),
+          paths, {data::VboIdMain::kTextRendererPrerenderSlot},
+          {data::VboIdMain::kTextRendererCursor}),
       terrain_(ui_shared_resources_, windows_, text_renderer_, tile_renderer.cur_tile_),
       water_(ui_shared_resources_, windows_, paths),
       fences_(ui_shared_resources_, text_renderer_, windows_),
@@ -71,35 +73,32 @@ UiRenderer::UiRenderer(
           ),
       ui_confirmation_(
           {data::VboIdMain::kConfirmationDesk},
-          {data::VboIdMain::kSpareText6},
           1.0f,
           ui_shared_resources_,
           windows_,
           {data::VboIdMain::kConfirmationAccept},
           {data::VboIdMain::kConfirmationDecline},
-          {text_renderer_, data::VboIdMain::kConfirmationTextLabel}
+          {text_renderer_, data::VboIdMain::kConfirmationText}
           ),
-      /*ui_caution_(
-          {data::VboIdMain::kSpareText5},
-          {data::VboIdMain::kSpareText5},
+      ui_caution_(
+          {data::VboIdMain::kCautionDesk},
           1.0f,
           ui_shared_resources_,
           windows_,
-          {data::VboIdMain::kSpareText5}
-          ),*/
+          {data::VboIdMain::kCautionText}
+          ),
       ui_file_(
           {data::VboIdMain::kFileDesk},
-          {data::VboIdMain::kSpareText7},
           1.0f,
           ui_shared_resources_,
           windows_,
           {data::VboIdMain::kFileAccept},
-          {data::VboIdMain::kRoadsEditAccept},
+          {data::VboIdMain::kFileDecline},
           {text_renderer_,
-           {data::VboIdMain::kFileText}},
+           {data::VboIdMain::kFileQuestion}},
           {text_renderer_,
-           {data::VboIdMain::kRoadsSlotsSlot},
-           {data::VboIdMain::kFileTextInput}}),
+           {data::VboIdMain::kFileTextLabel},
+           {data::VboIdMain::kFileTextBack}}),
       ui_tip_(
           {data::VboIdMain::kTipInfoDesk},
           1.0f,
@@ -122,7 +121,13 @@ UiRenderer::UiRenderer(
           {data::VboIdMain::kLoading8},
           {data::VboIdMain::kLoading9},
           {data::VboIdMain::kLoading10}),
-      compass_(data::VboIdMain::kCompass) {
+      ui_compass_(camera,
+                  {data::VboIdMain::kCompass},
+                  {data::VboIdMain::kCompassNorth},
+                  {data::VboIdMain::kCompassSouth},
+                  {data::VboIdMain::kCompassEast},
+                  {data::VboIdMain::kCompassWest}),
+      ui_layer_wireframe_(ui_shared_resources_) {
   Init();
 }
 
@@ -148,9 +153,7 @@ void UiRenderer::Render() {
   glBindVertexArray(ui_shared_resources_.vao_ui_);
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
-  compass_.SetRotate(glm::radians(
-      ui_shared_resources_.global_glfw_callback_data_.camera->GetYaw()));
-  compass_.Render();
+  ui_compass_.Render();
 
   bool old_render_menu = render_menu_;
   render_menu_ = (glfwGetKey(gWindow, GLFW_KEY_TAB) == GLFW_PRESS);
@@ -176,7 +179,7 @@ void UiRenderer::RenderPicking() {
 
   ui_shared_resources_.tex_ui_.Bind();
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-  compass_.RenderPicking();
+  ui_compass_.RenderPicking();
 
   cur_mode_->RenderPicking();
 }

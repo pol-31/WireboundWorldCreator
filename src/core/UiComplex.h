@@ -5,6 +5,92 @@
 #include "UiText.h"
 #include "WindowQueue.h"
 
+class CameraHandler;
+
+class UiWindowSlider final : public UiBase {
+ public:
+  UiWindowSlider(
+      UiDynamicSprite&& sp_track,
+      UiDynamicSprite&& sp_handle,
+      int slots_num,
+      float track_length_factor,
+      float slots_length_factor);
+
+  UiWindowSlider(UiWindowSlider&& other) noexcept;
+  UiWindowSlider(const UiWindowSlider& other) = delete;
+
+  UiWindowSlider& operator=(UiWindowSlider&& other) = delete;
+  UiWindowSlider& operator=(const UiWindowSlider& other) = delete;
+
+  void SetSlotPtr(const UiDynamicSprite* sp_slot) {
+    sp_slot_ = sp_slot;
+  }
+
+  void Render(glm::vec2 mouse_pos);
+
+  void RenderPicking() const;
+
+  void Press() override;
+
+  void Release() override;
+
+  bool Scroll(GLuint id, float yoffset) override;
+
+  void SetTranslate(glm::vec2 translate);
+
+  void SetParentTransform(LocalTransform transform);
+
+  [[nodiscard]] float GetProgress() const;
+
+  void UpdateTransform() override;
+
+  void SetValue(float value);
+
+  void UpdateRenderData();
+
+  int GetSlotId(glm::vec2 mouse_pos);
+
+  void Set(glm::vec2 mouse_pos);
+
+  void Set(float progress);
+
+  void SetEntryNum(int entry_num);
+
+  void FocusOnSelected(int slot_id);
+
+  void SetUpScissors() const;
+
+  /// ctor req
+  float track_length_factor_ = 1.0f;
+  float slots_length_factor_ = 1.0f;
+  int slots_num_ = 0;
+
+  int entry_num_ = 0;
+
+  UiDynamicSprite* slot_ = nullptr;
+
+ private:
+  const UiDynamicSprite* sp_slot_ = nullptr;
+  UiDynamicSprite sp_track_;
+  UiDynamicSprite sp_handle_;
+
+  float centre_ = 0.0f;
+  float length_ = 0.0f;
+  float length_slots_ = 0.0f;
+
+  float progress_ = 0.0f;
+  bool pressed_ = false;
+
+ public:
+  float slot_height_ = 0.0f;
+  int scissors_start_ = 0;
+  int scissors_length_ = 0;
+
+  /// so we could get id related to slots (0-5)
+  int cur_slots_offset_ = 0;
+  glm::vec2 start_slot_translate_ = glm::vec2(0.0f);
+};
+
 // NEVER just std::move it, recreate it in all ctors
 /// hierarchy blocks; should be created at most derived ui components
 class UiHierarchy final : public UiBase {
@@ -19,7 +105,7 @@ class UiHierarchy final : public UiBase {
   //TODO: UiBase ctor params !!!
   template<typename... Args>
   UiHierarchy(UiBase* parent, Args... components)
-      : UiBase(parent),
+      : UiBase(*parent),
         parent_(parent),
         components_{components...} {
     auto parent_id = parent_->GetId();
@@ -100,13 +186,42 @@ class UiLoading {
   UiHierarchy hierarchy_;
 };
 
+/// loading only on the bottom of the screen (so use UiStaticSprite)
+class UiCompass {
+ public:
+  UiCompass(const CameraHandler* camera,
+            UiDynamicSprite&& sp_compass,
+            UiDynamicSprite&& sp_north,
+            UiDynamicSprite&& sp_south,
+            UiDynamicSprite&& sp_east,
+            UiDynamicSprite&& sp_west);
+
+  UiCompass(UiCompass&& other) noexcept;
+  UiCompass(const UiCompass& other) = delete;
+
+  UiCompass& operator=(UiCompass&& other) = delete;
+  UiCompass& operator=(const UiCompass& other) = delete;
+
+  void Render();
+
+  void RenderPicking() const;
+
+ private:
+  const CameraHandler* camera_;
+  UiDynamicSprite sp_compass_;
+  UiDynamicSprite sp_north_;
+  UiDynamicSprite sp_south_;
+  UiDynamicSprite sp_east_;
+  UiDynamicSprite sp_west_;
+  UiHierarchy hierarchy_;
+};
+
 // cannot be pinned, cannot be hovered above,
 // single to interact - on very top; shadow all other
 class UiTopWindowBase {
  public:
   UiTopWindowBase(
       UiDynamicSprite&& desk,
-      UiDynamicSprite&& shadow,
       float size_scale,
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue);
@@ -137,7 +252,6 @@ class UiTopWindowBase {
  protected:
   UiDynamicSprite desk_;
   // Cancel() if not important; otherwise skip
-  UiDynamicSprite shadow_;
 
   float size_scale_{1.0f};
 
@@ -153,7 +267,6 @@ class UiCaution final : public UiTopWindowBase {
 
   UiCaution(
       UiDynamicSprite&& desk,
-      UiDynamicSprite&& shadow,
       float size_scale,
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
@@ -183,7 +296,6 @@ class UiConfirmation final : public UiTopWindowBase {
 
   UiConfirmation(
       UiDynamicSprite&& desk,
-      UiDynamicSprite&& shadow,
       float size_scale,
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
@@ -232,13 +344,12 @@ class UiFile final : public UiTopWindowBase {
 
   UiFile(
       UiDynamicSprite&& desk,
-      UiDynamicSprite&& shadow,
       float size_scale,
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       UiDynamicSprite&& btn_accept,
       UiDynamicSprite&& btn_decline,
-         UiText&& label,
+      UiText&& label,
       UiTextInput&& text);
 
   UiFile(UiFile&& other) noexcept;
@@ -257,7 +368,7 @@ class UiFile final : public UiTopWindowBase {
 
  private:
   UiDynamicSprite btn_accept_;
-  UiDynamicSprite btn_decline_;
+  UiDynamicSprite btn_decline_; // TODO: appears in case of overwrite
   UiText label_;
   UiTextInput text_;
 
@@ -380,17 +491,12 @@ class UiTabMenu final : public UiWindowAppear {
       UiStaticSprite&& btn_mode_biomes,
       UiStaticSprite&& btn_mode_tiles,
 
-      UiToggle&& toggle_terrain,
-      UiToggle&& toggle_water,
-      UiToggle&& toggle_roads,
-      UiToggle&& toggle_fences,
-      UiToggle&& toggle_placement,
-      UiToggle&& toggle_objects,
-      UiToggle&& toggle_biomes,
-      UiToggle&& toggle_tiles,
+            UiToggle4&& toggle_terrain, UiToggle4&& toggle_water,
+            UiToggle4&& toggle_roads, UiToggle4&& toggle_fences,
+            UiToggle4&& toggle_placement, UiToggle4&& toggle_objects,
+            UiToggle4&& toggle_biomes, UiToggle4&& toggle_tiles,
 
-      UiStaticSprite&& btn_shader_wirebound,
-      UiToggle&& toggle_shaders,
+      UiStaticSprite&& btn_shader_wirebound, UiToggle4&& toggle_shaders,
 
       UiDynamicSprite&& arrow_select,
       UiDynamicSprite&& arrow_selected,
@@ -425,17 +531,17 @@ class UiTabMenu final : public UiWindowAppear {
   UiStaticSprite btn_mode_biomes_;
   UiStaticSprite btn_mode_tiles_;
 
-  UiToggle toggle_terrain_;
-  UiToggle toggle_water_;
-  UiToggle toggle_roads_;
-  UiToggle toggle_fences_;
-  UiToggle toggle_placement_;
-  UiToggle toggle_objects_;
-  UiToggle toggle_biomes_;
-  UiToggle toggle_tiles_;
+  UiToggle4 toggle_terrain_;
+  UiToggle4 toggle_water_;
+  UiToggle4 toggle_roads_;
+  UiToggle4 toggle_fences_;
+  UiToggle4 toggle_placement_;
+  UiToggle4 toggle_objects_;
+  UiToggle4 toggle_biomes_;
+  UiToggle4 toggle_tiles_;
 
   UiStaticSprite btn_shader_wirebound_;
-  UiToggle toggle_shaders_;
+  UiToggle4 toggle_shaders_;
 
   UiDynamicSprite arrow_select_;
   UiDynamicSprite arrow_selected_;
@@ -540,15 +646,13 @@ class UiSettings final : public UiWindowPopUp {
       UiDynamicSprite&& resolution_left,
       UiDynamicSprite&& resolution_right,
       UiDynamicSprite&& resolution,
-      UiToggle&& toggle_fullscreen,
+             UiToggle4&& toggle_fullscreen,
       UiSliderH2 sensitivity,
-      UiSliderH2&& sound,
-      UiToggle&& toggle_sound,
+      UiSliderH2&& sound, UiToggle4&& toggle_sound,
       UiSliderH2&& music,
-      UiToggle&& toggle_music,
+             UiToggle4&& toggle_music,
       UiDynamicSprite&& tip_info_label,
-      UiDynamicSprite&& tip_info,
-      UiToggle&& toggle_tip_info);
+      UiDynamicSprite&& tip_info, UiToggle4&& toggle_tip_info);
 
   UiSettings(UiSettings&& other) noexcept;
   UiSettings(const UiSettings& other) = delete;
@@ -576,19 +680,19 @@ class UiSettings final : public UiWindowPopUp {
   UiDynamicSprite resolution_right_;
 
   UiDynamicSprite resolution_;
-  UiToggle toggle_fullscreen_;
+  UiToggle4 toggle_fullscreen_;
 
   UiSliderH2 sensitivity_;
 
   UiSliderH2 sound_;
-  UiToggle toggle_sound_;
+  UiToggle4 toggle_sound_;
 
   UiSliderH2 music_;
-  UiToggle toggle_music_;
+  UiToggle4 toggle_music_;
 
   UiDynamicSprite tip_info_label_;
   UiDynamicSprite tip_info_;
-  UiToggle toggle_tip_info_;
+  UiToggle4 toggle_tip_info_;
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kSettingsTipInfoOn3) -
@@ -610,21 +714,21 @@ class UiWaterLayerConfig final : public UiWindowPopUp {
       LocalTransform end_transform,
       UiDynamicSprite&& sprite_layer,
       UiDynamicSprite&& text_layer,
-      UiToggle&& toggle_layer,
+      UiToggle4&& toggle_layer,
       UiDynamicSprite&& scale_text,
-      UiSliderH&& scale,
+      UiSliderH3&& scale,
       UiDynamicSprite&& fetch_text,
-      UiSliderH&& fetch,
+      UiSliderH3&& fetch,
       UiDynamicSprite&& spread_blend_text,
-      UiSliderH&& spread_blend,
+      UiSliderH3&& spread_blend,
       UiDynamicSprite&& swell_text,
-      UiSliderH&& swell,
+      UiSliderH3&& swell,
       UiDynamicSprite&& peak_enhancement_text,
-      UiSliderH&& peak_enhancement,
+      UiSliderH3&& peak_enhancement,
       UiDynamicSprite&& short_waves_fade_text,
-      UiSliderH&& short_waves_fade,
+      UiSliderH3&& short_waves_fade,
       UiDynamicSprite&& lambda_text,
-      UiSliderH&& lambda);
+      UiSliderH3&& lambda);
 
   UiWaterLayerConfig(UiWaterLayerConfig&& other) noexcept;
   UiWaterLayerConfig(const UiWaterLayerConfig& other) = delete;
@@ -652,20 +756,20 @@ class UiWaterLayerConfig final : public UiWindowPopUp {
  private:
   UiDynamicSprite sprite_layer_;
   UiDynamicSprite text_layer_;
-  UiToggle toggle_layer_;
-  UiSliderH scale_;
+  UiToggle4 toggle_layer_;
+  UiSliderH3 scale_;
   UiDynamicSprite scale_text_;
-  UiSliderH fetch_;
+  UiSliderH3 fetch_;
   UiDynamicSprite fetch_text_;
-  UiSliderH spread_blend_;
+  UiSliderH3 spread_blend_;
   UiDynamicSprite spread_blend_text_;
-  UiSliderH swell_;
+  UiSliderH3 swell_;
   UiDynamicSprite swell_text_;
-  UiSliderH peak_enhancement_;
+  UiSliderH3 peak_enhancement_;
   UiDynamicSprite peak_enhancement_text_;
-  UiSliderH short_waves_fade_;
+  UiSliderH3 short_waves_fade_;
   UiDynamicSprite short_waves_fade_text_;
-  UiSliderH lambda_;
+  UiSliderH3 lambda_;
   UiDynamicSprite lambda_text_;
 
   bool modified_{false};

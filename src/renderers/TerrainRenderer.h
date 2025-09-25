@@ -7,7 +7,7 @@
 #include "../common/Paths.h"
 #include "../common/Shader.h"
 
-class TerrainInstanceData;
+struct TerrainInstanceData;
 
 class TerrainRenderer {
  public:
@@ -55,7 +55,9 @@ class TerrainRenderer {
 
   GLuint border_vao_ = 0;
   GLuint border_vbo_ = 0;
+  GLuint border_ebo_ = 0;
   Shader border_shader_;
+  Texture border_tex_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_TERRAINRENDERER_H_

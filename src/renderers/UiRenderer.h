@@ -15,15 +15,26 @@
 
 #include "../core/WindowQueue.h"
 
+#include "../core/UiLayerWireframe.h"
+
 #ifndef NDEBUG
 #include "../common/UiDebugger.h"
 #endif // NDEBUG
+
+class CameraHandler;
 
 class UiRenderer {
  public:
   UiRenderer(const Paths& paths,
              GlobalGlfwCallbackData& global_glfw_data_,
-             TileRenderer& tile_renderer);
+             TileRenderer& tile_renderer,
+             const CameraHandler* camera);
+
+  /// delete everything, just in case we missed something
+  UiRenderer(UiRenderer&& other) = delete;
+  UiRenderer(const UiRenderer& other) = delete;
+  UiRenderer& operator=(UiRenderer&& other) = delete;
+  UiRenderer& operator=(const UiRenderer& other) = delete;
 
   void Render();
 
@@ -38,6 +49,10 @@ class UiRenderer {
   //TODO: text should be prerendered in menu_prerender_texture by now
   void AskForConfirmation(
       data::TextId text, std::function<void()>&& callable);
+
+ UiLayerWireframe& GetUiLayerWireframe() {
+   return ui_layer_wireframe_;
+ }
 
  private:
   void Init();
@@ -63,15 +78,17 @@ class UiRenderer {
   Menu menu_;
   UiSettings ui_settings_;
   UiConfirmation ui_confirmation_;
-//  UiCaution ui_caution_;
+  UiCaution ui_caution_;
   UiFile ui_file_;
   UiTipWindow ui_tip_;
 
   UiLoading ui_loading_;
-  UiDynamicSprite compass_;
+  UiCompass ui_compass_;
 
   bool debug_ui_prev_{false};
   bool render_menu_{false};
+
+  UiLayerWireframe ui_layer_wireframe_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_UIRENDERER_H_

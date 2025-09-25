@@ -27,13 +27,14 @@ TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
           paths.shader_terrain_vert, "../shaders/TerrainWireframe.tesc",
           paths.shader_terrain_tese, "../shaders/TerrainWireframe.frag"),
       border_shader_(
-          "../shaders/TerrainBorder.vert", "../shaders/TerrainBorder.frag") {
+          "../shaders/TerrainBorder.vert", "../shaders/TerrainBorder.frag"),
+      border_tex_("../assets/border_tex1.png", GL_RGBA) {
   Init();
 }
 
 void TerrainRenderer::DeInit() {
-  GLuint vbos[] = {vbo_quad_, vbo_ids_, border_vbo_};
-  glDeleteBuffers(3, vbos);
+  GLuint vbos[] = {vbo_quad_, vbo_ids_, border_vbo_, border_ebo_};
+  glDeleteBuffers(4, vbos);
   GLuint vaos[] = {vao_, border_vao_};
   glDeleteVertexArrays(1, vaos);
 }
@@ -79,10 +80,16 @@ void TerrainRenderer::Render() {
   /// render SUM-layer borders
   border_shader_.Bind();
   glBindVertexArray(border_vao_);
+  glActiveTexture(GL_TEXTURE0);
+  glUniform1i(1, 0);
+  border_tex_.Bind();
+
   glm::mat4 model_mat = glm::scale(glm::mat4(1.0f), glm::vec3(tile_.map_scale * 64.0f));
   glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(model_mat));
+  glUniform1f(2, glfwGetTime());
   glEnable(GL_CULL_FACE);
-  glDrawArrays(GL_TRIANGLES, 0, 36);
+  glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+//  glDrawArrays(GL_TRIANGLES, 0, 36);
   glDisable(GL_CULL_FACE);
 }
 
@@ -200,11 +207,12 @@ void TerrainRenderer::Init() {
   border_vao_ = vaos[1];
   glBindVertexArray(vao_);
 
-  GLuint vbos[3];
-  glGenBuffers(3, vbos);
+  GLuint vbos[4];
+  glGenBuffers(4, vbos);
   vbo_quad_ = vbos[0];
   vbo_ids_ = vbos[1];
   border_vbo_ = vbos[2];
+  border_ebo_ = vbos[3];
   glBindBuffer(GL_ARRAY_BUFFER, vbo_quad_);
 
   const float quad[] = {
@@ -231,62 +239,65 @@ void TerrainRenderer::Init() {
 
   glBindVertexArray(0);
 
-  const float cube[] = {
-      // back
-      -0.5f, -0.5f, -0.5f,
-      0.5f, -0.5f, -0.5f,
-      0.5f,  0.5f, -0.5f,
-      0.5f,  0.5f, -0.5f,
-      -0.5f,  0.5f, -0.5f,
-      -0.5f, -0.5f, -0.5f,
+  float cubeVertices[] = {
+      // --- front face (z = +0.5)
+      -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+      0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+      0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+      -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
 
-      // front
-      -0.5f, -0.5f,  0.5f,
-      0.5f,  0.5f,  0.5f,
-      0.5f, -0.5f,  0.5f,
-      0.5f,  0.5f,  0.5f,
-      -0.5f, -0.5f,  0.5f,
-      -0.5f,  0.5f,  0.5f,
+      // --- back face (z = -0.5)
+      -0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+      -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+      0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+      0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 
-      // left
-      -0.5f,  0.5f,  0.5f,
-      -0.5f, -0.5f, -0.5f,
-      -0.5f,  0.5f, -0.5f,
-      -0.5f, -0.5f, -0.5f,
-      -0.5f,  0.5f,  0.5f,
-      -0.5f, -0.5f,  0.5f,
+      // --- left face (x = -0.5)
+      -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+      -0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+      -0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+      -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
 
-      // right
-      0.5f,  0.5f,  0.5f,
-      0.5f,  0.5f, -0.5f,
-      0.5f, -0.5f, -0.5f,
-      0.5f, -0.5f, -0.5f,
-      0.5f, -0.5f,  0.5f,
-      0.5f,  0.5f,  0.5f,
+      // --- right face (x = +0.5)
+      0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+      0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+      0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+      0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
 
-      // bottom
-      -0.5f, -0.5f, -0.5f,
-      0.5f, -0.5f,  0.5f,
-      0.5f, -0.5f, -0.5f,
-      0.5f, -0.5f,  0.5f,
-      -0.5f, -0.5f, -0.5f,
-      -0.5f, -0.5f,  0.5f,
+      // --- bottom face (y = -0.5)
+      -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+      0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+      0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+      -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
 
-      // top
-      -0.5f,  0.5f, -0.5f,
-      0.5f,  0.5f, -0.5f,
-      0.5f,  0.5f,  0.5f,
-      0.5f,  0.5f,  0.5f,
-      -0.5f,  0.5f,  0.5f,
-      -0.5f,  0.5f, -0.5f,
+      // --- top face (y = +0.5)
+      -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+      -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+      0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+      0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
+  };
+
+  unsigned int cubeIndices[] = {
+      0, 2, 1,   2, 0, 3,       // front
+      4, 6, 5,   6, 4, 7,       // back
+      8, 10, 9,  10,8, 11,       // left
+      12,14,13,  14,12,15,       // right
+      16,18,17,  18,16,19,       // bottom
+      20,22,21,  22,20,23        // top
   };
 
   glBindVertexArray(border_vao_);
 
   glBindBuffer(GL_ARRAY_BUFFER, border_vbo_);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(cube), cube, GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, border_ebo_);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
   glBindVertexArray(0);
 

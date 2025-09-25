@@ -3,12 +3,12 @@
 #include "../core/TileRenderer.h"
 #include "../common/OpenGlUtility.h"
 
-UiEditTerrainNoise::UiEditTerrainNoise(
+UiNoiseLayerConfig::UiNoiseLayerConfig(
     UiSharedResources& ui_shared_resources,
     UiDynamicSprite&& config,
     UiTextModeId&& text_name,
-    UiToggle&& toggle_invert,
-    UiToggle&& toggle_tiling,
+    UiToggle4&& toggle_invert,
+    UiToggle4&& toggle_tiling,
     UiSliderH2&& slider_strength,
     UiDynamicSprite&& hmap)
     : config_(std::move(config)),
@@ -19,23 +19,60 @@ UiEditTerrainNoise::UiEditTerrainNoise(
       ui_shared_resources_(ui_shared_resources),
       hmap_(std::move(hmap)) {}
 
-void UiEditTerrainNoise::Render(const Texture32F& hmap_ref) {
+void UiNoiseLayerConfig::ResetTransform() {
+  LocalTransform transform;
+  hmap_.SetParentTransform(transform);
+  config_.SetParentTransform(transform);
+  toggle_invert_.SetParentTransform(transform);
+  toggle_tiling_.SetParentTransform(transform);
+  slider_strength_.SetParentTransform(transform);
+  text_name_.SetParentTransform(transform);
+}
+void UiNoiseLayerConfig::Render(
+    NoiseDataBase* terrain_data, glm::vec2 translate,
+    bool update_strength, data::TextId text_id) {
+  LocalTransform transform;
+  transform.translate = translate;
+  hmap_.SetParentTransform(transform);
+  config_.SetParentTransform(transform);
+  toggle_invert_.SetParentTransform(transform);
+  toggle_tiling_.SetParentTransform(transform);
+  slider_strength_.SetParentTransform(transform);
+  text_name_.SetParentTransform(transform);
+
   ui_shared_resources_.hmap_shader_.Bind();
-  hmap_ref.Bind();
+  glBindTexture(GL_TEXTURE_2D, terrain_data->hmap_id);
   hmap_.Render();
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   config_.Render();
+  toggle_invert_.Set(terrain_data->do_invert);
+  toggle_tiling_.Set(terrain_data->do_tiling);
   toggle_invert_.Render();
   toggle_tiling_.Render();
-  auto mouse_pos =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
-  slider_strength_.Render(mouse_pos);
+  if (update_strength) {
+    auto mouse_pos =
+        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+    slider_strength_.Render(mouse_pos);
+    terrain_data->strength = slider_strength_.GetProgress();
+  } else {
+    slider_strength_.SetValue(terrain_data->strength);
+    slider_strength_.Render();
+  }
   // only after (due to internal shader & texture modification)
+  text_name_.SetText(text_id);
   text_name_.Render();
 }
 
-void UiEditTerrainNoise::RenderPicking() {
+void UiNoiseLayerConfig::RenderPicking(glm::vec2 translate) {
+  LocalTransform transform;
+  transform.translate = translate;
+  hmap_.SetParentTransform(transform);
+  config_.SetParentTransform(transform);
+  toggle_invert_.SetParentTransform(transform);
+  toggle_tiling_.SetParentTransform(transform);
+  slider_strength_.SetParentTransform(transform);
+  text_name_.SetParentTransform(transform);
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   config_.RenderPicking();
   toggle_invert_.RenderPicking();
@@ -48,13 +85,7 @@ void UiEditTerrainNoise::RenderPicking() {
   }
 }
 
-void UiEditTerrainNoise::SetConfig(NoiseDataBase* terrain_data) {
-  toggle_invert_.Set(terrain_data->do_invert);
-  toggle_tiling_.Set(terrain_data->do_tiling);
-  slider_strength_.SetValue(terrain_data->strength);
-}
-
-void UiEditTerrainNoise::AttachToHierarchy(UiHierarchy& hierarchy) {
+void UiNoiseLayerConfig::AttachToHierarchy(UiHierarchy& hierarchy) {
   hierarchy.AddNested(
       &config_, &toggle_invert_, &text_name_,
       &toggle_tiling_, &slider_strength_, &hmap_);
@@ -75,8 +106,7 @@ UiEditTerrain::UiEditTerrain(
     UiSliderH2&& color_brightness,
     UiDynamicSprite&& color_indicator,
     UiDynamicSprite&& random_generate,
-    const std::vector<TerrainInstanceData>& instances,
-    const int& instances_size)
+    const std::vector<TerrainInstanceData>& instances)
     : Base(std::move(sprite), size_scale, std::move(pin),
            ui_shared_resources, window_queue),
       accept_(std::move(accept)),
@@ -108,174 +138,53 @@ UiEditTerrain::UiEditTerrain(
 
       tex_mesh_(details::gTerrainSize, GL_RGBA32F),
 
-      noise1_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise1Config},
-              {text_renderer,
-               {data::VboIdMain::kTerrainEditNoise1Name},
-               data::TextId::kPerlin},
-              {{data::VboIdMain::kTerrainEditNoise1InvertOff},
-               {data::VboIdMain::kTerrainEditNoise1InvertOn1},
-               {data::VboIdMain::kTerrainEditNoise1InvertOn2},
-               {data::VboIdMain::kTerrainEditNoise1InvertOn3}},
-              {{data::VboIdMain::kTerrainEditNoise1TilingOff},
-               {data::VboIdMain::kTerrainEditNoise1TilingOn1},
-               {data::VboIdMain::kTerrainEditNoise1TilingOn2},
-               {data::VboIdMain::kTerrainEditNoise1TilingOn3}},
-              {{data::VboIdMain::kTerrainEditNoise1StrengthArea},
-               {data::VboIdMain::kTerrainEditNoise1StrengthIcon}},
-              {data::VboIdMain::kTerrainEditNoise1Hmap}),
-      noise2_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise2Config},
-              {text_renderer,
-               {data::VboIdMain::kTerrainEditNoise2Name},
-               data::TextId::kCellular},
-              {{data::VboIdMain::kTerrainEditNoise2InvertOff},
-               {data::VboIdMain::kTerrainEditNoise2InvertOn1},
-               {data::VboIdMain::kTerrainEditNoise2InvertOn2},
-               {data::VboIdMain::kTerrainEditNoise2InvertOn3}},
-              {{data::VboIdMain::kTerrainEditNoise2TilingOff},
-               {data::VboIdMain::kTerrainEditNoise2TilingOn1},
-               {data::VboIdMain::kTerrainEditNoise2TilingOn2},
-               {data::VboIdMain::kTerrainEditNoise2TilingOn3}},
-              {{data::VboIdMain::kTerrainEditNoise2StrengthArea},
-               {data::VboIdMain::kTerrainEditNoise2StrengthIcon}},
-              {data::VboIdMain::kTerrainEditNoise2Hmap}),
-      noise3_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise3Config},
-              {text_renderer,
-               {data::VboIdMain::kTerrainEditNoise3Name},
-               data::TextId::kMetaballs},
-              {{data::VboIdMain::kTerrainEditNoise3InvertOff},
-               {data::VboIdMain::kTerrainEditNoise3InvertOn1},
-               {data::VboIdMain::kTerrainEditNoise3InvertOn2},
-               {data::VboIdMain::kTerrainEditNoise3InvertOn3}},
-              {{data::VboIdMain::kTerrainEditNoise3TilingOff},
-               {data::VboIdMain::kTerrainEditNoise3TilingOn1},
-               {data::VboIdMain::kTerrainEditNoise3TilingOn2},
-               {data::VboIdMain::kTerrainEditNoise3TilingOn3}},
-              {{data::VboIdMain::kTerrainEditNoise3StrengthArea},
-               {data::VboIdMain::kTerrainEditNoise3StrengthIcon}},
-              {data::VboIdMain::kTerrainEditNoise3Hmap}),
-      noise4_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise4Config},
-              {text_renderer,
-               {data::VboIdMain::kTerrainEditNoise4Name},
-               data::TextId::kFbmGrid},
-              {{data::VboIdMain::kTerrainEditNoise4InvertOff},
-               {data::VboIdMain::kTerrainEditNoise4InvertOn1},
-               {data::VboIdMain::kTerrainEditNoise4InvertOn2},
-               {data::VboIdMain::kTerrainEditNoise4InvertOn3}},
-              {{data::VboIdMain::kTerrainEditNoise4TilingOff},
-               {data::VboIdMain::kTerrainEditNoise4TilingOn1},
-               {data::VboIdMain::kTerrainEditNoise4TilingOn2},
-               {data::VboIdMain::kTerrainEditNoise4TilingOn3}},
-              {{data::VboIdMain::kTerrainEditNoise4StrengthArea},
-               {data::VboIdMain::kTerrainEditNoise4StrengthIcon}},
-              {data::VboIdMain::kTerrainEditNoise4Hmap}),
-      noise5_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise5Config},
-              {text_renderer,
-               {data::VboIdMain::kTerrainEditNoise5Name},
-               data::TextId::kFbmMulti},
-              {{data::VboIdMain::kTerrainEditNoise5InvertOff},
-               {data::VboIdMain::kTerrainEditNoise5InvertOn1},
-               {data::VboIdMain::kTerrainEditNoise5InvertOn2},
-               {data::VboIdMain::kTerrainEditNoise5InvertOn3}},
-              {{data::VboIdMain::kTerrainEditNoise5TilingOff},
-               {data::VboIdMain::kTerrainEditNoise5TilingOn1},
-               {data::VboIdMain::kTerrainEditNoise5TilingOn2},
-               {data::VboIdMain::kTerrainEditNoise5TilingOn3}},
-              {{data::VboIdMain::kTerrainEditNoise5StrengthArea},
-               {data::VboIdMain::kTerrainEditNoise5StrengthIcon}},
-              {data::VboIdMain::kTerrainEditNoise5Hmap}),
-      noise6_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise6Config},
-              {text_renderer,
-               {data::VboIdMain::kTerrainEditNoise6Name},
-               data::TextId::kFbmdPerlin},
-              {{data::VboIdMain::kTerrainEditNoise6InvertOff},
-               {data::VboIdMain::kTerrainEditNoise6InvertOn1},
-               {data::VboIdMain::kTerrainEditNoise6InvertOn2},
-               {data::VboIdMain::kTerrainEditNoise6InvertOn3}},
-              {{data::VboIdMain::kTerrainEditNoise6TilingOff},
-               {data::VboIdMain::kTerrainEditNoise6TilingOn1},
-               {data::VboIdMain::kTerrainEditNoise6TilingOn2},
-               {data::VboIdMain::kTerrainEditNoise6TilingOn3}},
-              {{data::VboIdMain::kTerrainEditNoise6StrengthArea},
-               {data::VboIdMain::kTerrainEditNoise6StrengthIcon}},
-              {data::VboIdMain::kTerrainEditNoise6Hmap}),
-      noise7_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise7Config},
-              {text_renderer,
-               {data::VboIdMain::kTerrainEditNoise7Name},
-               data::TextId::kFbmWarp},
-              {{data::VboIdMain::kTerrainEditNoise7InvertOff},
-               {data::VboIdMain::kTerrainEditNoise7InvertOn1},
-               {data::VboIdMain::kTerrainEditNoise7InvertOn2},
-               {data::VboIdMain::kTerrainEditNoise7InvertOn3}},
-              {{data::VboIdMain::kTerrainEditNoise7TilingOff},
-               {data::VboIdMain::kTerrainEditNoise7TilingOn1},
-               {data::VboIdMain::kTerrainEditNoise7TilingOn2},
-               {data::VboIdMain::kTerrainEditNoise7TilingOn3}},
-              {{data::VboIdMain::kTerrainEditNoise7StrengthArea},
-               {data::VboIdMain::kTerrainEditNoise7StrengthIcon}},
-              {data::VboIdMain::kTerrainEditNoise7Hmap}),
-      noise8_(ui_shared_resources,
-              {data::VboIdMain::kTerrainEditNoise8Config},
-              {text_renderer,
-               {data::VboIdMain::kTerrainEditNoise8Name},
-               data::TextId::kFbmPerlinWarp},
-              {{data::VboIdMain::kTerrainEditNoise8InvertOff},
-               {data::VboIdMain::kTerrainEditNoise8InvertOn1},
-               {data::VboIdMain::kTerrainEditNoise8InvertOn2},
-               {data::VboIdMain::kTerrainEditNoise8InvertOn3}},
-              {{data::VboIdMain::kTerrainEditNoise8TilingOff},
-               {data::VboIdMain::kTerrainEditNoise8TilingOn1},
-               {data::VboIdMain::kTerrainEditNoise8TilingOn2},
-               {data::VboIdMain::kTerrainEditNoise8TilingOn3}},
-              {{data::VboIdMain::kTerrainEditNoise8StrengthArea},
-               {data::VboIdMain::kTerrainEditNoise8StrengthIcon}},
-              {data::VboIdMain::kTerrainEditNoise8Hmap}),
+      noise_layer_config_(
+          ui_shared_resources,
+          {data::VboIdMain::kTerrainEditNoiseConfig},
+          {text_renderer,
+           {data::VboIdMain::kTerrainEditNoiseName},
+           data::TextId::kPerlin},
+          {{data::VboIdMain::kTerrainEditNoiseInvertOff},
+           {data::VboIdMain::kTerrainEditNoiseInvertOn1},
+           {data::VboIdMain::kTerrainEditNoiseInvertOn2},
+           {data::VboIdMain::kTerrainEditNoiseInvertOn3}},
+          {{data::VboIdMain::kTerrainEditNoiseTilingOff},
+           {data::VboIdMain::kTerrainEditNoiseTilingOn1},
+           {data::VboIdMain::kTerrainEditNoiseTilingOn2},
+           {data::VboIdMain::kTerrainEditNoiseTilingOn3}},
+          {{data::VboIdMain::kTerrainEditNoiseStrengthArea},
+           {data::VboIdMain::kTerrainEditNoiseStrengthIcon}},
+          {data::VboIdMain::kTerrainEditNoiseHmap}),
 
-      noise_perlin_(ui_shared_resources, window_queue, text_renderer),
-      noise_cellular_(ui_shared_resources, window_queue, text_renderer),
-      noise_metaballs_(ui_shared_resources, window_queue, text_renderer),
-      noise_fbm_grid_(ui_shared_resources, window_queue, text_renderer),
-      noise_fbm_multi_(ui_shared_resources, window_queue, text_renderer),
-      noise_fbmd_perlin_(ui_shared_resources, window_queue, text_renderer),
-      noise_fbm_warp_(ui_shared_resources, window_queue, text_renderer),
-      noise_fmb_perlin_warp_(ui_shared_resources, window_queue, text_renderer),
+      noise_perlin_(),
+      noise_cellular_(),
+      noise_metaballs_(),
+      noise_fbm_grid_(),
+      noise_fbm_multi_(),
+      noise_fbmd_perlin_(),
+      noise_fbm_warp_(),
+      noise_fmb_perlin_warp_(),
+      noises_({&noise_perlin_, &noise_cellular_, &noise_metaballs_,
+          &noise_fbm_grid_, &noise_fbm_multi_, &noise_fbmd_perlin_,
+          &noise_fbm_warp_, &noise_fmb_perlin_warp_}),
 
       ui_event_handler_({
           &pin_,
-          &noise1_.config_, &noise1_.toggle_invert_, &noise1_.toggle_tiling_, &noise1_.slider_strength_,
-          &noise2_.config_, &noise2_.toggle_invert_, &noise2_.toggle_tiling_, &noise2_.slider_strength_,
-          &noise3_.config_, &noise3_.toggle_invert_, &noise3_.toggle_tiling_, &noise3_.slider_strength_,
-          &noise4_.config_, &noise4_.toggle_invert_, &noise4_.toggle_tiling_, &noise4_.slider_strength_,
-          &noise5_.config_, &noise5_.toggle_invert_, &noise5_.toggle_tiling_, &noise5_.slider_strength_,
-          &noise6_.config_, &noise6_.toggle_invert_, &noise6_.toggle_tiling_, &noise6_.slider_strength_,
-          &noise7_.config_, &noise7_.toggle_invert_, &noise7_.toggle_tiling_, &noise7_.slider_strength_,
-          &noise8_.config_, &noise8_.toggle_invert_, &noise8_.toggle_tiling_, &noise8_.slider_strength_,
+          &noise_layer_config_.config_, &noise_layer_config_.toggle_invert_,
+          &noise_layer_config_.toggle_tiling_, &noise_layer_config_.slider_strength_,
           &accept_, &name_, &color_palette_,
           &color_brightness_, &random_generate_
       }),
       ui_shared_resources_(ui_shared_resources),
       instances_(instances),
-      instances_size_(instances_size) {
+      ui_terrain_noise_(ui_shared_resources, window_queue, text_renderer) {
   Init();
   hierarchy_ = UiHierarchy(
       &sprite_, &pin_, &accept_, &name_,
       &color_palette_, &color_brightness_,
       &color_indicator_, &random_generate_, &text_noise_invert_,
       &text_noise_tiling_, &text_noise_strength_);
-  noise1_.AttachToHierarchy(hierarchy_);
-  noise2_.AttachToHierarchy(hierarchy_);
-  noise3_.AttachToHierarchy(hierarchy_);
-  noise4_.AttachToHierarchy(hierarchy_);
-  noise5_.AttachToHierarchy(hierarchy_);
-  noise6_.AttachToHierarchy(hierarchy_);
-  noise7_.AttachToHierarchy(hierarchy_);
-  noise8_.AttachToHierarchy(hierarchy_);
+  noise_layer_config_.AttachToHierarchy(hierarchy_);
   speed_ = 2.0f;
 }
 
@@ -301,14 +210,7 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
 
       tex_mesh_(std::move(other.tex_mesh_)),
 
-      noise1_(std::move(other.noise1_)),
-      noise2_(std::move(other.noise2_)),
-      noise3_(std::move(other.noise3_)),
-      noise4_(std::move(other.noise4_)),
-      noise5_(std::move(other.noise5_)),
-      noise6_(std::move(other.noise6_)),
-      noise7_(std::move(other.noise7_)),
-      noise8_(std::move(other.noise8_)),
+      noise_layer_config_(std::move(other.noise_layer_config_)),
 
       noise_perlin_(std::move(other.noise_perlin_)),
       noise_cellular_(std::move(other.noise_cellular_)),
@@ -320,33 +222,20 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
       noise_fmb_perlin_warp_(std::move(other.noise_fmb_perlin_warp_)),
       ui_event_handler_({
           &pin_,
-          &noise1_.config_, &noise1_.toggle_invert_, &noise1_.toggle_tiling_, &noise1_.slider_strength_,
-          &noise2_.config_, &noise2_.toggle_invert_, &noise2_.toggle_tiling_, &noise2_.slider_strength_,
-          &noise3_.config_, &noise3_.toggle_invert_, &noise3_.toggle_tiling_, &noise3_.slider_strength_,
-          &noise4_.config_, &noise4_.toggle_invert_, &noise4_.toggle_tiling_, &noise4_.slider_strength_,
-          &noise5_.config_, &noise5_.toggle_invert_, &noise5_.toggle_tiling_, &noise5_.slider_strength_,
-          &noise6_.config_, &noise6_.toggle_invert_, &noise6_.toggle_tiling_, &noise6_.slider_strength_,
-          &noise7_.config_, &noise7_.toggle_invert_, &noise7_.toggle_tiling_, &noise7_.slider_strength_,
-          &noise8_.config_, &noise8_.toggle_invert_, &noise8_.toggle_tiling_, &noise8_.slider_strength_,
+          &noise_layer_config_.config_, &noise_layer_config_.toggle_invert_,
+          &noise_layer_config_.toggle_tiling_, &noise_layer_config_.slider_strength_,
           &accept_, &name_, &color_palette_,
           &color_brightness_, &random_generate_
       }),
       ui_shared_resources_(other.ui_shared_resources_),
       instances_(other.instances_),
-      instances_size_(other.instances_size_) {
+      ui_terrain_noise_(std::move(other.ui_terrain_noise_)) {
   hierarchy_ = UiHierarchy(
       &sprite_, &pin_, &accept_, &name_,
       &color_palette_, &color_brightness_,
       &color_indicator_, &random_generate_, &text_noise_invert_,
       &text_noise_tiling_, &text_noise_strength_);
-  noise1_.AttachToHierarchy(hierarchy_);
-  noise2_.AttachToHierarchy(hierarchy_);
-  noise3_.AttachToHierarchy(hierarchy_);
-  noise4_.AttachToHierarchy(hierarchy_);
-  noise5_.AttachToHierarchy(hierarchy_);
-  noise6_.AttachToHierarchy(hierarchy_);
-  noise7_.AttachToHierarchy(hierarchy_);
-  noise8_.AttachToHierarchy(hierarchy_);
+  noise_layer_config_.AttachToHierarchy(hierarchy_);
 }
 
 int UiEditTerrain::CalculateGradientId(const glm::vec3& rotation) {
@@ -389,7 +278,7 @@ void UiEditTerrain::UpdateHmap() {
 
   //TODO: skip selected layer, then show as a wireframe on top
 
-  for (int i = 0; i < instances_size_; ++i) {
+  for (int i = 0; i < instances_.size(); ++i) {
     if (!instances_[i].do_show) {
       continue;
     }
@@ -477,36 +366,53 @@ bool UiEditTerrain::Press(int id) {
     terrain_data_->data = Generate();
     UpdateHmap();
     return true;
-  } else if (id == noise1_.config_.GetId()) {
-    noise_perlin_.Show();
-    return true;
-  } else if (id == noise2_.config_.GetId()) {
-    noise_cellular_.Show();
-    return true;
-  } else if (id == noise3_.config_.GetId()) {
-    noise_metaballs_.Show();
-    return true;
-  } else if (id == noise4_.config_.GetId()) {
-    noise_fbm_grid_.Show();
-    return true;
-  } else if (id == noise5_.config_.GetId()) {
-    noise_fbm_multi_.Show();
-    return true;
-  } else if (id == noise6_.config_.GetId()) {
-    noise_fbmd_perlin_.Show();
-    return true;
-  } else if (id == noise7_.config_.GetId()) {
-    noise_fbm_warp_.Show();
-    return true;
-  } else if (id == noise8_.config_.GetId()) {
-    noise_fmb_perlin_warp_.Show();
-    return true;
   }
-  return ui_event_handler_.Press(id);
+  pressed_strength_id_ = GetSliderNoiseId(
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
+  if (id == noise_layer_config_.config_.GetId()) {
+    ui_terrain_noise_.SetNoise(noises_[pressed_strength_id_]);
+    ui_terrain_noise_.Show();
+    return true;
+  } else if (id == noise_layer_config_.slider_strength_.GetId()) {
+    noise_layer_config_.slider_strength_.Press();
+  } else if (id == noise_layer_config_.toggle_invert_.GetId()) {
+    noises_[pressed_strength_id_]->ToggleDoInvert();
+  } else if (id == noise_layer_config_.toggle_tiling_.GetId()) {
+    noises_[pressed_strength_id_]->ToggleDoTiling();
+  }
+  return false;//ui_event_handler_.Press(id);
 }
 
 void UiEditTerrain::Release() {
+  pressed_strength_id_ = -1;
+  noise_layer_config_.slider_strength_.Release();
   ui_event_handler_.Release();
+}
+
+float UiEditTerrain::GetEntryHeight() {
+  float top = sprite_.GetTopBorder();
+  float bottom = sprite_.GetBottomBorder();
+  return (top - bottom) / static_cast<float>(noises_.size() + 5);
+}
+
+int UiEditTerrain::GetSliderNoiseId(glm::vec2 mouse_pos) {
+  noise_layer_config_.ResetTransform();
+  float entry_height = GetEntryHeight();
+  float cursor = noise_layer_config_.slider_strength_.GetTrackPtr()
+                     ->GetTopBorder();
+  // pretty heavy check on DBG, skip
+//  float top = sprite_.GetTopBorder();
+//  float bottom = sprite_.GetBottomBorder();
+//  if (mouse_pos.y > top || mouse_pos.y < bottom) {
+//    return -1;
+//  }
+  for (int i = 0; i < noises_.size(); ++i) {
+    cursor -= entry_height;
+    if (cursor < mouse_pos.y) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 bool UiEditTerrain::Scroll(GLuint id, float yoffset) {
@@ -516,7 +422,6 @@ bool UiEditTerrain::Scroll(GLuint id, float yoffset) {
 
 glm::vec4 HSBtoRGB(float h, float s, float b) {
   float r = 0, g = 0, bl = 0;
-
   if (s == 0.0f) {
     // Achromatic (gray)
     r = g = bl = b;
@@ -539,6 +444,38 @@ glm::vec4 HSBtoRGB(float h, float s, float b) {
   }
 
   return {r, g, bl, 1.0f};
+}
+
+void UiEditTerrain::RenderNoiseConfig() {
+  //TODO: need pad (in case we removed the last, while pinned noise_layer_config)
+  // ... or we don't need it... nat bad too
+  if (!terrain_data_) {
+    return; // no necessary, basically we can't be here in such case
+  }
+  glm::vec2 next_offset = glm::vec2{0.0f};
+  // 4 for top+bottom border + top+bottom indent and all * 2 factor (because;)
+  float entry_height = GetEntryHeight();
+  for (int i = 0; i < noises_.size(); ++i) {
+    noise_layer_config_.Render(
+        noises_[i]->GetBaseConfigPtr(),
+        next_offset, pressed_strength_id_ == i, noises_[i]->GetTextId());
+    next_offset.y -= entry_height;
+  }
+}
+
+void UiEditTerrain::RenderPickingNoiseConfig() {
+  //TODO: need pad (in case we removed the last, while pinned noise_layer_config)
+  // ... or we don't need it... nat bad too
+  if (!terrain_data_) {
+    return; // no necessary, basically we can't be here in such case
+  }
+  glm::vec2 next_offset = glm::vec2{0.0f};
+  // 4 for top+bottom border + top+bottom indent
+  float entry_height = GetEntryHeight();
+  for (int i = 0; i < noises_.size(); ++i) {
+    noise_layer_config_.RenderPicking(next_offset);
+    next_offset.y -= entry_height;
+  }
 }
 
 bool UiEditTerrain::Render() {
@@ -566,21 +503,9 @@ bool UiEditTerrain::Render() {
   glUniform4fv(7, 1, glm::value_ptr(color));
 
   random_generate_.Render();
-  color_palette_.RenderIcon();
-  color_brightness_.RenderIcon();
   name_.RenderBack();
 
-  //TODO: need pad
-  if (terrain_data_) {
-    noise1_.Render(terrain_data_->data.perlin.hmap);
-    noise2_.Render(terrain_data_->data.cellular.hmap);
-    noise3_.Render(terrain_data_->data.metaballs.hmap);
-    noise4_.Render(terrain_data_->data.fbm_grid.hmap);
-    noise5_.Render(terrain_data_->data.fbm_multi.hmap);
-    noise6_.Render(terrain_data_->data.fbmd_perlin.hmap);
-    noise7_.Render(terrain_data_->data.fbm_warp.hmap);
-    noise8_.Render(terrain_data_->data.fbm_perlin_warp.hmap);
-  }
+  RenderNoiseConfig();
 
   // text section
 
@@ -597,21 +522,13 @@ void UiEditTerrain::SetTerrainData(TerrainInstanceData* terrain_data) {
   terrain_data_ = terrain_data;
   NoiseTerrainData* noise_data = &(terrain_data_->data);
   noise_perlin_.SetConfig(noise_data->perlin);
-  noise1_.SetConfig(static_cast<NoiseDataBase*>(&noise_data->perlin));
   noise_cellular_.SetConfig(noise_data->cellular);
-  noise2_.SetConfig(static_cast<NoiseDataBase*>(&noise_data->cellular));
   noise_metaballs_.SetConfig(noise_data->metaballs);
-  noise3_.SetConfig(static_cast<NoiseDataBase*>(&noise_data->metaballs));
   noise_fbm_grid_.SetConfig(noise_data->fbm_grid);
-  noise4_.SetConfig(static_cast<NoiseDataBase*>(&noise_data->fbm_grid));
   noise_fbm_multi_.SetConfig(noise_data->fbm_multi);
-  noise5_.SetConfig(static_cast<NoiseDataBase*>(&noise_data->fbm_multi));
   noise_fbmd_perlin_.SetConfig(noise_data->fbmd_perlin);
-  noise6_.SetConfig(static_cast<NoiseDataBase*>(&noise_data->fbmd_perlin));
   noise_fbm_warp_.SetConfig(noise_data->fbm_warp);
-  noise7_.SetConfig(static_cast<NoiseDataBase*>(&noise_data->fbm_warp));
   noise_fmb_perlin_warp_.SetConfig(noise_data->fbm_perlin_warp);
-  noise8_.SetConfig(static_cast<NoiseDataBase*>(&noise_data->fbm_perlin_warp));
 }
 
 void UiEditTerrain::RenderPicking() {
@@ -625,14 +542,7 @@ void UiEditTerrain::RenderPicking() {
   color_indicator_.RenderPicking();
   random_generate_.RenderPicking();
 
-  noise1_.RenderPicking();
-  noise2_.RenderPicking();
-  noise3_.RenderPicking();
-  noise4_.RenderPicking();
-  noise5_.RenderPicking();
-  noise6_.RenderPicking();
-  noise7_.RenderPicking();
-  noise8_.RenderPicking();
+  RenderPickingNoiseConfig();
 
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   name_.RenderPicking();
@@ -649,52 +559,52 @@ NoiseTerrainData UiEditTerrain::Generate() {
   terrain_data.hmap.Store("hmap_start.png", 1, GL_RED);
 
 
-  terrain_data.perlin = noise_perlin_.Generate(
-      resolution, "hmap_perlin.png");
+  terrain_data.perlin = noise_perlin_.Generate();
   MergeLayers(terrain_data.hmap, terrain_data.perlin.hmap,
-              static_cast<NoiseDataBase*>(&terrain_data.perlin), noise1_);
+              static_cast<NoiseDataBase*>(&terrain_data.perlin),
+              &terrain_data.perlin);
   terrain_data.hmap.Store("hmap_end_1.png", 1, GL_RED);
 
-  terrain_data.cellular = noise_cellular_.Generate(
-      resolution, "hmap_cellular.png");
+  terrain_data.cellular = noise_cellular_.Generate();
   MergeLayers(terrain_data.hmap, terrain_data.cellular.hmap,
-              static_cast<NoiseDataBase*>(&terrain_data.cellular), noise2_);
+              static_cast<NoiseDataBase*>(&terrain_data.cellular),
+              &terrain_data.cellular);
   terrain_data.hmap.Store("hmap_end_2.png", 1, GL_RED);
 
-  terrain_data.metaballs = noise_metaballs_.Generate(
-      resolution, "hmap_metaballs.png");
+  terrain_data.metaballs = noise_metaballs_.Generate();
   MergeLayers(terrain_data.hmap, terrain_data.metaballs.hmap,
-              static_cast<NoiseDataBase*>(&terrain_data.metaballs), noise3_);
+              static_cast<NoiseDataBase*>(&terrain_data.metaballs),
+              &terrain_data.metaballs);
   terrain_data.hmap.Store("hmap_end_3.png", 1, GL_RED);
 
-  terrain_data.fbm_grid = noise_fbm_grid_.Generate(
-      resolution, "hmap_fbm_grid.png");
-//  MergeLayers(terrain_data.hmap, terrain_data.fbm_grid.hmap,
-//              static_cast<NoiseDataBase*>(&terrain_data.fbm_grid), noise4_);
+  terrain_data.fbm_grid = noise_fbm_grid_.Generate();
+  MergeLayers(terrain_data.hmap, terrain_data.fbm_grid.hmap,
+              static_cast<NoiseDataBase*>(&terrain_data.fbm_grid),
+              &terrain_data.fbm_grid);
   terrain_data.hmap.Store("hmap_end_4.png", 1, GL_RED);
 
-  terrain_data.fbm_multi = noise_fbm_multi_.Generate(
-      resolution, "hmap_fbm_multi.png");
+  terrain_data.fbm_multi = noise_fbm_multi_.Generate();
 //  MergeLayers(terrain_data.hmap, terrain_data.fbm_multi.hmap,
-//              static_cast<NoiseDataBase*>(&terrain_data.fbm_multi), noise5_);
+//              static_cast<NoiseDataBase*>(&terrain_data.fbm_multi),
+//              &terrain_data.fbm_multi);
   terrain_data.hmap.Store("hmap_end_5.png", 1, GL_RED);
 
-  terrain_data.fbmd_perlin = noise_fbmd_perlin_.Generate(
-      resolution, "hmap_fbm_perlin.png");
-//  MergeLayers(terrain_data.hmap, terrain_data.fbmd_perlin.hmap,
-//              static_cast<NoiseDataBase*>(&terrain_data.fbmd_perlin), noise6_);
+  terrain_data.fbmd_perlin = noise_fbmd_perlin_.Generate();
+  MergeLayers(terrain_data.hmap, terrain_data.fbmd_perlin.hmap,
+              static_cast<NoiseDataBase*>(&terrain_data.fbmd_perlin),
+              &terrain_data.fbmd_perlin);
   terrain_data.hmap.Store("hmap_end_6.png", 1, GL_RED);
 
-  terrain_data.fbm_warp = noise_fbm_warp_.Generate(
-      resolution, "hmap_fbm_warp.png");
+  terrain_data.fbm_warp = noise_fbm_warp_.Generate();
 //  MergeLayers(terrain_data.hmap, terrain_data.fbm_warp.hmap,
-//              static_cast<NoiseDataBase*>(&terrain_data.fbm_warp), noise7_);
+//              static_cast<NoiseDataBase*>(&terrain_data.fbm_warp),
+//              &terrain_data.fbm_warp);
   terrain_data.hmap.Store("hmap_end_7.png", 1, GL_RED);
 
-  terrain_data.fbm_perlin_warp = noise_fmb_perlin_warp_.Generate(
-      resolution, "hmap_fbm_perlin_warp.png");
-//  MergeLayers(terrain_data.hmap, terrain_data.fbm_perlin_warp.hmap,
-//              static_cast<NoiseDataBase*>(&terrain_data.fbm_perlin_warp), noise8_);
+  terrain_data.fbm_perlin_warp = noise_fmb_perlin_warp_.Generate();
+  MergeLayers(terrain_data.hmap, terrain_data.fbm_perlin_warp.hmap,
+              static_cast<NoiseDataBase*>(&terrain_data.fbm_perlin_warp),
+              &terrain_data.fbm_perlin_warp);
   terrain_data.hmap.Store("hmap_end_8.png", 1, GL_RED);
 
   terrain_data.hmap.Store("hmap_generated.png", 1, GL_RED);
@@ -710,11 +620,11 @@ NoiseTerrainData UiEditTerrain::Generate() {
 
 void UiEditTerrain::MergeLayers(
     Texture32F& bottom_layer, Texture32F& top_layer,
-    NoiseDataBase* noise_data, const UiEditTerrainNoise& noise) {
-  noise_data->strength = noise.slider_strength_.GetProgress();
-  noise_data->do_invert = !noise.toggle_invert_.IsOff();
-  noise_data->do_tiling = !noise.toggle_tiling_.IsOff();
-  std::cout << "merged with " << noise.slider_strength_.GetProgress()
+    NoiseDataBase* noise_data, const NoiseDataBase* noise) {
+  noise_data->strength = noise->strength;
+  noise_data->do_invert = noise->do_invert;
+  noise_data->do_tiling = noise->do_tiling;
+  std::cout << "merged with " << noise->strength
             << ' ' << std::boolalpha << noise_data->do_invert
             << ' ' << noise_data->do_tiling << std::endl;
   shader_merge_noises_.Bind();
@@ -737,14 +647,7 @@ void UiEditTerrain::MergeLayers(
 
 void UiEditTerrain::HideAll() {
   ForceHide();
-  noise_perlin_.ForceHide();
-  noise_cellular_.ForceHide();
-  noise_metaballs_.ForceHide();
-  noise_fbm_grid_.ForceHide();
-  noise_fbm_multi_.ForceHide();
-  noise_fbmd_perlin_.ForceHide();
-  noise_fbm_warp_.ForceHide();
-  noise_fmb_perlin_warp_.ForceHide();
+  ui_terrain_noise_.ForceHide();
 }
 
 void UiEditTerrain::Init() {
@@ -825,14 +728,14 @@ UiTerrainBake::UiTerrainBake(
       weathering_label_(std::move(weathering_label)),
       weathering_input_(std::move(weathering_input)),
       sprite_hmap_(data::VboIdMain::kTerrainBakeHmap),
-      sprite_nmap_(data::VboIdMain::kTerrainBakeNmap),
+      /*sprite_nmap_(data::VboIdMain::kTerrainBakeNmap),
       sprite_slopemap_(data::VboIdMain::kTerrainBakeSlopemap),
       sprite_ao_(data::VboIdMain::kTerrainBakeAo),
       sprite_splatmap_(data::VboIdMain::kTerrainBakeSplatmap),
       sprite_erosion_thermal_(data::VboIdMain::kTerrainBakeErosionThermal),
       sprite_erosion_hydraulic_(data::VboIdMain::kTerrainBakeErosionHydraulic),
       sprite_water_accum_(data::VboIdMain::kTerrainBakeWaterAccum),
-      sprite_water_flow_(data::VboIdMain::kTerrainBakeWaterFlow),
+      sprite_water_flow_(data::VboIdMain::kTerrainBakeWaterFlow),*/
       ui_event_handler_({
           &pin_, &accept_, &erosion_input_, &weathering_input_
       }),
@@ -858,9 +761,9 @@ UiTerrainBake::UiTerrainBake(
   hierarchy_ = UiHierarchy(
       &sprite_, &pin_, &accept_, &erosion_label_,
       &erosion_input_, &weathering_label_, &weathering_input_,
-      &sprite_hmap_, &sprite_nmap_, &sprite_slopemap_,
+      &sprite_hmap_/*, &sprite_nmap_, &sprite_slopemap_,
       &sprite_ao_, &sprite_splatmap_, &sprite_erosion_thermal_,
-      &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_);
+      &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_*/);
   speed_ = 2.0f;
 }
 
@@ -872,14 +775,14 @@ UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
       weathering_label_(std::move(other.weathering_label_)),
       weathering_input_(std::move(other.weathering_input_)),
       sprite_hmap_(std::move(other.sprite_hmap_)),
-      sprite_nmap_(std::move(other.sprite_nmap_)),
+      /*sprite_nmap_(std::move(other.sprite_nmap_)),
       sprite_slopemap_(std::move(other.sprite_slopemap_)),
       sprite_ao_(std::move(other.sprite_ao_)),
       sprite_splatmap_(std::move(other.sprite_splatmap_)),
       sprite_erosion_thermal_(std::move(other.sprite_erosion_thermal_)),
       sprite_erosion_hydraulic_(std::move(other.sprite_erosion_hydraulic_)),
       sprite_water_accum_(std::move(other.sprite_water_accum_)),
-      sprite_water_flow_(std::move(other.sprite_water_flow_)),
+      sprite_water_flow_(std::move(other.sprite_water_flow_)),*/
       ui_event_handler_({
           &pin_, &accept_, &erosion_input_, &weathering_input_
       }),
@@ -906,9 +809,9 @@ UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
   hierarchy_ = UiHierarchy(
       &sprite_, &pin_, &accept_, &erosion_label_,
       &erosion_input_, &weathering_label_, &weathering_input_,
-      &sprite_hmap_, &sprite_nmap_, &sprite_slopemap_,
+      &sprite_hmap_/*, &sprite_nmap_, &sprite_slopemap_,
       &sprite_ao_, &sprite_splatmap_, &sprite_erosion_thermal_,
-      &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_);
+      &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_*/);
 }
 
 bool UiTerrainBake::Press(int id) {
@@ -933,7 +836,7 @@ bool UiTerrainBake::Render() {
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_height.Bind();
   sprite_hmap_.Render();
 
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_normal.Bind();
+/*  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_normal.Bind();
   sprite_nmap_.Render();
 
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_slope.Bind();
@@ -955,7 +858,7 @@ bool UiTerrainBake::Render() {
   sprite_water_accum_.Render();
 
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_water_flow.Bind();
-  sprite_water_flow_.Render();
+  sprite_water_flow_.Render();*/
 
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
@@ -981,14 +884,14 @@ void UiTerrainBake::RenderPicking() {
   accept_.RenderPicking();
 
   sprite_hmap_.RenderPicking();
-  sprite_nmap_.RenderPicking();
+  /*sprite_nmap_.RenderPicking();
   sprite_slopemap_.RenderPicking();
   sprite_ao_.RenderPicking();
   sprite_splatmap_.RenderPicking();
   sprite_erosion_thermal_.RenderPicking();
   sprite_erosion_hydraulic_.RenderPicking();
   sprite_water_accum_.RenderPicking();
-  sprite_water_flow_.RenderPicking();
+  sprite_water_flow_.RenderPicking();*/
 
   erosion_input_.RenderPicking();
   weathering_input_.RenderPicking();

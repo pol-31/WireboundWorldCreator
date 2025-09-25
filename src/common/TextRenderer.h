@@ -35,7 +35,6 @@ class TextRenderer {
       UiSharedResources& ui_shared_resources,
       const Paths& paths,
       UiDynamicSprite&& prerender_text_slot,
-      UiDynamicSprite&& sprite_shadow,
       UiDynamicSprite&& sprite_cursor);
 
   ~TextRenderer();
@@ -155,7 +154,6 @@ class TextRenderer {
 
   UiDynamicSprite prerender_text_slot_;
 
-  UiDynamicSprite sprite_shadow_;
   UiDynamicSprite sprite_cursor_;
 
   /// --- INPUT SECTION ---

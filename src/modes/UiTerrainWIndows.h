@@ -8,36 +8,37 @@
 #include "TerrainInstanceData.h"
 
 // no parent-child rel; facade pattern
-class UiEditTerrainNoise {
+class UiNoiseLayerConfig {
  public:
-  UiEditTerrainNoise(
+  UiNoiseLayerConfig(
       UiSharedResources& ui_shared_resources,
       UiDynamicSprite&& config, UiTextModeId&& text_name,
-      UiToggle&& toggle_invert,
-      UiToggle&& toggle_tiling,
+      UiToggle4&& toggle_invert, UiToggle4&& toggle_tiling,
       UiSliderH2&& slider_strength,
       UiDynamicSprite&& hmap);
 
-  UiEditTerrainNoise(UiEditTerrainNoise&& other) noexcept = default;
-  UiEditTerrainNoise(const UiEditTerrainNoise& other) = delete;
+  UiNoiseLayerConfig(UiNoiseLayerConfig&& other) noexcept = default;
+  UiNoiseLayerConfig(const UiNoiseLayerConfig& other) = delete;
 
-  UiEditTerrainNoise& operator=(UiEditTerrainNoise&& other) = delete;
-  UiEditTerrainNoise& operator=(const UiEditTerrainNoise& other) = delete;
+  UiNoiseLayerConfig& operator=(UiNoiseLayerConfig&& other) = delete;
+  UiNoiseLayerConfig& operator=(const UiNoiseLayerConfig& other) = delete;
+
+  /// so we could get GetTopBorder & GetBottomBorder and estimate position
+  void ResetTransform();
 
   /// no Press(), Release() <- done in external ui_event_handler
-  void Render(const Texture32F& hmap_ref);
+  void Render(NoiseDataBase* terrain_data, glm::vec2 translate,
+              bool update_strength, data::TextId text_id);
 
-  void RenderPicking();
-
-  void SetConfig(NoiseDataBase* terrain_data);
+  void RenderPicking(glm::vec2 translate);
 
   void AttachToHierarchy(UiHierarchy& hierarchy);
 
   // public, for simpler external ui_event_handler adding
   UiDynamicSprite config_;
   UiTextModeId text_name_;
-  UiToggle toggle_invert_;
-  UiToggle toggle_tiling_;
+  UiToggle4 toggle_invert_;
+  UiToggle4 toggle_tiling_;
   UiSliderH2 slider_strength_;
   UiDynamicSprite hmap_;
 
@@ -63,8 +64,7 @@ class UiEditTerrain final : public UiWindowAppear {
       UiSliderH2&& color_brightness,
       UiDynamicSprite&& color_indicator,
       UiDynamicSprite&& random_generate,
-      const std::vector<TerrainInstanceData>& instances,
-      const int& instances_size);
+      const std::vector<TerrainInstanceData>& instances);
 
   ~UiEditTerrain() {
     DeInit();
@@ -102,9 +102,17 @@ class UiEditTerrain final : public UiWindowAppear {
   void DeInit();
 
   void MergeLayers(Texture32F& bottom_layer, Texture32F& top_layer,
-                   NoiseDataBase* noise_data, const UiEditTerrainNoise& noise);
+                   NoiseDataBase* noise_data, const NoiseDataBase* noise);
 
   static int CalculateGradientId(const glm::vec3& rotation);
+
+  void RenderNoiseConfig();
+
+  void RenderPickingNoiseConfig();
+
+  int GetSliderNoiseId(glm::vec2 mouse_pos);
+
+  float GetEntryHeight();
 
   Texture32F& tex_hmap_;
   std::vector<GLfloat>& hmap_heights_;
@@ -132,23 +140,8 @@ class UiEditTerrain final : public UiWindowAppear {
   UiTextModeId text_noise_tiling_;
   UiTextModeId text_noise_strength_;
 
-//  Texture32F tex_perlin_;
-//  Texture32F tex_cellular_;
-//  Texture32F tex_metaballs_;
-//  Texture32F tex_fbm_grid;
-//  Texture32F tex_fbm_multi_;
-//  Texture32F tex_fbmd_perlin_;
-//  Texture32F tex_fbm_warp;
-//  Texture32F tex_fbm_perlin_warp_;
-
-  UiEditTerrainNoise noise1_;
-  UiEditTerrainNoise noise2_;
-  UiEditTerrainNoise noise3_;
-  UiEditTerrainNoise noise4_;
-  UiEditTerrainNoise noise5_;
-  UiEditTerrainNoise noise6_;
-  UiEditTerrainNoise noise7_;
-  UiEditTerrainNoise noise8_;
+  UiNoiseLayerConfig noise_layer_config_; // noise1-8
+  // all needed data stored in vector instances_[]
 
   TerrainNoisePerlin noise_perlin_;
   TerrainNoiseCellular noise_cellular_;
@@ -158,6 +151,9 @@ class UiEditTerrain final : public UiWindowAppear {
   TerrainNoiseFbmdPerlin noise_fbmd_perlin_;
   TerrainNoiseFbmWarp noise_fbm_warp_;
   TerrainNoiseFbmPerlinWarp noise_fmb_perlin_warp_;
+  std::array<ITerrainNoise*, 8> noises_;
+
+  UiTerrainNoise ui_terrain_noise_;
 
   // we modify it here, non const
   TerrainInstanceData* terrain_data_ = nullptr;
@@ -172,14 +168,15 @@ class UiEditTerrain final : public UiWindowAppear {
 //  ITerrainNoise* selected_noise_ = nullptr;
 
   UiEventHandler<
-      static_cast<int>(data::VboIdMain::kTerrainEditNoise8StrengthIcon) -
+      static_cast<int>(data::VboIdMain::kTerrainWindowNoiseSliderIcon) -
       static_cast<int>(data::VboIdMain::kTerrainEditDesk) + 1
       > ui_event_handler_;
 
   UiSharedResources& ui_shared_resources_;
 
   const std::vector<TerrainInstanceData>& instances_;
-  const int& instances_size_;
+
+  int pressed_strength_id_ = -1.0f;
 };
 
 class UiTerrainBake final : public UiWindowAppear {
@@ -301,14 +298,14 @@ class UiTerrainBake final : public UiWindowAppear {
 
   //TODO: bind from TileRenderer, same with UiEditTerrain
   UiDynamicSprite sprite_hmap_;
-  UiDynamicSprite sprite_nmap_;
+  /*UiDynamicSprite sprite_nmap_;
   UiDynamicSprite sprite_slopemap_;
   UiDynamicSprite sprite_ao_;
   UiDynamicSprite sprite_splatmap_;
   UiDynamicSprite sprite_erosion_thermal_;
   UiDynamicSprite sprite_erosion_hydraulic_;
   UiDynamicSprite sprite_water_accum_;
-  UiDynamicSprite sprite_water_flow_;
+  UiDynamicSprite sprite_water_flow_;*/
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINWINDOWS_H_

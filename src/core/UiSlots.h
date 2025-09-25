@@ -8,65 +8,25 @@
 #include "../common/ArbitraryGraph.h"
 #include "../common/TerrainGrid.h"
 
-struct UiSlotsSliderData {
-  float progress_{0.0f};
-  bool pressed_{false};
-  float centre_{0.0f};
-  float length_{0.0f};
-  float length_slots_{0.0f};
-  static const float kTrackLengthFactor;
-  static const float kSlotsLengthFactor;
-  static const int kSlotsNum;
-
-  float slot_height_{0.0f};
-  int scissors_start_{0};
-  int scissors_length_{0};
-
-  /// so we could get id related to slots (0-5)
-  int cur_slots_offset_{0};
-  glm::vec2 start_slot_translate_{0.0f};
-
-  void UpdateRenderData(float track_length, int graphs_num);
-
-  int GetSlotId(glm::vec2 mouse_pos);
-
-  void Set(glm::vec2 mouse_pos, UiDynamicSprite& handler_sprite,
-           float track_length, int graphs_num);
-
-  void Set(float progress, UiDynamicSprite& handler_sprite,
-           float track_length, int graphs_num);
-
-  void FocusOnSelected(int slot_id, int graphs_num,
-                       UiDynamicSprite& handler_sprite,
-                       const UiDynamicSprite& back_sprite);
-};
-
 class IUiSlots : public UiBase {
  public:
-  IUiSlots(size_t vbo_texture_id, UiSharedResources& ui_shared_resources);
+  IUiSlots(size_t vbo_texture_id,
+           UiSharedResources& ui_shared_resources,
+           UiWindowSlider&& sl_data);
 
-  /// other ctors default
-
-  /// UiBase methods
   void Press() override;
 
   void Release() override;
 
-  /// interface virtual methods
   virtual void Render(glm::vec2 mouse_pos) = 0;
   virtual void RenderPicking() = 0;
   virtual bool Press(int id) = 0;
   virtual bool Scroll(GLuint id, float yoffset) = 0;
 
-  /// as a decorator for graph_
-  /*bool Press(int id) {
-    if (!InRange()) {
-      return false;
-    }
-
-  }*/
   void CreateGraph();
+
   virtual void SelectGraph(GLuint id);
+
   void RemoveGraph(GLuint id);
 
   void RenderGraph();
@@ -80,19 +40,9 @@ class IUiSlots : public UiBase {
   virtual void PressGraph(GLuint id) = 0;
 
  protected:
-  /// slider
-  UiSlotsSliderData sl_data_;
-
-  /// event handler (press / release)
+  UiWindowSlider sl_data_;
   IUiEventHandler* ui_event_handler_ = nullptr;
-
-  /// Render custom, but states show/hide pop-up edit window related to *this
-  //  IUiEdit* ui_edit_ = nullptr;
-
-  /// graph data + edit window
-  IGraph* graph_ = nullptr;// -- no interface, sry;(
-
-  // for shader bindings & mouse pos
+  IGraph* graph_ = nullptr;
   UiSharedResources& ui_shared_resources_;
 };
 
@@ -114,8 +64,8 @@ class UiSlotsTerrain final : public IUiSlots {
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
       TextRenderer& text_renderer,
-      const UiSliderV& slider_size,
-      const UiSliderV& slider_falloff);
+      const UiSliderV3& slider_size,
+      const UiSliderV3& slider_falloff);
 
   UiSlotsTerrain(UiSlotsTerrain&& other) noexcept;
   UiSlotsTerrain(const UiSlotsTerrain& other) = delete;
@@ -124,6 +74,7 @@ class UiSlotsTerrain final : public IUiSlots {
   UiSlotsTerrain& operator=(const UiSlotsTerrain& other) = delete;
 
   void Render(glm::vec2 mouse_pos) override;
+
   void RenderPicking() override;
 
   bool Scroll(GLuint id, float yoffset) override;
@@ -132,54 +83,48 @@ class UiSlotsTerrain final : public IUiSlots {
 
   void SelectGraph(GLuint id) override;
 
-  void NextClickMode();
-
-  void PressGraph(GLuint id) override;
-
   void TranslateSelected(glm::vec3 value);
 
   void RotateSelected(glm::vec3 value);
 
   void ScaleSelected(glm::vec3 value);
 
-  void UpdateTransformUniform();
-
   int GetSlotId();
 
   void UpdateTransform() override;
 
- private:
-  std::vector<TerrainInstanceData> instances_;
-  int instances_size_;
+  void PressGraph(GLuint id) override {};
 
-  UiDynamicSprite handler_;
-  UiDynamicSprite slider_;
+ private:
+  void RenderSlotsSprites();
+
+  void RenderSlotsText();
+
+  void RenderPickingSlotsSprites();
+
+  void RenderPickingSlotsText();
+
+  std::vector<TerrainInstanceData> instances_;
+
+//  UiDynamicSprite handler_;
+//  UiDynamicSprite slider_;
   UiDynamicSprite back_;
   UiDynamicSprite create_;
-  UiDynamicSprite flip_point_edge_back_;
-
-  UiDynamicSprite flip_point_edge_sprite_;
-  UiSpriteTransformation flip_point_edge_;
 
   UiText slot_name_;
   UiDynamicSprite slot_config_;
-  UiToggle toggle_slot_visible_;
+  UiToggle4 toggle_slot_visible_;
 
   UiDynamicSprite slot_back_;
-  UiDynamicSprite slot_color_; //todo; *color in shader
+  UiDynamicSprite slot_color_;
   UiDynamicSprite slot_remove_;
   UiDynamicSprite slot_selected_;
 
-  /// store here, pointers to base class, see explanation at base class
-
-  UiEditTerrain ui_edit_; // IUiEdit* for base
-
-  TerrainGrid graph_; // IGraph* for base
-
-  EditState edit_state_;
+  UiEditTerrain ui_edit_;
+  TerrainGrid graph_;
 
   UiEventHandler<
-      static_cast<int>(data::VboIdMain::kTerrainSlotsFlipPointEdgeFace) -
+      static_cast<int>(data::VboIdMain::kTerrainSlotsCreate) -
       static_cast<int>(data::VboIdMain::kTerrainSlotsName) + 1
       > ui_event_handler_; // IUiEventHandler for base
 
@@ -208,7 +153,7 @@ class UiSlotsModels final : public IUiSlots {
       UiDynamicSprite&& flip_point_edge_sprite,
       UiDynamicSprite&& slot_name,
       UiDynamicSprite&& slot_config,
-      UiToggle&& toggle_slot_visible,
+                UiToggle4&& toggle_slot_visible,
       UiDynamicSprite&& slot_back,
       UiDynamicSprite&& slot_color,
       UiDynamicSprite&& slot_remove,
@@ -250,7 +195,7 @@ class UiSlotsModels final : public IUiSlots {
 
   UiDynamicSprite slot_name_;
   UiDynamicSprite slot_config_;
-  UiToggle toggle_slot_visible_;
+  UiToggle4 toggle_slot_visible_;
 
   UiDynamicSprite slot_back_;
   UiDynamicSprite slot_color_; //todo; *color in shader

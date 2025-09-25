@@ -15,11 +15,9 @@ TextRenderer::TextRenderer(
     UiSharedResources& ui_shared_resources,
     const Paths& paths,
     UiDynamicSprite&& prerender_text_slot,
-    UiDynamicSprite&& sprite_shadow,
     UiDynamicSprite&& sprite_cursor)
     : tex_bitmap_("../assets/bmp_ascii_header.png", GL_RED),
       prerender_text_slot_(std::move(prerender_text_slot)),
-      sprite_shadow_(std::move(sprite_shadow)),
       sprite_cursor_(std::move(sprite_cursor)),
       tex_menu_(1024, 1024, GL_RED),
       tex_mode_(1024, 1024, GL_RED),
@@ -456,8 +454,6 @@ void TextRenderer::RenderInput() {
   /// blur background, render back
   ui_shared_resources_.tex_ui_.Bind();
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  glUniform1f(1, 0.3f); // transparency
-  sprite_shadow_.Render();
   glUniform1f(1, 1.0f);
   input_data_->sp_back_.Render();
 

@@ -1,6 +1,7 @@
 #include "UiTerrainConfig.h"
 
-//TODO: UBOs?
+/// UBOs? don't think so - we'd need extra 8 ubo ids;
+/// not much overhead, but a little much for code & logic
 
 Texture32F GenAndSave(std::string_view tex_name) {
   int size = details::gTerrainSize;
@@ -13,465 +14,164 @@ Texture32F GenAndSave(std::string_view tex_name) {
   return std::move(height_map);
 }
 
-TerrainNoisePerlin::TerrainNoisePerlin(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoisePerlinDesk},
-           1.0f,
-           {{data::VboIdMain::kTerrainNoisePerlinPinBack, []() {}},
-            {data::VboIdMain::kTerrainNoisePerlinPinPoint}},
-           ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoisePerlinSave},
-           {text_renderer,
-            {data::VboIdMain::kTerrainNoisePerlinName},
-            data::TextId::kScaleTerrain}),
-      slider_scale_x_(
-          {data::VboIdMain::kTerrainNoisePerlinScaleXArea},
-          {data::VboIdMain::kTerrainNoisePerlinScaleXIcon},
-          20.0f
-          ),
-      slider_scale_y_(
-          {data::VboIdMain::kTerrainNoisePerlinScaleYArea},
-          {data::VboIdMain::kTerrainNoisePerlinScaleYIcon},
-          20.0f
-          ),
-      text_scale_x_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoisePerlinScaleXText},
-          data::TextId::kScaleX),
-      text_scale_y_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoisePerlinScaleYText},
-          data::TextId::kScaleY),
-      slider_seed_(
-          {data::VboIdMain::kTerrainNoisePerlinSeedArea},
-          {data::VboIdMain::kTerrainNoisePerlinSeedIcon},
-          20.0f
-          ),
-      text_seed_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoisePerlinSeedText}, data::TextId::kSeed) {
-  sliders_ = {&slider_scale_x_, &slider_scale_y_, &slider_seed_};
-  texts_ = {&text_scale_x_, &text_scale_y_, &text_seed_};
-  ui_event_handler_ = {&btn_save_, &pin_, &slider_scale_x_,
-                       &slider_scale_y_, &slider_seed_};
+TerrainNoisePerlin::TerrainNoisePerlin() {
+  value_ = {0.0f};
+  scale_ = {20.0f, 20.0f, 20.0f};
+  text_id_ = {data::TextId::kScaleX, data::TextId::kScaleY,
+              data::TextId::kSeed};
   shader_ = Shader("../shaders/noise_shaders/Perlin.comp");
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
-TerrainNoisePerlin::TerrainNoisePerlin(TerrainNoisePerlin&& other)
-    : Base(std::move(other)),
-      slider_scale_x_(std::move(other.slider_scale_x_)),
-      text_scale_x_(std::move(other.text_scale_x_)),
-      slider_scale_y_(std::move(other.slider_scale_y_)),
-      text_scale_y_(std::move(other.text_scale_y_)),
-      slider_seed_(std::move(other.slider_seed_)),
-      text_seed_(std::move(other.text_seed_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-}
-
-NoisePerlinData TerrainNoisePerlin::Generate(
-    glm::vec2 resolution, std::string_view tex_name) {
+NoisePerlinData TerrainNoisePerlin::Generate() {
   NoisePerlinData data{};
-  data.scale_x = slider_scale_x_.GetProgress();
-  data.scale_y = slider_scale_y_.GetProgress();
-  data.seed = slider_seed_.GetProgress();
+  data.scale_x = value_[0];
+  data.scale_y = value_[1];
+  data.seed = value_[2];
+  data.strength = base_data_.strength;
+  data.do_invert = base_data_.do_invert;
+  data.do_tiling = base_data_.do_tiling;
   shader_.Bind();
-  //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- Perlin noise --- ---" << std::endl;
   std::cout << data.scale_x
             << ' ' << data.scale_y
             << ' ' << data.seed
             << std::endl;
-  glUniform1f(1, data.scale_x);
-  glUniform1f(2, data.scale_y);
-  glUniform1f(3, data.seed);
-  data.hmap = GenAndSave(tex_name);
+  for (int i = 0; i < value_.size(); ++i) {
+    glUniform1f(i, value_[i] * scale_[i]);
+  }
+  data.hmap = GenAndSave("hmap_perlin.png");
+  base_data_.hmap_id = data.hmap.GetId();
   return data;
 }
 
 void TerrainNoisePerlin::SetConfig(const NoisePerlinData& config) {
-  slider_scale_x_.SetValue(config.scale_x);
-  slider_scale_y_.SetValue(config.scale_y);
-  slider_seed_.SetValue(config.seed);
+  value_[0] = config.scale_x;
+  value_[1] = config.scale_y;
+  value_[2] = config.seed;
+  SetBaseData(config.do_invert, config.do_tiling,
+              config.strength, config.hmap_id);
 }
 
-TerrainNoiseCellular::TerrainNoiseCellular(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseCellularDesk},
-           1.0f,
-           {{data::VboIdMain::kTerrainNoiseCellularPinBack, []() {}},
-            {data::VboIdMain::kTerrainNoiseCellularPinPoint}},
-           ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseCellularSave},
-           {text_renderer,
-            {data::VboIdMain::kTerrainNoiseCellularName},
-            data::TextId::kScaleTerrain}),
-      slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseCellularScaleXArea},
-          {data::VboIdMain::kTerrainNoiseCellularScaleXIcon},
-          20.0f
-          ),
-      slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseCellularScaleYArea},
-          {data::VboIdMain::kTerrainNoiseCellularScaleYIcon},
-          20.0f
-          ),
-      text_scale_x_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseCellularScaleXText},
-          data::TextId::kScaleX),
-      text_scale_y_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseCellularScaleYText},
-          data::TextId::kScaleY),
-      slider_jitter_(
-          {data::VboIdMain::kTerrainNoiseCellularJitterArea},
-          {data::VboIdMain::kTerrainNoiseCellularJitterIcon},
-          20.0f
-          ),
-      text_jitter_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseCellularJitterText}, data::TextId::kJitter),
-      slider_seed_(
-          {data::VboIdMain::kTerrainNoiseCellularSeedArea},
-          {data::VboIdMain::kTerrainNoiseCellularSeedIcon},
-          20.0f
-          ),
-      text_seed_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseCellularSeedText}, data::TextId::kSeed) {
-  Base::sliders_ = {&slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
-  Base::texts_ = {&text_scale_x_, &text_scale_y_, &text_jitter_, &text_seed_};
-  Base::ui_event_handler_ = {&btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
+data::TextId TerrainNoisePerlin::GetTextId() const noexcept {
+  return data::TextId::kPerlin;
+}
+
+TerrainNoiseCellular::TerrainNoiseCellular() {
+  value_ = {0.0f};
+  scale_ = {20.0f, 20.0f, 20.0f, 20.0f};
+  text_id_ = {data::TextId::kScaleX, data::TextId::kScaleY,
+              data::TextId::kJitter, data::TextId::kSeed};
   shader_ = Shader("../shaders/noise_shaders/Cellular.comp");
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_jitter_, &text_jitter_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
-TerrainNoiseCellular::TerrainNoiseCellular(TerrainNoiseCellular&& other)
-    : Base(std::move(other)),
-      slider_scale_x_(std::move(other.slider_scale_x_)),
-      text_scale_x_(std::move(other.text_scale_x_)),
-      slider_scale_y_(std::move(other.slider_scale_y_)),
-      text_scale_y_(std::move(other.text_scale_y_)),
-      slider_jitter_(std::move(other.slider_jitter_)),
-      text_jitter_(std::move(other.text_jitter_)),
-      slider_seed_(std::move(other.slider_seed_)),
-      text_seed_(std::move(other.text_seed_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_jitter_, &text_jitter_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-}
-
-NoiseCellularData TerrainNoiseCellular::Generate(
-    glm::vec2 resolution, std::string_view tex_name) {
+NoiseCellularData TerrainNoiseCellular::Generate() {
   NoiseCellularData data{};
-  data.scale_x = slider_scale_x_.GetProgress();
-  data.scale_y = slider_scale_y_.GetProgress();
-  data.jitter = slider_jitter_.GetProgress();
-  data.seed = slider_seed_.GetProgress();
+  data.scale_x = value_[0];
+  data.scale_y = value_[1];
+  data.jitter = value_[2];
+  data.seed = value_[3];
+  data.strength = base_data_.strength;
+  data.do_invert = base_data_.do_invert;
+  data.do_tiling = base_data_.do_tiling;
   shader_.Bind();
-  //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- Cellular noise --- ---" << std::endl;
   std::cout << data.scale_x
             << ' ' << data.scale_y
             << ' ' << data.jitter
             << ' ' << data.seed
             << std::endl;
-  glUniform1f(1, data.scale_x);
-  glUniform1f(2, data.scale_y);
-  glUniform1f(3, data.jitter);
-  glUniform1f(4, data.seed);
-  data.hmap = GenAndSave(tex_name);
+  for (int i = 0; i < value_.size(); ++i) {
+    glUniform1f(i, value_[i] * scale_[i]);
+  }
+  data.hmap = GenAndSave("hmap_cellular.png");
+  base_data_.hmap_id = data.hmap.GetId();
   return data;
 }
 
 void TerrainNoiseCellular::SetConfig(const NoiseCellularData& config) {
-  slider_scale_x_.SetValue(config.scale_x);
-  slider_scale_y_.SetValue(config.scale_y);
-  slider_jitter_.SetValue(config.jitter);
-  slider_seed_.SetValue(config.seed);
+  value_[0] = config.scale_x;
+  value_[1] = config.scale_y;
+  value_[2] = config.jitter;
+  value_[3] = config.seed;
+  SetBaseData(config.do_invert, config.do_tiling,
+              config.strength, config.hmap_id);
 }
 
-TerrainNoiseMetaballs::TerrainNoiseMetaballs(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseMetaballsDesk},
-           1.0f,
-           {{data::VboIdMain::kTerrainNoiseMetaballsPinBack, []() {}},
-            {data::VboIdMain::kTerrainNoiseMetaballsPinPoint}},
-           ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseMetaballsSave},
-           {text_renderer,
-            {data::VboIdMain::kTerrainNoiseMetaballsName},
-            data::TextId::kScaleTerrain}),
-      slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleXArea},
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleXIcon},
-          20.0f
-          ),
-      slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleYArea},
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleYIcon},
-          20.0f
-          ),
-      text_scale_x_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleXText},
-          data::TextId::kScaleX),
-      text_scale_y_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseMetaballsScaleYText},
-          data::TextId::kScaleY),
-      slider_jitter_(
-          {data::VboIdMain::kTerrainNoiseMetaballsJitterArea},
-          {data::VboIdMain::kTerrainNoiseMetaballsJitterIcon},
-          20.0f
-          ),
-      text_jitter_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseMetaballsJitterText},
-          data::TextId::kJitter),
-      slider_seed_(
-          {data::VboIdMain::kTerrainNoiseMetaballsSeedArea},
-          {data::VboIdMain::kTerrainNoiseMetaballsSeedIcon},
-          20.0f
-          ),
-      text_seed_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseMetaballsSeedText}, data::TextId::kSeed) {
-  Base::sliders_ = {&slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
-  Base::texts_ = {&text_scale_x_, &text_scale_y_, &text_jitter_, &text_seed_};
-  Base::ui_event_handler_ = {&btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_jitter_, &slider_seed_};
+data::TextId TerrainNoiseCellular::GetTextId() const noexcept {
+  return data::TextId::kCellular;
+}
+
+TerrainNoiseMetaballs::TerrainNoiseMetaballs() {
+  value_ = {0.0f};
+  scale_ = {20.0f, 20.0f, 20.0f, 20.0f};
+  text_id_ = {data::TextId::kScaleX, data::TextId::kScaleY,
+              data::TextId::kJitter, data::TextId::kSeed};
   shader_ = Shader("../shaders/noise_shaders/Metaballs.comp");
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_jitter_, &text_jitter_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
-TerrainNoiseMetaballs::TerrainNoiseMetaballs(TerrainNoiseMetaballs&& other)
-    : Base(std::move(other)),
-      slider_scale_x_(std::move(other.slider_scale_x_)),
-      text_scale_x_(std::move(other.text_scale_x_)),
-      slider_scale_y_(std::move(other.slider_scale_y_)),
-      text_scale_y_(std::move(other.text_scale_y_)),
-      slider_jitter_(std::move(other.slider_jitter_)),
-      text_jitter_(std::move(other.text_jitter_)),
-      slider_seed_(std::move(other.slider_seed_)),
-      text_seed_(std::move(other.text_seed_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_jitter_, &text_jitter_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-}
-
-NoiseMetaballsData TerrainNoiseMetaballs::Generate(
-    glm::vec2 resolution, std::string_view tex_name) {
+NoiseMetaballsData TerrainNoiseMetaballs::Generate() {
   NoiseMetaballsData data{};
-  data.scale_x = slider_scale_x_.GetProgress();
-  data.scale_y = slider_scale_y_.GetProgress();
-  data.jitter = slider_jitter_.GetProgress();
-  data.seed = slider_seed_.GetProgress();
+  data.scale_x = value_[0];
+  data.scale_y = value_[1];
+  data.jitter = value_[2];
+  data.seed = value_[3];
+  data.strength = base_data_.strength;
+  data.do_invert = base_data_.do_invert;
+  data.do_tiling = base_data_.do_tiling;
   shader_.Bind();
-  //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- Metaballs noise --- ---" << std::endl;
   std::cout << data.scale_x
             << ' ' << data.scale_y
             << ' ' << data.jitter
             << ' ' << data.seed
             << std::endl;
-  glUniform1f(1, data.scale_x);
-  glUniform1f(2, data.scale_y);
-  glUniform1f(3, data.jitter);
-  glUniform1f(5, data.seed);
-  data.hmap = GenAndSave(tex_name);
+  for (int i = 0; i < value_.size(); ++i) {
+    glUniform1f(i, value_[i] * scale_[i]);
+  }
+  data.hmap = GenAndSave("hmap_metaballs.png");
+  base_data_.hmap_id = data.hmap.GetId();
   return data;
 }
 
 void TerrainNoiseMetaballs::SetConfig(const NoiseMetaballsData& config) {
-  slider_scale_x_.SetValue(config.scale_x);
-  slider_scale_y_.SetValue(config.scale_y);
-  slider_jitter_.SetValue(config.jitter);
-  slider_seed_.SetValue(config.seed);
+  value_[0] = config.scale_x;
+  value_[1] = config.scale_y;
+  value_[2] = config.jitter;
+  value_[3] = config.seed;
+  SetBaseData(config.do_invert, config.do_tiling,
+              config.strength, config.hmap_id);
 }
 
-TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmGridDesk},
-           1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmGridPinBack, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmGridPinPoint}},
-           ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmGridSave},
-           {text_renderer,
-            {data::VboIdMain::kTerrainNoiseFbmGridName},
-            data::TextId::kScaleTerrain}),
-      slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleXArea},
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleXIcon},
-          20.0f
-          ),
-      slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleYArea},
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleYIcon},
-          20.0f
-          ),
-      text_scale_x_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleXText},
-          data::TextId::kScaleX),
-      text_scale_y_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmGridScaleYText},
-          data::TextId::kScaleY),
-      slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmGridOctavesArea},
-          {data::VboIdMain::kTerrainNoiseFbmGridOctavesIcon},
-          20.0f
-          ),
-      text_octaves_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmGridOctavesText}, data::TextId::kOctaves),
-      slider_shift_(
-          {data::VboIdMain::kTerrainNoiseFbmGridShiftArea},
-          {data::VboIdMain::kTerrainNoiseFbmGridShiftIcon},
-          20.0f
-          ),
-      text_shift_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmGridShiftText}, data::TextId::kShift),
-      slider_gain_(
-          {data::VboIdMain::kTerrainNoiseFbmGridGainArea},
-          {data::VboIdMain::kTerrainNoiseFbmGridGainIcon},
-          20.0f
-          ),
-      text_gain_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmGridGainText}, data::TextId::kGain),
-      slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmGridLacunarityArea},
-          {data::VboIdMain::kTerrainNoiseFbmGridLacunarityIcon},
-          20.0f
-          ),
-      text_lacunarity_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmGridLacunarityText}, data::TextId::kLacunarity),
-      slider_warp_strength_(
-          {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthArea},
-          {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthIcon},
-          20.0f
-          ),
-      text_warp_strength_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmGridWarpStrengthText}, data::TextId::kWarpStrength),
-      slider_octave_factor_(
-          {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorArea},
-          {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorIcon},
-          20.0f
-          ),
-      text_octave_factor_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmGridOctaveFactorText}, data::TextId::kOctaveFactor),
-      slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmGridSeedArea},
-          {data::VboIdMain::kTerrainNoiseFbmGridSeedIcon},
-          20.0f
-          ),
-      text_seed_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmGridSeedText}, data::TextId::kSeed) {
-  Base::sliders_ = {
-      &slider_scale_x_, &slider_scale_y_, &slider_octaves_, &slider_shift_,
-      &slider_gain_, &slider_lacunarity_,
-      &slider_warp_strength_, &slider_octave_factor_, &slider_seed_};
-  Base::texts_ = {
-      &text_scale_x_, &text_scale_y_, &text_octaves_, &text_shift_,
-      &text_gain_, &text_lacunarity_,
-      &text_warp_strength_, &text_octave_factor_, &text_seed_};
-  Base::ui_event_handler_ = {
-      &btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_octaves_, &slider_shift_,
-      &slider_gain_, &slider_lacunarity_,
-      &slider_warp_strength_, &slider_octave_factor_, &slider_seed_};
+data::TextId TerrainNoiseMetaballs::GetTextId() const noexcept {
+  return data::TextId::kMetaballs;
+}
+
+TerrainNoiseFbmGrid::TerrainNoiseFbmGrid() {
+  value_ = {0.0f};
+  scale_ = {20.0f, 20.0f, 20.0f, 20.0f, 20.0f, 20.0f, 20.0f, 20.0f, 20.0f};
+  text_id_ = {data::TextId::kScaleX, data::TextId::kScaleY,
+              data::TextId::kOctaves, data::TextId::kShift,
+              data::TextId::kGain, data::TextId::kLacunarity,
+              data::TextId::kWarpStrength, data::TextId::kOctaveFactor,
+              data::TextId::kSeed};
   shader_ = Shader("../shaders/noise_shaders/FbmGrid.comp");
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_shift_, &text_shift_);
-  hierarchy_.AddNested(&slider_gain_, &text_gain_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_warp_strength_, &text_warp_strength_);
-  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
-TerrainNoiseFbmGrid::TerrainNoiseFbmGrid(TerrainNoiseFbmGrid&& other)
-    : Base(std::move(other)),
-      slider_scale_x_(std::move(other.slider_scale_x_)),
-      text_scale_x_(std::move(other.text_scale_x_)),
-      slider_scale_y_(std::move(other.slider_scale_y_)),
-      text_scale_y_(std::move(other.text_scale_y_)),
-      slider_octaves_(std::move(other.slider_octaves_)),
-      text_octaves_(std::move(other.text_octaves_)),
-      slider_shift_(std::move(other.slider_shift_)),
-      text_shift_(std::move(other.text_shift_)),
-      slider_gain_(std::move(other.slider_gain_)),
-      text_gain_(std::move(other.text_gain_)),
-      slider_lacunarity_(std::move(other.slider_lacunarity_)),
-      text_lacunarity_(std::move(other.text_lacunarity_)),
-      slider_warp_strength_(std::move(other.slider_warp_strength_)),
-      text_warp_strength_(std::move(other.text_warp_strength_)),
-      slider_octave_factor_(std::move(other.slider_octave_factor_)),
-      text_octave_factor_(std::move(other.text_octave_factor_)),
-      slider_seed_(std::move(other.slider_seed_)),
-      text_seed_(std::move(other.text_seed_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_shift_, &text_shift_);
-  hierarchy_.AddNested(&slider_gain_, &text_gain_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_warp_strength_, &text_warp_strength_);
-  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-}
-
-NoiseFbmGridData TerrainNoiseFbmGrid::Generate(
-    glm::vec2 resolution, std::string_view tex_name) {
+NoiseFbmGridData TerrainNoiseFbmGrid::Generate() {
   NoiseFbmGridData data{};
-  data.scale_x = slider_scale_x_.GetProgress();
-  data.scale_y = slider_scale_y_.GetProgress();
-  data.octaves = static_cast<int>(slider_octaves_.GetProgress());
-  data.shift = slider_shift_.GetProgress();
-  data.gain = slider_gain_.GetProgress();
-  data.lacunarity = slider_lacunarity_.GetProgress();
-  data.warp_strength = slider_warp_strength_.GetProgress();
-  data.octave_factor = slider_octave_factor_.GetProgress();
-  data.seed = slider_seed_.GetProgress();
+  data.scale_x = value_[0];
+  data.scale_y = value_[1];
+  data.octaves = static_cast<int>(value_[2]);
+  data.shift = value_[3];
+  data.gain = value_[4];
+  data.lacunarity = value_[5];
+  data.warp_strength = value_[6];
+  data.octave_factor = value_[7];
+  data.seed = value_[8];
+  data.strength = base_data_.strength;
+  data.do_invert = base_data_.do_invert;
+  data.do_tiling = base_data_.do_tiling;
   shader_.Bind();
-  //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- FbmGrid noise --- ---" << std::endl;
   std::cout << data.scale_x
             << ' ' << data.scale_y
@@ -483,131 +183,52 @@ NoiseFbmGridData TerrainNoiseFbmGrid::Generate(
             << ' ' << data.octave_factor
             << ' ' << data.seed
             << std::endl;
-  glUniform1f(1, data.scale_x);
-  glUniform1f(2, data.scale_y);
-  glUniform1i(3, data.octaves);
-  glUniform1f(4, data.shift);
-  glUniform1f(6, data.gain);
-  glUniform1f(7, data.lacunarity);
-  glUniform1f(9, data.warp_strength);
-  glUniform1f(10, data.octave_factor);
-  glUniform1f(11, data.seed);
-  data.hmap = GenAndSave(tex_name);
+  for (int i = 0; i < value_.size(); ++i) {
+    glUniform1f(i, value_[i] * scale_[i]);
+  }
+  data.hmap = GenAndSave("hmap_fbm_grid.png");
+  base_data_.hmap_id = data.hmap.GetId();
   return data;
 }
 
 void TerrainNoiseFbmGrid::SetConfig(const NoiseFbmGridData& config) {
-  slider_scale_x_.SetValue(config.scale_x);
-  slider_scale_y_.SetValue(config.scale_y);
-  slider_octaves_.SetValue(static_cast<float>(config.octaves));
-  slider_shift_.SetValue(config.shift);
-  slider_gain_.SetValue(config.gain);
-  slider_lacunarity_.SetValue(config.lacunarity);
-  slider_warp_strength_.SetValue(config.warp_strength);
-  slider_octave_factor_.SetValue(config.octave_factor);
-  slider_seed_.SetValue(config.seed);
+  value_[0] = config.scale_x;
+  value_[1] = config.scale_y;
+  value_[2] = static_cast<float>(config.octaves);
+  value_[3] = config.shift;
+  value_[4] = config.gain;
+  value_[5] = config.lacunarity;
+  value_[6] = config.warp_strength;
+  value_[7] = config.octave_factor;
+  value_[8] = config.seed;
+  SetBaseData(config.do_invert, config.do_tiling,
+              config.strength, config.hmap_id);
 }
 
-TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmMultiDesk},
-           1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmMultiPinBack, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmMultiPinPoint}},
-           ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmMultiSave},
-           {text_renderer,
-            {data::VboIdMain::kTerrainNoiseFbmMultiName},
-            data::TextId::kScaleTerrain}),
-      slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleXArea},
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleXIcon},
-          20.0f
-          ),
-      slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleYArea},
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleYIcon},
-          20.0f
-          ),
-      text_scale_x_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleXText},
-          data::TextId::kScaleX),
-      text_scale_y_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmMultiScaleYText},
-          data::TextId::kScaleY),
-      slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityArea},
-          {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityIcon},
-          20.0f
-          ),
-      text_lacunarity_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmMultiLacunarityText}, data::TextId::kLacunarity),
-      slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiOctavesArea},
-          {data::VboIdMain::kTerrainNoiseFbmMultiOctavesIcon},
-          20.0f
-          ),
-      text_octaves_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmMultiOctavesText}, data::TextId::kOctaves),
-      slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmMultiSeedArea},
-          {data::VboIdMain::kTerrainNoiseFbmMultiSeedIcon},
-          20.0f
-          ),
-      text_seed_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmMultiSeedText}, data::TextId::kSeed) {
-  Base::sliders_ = {
-      &slider_scale_x_, &slider_scale_y_, &slider_lacunarity_, &slider_octaves_, &slider_seed_};
-  Base::texts_ = {
-      &text_scale_x_, &text_scale_y_, &text_lacunarity_, &text_octaves_, &text_seed_};
-  Base::ui_event_handler_ = {
-      &btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_lacunarity_, &slider_octaves_, &slider_seed_};
+data::TextId TerrainNoiseFbmGrid::GetTextId() const noexcept {
+  return data::TextId::kFbmGrid;
+}
+
+TerrainNoiseFbmMulti::TerrainNoiseFbmMulti() {
+  value_ = {0.0f};
+  scale_ = {20.0f, 20.0f, 20.0f, 20.0f, 20.0f};
+  text_id_ = {data::TextId::kScaleX, data::TextId::kScaleY,
+              data::TextId::kLacunarity, data::TextId::kOctaves,
+              data::TextId::kSeed};
   shader_ = Shader("../shaders/noise_shaders/FbmMulti.comp");
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
-TerrainNoiseFbmMulti::TerrainNoiseFbmMulti(TerrainNoiseFbmMulti&& other)
-    : Base(std::move(other)),
-      slider_scale_x_(std::move(other.slider_scale_x_)),
-      text_scale_x_(std::move(other.text_scale_x_)),
-      slider_scale_y_(std::move(other.slider_scale_y_)),
-      text_scale_y_(std::move(other.text_scale_y_)),
-      slider_lacunarity_(std::move(other.slider_lacunarity_)),
-      text_lacunarity_(std::move(other.text_lacunarity_)),
-      slider_octaves_(std::move(other.slider_octaves_)),
-      text_octaves_(std::move(other.text_octaves_)),
-      slider_seed_(std::move(other.slider_seed_)),
-      text_seed_(std::move(other.text_seed_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-}
-
-NoiseFbmMultiData TerrainNoiseFbmMulti::Generate(
-    glm::vec2 resolution, std::string_view tex_name) {
+NoiseFbmMultiData TerrainNoiseFbmMulti::Generate() {
   NoiseFbmMultiData data{};
-  data.scale_x = slider_scale_x_.GetProgress();
-  data.scale_y = slider_scale_y_.GetProgress();
-  data.lacunarity = slider_lacunarity_.GetProgress();
-  data.octaves = static_cast<int>(slider_octaves_.GetProgress());
-  data.seed = slider_seed_.GetProgress();
+  data.scale_x = value_[0];
+  data.scale_y = value_[1];
+  data.lacunarity = value_[2];
+  data.octaves = static_cast<int>(value_[3]);
+  data.seed = value_[4];
+  data.strength = base_data_.strength;
+  data.do_invert = base_data_.do_invert;
+  data.do_tiling = base_data_.do_tiling;
   shader_.Bind();
-  //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- FbmMulti noise --- ---" << std::endl;
   std::cout << data.scale_x
             << ' ' << data.scale_y
@@ -615,168 +236,52 @@ NoiseFbmMultiData TerrainNoiseFbmMulti::Generate(
             << ' ' << data.octaves
             << ' ' << data.seed
             << std::endl;
-  glUniform1f(1, data.scale_x);
-  glUniform1f(2, data.scale_y);
-  glUniform1f(3, data.lacunarity);
-  glUniform1i(4, data.octaves);
-  glUniform1f(6, data.seed);
-  data.hmap = GenAndSave(tex_name);
+  for (int i = 0; i < value_.size(); ++i) {
+    glUniform1f(i, value_[i] * scale_[i]);
+  }
+  data.hmap = GenAndSave("hmap_fbm_multi.png");
+  base_data_.hmap_id = data.hmap.GetId();
   return data;
 }
 
 void TerrainNoiseFbmMulti::SetConfig(const NoiseFbmMultiData& config) {
-  slider_scale_x_.SetValue(config.scale_x);
-  slider_scale_y_.SetValue(config.scale_y);
-  slider_lacunarity_.SetValue(config.lacunarity);
-  slider_octaves_.SetValue(static_cast<float>(config.octaves));
-  slider_seed_.SetValue(config.seed);
+  value_[0] = config.scale_x;
+  value_[1] = config.scale_y;
+  value_[2] = config.lacunarity;
+  value_[3] = static_cast<float>(config.octaves);
+  value_[4] = config.seed;
+  SetBaseData(config.do_invert, config.do_tiling,
+              config.strength, config.hmap_id);
 }
 
-TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmdPerlinDesk},
-           1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmdPerlinPinBack, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmdPerlinPinPoint}},
-           ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmdPerlinSave},
-           {text_renderer,
-            {data::VboIdMain::kTerrainNoiseFbmdPerlinName},
-            data::TextId::kScaleTerrain}),
-      slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXArea},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXIcon},
-          20.0f
-          ),
-      slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYArea},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYIcon},
-          20.0f
-          ),
-      text_scale_x_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleXText},
-          data::TextId::kScaleX),
-      text_scale_y_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinScaleYText},
-          data::TextId::kScaleY),
-      slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesArea},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesIcon},
-          20.0f
-          ),
-      text_octaves_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctavesText}, data::TextId::kOctaves),
-      slider_gain_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinGainArea},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinGainIcon},
-          20.0f
-          ),
-      text_gain_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinGainText}, data::TextId::kGain),
-      slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityArea},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityIcon},
-          20.0f
-          ),
-      text_lacunarity_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinLacunarityText}, data::TextId::kLacunarity),
-      slider_slopeness_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessArea},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessIcon},
-          20.0f
-          ),
-      text_slopeness_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSlopenessText}, data::TextId::kSlopeness),
-      slider_octave_factor_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorArea},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorIcon},
-          20.0f
-          ),
-      text_octave_factor_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinOctaveFactorText}, data::TextId::kOctaveFactor),
-      slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedArea},
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedIcon},
-          20.0f
-          ),
-      text_seed_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmdPerlinSeedText}, data::TextId::kSeed) {
-  Base::sliders_ = {
-      &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
-      &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
-      &slider_octave_factor_, &slider_seed_};
-  Base::texts_ = {
-      &text_scale_x_, &text_scale_y_, &text_octaves_,
-      &text_gain_, &text_lacunarity_, &text_slopeness_,
-      &text_octave_factor_, &text_seed_};
-  Base::ui_event_handler_ = {
-      &btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
-      &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
-      &slider_octave_factor_, &slider_seed_};
+data::TextId TerrainNoiseFbmMulti::GetTextId() const noexcept {
+  return data::TextId::kFbmMulti;
+}
+
+TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin() {
+  value_ = {0.0f};
+  scale_ = {20.0f, 20.0f, 20.0f, 20.0f, 20.0f, 20.0f, 20.0f, 20.0f};
+  text_id_ = {data::TextId::kScaleX, data::TextId::kScaleY,
+              data::TextId::kOctaves, data::TextId::kGain,
+              data::TextId::kLacunarity, data::TextId::kSlopeness,
+              data::TextId::kOctaveFactor, data::TextId::kSeed};
   shader_ = Shader("../shaders/noise_shaders/FbmdPerlin.comp");
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_gain_, &text_gain_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
-  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
 }
 
-TerrainNoiseFbmdPerlin::TerrainNoiseFbmdPerlin(TerrainNoiseFbmdPerlin&& other)
-    : Base(std::move(other)),
-      slider_scale_x_(std::move(other.slider_scale_x_)),
-      text_scale_x_(std::move(other.text_scale_x_)),
-      slider_scale_y_(std::move(other.slider_scale_y_)),
-      text_scale_y_(std::move(other.text_scale_y_)),
-      slider_octaves_(std::move(other.slider_octaves_)),
-      text_octaves_(std::move(other.text_octaves_)),
-      slider_gain_(std::move(other.slider_gain_)),
-      text_gain_(std::move(other.text_gain_)),
-      slider_lacunarity_(std::move(other.slider_lacunarity_)),
-      text_lacunarity_(std::move(other.text_lacunarity_)),
-      slider_slopeness_(std::move(other.slider_slopeness_)),
-      text_slopeness_(std::move(other.text_slopeness_)),
-      slider_octave_factor_(std::move(other.slider_octave_factor_)),
-      text_octave_factor_(std::move(other.text_octave_factor_)),
-      slider_seed_(std::move(other.slider_seed_)),
-      text_seed_(std::move(other.text_seed_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_gain_, &text_gain_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
-  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-}
-
-NoiseFbmdPerlinData TerrainNoiseFbmdPerlin::Generate(
-    glm::vec2 resolution, std::string_view tex_name) {
+NoiseFbmdPerlinData TerrainNoiseFbmdPerlin::Generate() {
   NoiseFbmdPerlinData data{};
-  data.scale_x = slider_scale_x_.GetProgress();
-  data.scale_y = slider_scale_y_.GetProgress();
-  data.octaves = static_cast<int>(slider_octaves_.GetProgress());
-  data.gain = slider_gain_.GetProgress();
-  data.lacunarity = slider_lacunarity_.GetProgress();
-  data.slopeness = slider_slopeness_.GetProgress();
-  data.octave_factor = slider_octave_factor_.GetProgress();
-  data.seed = slider_seed_.GetProgress();
+  data.scale_x = value_[0];
+  data.scale_y = value_[1];
+  data.octaves = static_cast<int>(value_[2]);
+  data.gain = value_[3];
+  data.lacunarity = value_[4];
+  data.slopeness = value_[5];
+  data.octave_factor = value_[6];
+  data.seed = value_[7];
+  data.strength = base_data_.strength;
+  data.do_invert = base_data_.do_invert;
+  data.do_tiling = base_data_.do_tiling;
   shader_.Bind();
-  //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- FbmdPerlin noise --- ---" << std::endl;
   std::cout << data.scale_x
             << ' ' << data.scale_y
@@ -787,199 +292,59 @@ NoiseFbmdPerlinData TerrainNoiseFbmdPerlin::Generate(
             << ' ' << data.octave_factor
             << ' ' << data.seed
             << std::endl;
-  glUniform1f(1, data.scale_x);
-  glUniform1f(2, data.scale_y);
-  glUniform1i(3, data.octaves);
-  glUniform1f(6, data.gain);
-  glUniform1f(7, data.lacunarity);
-  glUniform1f(8, data.slopeness);
-  glUniform1f(9, data.octave_factor);
-  glUniform1f(11, data.seed);
-  data.hmap = GenAndSave(tex_name);
+  for (int i = 0; i < value_.size(); ++i) {
+    glUniform1f(i, value_[i] * scale_[i]);
+  }
+  data.hmap = GenAndSave("hmap_fbmd_perlin.png");
+  base_data_.hmap_id = data.hmap.GetId();
   return data;
 }
 
 void TerrainNoiseFbmdPerlin::SetConfig(const NoiseFbmdPerlinData& config) {
-  slider_scale_x_.SetValue(config.scale_x);
-  slider_scale_y_.SetValue(config.scale_y);
-  slider_octaves_.SetValue(static_cast<float>(config.octaves));
-  slider_gain_.SetValue(config.gain);
-  slider_lacunarity_.SetValue(config.lacunarity);
-  slider_slopeness_.SetValue(config.slopeness);
-  slider_octave_factor_.SetValue(config.octave_factor);
-  slider_seed_.SetValue(config.seed);
+  value_[0] = config.scale_x;
+  value_[1] = config.scale_y;
+  value_[2] = static_cast<float>(config.octaves);
+  value_[3] = config.gain;
+  value_[4] = config.lacunarity;
+  value_[5] = config.slopeness;
+  value_[6] = config.octave_factor;
+  value_[7] = config.seed;
+  SetBaseData(config.do_invert, config.do_tiling,
+              config.strength, config.hmap_id);
 }
 
-TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmWarpDesk},
-           1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmWarpPinBack, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmWarpPinPoint}},
-           ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmWarpSave},
-           {text_renderer,
-            {data::VboIdMain::kTerrainNoiseFbmWarpName},
-            data::TextId::kScaleTerrain}),
-      slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleXArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleXIcon},
-          20.0f
-          ),
-      slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleYArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleYIcon},
-          20.0f
-          ),
-      text_scale_x_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleXText},
-          data::TextId::kScaleX),
-      text_scale_y_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpScaleYText},
-          data::TextId::kScaleY),
-      slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctavesArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctavesIcon},
-          20.0f
-          ),
-      text_octaves_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctavesText}, data::TextId::kOctaves),
-      slider_gain_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpGainArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpGainIcon},
-          20.0f
-          ),
-      text_gain_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpGainText}, data::TextId::kGain),
-      slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityIcon},
-          20.0f
-          ),
-      text_lacunarity_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpLacunarityText}, data::TextId::kLacunarity),
-      slider_slopeness_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessIcon}
-          ),
-      text_slopeness_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpSlopenessText}, data::TextId::kSlopeness),
-      slider_octave_factor_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorIcon},
-          20.0f
-          ),
-      text_octave_factor_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpOctaveFactorText}, data::TextId::kOctaveFactor),
-      slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpSeedArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpSeedIcon},
-          20.0f
-          ),
-      text_seed_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpSeedText}, data::TextId::kSeed),
-      slider_q_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpQArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpQIcon},
-          20.0f
-          ),
-      text_q_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpQText}, data::TextId::kQ),
-      slider_r_(
-          {data::VboIdMain::kTerrainNoiseFbmWarpRArea},
-          {data::VboIdMain::kTerrainNoiseFbmWarpRIcon},
-          20.0f
-          ),
-      text_r_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmWarpRText}, data::TextId::kR) {
-  Base::sliders_ = {
-      &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
-      &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
-      &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
-  Base::texts_ = {
-      &text_scale_x_, &text_scale_y_, &text_octaves_,
-      &text_gain_, &text_lacunarity_, &text_slopeness_,
-      &text_octave_factor_, &text_seed_, &text_q_, &text_r_};
-  Base::ui_event_handler_ = {
-      &btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
-      &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
-      &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
+data::TextId TerrainNoiseFbmdPerlin::GetTextId() const noexcept {
+  return data::TextId::kFbmdPerlin;
+}
+
+TerrainNoiseFbmWarp::TerrainNoiseFbmWarp() {
+  value_ = {0.0f};
+  scale_ = {20.0f, 20.0f, 20.0f, 20.0f, 20.0f,
+            20.0f, 20.0f, 20.0f, 20.0f, 20.0f};
+  text_id_ = {data::TextId::kScaleX, data::TextId::kScaleY,
+              data::TextId::kOctaves, data::TextId::kGain,
+              data::TextId::kLacunarity, data::TextId::kSlopeness,
+              data::TextId::kOctaveFactor, data::TextId::kSeed,
+              data::TextId::kQ, data::TextId::kR};
   shader_ = Shader("../shaders/noise_shaders/FbmWarp.comp");
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_gain_, &text_gain_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
-  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-  hierarchy_.AddNested(&slider_q_, &text_q_);
-  hierarchy_.AddNested(&slider_r_, &text_r_);
 }
 
-TerrainNoiseFbmWarp::TerrainNoiseFbmWarp(TerrainNoiseFbmWarp&& other)
-    : Base(std::move(other)),
-      slider_scale_x_(std::move(other.slider_scale_x_)),
-      text_scale_x_(std::move(other.text_scale_x_)),
-      slider_scale_y_(std::move(other.slider_scale_y_)),
-      text_scale_y_(std::move(other.text_scale_y_)),
-      slider_octaves_(std::move(other.slider_octaves_)),
-      text_octaves_(std::move(other.text_octaves_)),
-      slider_gain_(std::move(other.slider_gain_)),
-      text_gain_(std::move(other.text_gain_)),
-      slider_lacunarity_(std::move(other.slider_lacunarity_)),
-      text_lacunarity_(std::move(other.text_lacunarity_)),
-      slider_slopeness_(std::move(other.slider_slopeness_)),
-      text_slopeness_(std::move(other.text_slopeness_)),
-      slider_octave_factor_(std::move(other.slider_octave_factor_)),
-      text_octave_factor_(std::move(other.text_octave_factor_)),
-      slider_seed_(std::move(other.slider_seed_)),
-      text_seed_(std::move(other.text_seed_)),
-      slider_q_(std::move(other.slider_q_)),
-      text_q_(std::move(other.text_q_)),
-      slider_r_(std::move(other.slider_r_)),
-      text_r_(std::move(other.text_r_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_gain_, &text_gain_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
-  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-  hierarchy_.AddNested(&slider_q_, &text_q_);
-  hierarchy_.AddNested(&slider_r_, &text_r_);
-}
-
-NoiseFbmWarpData TerrainNoiseFbmWarp::Generate(
-    glm::vec2 resolution, std::string_view tex_name) {
+NoiseFbmWarpData TerrainNoiseFbmWarp::Generate() {
   NoiseFbmWarpData data{};
-  data.scale_x = slider_scale_x_.GetProgress();
-  data.scale_y = slider_scale_y_.GetProgress();
-  data.octaves = static_cast<int>(slider_octaves_.GetProgress());
-  data.gain = slider_gain_.GetProgress();
-  data.lacunarity = slider_lacunarity_.GetProgress();
-  data.slopeness = slider_slopeness_.GetProgress();
-  data.octave_factor = slider_octave_factor_.GetProgress();
-  data.seed = slider_seed_.GetProgress();
-  data.q = slider_q_.GetProgress();
-  data.r = slider_r_.GetProgress();
+  data.scale_x = value_[0];
+  data.scale_y = value_[1];
+  data.octaves = static_cast<int>(value_[2]);
+  data.gain = value_[3];
+  data.lacunarity = value_[4];
+  data.slopeness = value_[5];
+  data.octave_factor = value_[6];
+  data.seed = value_[7];
+  data.q = value_[8];
+  data.r = value_[9];
+  data.strength = base_data_.strength;
+  data.do_invert = base_data_.do_invert;
+  data.do_tiling = base_data_.do_tiling;
   shader_.Bind();
-  //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- FbmWarp noise --- ---" << std::endl;
   std::cout << data.scale_x
             << ' ' << data.scale_y
@@ -992,204 +357,61 @@ NoiseFbmWarpData TerrainNoiseFbmWarp::Generate(
             << ' ' << data.q
             << ' ' << data.r
             << std::endl;
-  glUniform1f(1, data.scale_x);
-  glUniform1f(2, data.scale_y);
-  glUniform1i(4, data.octaves);
-  glUniform1f(7, data.gain);
-  glUniform1f(8, data.lacunarity);
-  glUniform1f(9, data.slopeness);
-  glUniform1f(10, data.octave_factor);
-  glUniform1f(12, data.seed);
-  glUniform1f(13, data.q);
-  glUniform1f(14, data.r);
-  data.hmap = GenAndSave(tex_name);
+  for (int i = 0; i < value_.size(); ++i) {
+    glUniform1f(i, value_[i] * scale_[i]);
+  }
+  data.hmap = GenAndSave("hmap_fbm_warp.png");
+  base_data_.hmap_id = data.hmap.GetId();
   return data;
 }
 
 void TerrainNoiseFbmWarp::SetConfig(const NoiseFbmWarpData& config) {
-  slider_scale_x_.SetValue(config.scale_x);
-  slider_scale_y_.SetValue(config.scale_y);
-  slider_octaves_.SetValue(static_cast<float>(config.octaves));
-  slider_gain_.SetValue(config.gain);
-  slider_lacunarity_.SetValue(config.lacunarity);
-  slider_slopeness_.SetValue(config.slopeness);
-  slider_octave_factor_.SetValue(config.octave_factor);
-  slider_seed_.SetValue(config.seed);
-  slider_q_.SetValue(config.q);
-  slider_r_.SetValue(config.r);
+  value_[0] = config.scale_x;
+  value_[1] = config.scale_y;
+  value_[2] = static_cast<float>(config.octaves);
+  value_[3] = config.gain;
+  value_[4] = config.lacunarity;
+  value_[5] = config.slopeness;
+  value_[6] = config.octave_factor;
+  value_[7] = config.seed;
+  value_[8] = config.q;
+  value_[9] = config.r;
+  SetBaseData(config.do_invert, config.do_tiling,
+              config.strength, config.hmap_id);
 }
 
-TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer)
-    : Base({data::VboIdMain::kTerrainNoiseFbmPerlinWarpDesk},
-           1.0f,
-           {{data::VboIdMain::kTerrainNoiseFbmPerlinWarpPinBack, []() {}},
-            {data::VboIdMain::kTerrainNoiseFbmPerlinWarpPinPoint}},
-           ui_shared_resources, window_queue,
-           {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSave},
-           {text_renderer,
-            {data::VboIdMain::kTerrainNoiseFbmPerlinWarpName},
-            data::TextId::kScaleTerrain}),
-      slider_scale_x_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXIcon},
-          20.0f
-          ),
-      slider_scale_y_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYIcon},
-          20.0f
-          ),
-      text_scale_x_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleXText},
-          data::TextId::kScaleX),
-      text_scale_y_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpScaleYText},
-          data::TextId::kScaleY),
-      slider_octaves_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesIcon},
-          20.0f
-          ),
-      text_octaves_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctavesText}, data::TextId::kOctaves),
-      slider_gain_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainIcon},
-          20.0f
-          ),
-      text_gain_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpGainText}, data::TextId::kGain),
-      slider_lacunarity_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityIcon},
-          20.0f
-          ),
-      text_lacunarity_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpLacunarityText}, data::TextId::kLacunarity),
-      slider_slopeness_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessIcon},
-          20.0f
-          ),
-      text_slopeness_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSlopenessText}, data::TextId::kSlopeness),
-      slider_octave_factor_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorIcon},
-          20.0f
-          ),
-      text_octave_factor_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpOctaveFactorText}, data::TextId::kOctaveFactor),
-      slider_seed_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedIcon},
-          20.0f
-          ),
-      text_seed_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpSeedText}, data::TextId::kSeed),
-      slider_q_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQIcon},
-          20.0f
-          ),
-      text_q_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpQText}, data::TextId::kQ),
-      slider_r_(
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRArea},
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRIcon},
-          20.0f
-          ),
-      text_r_(
-          text_renderer,
-          {data::VboIdMain::kTerrainNoiseFbmPerlinWarpRText}, data::TextId::kR) {
-  Base::sliders_ = {
-      &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
-      &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
-      &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
-  Base::texts_ = {
-      &text_scale_x_, &text_scale_y_, &text_octaves_,
-      &text_gain_, &text_lacunarity_, &text_slopeness_,
-      &text_octave_factor_, &text_seed_, &text_q_, &text_r_};
-  Base::ui_event_handler_ = {
-      &btn_save_, &pin_, &slider_scale_x_, &slider_scale_y_, &slider_octaves_,
-      &slider_gain_, &slider_lacunarity_, &slider_slopeness_,
-      &slider_octave_factor_, &slider_seed_, &slider_q_, &slider_r_};
+data::TextId TerrainNoiseFbmWarp::GetTextId() const noexcept {
+  return data::TextId::kFbmWarp;
+}
+
+TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp() {
+  value_ = {0.0f};
+  scale_ = {20.0f, 20.0f, 20.0f, 20.0f, 20.0f,
+            20.0f, 20.0f, 20.0f, 20.0f, 20.0f};
+  text_id_ = {data::TextId::kScaleX, data::TextId::kScaleY,
+              data::TextId::kOctaves, data::TextId::kGain,
+              data::TextId::kLacunarity, data::TextId::kSlopeness,
+              data::TextId::kOctaveFactor, data::TextId::kSeed,
+              data::TextId::kQ, data::TextId::kR};
   shader_ = Shader("../shaders/noise_shaders/FbmPerlinWarp.comp");
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_gain_, &text_gain_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
-  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-  hierarchy_.AddNested(&slider_q_, &text_q_);
-  hierarchy_.AddNested(&slider_r_, &text_r_);
 }
 
-TerrainNoiseFbmPerlinWarp::TerrainNoiseFbmPerlinWarp(TerrainNoiseFbmPerlinWarp&& other)
-    : Base(std::move(other)),
-      slider_scale_x_(std::move(other.slider_scale_x_)),
-      text_scale_x_(std::move(other.text_scale_x_)),
-      slider_scale_y_(std::move(other.slider_scale_y_)),
-      text_scale_y_(std::move(other.text_scale_y_)),
-      slider_octaves_(std::move(other.slider_octaves_)),
-      text_octaves_(std::move(other.text_octaves_)),
-      slider_gain_(std::move(other.slider_gain_)),
-      text_gain_(std::move(other.text_gain_)),
-      slider_lacunarity_(std::move(other.slider_lacunarity_)),
-      text_lacunarity_(std::move(other.text_lacunarity_)),
-      slider_slopeness_(std::move(other.slider_slopeness_)),
-      text_slopeness_(std::move(other.text_slopeness_)),
-      slider_octave_factor_(std::move(other.slider_octave_factor_)),
-      text_octave_factor_(std::move(other.text_octave_factor_)),
-      slider_seed_(std::move(other.slider_seed_)),
-      text_seed_(std::move(other.text_seed_)),
-      slider_q_(std::move(other.slider_q_)),
-      text_q_(std::move(other.text_q_)),
-      slider_r_(std::move(other.slider_r_)),
-      text_r_(std::move(other.text_r_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_);
-  hierarchy_.AddNested(&slider_scale_x_, &text_scale_x_);
-  hierarchy_.AddNested(&slider_scale_y_, &text_scale_y_);
-  hierarchy_.AddNested(&slider_octaves_, &text_octaves_);
-  hierarchy_.AddNested(&slider_gain_, &text_gain_);
-  hierarchy_.AddNested(&slider_lacunarity_, &text_lacunarity_);
-  hierarchy_.AddNested(&slider_slopeness_, &text_slopeness_);
-  hierarchy_.AddNested(&slider_octave_factor_, &text_octave_factor_);
-  hierarchy_.AddNested(&slider_seed_, &text_seed_);
-  hierarchy_.AddNested(&slider_q_, &text_q_);
-  hierarchy_.AddNested(&slider_r_, &text_r_);
-}
-
-NoiseFbmPerlinWarpData TerrainNoiseFbmPerlinWarp::Generate(
-    glm::vec2 resolution, std::string_view tex_name) {
+NoiseFbmPerlinWarpData TerrainNoiseFbmPerlinWarp::Generate() {
   NoiseFbmPerlinWarpData data{};
-  data.scale_x = slider_scale_x_.GetProgress();
-  data.scale_y = slider_scale_y_.GetProgress();
-  data.octaves = static_cast<int>(slider_octaves_.GetProgress());
-  data.gain = slider_gain_.GetProgress();
-  data.lacunarity = slider_lacunarity_.GetProgress();
-  data.slopeness = slider_slopeness_.GetProgress();
-  data.octave_factor = slider_octave_factor_.GetProgress();
-  data.seed = slider_seed_.GetProgress();
-  data.q = slider_q_.GetProgress();
-  data.r = slider_r_.GetProgress();
+  data.scale_x = value_[0];
+  data.scale_y = value_[1];
+  data.octaves = static_cast<int>(value_[2]);
+  data.gain = value_[3];
+  data.lacunarity = value_[4];
+  data.slopeness = value_[5];
+  data.octave_factor = value_[6];
+  data.seed = value_[7];
+  data.q = value_[8];
+  data.r = value_[9];
+  data.strength = base_data_.strength;
+  data.do_invert = base_data_.do_invert;
+  data.do_tiling = base_data_.do_tiling;
   shader_.Bind();
-  //glUniform2fv(0, 1, glm::value_ptr(resolution));
   std::cout << "--- --- FbmPerlinWarp noise --- ---" << std::endl;
   std::cout << data.scale_x
             << ' ' << data.scale_y
@@ -1202,29 +424,199 @@ NoiseFbmPerlinWarpData TerrainNoiseFbmPerlinWarp::Generate(
             << ' ' << data.q
             << ' ' << data.r
             << std::endl;
-  glUniform1f(1, data.scale_x);
-  glUniform1f(2, data.scale_y);
-  glUniform1i(4, data.octaves);
-  glUniform1f(7, data.gain);
-  glUniform1f(8, data.lacunarity);
-  glUniform1f(9, data.slopeness);
-  glUniform1f(10, data.octave_factor);
-  glUniform1f(12, data.seed);
-  glUniform1f(13, data.q);
-  glUniform1f(14, data.r);
-  data.hmap = GenAndSave(tex_name);
+  for (int i = 0; i < value_.size(); ++i) {
+    glUniform1f(i, value_[i] * scale_[i]);
+  }
+  data.hmap = GenAndSave("hmap_fbm_perlin_warp.png");
+  base_data_.hmap_id = data.hmap.GetId();
   return data;
 }
 
 void TerrainNoiseFbmPerlinWarp::SetConfig(const NoiseFbmPerlinWarpData& config) {
-  slider_scale_x_.SetValue(config.scale_x);
-  slider_scale_y_.SetValue(config.scale_y);
-  slider_octaves_.SetValue(static_cast<float>(config.octaves));
-  slider_gain_.SetValue(config.gain);
-  slider_lacunarity_.SetValue(config.lacunarity);
-  slider_slopeness_.SetValue(config.slopeness);
-  slider_octave_factor_.SetValue(config.octave_factor);
-  slider_seed_.SetValue(config.seed);
-  slider_q_.SetValue(config.q);
-  slider_r_.SetValue(config.r);
+  value_[0] = config.scale_x;
+  value_[1] = config.scale_y;
+  value_[2] = static_cast<float>(config.octaves);
+  value_[3] = config.gain;
+  value_[4] = config.lacunarity;
+  value_[5] = config.slopeness;
+  value_[6] = config.octave_factor;
+  value_[7] = config.seed;
+  value_[8] = config.q;
+  value_[9] = config.r;
+  SetBaseData(config.do_invert, config.do_tiling,
+              config.strength, config.hmap_id);
+}
+
+data::TextId TerrainNoiseFbmPerlinWarp::GetTextId() const noexcept {
+  return data::TextId::kFbmPerlinWarp;
+}
+
+UiTerrainNoise::UiTerrainNoise(
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+    TextRenderer& text_renderer)
+    : UiWindowAppear(
+          (data::VboIdMain::kTerrainWindowNoiseDesk), 1.0f,
+          {data::VboIdMain::kTerrainWindowNoisePinBack,
+           data::VboIdMain::kTerrainWindowNoisePinPoint},
+          ui_shared_resources, window_queue),
+      name_(text_renderer, data::VboIdMain::kTerrainWindowNoiseName,
+            data::TextId::kSeed),
+      btn_save_(data::VboIdMain::kTerrainWindowNoiseSave),
+      sl_data_({data::VboIdMain::kTerrainWindowNoiseSlider},
+               {data::VboIdMain::kTerrainWindowNoiseHandler},
+               6, 0.75f, 0.8f),
+      config_slider_(data::VboIdMain::kTerrainWindowNoiseSliderArea,
+                     data::VboIdMain::kTerrainWindowNoiseSliderIcon),
+      config_text_(text_renderer, data::VboIdMain::kTerrainWindowNoiseSliderText,
+                   data::TextId::kSeed) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_, &sl_data_);
+  hierarchy_.AddNested(&config_slider_, &config_text_);
+  sl_data_.SetSlotPtr(config_slider_.GetTrackPtr());
+}
+
+UiTerrainNoise::UiTerrainNoise(UiTerrainNoise&& other) noexcept
+    : UiWindowAppear(std::move(other)),
+      name_(std::move(other.name_)),
+      btn_save_(std::move(other.btn_save_)),
+      sl_data_(std::move(other.sl_data_)),
+      config_slider_(std::move(other.config_slider_)),
+      config_text_(std::move(other.config_text_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_, &sl_data_);
+  hierarchy_.AddNested(&config_slider_, &config_text_);
+}
+
+void UiTerrainNoise::RenderSlotsSprites(glm::vec2 mouse_pos) {
+  glm::vec2 next_offset = sl_data_.start_slot_translate_;
+  int slots_to_render = std::min(
+      sl_data_.slots_num_ - 1, static_cast<int>(value_.size()));
+  LocalTransform transform;
+  int start_id = sl_data_.cur_slots_offset_;
+  int end_id = start_id + slots_to_render;
+  for (int i = start_id; i < end_id; ++i) {
+    transform.translate = next_offset;
+//    config_slider_.SetTranslate(next_offset);
+    config_slider_.SetParentTransform(transform);
+    if (i == sl_pressed_config_) {
+      config_slider_.Render(mouse_pos);
+      value_[i] = config_slider_.GetProgress();
+    } else {
+      config_slider_.SetValue(value_[i]);
+      config_slider_.Render();
+    }
+    next_offset.y -= sl_data_.slot_height_;
+  }
+}
+
+void UiTerrainNoise::RenderSlotsText() {
+  glm::vec2 next_offset = sl_data_.start_slot_translate_;
+  int slots_to_render = std::min(
+      sl_data_.slots_num_ - 1, static_cast<int>(text_id_.size()));
+  int start_id = sl_data_.cur_slots_offset_;
+  int end_id = start_id + slots_to_render;
+  for (int i = start_id; i < end_id; ++i) {
+    auto graph_name = text_id_[i];
+    config_text_.SetText(graph_name);
+    config_text_.SetTranslate(next_offset);
+    config_text_.Render();
+    next_offset.y -= sl_data_.slot_height_;
+  }
+}
+
+bool UiTerrainNoise::Render() {
+  RenderBack(true);
+  auto mouse_pos =
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.tex_ui_.Bind();
+  btn_save_.Render();
+  sl_data_.Render(mouse_pos);
+  glEnable(GL_SCISSOR_TEST);
+  sl_data_.SetUpScissors();
+  RenderSlotsSprites(mouse_pos);
+  RenderSlotsText();
+  glDisable(GL_SCISSOR_TEST);
+  name_.Render();
+  return false;
+}
+
+void UiTerrainNoise::RenderPickingSlotsSprites() {
+  glm::vec2 next_offset = sl_data_.start_slot_translate_;
+  //TODO: config_slider_::handle probably already use SetTranslate
+  int slots_to_render = std::min(
+      sl_data_.slots_num_ - 1, static_cast<int>(value_.size()));
+  LocalTransform transform;
+  int start_id = sl_data_.cur_slots_offset_;
+  int end_id = start_id + slots_to_render;
+  for (int i = start_id; i < end_id; ++i) {
+    transform.translate = next_offset;
+    config_slider_.SetParentTransform(transform);
+    config_slider_.SetValue(value_[i]);
+    config_slider_.RenderPicking();
+    next_offset.y -= sl_data_.slot_height_;
+  }
+}
+
+void UiTerrainNoise::RenderPickingSlotsText() {
+  glm::vec2 next_offset = sl_data_.start_slot_translate_;
+  int slots_to_render = std::min(
+      sl_data_.slots_num_ - 1, static_cast<int>(text_id_.size()));
+  int start_id = sl_data_.cur_slots_offset_;
+  int end_id = start_id + slots_to_render;
+  for (int i = start_id; i < end_id; ++i) {
+    auto graph_name = text_id_[i];
+    config_text_.SetText(graph_name);
+    config_text_.SetTranslate(next_offset);
+    config_text_.RenderPicking();
+    next_offset.y -= sl_data_.slot_height_;
+  }
+}
+
+void UiTerrainNoise::RenderPicking() {
+  RenderPickingBack();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.tex_ui_.Bind();
+  btn_save_.RenderPicking();
+  sl_data_.RenderPicking();
+  glEnable(GL_SCISSOR_TEST);
+  sl_data_.SetUpScissors();
+  RenderPickingSlotsSprites();
+  RenderPickingSlotsText();
+  glDisable(GL_SCISSOR_TEST);
+  name_.RenderPicking();
+}
+
+bool UiTerrainNoise::Scroll(GLuint id, float yoffset) {
+  // any inside
+  return false;
+//  return slider_.Scroll(id, yoffset);
+}
+
+bool UiTerrainNoise::Press(int id) {
+  if (id == pin_.GetId()) {
+    pin_.Press();
+  } else if (id == sl_data_.GetId()) {
+    sl_data_.Press();
+    return true;
+  } else if (id == config_slider_.GetId()) {
+    sl_pressed_config_ = sl_data_.GetSlotId(
+        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
+    std::cout << sl_pressed_config_ << std::endl;
+    config_slider_.Press();
+    return true;
+  }
+  return false;
+}
+
+void UiTerrainNoise::Release() {
+  sl_data_.Release();
+  sl_pressed_config_ = -1;
+  config_slider_.Release();
+}
+
+void UiTerrainNoise::SetNoise(ITerrainNoise* noise) {
+  value_ = noise->GetValueSpan();
+  text_id_ = noise->GetTextIdSpan();
+  name_.SetText(noise->GetTextId());
+  sl_data_.SetEntryNum(static_cast<int>(value_.size()));
 }

@@ -35,8 +35,6 @@ LocalTransformLinear GetParentDbgTransform(size_t id);
 
 extern std::array<data::UiData, data::gVboIdSize> gUiComponents;
 
-//TODO: callable, text_id... under the question
-
 class UiBase {
  public:
   using CallableType = std::function<void()>;
@@ -45,13 +43,9 @@ class UiBase {
 
   UiBase(size_t ui_data_id, CallableType&& action);
 
-
-
-  ///
-  UiBase(UiBase* other) noexcept {
-    ui_data_id_ = other->ui_data_id_;
-  }
-  /// \param other
+//  UiBase(UiBase* other) noexcept {
+//    ui_data_id_ = other->ui_data_id_;
+//  }
 
   UiBase(UiBase&& other) noexcept = default;
   UiBase(const UiBase& other) = default;
@@ -337,53 +331,48 @@ class UiSpriteTransformation {
   bool looping_{false};
 };
 
-class UiSliderV final : public UiBase {
+class UiSliderV3 final : public UiBase {
  public:
-  UiSliderV(UiDynamicSprite&& fill_sprite,
-            UiDynamicSprite&& back_sprite,
-            UiDynamicSprite&& icon_sprite,
+  UiSliderV3(UiDynamicSprite&& sp_fill,
+            UiDynamicSprite&& sp_track,
+            UiDynamicSprite&& sp_handle,
             float scale = 1.0f);
 
-  UiSliderV(UiSliderV&& other) noexcept;
-  UiSliderV(const UiSliderV& other) = delete;
+  UiSliderV3(UiSliderV3&& other) noexcept;
+  UiSliderV3(const UiSliderV3& other) = delete;
 
-  UiSliderV& operator=(UiSliderV&& other) = delete;
-  UiSliderV& operator=(const UiSliderV& other) = delete;
+  UiSliderV3& operator=(UiSliderV3&& other) = delete;
+  UiSliderV3& operator=(const UiSliderV3& other) = delete;
 
   void Render(glm::vec2 mouse_pos);
-  void RenderIcon();
 
   void RenderPicking() const;
 
-  void Press() override {
-    pressed_ = true;
-  }
+  void Press() override;
 
-  void Release() override {
-    pressed_ = false;
-  }
+  void Release() override;
 
   bool Scroll(GLuint id, float yoffset) override;
 
-  [[nodiscard]] float GetProgress() const;
+  void SetParentTransform(LocalTransform transform);
 
-  [[nodiscard]] float GetProgressUnscaled() const;
+  [[nodiscard]] float GetProgress() const;
 
   void UpdateTransform() override;
 
-  void SetParentTransform(LocalTransform transform);
+  void SetMouseDiff(
+      float prev_progress, glm::vec2 start, glm::vec2 end);
 
-  void Set(float progress);
-
-  void SetMouseDiff(float remembered_progress,
-                    glm::vec2 cursor_start, glm::vec2 cursor_end);
+  void SetValue(float value);
 
  private:
   void Set(glm::vec2 mouse_pos);
 
-  UiDynamicSprite fill_sprite_;
-  UiDynamicSprite back_sprite_;
-  UiDynamicSprite icon_sprite_;
+  void Set(float progress);
+
+  UiDynamicSprite sp_fill_;
+  UiDynamicSprite sp_track_;
+  UiDynamicSprite sp_handle_;
 
   float progress_{0.0f};
   bool pressed_ = false;
@@ -393,79 +382,12 @@ class UiSliderV final : public UiBase {
   static const float kTrackLengthFactor;
 };
 
-class UiSliderH final : public UiBase {
- public:
-  UiSliderH(UiDynamicSprite&& fill_sprite,
-            UiDynamicSprite&& back_sprite,
-            UiDynamicSprite&& handler_sprite,
-            float scale = 1.0f);
-
-  UiSliderH(UiSliderH&& other) noexcept;
-  UiSliderH(const UiSliderH& other) = delete;
-
-  UiSliderH& operator=(UiSliderH&& other) = delete;
-  UiSliderH& operator=(const UiSliderH& other) = delete;
-
-  void Render(glm::vec2 mouse_pos);
-
-  void RenderIcon();
-
-  void RenderPicking() const;
-
-  void Press() override {
-    pressed_ = true;
-  }
-
-  void Release() override {
-    pressed_ = false;
-  }
-
-  bool Scroll(GLuint id, float yoffset) override;
-
-  /// UiSlider has the same id as a track_, so it's like its wrapper.
-  /// We don't render UiSlider id, but
-  /// for comparison (e.g. in key callback) we directly slider.GetId()
-  [[nodiscard]] std::uint32_t GetTrackId() const {
-    return fill_sprite_.GetId();
-  }
-
-  void SetParentTransform(LocalTransform transform);
-
-  [[nodiscard]] float GetProgress() const;
-
-  void UpdateTransform() override;
-
- private:
-  // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
-  void Set(glm::vec2 mouse_pos);
-
-  void Set(float progress);
-
-  /// we want to use UiDynamicSprite only for handler_sprite_,
-  /// BUT to use it in complex hierarhies we need all to be UiDynamicSprite
-//  UiStaticSprite fill_sprite_;
-//  UiStaticSprite back_sprite_;
-//  UiStaticSprite icon_sprite_;
-//  UiDynamicSprite handler_sprite_;
-
-  UiDynamicSprite fill_sprite_;
-  UiDynamicSprite back_sprite_;
-  UiDynamicSprite handler_sprite_;
-
-  float progress_{0.0f};
-  bool pressed_{false};
-  float centre_;
-  float length_;
-  float scale_{1.0f};
-  static const float kTrackLengthFactor;
-};
-
 class UiSliderH3 final : public UiBase {
  public:
-  UiSliderH3(UiDynamicSprite&& fill_sprite,
-             UiDynamicSprite&& back_sprite,
-             UiDynamicSprite&& icon_sprite,
-            float scale = 1.0f);
+  UiSliderH3(UiDynamicSprite&& sp_fill,
+             UiDynamicSprite&& sp_track,
+             UiDynamicSprite&& sp_handle,
+             float scale = 1.0f);
 
   UiSliderH3(UiSliderH3&& other) noexcept;
   UiSliderH3(const UiSliderH3& other) = delete;
@@ -475,26 +397,13 @@ class UiSliderH3 final : public UiBase {
 
   void Render(glm::vec2 mouse_pos);
 
-  void RenderIcon();
-
   void RenderPicking() const;
 
-  void Press() override {
-    pressed_ = true;
-  }
+  void Press() override;
 
-  void Release() override {
-    pressed_ = false;
-  }
+  void Release() override;
 
   bool Scroll(GLuint id, float yoffset) override;
-
-  /// UiSlider has the same id as a track_, so it's like its wrapper.
-  /// We don't render UiSlider id, but
-  /// for comparison (e.g. in key callback) we directly slider.GetId()
-  [[nodiscard]] std::uint32_t GetTrackId() const {
-    return fill_sprite_.GetId();
-  }
 
   void SetParentTransform(LocalTransform transform);
 
@@ -502,22 +411,16 @@ class UiSliderH3 final : public UiBase {
 
   void UpdateTransform() override;
 
+  void SetValue(float value);
+
  private:
-  // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
   void Set(glm::vec2 mouse_pos);
 
   void Set(float progress);
 
-  /// we want to use UiDynamicSprite only for handler_sprite_,
-  /// BUT to use it in complex hierarhies we need all to be UiDynamicSprite
-  //  UiStaticSprite fill_sprite_;
-  //  UiStaticSprite back_sprite_;
-  //  UiStaticSprite icon_sprite_;
-  //  UiDynamicSprite handler_sprite_;
-
-  UiDynamicSprite fill_sprite_;
-  UiDynamicSprite back_sprite_;
-  UiDynamicSprite icon_sprite_;
+  UiDynamicSprite sp_fill_;
+  UiDynamicSprite sp_track_;
+  UiDynamicSprite sp_handle_;
 
   float progress_{0.0f};
   bool pressed_{false};
@@ -529,8 +432,8 @@ class UiSliderH3 final : public UiBase {
 
 class UiSliderH2 final : public UiBase {
  public:
-  UiSliderH2(UiDynamicSprite&& back_sprite,
-             UiDynamicSprite&& icon_sprite,
+  UiSliderH2(UiDynamicSprite&& sp_track,
+             UiDynamicSprite&& sp_handle,
              float scale = 1.0f);
 
   UiSliderH2(UiSliderH2&& other) noexcept;
@@ -541,8 +444,6 @@ class UiSliderH2 final : public UiBase {
 
   void Render(glm::vec2 mouse_pos);
 
-  void RenderIcon();
-
   void RenderPicking() const;
 
   void Press() override;
@@ -551,12 +452,7 @@ class UiSliderH2 final : public UiBase {
 
   bool Scroll(GLuint id, float yoffset) override;
 
-  /// UiSlider has the same id as a track_, so it's like its wrapper.
-  /// We don't render UiSlider id, but
-  /// for comparison (e.g. in key callback) we directly slider.GetId()
-  [[nodiscard]] std::uint32_t GetTrackId() const {
-    return back_sprite_.GetId();
-  }
+  void SetTranslate(glm::vec2 translate);
 
   void SetParentTransform(LocalTransform transform);
 
@@ -566,28 +462,37 @@ class UiSliderH2 final : public UiBase {
 
   void SetValue(float value);
 
+  // used for UiWindowSlider (UiComplex.h) as a slot height
+  [[nodiscard]] const UiDynamicSprite* GetTrackPtr() const noexcept {
+    return &sp_track_;
+  }
+  // used for UiWindowSlider (UiComplex.h) do setup a group of sliders
+  void Render() {
+    sp_track_.Render();
+    sp_handle_.Render();
+  }
+
  private:
-  // if hor slider - use mouse_pos.x, otherwise mouse_pos.y
   void Set(glm::vec2 mouse_pos);
 
   void Set(float progress);
 
-  UiDynamicSprite back_sprite_;
-  UiDynamicSprite icon_sprite_;
+  UiDynamicSprite sp_track_;
+  UiDynamicSprite sp_handle_;
 
-  float progress_{0.0f};
-  bool pressed_{false};
+  float progress_ = 0.0f;
+  bool pressed_ = false;
   float centre_;
   float length_;
-  float scale_{1.0f};
+  float scale_ = 1.0f;
   static const float kTrackLengthFactor;
 };
 
-//used for UiPalette, so X-axis is Hue, Y-asix is Saturation
+/// used for ui palette, so X-axis is Hue, Y-axis is Saturation
 class UiSlider2D final : public UiBase {
  public:
-  UiSlider2D(UiDynamicSprite&& palette,
-             UiDynamicSprite&& cursor,
+  UiSlider2D(UiDynamicSprite&& sp_palette,
+             UiDynamicSprite&& sp_handle,
              glm::vec2 scale = glm::vec2{1.0f});
 
   UiSlider2D(UiSlider2D&& other) noexcept;
@@ -597,19 +502,16 @@ class UiSlider2D final : public UiBase {
   UiSlider2D& operator=(const UiSlider2D& other) = delete;
 
   void Render(glm::vec2 mouse_pos);
-  void RenderIcon();
 
   void RenderPicking() const;
 
-  void Press() override {
-    pressed_ = true;
-  }
+  void Press() override;
 
-  void Release() override {
-    pressed_ = false;
-  }
+  void Release() override;
 
   bool Scroll(GLuint id, float yoffset) override;
+
+  void SetParentTransform(LocalTransform transform);
 
   [[nodiscard]] glm::vec2 GetProgress() const;
 
@@ -619,15 +521,15 @@ class UiSlider2D final : public UiBase {
 
   void UpdateTransform() override;
 
-  void SetParentTransform(LocalTransform transform);
+  void SetValue(glm::vec2 value);
 
  private:
   void SetMousePos(glm::vec2 mouse_pos);
 
   void SetProgress(glm::vec2 progress);
 
-  UiDynamicSprite palette_;
-  UiDynamicSprite cursor_;
+  UiDynamicSprite sp_track_;
+  UiDynamicSprite sp_handle_;
 
   glm::vec2 progress_ = glm::vec2{0.0f};
   bool pressed_ = false;
@@ -640,16 +542,16 @@ class UiSlider2D final : public UiBase {
 };
 
 /// You should pass action to off_ sprite (see Press());
-class UiToggle final : public UiBase {
+class UiToggle4 final : public UiBase {
  public:
-  UiToggle(UiDynamicSprite&& off, UiDynamicSprite&& on1,
+  UiToggle4(UiDynamicSprite&& off, UiDynamicSprite&& on1,
            UiDynamicSprite&& on2, UiDynamicSprite&& on3);
 
-  UiToggle(UiToggle&& other) noexcept;
-  UiToggle(const UiToggle& other) = delete;
+  UiToggle4(UiToggle4&& other) noexcept;
+  UiToggle4(const UiToggle4& other) = delete;
 
-  UiToggle& operator=(UiToggle&& other) = delete;
-  UiToggle& operator=(const UiToggle& other) = delete;
+  UiToggle4& operator=(UiToggle4&& other) = delete;
+  UiToggle4& operator=(const UiToggle4& other) = delete;
 
   void Render();
 
@@ -659,23 +561,19 @@ class UiToggle final : public UiBase {
 
   void UpdateTransform() override;
 
-  void UpdateState();
-
   void SetParentTransform(LocalTransform transform);
 
   void SetTranslate(glm::vec2 translate);
 
-  [[nodiscard]] bool IsOff() const noexcept {
-    return turned_off_;
+  [[nodiscard]] bool TurnedOn() const noexcept {
+    return !turned_off_;
   }
 
-  void Set(bool value) {
-    if (turned_off_ != value) {
-      Press();
-    }
-  }
+  void Set(bool value);
 
  private:
+  void UpdateState();
+
   UiDynamicSprite off_;
   UiDynamicSprite on1_;
   UiDynamicSprite on2_;
@@ -715,11 +613,7 @@ class UiToggle2 final : public UiBase {
     return !turned_off_;
   }
 
-  void Set(bool value) {
-    if (turned_off_ == value) {
-      Press();
-    }
-  }
+  void Set(bool value);
 
  private:
   UiDynamicSprite off_;

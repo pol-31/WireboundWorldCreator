@@ -4,9 +4,12 @@
 #include "../common/Texture.h"
 
 struct NoiseDataBase {
+//  Texture32F hmap; can't have it here; anyway need to store it in
+// NoisePerlinData (derived class) to serialize it; no benefits from it here
+  GLuint hmap_id = 0; // idk.. soryy
   float strength = 0.0f;
-  bool do_tiling = true;
-  bool do_invert = true;
+  bool do_tiling = false;
+  bool do_invert = false;
 };
 
 struct NoisePerlinData : public NoiseDataBase {

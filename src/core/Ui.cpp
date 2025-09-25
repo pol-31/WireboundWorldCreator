@@ -314,297 +314,160 @@ void UiSpriteTransformation::UpdateAnimation() {
   sprite_.SetParentTransform(cur_);
 }
 
-const float UiSliderV::kTrackLengthFactor = 0.8f;
+const float UiSliderV3::kTrackLengthFactor = 0.8f;
 
-UiSliderV::UiSliderV(
-    UiDynamicSprite&& fill_sprite,
-    UiDynamicSprite&& back_sprite,
-    UiDynamicSprite&& icon_sprite,
+UiSliderV3::UiSliderV3(
+    UiDynamicSprite&& sp_fill,
+    UiDynamicSprite&& sp_track,
+    UiDynamicSprite&& sp_handle,
     float scale)
-    : UiBase(back_sprite.GetId(), {}),
-      fill_sprite_(std::move(fill_sprite)),
-      back_sprite_(std::move(back_sprite)),
-      icon_sprite_(std::move(icon_sprite)),
+    : UiBase(sp_track.GetId(), {}),
+      sp_fill_(std::move(sp_fill)),
+      sp_track_(std::move(sp_track)),
+      sp_handle_(std::move(sp_handle)),
       length_(kTrackLengthFactor *
-              (back_sprite_.GetTopBorder()
-               - back_sprite_.GetBottomBorder())),
-      centre_((back_sprite_.GetTopBorder()
-               + back_sprite_.GetBottomBorder()) / 2.0f),
+              (sp_track_.GetTopBorder()
+               - sp_track_.GetBottomBorder())),
+      centre_((sp_track_.GetTopBorder()
+               + sp_track_.GetBottomBorder()) / 2.0f),
       scale_(scale) {
-  gUiComponents[fill_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_sprite_.GetId();
-  gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_sprite_.GetId();
+  gUiComponents[sp_fill_.GetId() - details::kIdOffsetUi].parent_id_
+      = sp_track_.GetId();
+  gUiComponents[sp_handle_.GetId() - details::kIdOffsetUi].parent_id_
+      = sp_track_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
   UpdateTransform();
 }
 
-/// to update component features (not transform, but e.g. slider handler,
-/// write itself(this) to gUiComponents[id - offset].ui
-
-/// to update transform at the program start get transform from gUiTransforms
-
-UiSliderV::UiSliderV(UiSliderV&& other) noexcept
+UiSliderV3::UiSliderV3(UiSliderV3&& other) noexcept
     : UiBase(std::move(other)),
-      fill_sprite_(std::move(other.fill_sprite_)),
-      back_sprite_(std::move(other.back_sprite_)),
-      icon_sprite_(std::move(other.icon_sprite_)) {
+      sp_fill_(std::move(other.sp_fill_)),
+      sp_track_(std::move(other.sp_track_)),
+      sp_handle_(std::move(other.sp_handle_)) {
   progress_ = other.progress_;
   pressed_ = other.pressed_;
   centre_ = other.centre_;
   length_ = other.length_;
   scale_ = other.scale_;
-  gUiComponents[back_sprite_.GetId() - details::kIdOffsetUi].ui
+  gUiComponents[sp_track_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
 }
 
-/// we need this only in DEBUG, but in DEBUG we use only UiDynamicSprite,
-/// so we don't separate it to RenderPicking and RenderPickingIcon,
-/// but not for Render() and RenderPicking()
+void UiSliderV3::SetParentTransform(LocalTransform transform) {
+  sp_track_.SetParentTransform(transform);
+  sp_fill_.SetParentTransform(transform);
+  sp_handle_.SetParentTransform(transform);
+}
 
-void UiSliderV::Render(glm::vec2 mouse_pos) {
+void UiSliderV3::Render(glm::vec2 mouse_pos) {
   if (pressed_) {
     Set(mouse_pos);
   }
-  back_sprite_.Render();
+  sp_track_.Render();
   glEnable(GL_SCISSOR_TEST);
-  // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
   float y_ndc = centre_ - length_ / 2;
   int y_px = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
   int height_px = int(progress_ * length_ * 0.5f * gWindowHeight);
-  glScissor(0, y_px, 4000, height_px);
-
-  fill_sprite_.Render();
+  glScissor(0, y_px, gWindowWidth, height_px);
+  sp_fill_.Render();
   glDisable(GL_SCISSOR_TEST);
+  sp_handle_.Render();
 }
 
-void UiSliderV::RenderIcon() {
-  icon_sprite_.Render();
-}
-
-void UiSliderV::RenderPicking() const {
-  back_sprite_.RenderPicking();
+void UiSliderV3::RenderPicking() const {
+  sp_track_.RenderPicking();
   if (debug::gUiAltMode) {
     glEnable(GL_SCISSOR_TEST);
-    // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
     float y_ndc = centre_ - length_ / 2;
     int y_px = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
     int height_px = int(progress_ * length_ * 0.5f * gWindowHeight);
-    glScissor(0, y_px, 4000, height_px);
-    fill_sprite_.RenderPicking();
+    glScissor(0, y_px, gWindowWidth, height_px);
+    sp_fill_.RenderPicking();
     glDisable(GL_SCISSOR_TEST);
-    icon_sprite_.RenderPicking();
+    sp_handle_.RenderPicking();
   }
 }
 
-void UiSliderV::Set(glm::vec2 mouse_pos) {
+void UiSliderV3::Press() {
+  pressed_ = true;
+}
+
+void UiSliderV3::Release() {
+  pressed_ = false;
+}
+
+void UiSliderV3::SetValue(float value) {
+  Set(value / scale_);
+}
+
+void UiSliderV3::Set(glm::vec2 mouse_pos) {
   float half_length_ = length_ / 2.0f;
   float offset = glm::clamp(
       mouse_pos.y - centre_, -half_length_, +half_length_);
   progress_ = (offset + half_length_) / length_;
   glm::vec2 translate = {0.0f, offset};
-  icon_sprite_.SetTranslate(translate);
+  sp_handle_.SetTranslate(translate);
 }
 
-void UiSliderV::Set(float progress) {
-  progress_ = progress;
+void UiSliderV3::Set(float progress) {
+  progress_ = std::clamp(progress, 0.0f, 1.0f);
   float half_length_ = length_ / 2.0f;
   float offset = progress_ * length_ - half_length_;
   glm::vec2 translate = {0.0f, offset};
-  icon_sprite_.SetTranslate(translate);
+  sp_handle_.SetTranslate(translate);
 }
 
-void UiSliderV::SetMouseDiff(
-    float remembered_progress,
-    glm::vec2 cursor_start, glm::vec2 cursor_end) {
-  float diff = (cursor_start.y - cursor_end.y) / gWindowHeight;
-  Set(std::clamp(remembered_progress + diff, 0.0f, 1.0f));
-}
-
-bool UiSliderV::Scroll(GLuint id, float yoffset) {
-  if (id > icon_sprite_.GetId() || id < fill_sprite_.GetId()) {
+bool UiSliderV3::Scroll(GLuint id, float yoffset) {
+  if (id > sp_handle_.GetId() || id < sp_fill_.GetId()) {
     return false;
   }
-  float factor = 0.01f * yoffset;
-  float progress = std::clamp(progress_ + factor, 0.0f, 1.0f);
-  Set(progress);
+  Set(progress_ + yoffset * 0.01f);
   return true;
 }
 
-float UiSliderV::GetProgress() const {
-  //TODO: make some *magic* with sprite and "return progress_;"
-  return (1.0f - progress_) * scale_;
+float UiSliderV3::GetProgress() const {
+  return progress_ * scale_;
 }
 
-float UiSliderV::GetProgressUnscaled() const {
-  return 1.0f - progress_;
-}
-
-void UiSliderV::UpdateTransform() {
-  back_sprite_.UpdateTransform();
-  fill_sprite_.UpdateTransform();
-  icon_sprite_.UpdateTransform();
+void UiSliderV3::UpdateTransform() {
+  sp_track_.UpdateTransform();
+  sp_fill_.UpdateTransform();
+  sp_handle_.UpdateTransform();
   length_ = kTrackLengthFactor *
-            (back_sprite_.GetTopBorder() - back_sprite_.GetBottomBorder());
-  centre_ = (back_sprite_.GetTopBorder() + back_sprite_.GetBottomBorder()) / 2.0f;
+            (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder());
+  centre_ = (sp_track_.GetTopBorder() + sp_track_.GetBottomBorder()) / 2.0f;
   float related_pos = progress_ * length_ - length_ / 2.0f + centre_;
   Set({0.0f, related_pos});
 }
 
-void UiSliderV::SetParentTransform(LocalTransform transform) {
-  back_sprite_.SetParentTransform(transform);
-  fill_sprite_.SetParentTransform(transform);
-  icon_sprite_.SetParentTransform(transform);
+void UiSliderV3::SetMouseDiff(
+    float prev_progress, glm::vec2 start, glm::vec2 end) {
+  float diff = (start.y - end.y) / gWindowHeight;
+  SetValue(prev_progress + diff * scale_);
 }
-
-
-const float UiSliderH::kTrackLengthFactor = 0.8f;
-
-UiSliderH::UiSliderH(
-    UiDynamicSprite&& fill_sprite,
-    UiDynamicSprite&& back_sprite,
-    UiDynamicSprite&& handler_sprite,
-    float scale)
-    : UiBase(back_sprite.GetId(), {}),
-      fill_sprite_(std::move(fill_sprite)),
-      back_sprite_(std::move(back_sprite)),
-      handler_sprite_(std::move(handler_sprite)),
-      length_(kTrackLengthFactor * (back_sprite_.GetRightBorder()
-              - back_sprite_.GetLeftBorder())),
-      centre_((back_sprite_.GetRightBorder()
-               + back_sprite_.GetLeftBorder()) / 2.0f),
-      scale_(scale) {
-  gUiComponents[fill_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_sprite_.GetId();
-  gUiComponents[handler_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_sprite_.GetId();
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UpdateTransform();
-}
-
-UiSliderH::UiSliderH(UiSliderH&& other) noexcept
-    : UiBase(std::move(other)),
-      fill_sprite_(std::move(other.fill_sprite_)),
-      back_sprite_(std::move(other.back_sprite_)),
-      handler_sprite_(std::move(other.handler_sprite_)) {
-  progress_ = other.progress_;
-  pressed_ = other.pressed_;
-  centre_ = other.centre_;
-  length_ = other.length_;
-  scale_ = other.scale_;
-  gUiComponents[back_sprite_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
-
-void UiSliderH::SetParentTransform(LocalTransform transform) {
-  back_sprite_.SetParentTransform(transform);
-  fill_sprite_.SetParentTransform(transform);
-  handler_sprite_.SetParentTransform(transform);
-}
-
-void UiSliderH::Render(glm::vec2 mouse_pos) {
-  if (pressed_) {
-    Set(mouse_pos);
-  }
-  back_sprite_.Render();
-  glEnable(GL_SCISSOR_TEST);
-  // ---- ---- ----
-  // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
-  float x_ndc = centre_ - length_ / 2;
-  int x_px = int((x_ndc + 1.0f) * 0.5f * gWindowWidth);
-  int width_px = int(progress_ * length_ * 0.5f * gWindowWidth);
-  glScissor(x_px, 0, width_px, 4000);
-
-  fill_sprite_.Render();
-  glDisable(GL_SCISSOR_TEST);
-}
-
-void UiSliderH::RenderIcon() {
-  handler_sprite_.Render();
-}
-
-void UiSliderH::RenderPicking() const {
-  back_sprite_.RenderPicking();
-  if (debug::gUiAltMode) {
-    glEnable(GL_SCISSOR_TEST);
-    // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
-    float x_ndc = centre_ - length_ / 2;
-    int x_px = int((x_ndc + 1.0f) * 0.5f * gWindowWidth);
-    int width_px = int(progress_ * length_ * 0.5f * gWindowWidth);
-    glScissor(x_px, 0, width_px, 4000);
-    fill_sprite_.RenderPicking();
-    glDisable(GL_SCISSOR_TEST);
-    handler_sprite_.RenderPicking();
-  }
-}
-
-void UiSliderH::Set(glm::vec2 mouse_pos) {
-  float half_length_ = length_ / 2.0f;
-  float offset = glm::clamp(
-      mouse_pos.x - centre_, -half_length_, +half_length_);
-  progress_ = (offset + half_length_) / length_;
-  glm::vec2 translate = {offset, 0.0f};
-  handler_sprite_.SetTranslate(translate);
-}
-
-void UiSliderH::Set(float progress) {
-  progress_ = progress;
-  float half_length_ = length_ / 2.0f;
-  float offset = progress_ * length_ - half_length_;
-  glm::vec2 translate = {offset, 0.0f};
-  handler_sprite_.SetTranslate(translate);
-}
-
-bool UiSliderH::Scroll(GLuint id, float yoffset) {
-  if (id > handler_sprite_.GetId() || id < fill_sprite_.GetId()) {
-    return false;
-  }
-  float factor = 0.01f * yoffset;
-  float progress = std::clamp(progress_ + factor, 0.0f, 1.0f);
-  Set(progress);
-  return true;
-}
-
-float UiSliderH::GetProgress() const {
-  //TODO: make some *magic* with sprite and "return progress_;"
-  return (1.0f - progress_) * scale_;
-}
-
-void UiSliderH::UpdateTransform() {
-  back_sprite_.UpdateTransform();
-  fill_sprite_.UpdateTransform();
-  handler_sprite_.UpdateTransform();
-  length_ = kTrackLengthFactor *
-            (back_sprite_.GetRightBorder() - back_sprite_.GetLeftBorder());
-  centre_ = (back_sprite_.GetRightBorder() + back_sprite_.GetLeftBorder()) / 2.0f;
-  float related_pos = progress_ * length_ - length_ / 2.0f + centre_;
-  Set({related_pos, 0.0f});
-}
-
 
 const float UiSliderH3::kTrackLengthFactor = 0.9f;
 
 UiSliderH3::UiSliderH3(
-    UiDynamicSprite&& fill_sprite,
-    UiDynamicSprite&& back_sprite,
-    UiDynamicSprite&& icon_sprite,
+    UiDynamicSprite&& sp_fill,
+    UiDynamicSprite&& sp_track,
+    UiDynamicSprite&& sp_handle,
     float scale)
-    : UiBase(back_sprite.GetId(), {}),
-      fill_sprite_(std::move(fill_sprite)),
-      back_sprite_(std::move(back_sprite)),
-      icon_sprite_(std::move(icon_sprite)),
+    : UiBase(sp_track.GetId(), {}),
+      sp_fill_(std::move(sp_fill)),
+      sp_track_(std::move(sp_track)),
+      sp_handle_(std::move(sp_handle)),
       length_(kTrackLengthFactor *
-              (back_sprite_.GetRightBorder()
-               - back_sprite_.GetLeftBorder())),
-      centre_((back_sprite_.GetRightBorder()
-               + back_sprite_.GetLeftBorder()) / 2.0f),
+              (sp_track_.GetRightBorder()
+               - sp_track_.GetLeftBorder())),
+      centre_((sp_track_.GetRightBorder()
+               + sp_track_.GetLeftBorder()) / 2.0f),
       scale_(scale) {
-  gUiComponents[fill_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_sprite_.GetId();
-  gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_sprite_.GetId();
+  gUiComponents[sp_fill_.GetId() - details::kIdOffsetUi].parent_id_
+      = sp_track_.GetId();
+  gUiComponents[sp_handle_.GetId() - details::kIdOffsetUi].parent_id_
+      = sp_track_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
   UpdateTransform();
@@ -612,58 +475,63 @@ UiSliderH3::UiSliderH3(
 
 UiSliderH3::UiSliderH3(UiSliderH3&& other) noexcept
     : UiBase(std::move(other)),
-      fill_sprite_(std::move(other.fill_sprite_)),
-      back_sprite_(std::move(other.back_sprite_)),
-      icon_sprite_(std::move(other.icon_sprite_)) {
+      sp_fill_(std::move(other.sp_fill_)),
+      sp_track_(std::move(other.sp_track_)),
+      sp_handle_(std::move(other.sp_handle_)) {
   progress_ = other.progress_;
   pressed_ = other.pressed_;
   centre_ = other.centre_;
   length_ = other.length_;
   scale_ = other.scale_;
-  gUiComponents[back_sprite_.GetId() - details::kIdOffsetUi].ui
+  gUiComponents[sp_track_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
 }
 
 void UiSliderH3::SetParentTransform(LocalTransform transform) {
-  back_sprite_.SetParentTransform(transform);
-  fill_sprite_.SetParentTransform(transform);
-  icon_sprite_.SetParentTransform(transform);
+  sp_track_.SetParentTransform(transform);
+  sp_fill_.SetParentTransform(transform);
+  sp_handle_.SetParentTransform(transform);
 }
 
 void UiSliderH3::Render(glm::vec2 mouse_pos) {
   if (pressed_) {
     Set(mouse_pos);
   }
-  back_sprite_.Render();
+  sp_track_.Render();
   glEnable(GL_SCISSOR_TEST);
-  // ---- ---- ----
-  // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
   float x_ndc = centre_ - length_ / 2;
   int x_px = int((x_ndc + 1.0f) * 0.5f * gWindowWidth);
   int width_px = int(progress_ * length_ * 0.5f * gWindowWidth);
-  glScissor(x_px, 0, width_px, 4000);
-
-  fill_sprite_.Render();
+  glScissor(x_px, 0, width_px, gWindowHeight);
+  sp_fill_.Render();
   glDisable(GL_SCISSOR_TEST);
-}
-
-void UiSliderH3::RenderIcon() {
-  icon_sprite_.Render();
+  sp_handle_.Render();
 }
 
 void UiSliderH3::RenderPicking() const {
-  back_sprite_.RenderPicking();
+  sp_track_.RenderPicking();
   if (debug::gUiAltMode) {
     glEnable(GL_SCISSOR_TEST);
-    // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
     float x_ndc = centre_ - length_ / 2;
     int x_px = int((x_ndc + 1.0f) * 0.5f * gWindowWidth);
     int width_px = int(progress_ * length_ * 0.5f * gWindowWidth);
-    glScissor(x_px, 0, width_px, 4000);
-    fill_sprite_.RenderPicking();
+    glScissor(x_px, 0, width_px, gWindowHeight);
+    sp_fill_.RenderPicking();
     glDisable(GL_SCISSOR_TEST);
-    icon_sprite_.RenderPicking();
+    sp_handle_.RenderPicking();
   }
+}
+
+void UiSliderH3::Press() {
+  pressed_ = true;
+}
+
+void UiSliderH3::Release() {
+  pressed_ = false;
+}
+
+void UiSliderH3::SetValue(float value) {
+  Set(value / scale_);
 }
 
 void UiSliderH3::Set(glm::vec2 mouse_pos) {
@@ -672,61 +540,57 @@ void UiSliderH3::Set(glm::vec2 mouse_pos) {
       mouse_pos.x - centre_, -half_length_, +half_length_);
   progress_ = (offset + half_length_) / length_;
   glm::vec2 translate = {offset, 0.0f};
-  icon_sprite_.SetTranslate(translate);
+  sp_handle_.SetTranslate(translate);
 }
 
 void UiSliderH3::Set(float progress) {
-  progress_ = progress;
+  progress_ = std::clamp(progress, 0.0f, 1.0f);
   float half_length_ = length_ / 2.0f;
   float offset = progress_ * length_ - half_length_;
   glm::vec2 translate = {offset, 0.0f};
-  icon_sprite_.SetTranslate(translate);
+  sp_handle_.SetTranslate(translate);
 }
 
 bool UiSliderH3::Scroll(GLuint id, float yoffset) {
-  if (id > icon_sprite_.GetId() || id < fill_sprite_.GetId()) {
+  if (id > sp_handle_.GetId() || id < sp_fill_.GetId()) {
     return false;
   }
-  float factor = 0.01f * yoffset;
-  float progress = std::clamp(progress_ + factor, 0.0f, 1.0f);
-  Set(progress);
+  Set(progress_ + yoffset * 0.01f);
   return true;
 }
 
 float UiSliderH3::GetProgress() const {
-  //TODO: make some *magic* with sprite and "return progress_;"
-  return (1.0f - progress_) * scale_;
+  return progress_ * scale_;
 }
 
 void UiSliderH3::UpdateTransform() {
-  back_sprite_.UpdateTransform();
-  fill_sprite_.UpdateTransform();
-  icon_sprite_.UpdateTransform();
+  sp_track_.UpdateTransform();
+  sp_fill_.UpdateTransform();
+  sp_handle_.UpdateTransform();
   length_ = kTrackLengthFactor *
-            (back_sprite_.GetRightBorder() - back_sprite_.GetLeftBorder());
-  centre_ = (back_sprite_.GetRightBorder() + back_sprite_.GetLeftBorder()) / 2.0f;
+            (sp_track_.GetRightBorder() - sp_track_.GetLeftBorder());
+  centre_ = (sp_track_.GetRightBorder() + sp_track_.GetLeftBorder()) / 2.0f;
   float related_pos = progress_ * length_ - length_ / 2.0f + centre_;
   Set({related_pos, 0.0f});
 }
 
-
 const float UiSliderH2::kTrackLengthFactor = 0.9f;
 
 UiSliderH2::UiSliderH2(
-    UiDynamicSprite&& back_sprite,
-    UiDynamicSprite&& icon_sprite,
+    UiDynamicSprite&& sp_track,
+    UiDynamicSprite&& sp_handle,
     float scale)
-    : UiBase(back_sprite.GetId(), {}),
-      back_sprite_(std::move(back_sprite)),
-      icon_sprite_(std::move(icon_sprite)),
+    : UiBase(sp_track.GetId(), {}),
+      sp_track_(std::move(sp_track)),
+      sp_handle_(std::move(sp_handle)),
       length_(kTrackLengthFactor *
-              (back_sprite_.GetRightBorder()
-               - back_sprite_.GetLeftBorder())),
-      centre_((back_sprite_.GetRightBorder()
-               + back_sprite_.GetLeftBorder()) / 2.0f),
+              (sp_track_.GetRightBorder()
+               - sp_track_.GetLeftBorder())),
+      centre_((sp_track_.GetRightBorder()
+               + sp_track_.GetLeftBorder()) / 2.0f),
       scale_(scale) {
-  gUiComponents[icon_sprite_.GetId() - details::kIdOffsetUi].parent_id_
-      = back_sprite_.GetId();
+  gUiComponents[sp_handle_.GetId() - details::kIdOffsetUi].parent_id_
+      = sp_track_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
   UpdateTransform();
@@ -734,77 +598,36 @@ UiSliderH2::UiSliderH2(
 
 UiSliderH2::UiSliderH2(UiSliderH2&& other) noexcept
     : UiBase(std::move(other)),
-      back_sprite_(std::move(other.back_sprite_)),
-      icon_sprite_(std::move(other.icon_sprite_)) {
+      sp_track_(std::move(other.sp_track_)),
+      sp_handle_(std::move(other.sp_handle_)) {
   progress_ = other.progress_;
   pressed_ = other.pressed_;
   centre_ = other.centre_;
   length_ = other.length_;
   scale_ = other.scale_;
-  gUiComponents[back_sprite_.GetId() - details::kIdOffsetUi].ui
+  scale_ = other.scale_;
+  gUiComponents[sp_track_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
 }
 
 void UiSliderH2::SetParentTransform(LocalTransform transform) {
-  back_sprite_.SetParentTransform(transform);
-  icon_sprite_.SetParentTransform(transform);
+  sp_track_.SetParentTransform(transform);
+  sp_handle_.SetParentTransform(transform);
 }
 
 void UiSliderH2::Render(glm::vec2 mouse_pos) {
   if (pressed_) {
     Set(mouse_pos);
   }
-  back_sprite_.Render();
-  glEnable(GL_SCISSOR_TEST);
-  // ---- ---- ----
-  // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
-  float x_ndc = centre_ - length_ / 2;
-  int x_px = int((x_ndc + 1.0f) * 0.5f * gWindowWidth);
-  int width_px = int(progress_ * length_ * 0.5f * gWindowWidth);
-  glScissor(x_px, 0, width_px, 4000);
-  glDisable(GL_SCISSOR_TEST);
-  icon_sprite_.Render();
-}
-
-void UiSliderH2::RenderIcon() {
-  icon_sprite_.Render();
+  sp_track_.Render();
+  sp_handle_.Render();
 }
 
 void UiSliderH2::RenderPicking() const {
-  back_sprite_.RenderPicking();
+  sp_track_.RenderPicking();
   if (debug::gUiAltMode) {
-    glEnable(GL_SCISSOR_TEST);
-    // NDC to pixels: ((ndc + 1.0) / 2.0) * dimension
-    float x_ndc = centre_ - length_ / 2;
-    int x_px = int((x_ndc + 1.0f) * 0.5f * gWindowWidth);
-    int width_px = int(progress_ * length_ * 0.5f * gWindowWidth);
-    glScissor(x_px, 0, width_px, 4000);
-    glDisable(GL_SCISSOR_TEST);
-    icon_sprite_.RenderPicking();
+    sp_handle_.RenderPicking();
   }
-}
-
-void UiSliderH2::SetValue(float value) {
-  /// deduced from GetProgress
-  Set(value / scale_);
-}
-
-
-void UiSliderH2::Set(glm::vec2 mouse_pos) {
-  float half_length_ = length_ / 2.0f;
-  float offset = glm::clamp(
-      mouse_pos.x - centre_, -half_length_, +half_length_);
-  progress_ = (offset + half_length_) / length_;
-  glm::vec2 translate = {offset, 0.0f};
-  icon_sprite_.SetTranslate(translate);
-}
-
-void UiSliderH2::Set(float progress) {
-  progress_ = progress;
-  float half_length_ = length_ / 2.0f;
-  float offset = progress_ * length_ - half_length_;
-  glm::vec2 translate = {offset, 0.0f};
-  icon_sprite_.SetTranslate(translate);
 }
 
 void UiSliderH2::Press() {
@@ -815,27 +638,50 @@ void UiSliderH2::Release() {
   pressed_ = false;
 }
 
+void UiSliderH2::SetValue(float value) {
+  Set(value / scale_);
+}
+
+void UiSliderH2::Set(glm::vec2 mouse_pos) {
+  float half_length_ = length_ / 2.0f;
+  float offset = glm::clamp(
+      mouse_pos.x - centre_, -half_length_, +half_length_);
+  progress_ = (offset + half_length_) / length_;
+  glm::vec2 translate = {offset, 0.0f};
+  sp_handle_.SetTranslate(translate);
+}
+
+void UiSliderH2::Set(float progress) {
+  progress_ = std::clamp(progress, 0.0f, 1.0f);
+  float half_length_ = length_ / 2.0f;
+  float offset = progress_ * length_ - half_length_;
+  glm::vec2 translate = {offset, 0.0f};
+  sp_handle_.SetTranslate(translate);
+}
+
 bool UiSliderH2::Scroll(GLuint id, float yoffset) {
-  if (id > icon_sprite_.GetId() || id < back_sprite_.GetId()) {
+  if (id > sp_handle_.GetId() || id < sp_track_.GetId()) {
     return false;
   }
-  float factor = 0.01f * yoffset;
-  float progress = std::clamp(progress_ + factor, 0.0f, 1.0f);
-  Set(progress);
+  Set(progress_ + yoffset * 0.01f);
   return true;
 }
 
+void UiSliderH2::SetTranslate(glm::vec2 translate) {
+  sp_track_.SetTranslate(translate);
+  sp_handle_.SetTranslate(translate);
+}
+
 float UiSliderH2::GetProgress() const {
-  //TODO: make some *magic* with sprite and "return progress_;"
   return progress_ * scale_;
 }
 
 void UiSliderH2::UpdateTransform() {
-  back_sprite_.UpdateTransform();
-  icon_sprite_.UpdateTransform();
+  sp_track_.UpdateTransform();
+  sp_handle_.UpdateTransform();
   length_ = kTrackLengthFactor *
-            (back_sprite_.GetRightBorder() - back_sprite_.GetLeftBorder());
-  centre_ = (back_sprite_.GetRightBorder() + back_sprite_.GetLeftBorder()) / 2.0f;
+            (sp_track_.GetRightBorder() - sp_track_.GetLeftBorder());
+  centre_ = (sp_track_.GetRightBorder() + sp_track_.GetLeftBorder()) / 2.0f;
   float related_pos = progress_ * length_ - length_ / 2.0f + centre_;
   Set({related_pos, 0.0f});
 }
@@ -844,23 +690,22 @@ const float UiSlider2D::kTrackWidthFactor = 0.9f;
 const float UiSlider2D::kTrackHeightFactor = 0.8f;
 
 UiSlider2D::UiSlider2D(
-    UiDynamicSprite&& palette,
-    UiDynamicSprite&& cursor,
+    UiDynamicSprite&& sp_palette,
+    UiDynamicSprite&& sp_handle,
     glm::vec2 scale)
-    : UiBase(palette.GetId(), {}),
-      palette_(std::move(palette)),
-      cursor_(std::move(cursor)),
-      length_({
-          kTrackWidthFactor *
-              (palette.GetRightBorder() - palette.GetLeftBorder()),
-          kTrackHeightFactor *
-              (palette.GetTopBorder() - palette.GetBottomBorder())}),
+    : UiBase(sp_palette.GetId(), {}),
+      sp_track_(std::move(sp_palette)),
+      sp_handle_(std::move(sp_handle)),
+      length_({kTrackWidthFactor *
+                   (sp_palette.GetRightBorder() - sp_palette.GetLeftBorder()),
+               kTrackHeightFactor *
+                   (sp_palette.GetTopBorder() - sp_palette.GetBottomBorder())}),
       centre_({
-          (palette.GetRightBorder() + palette.GetLeftBorder()) / 2.0f,
-          (palette.GetTopBorder() + palette.GetBottomBorder()) / 2.0f}),
+          (sp_palette.GetRightBorder() + sp_palette.GetLeftBorder()) / 2.0f,
+          (sp_palette.GetTopBorder() + sp_palette.GetBottomBorder()) / 2.0f}),
       scale_(scale) {
-  gUiComponents[cursor_.GetId() - details::kIdOffsetUi].parent_id_
-      = palette_.GetId();
+  gUiComponents[sp_handle_.GetId() - details::kIdOffsetUi].parent_id_
+      = sp_track_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
       static_cast<UiBase*>(this);
   UpdateTransform();
@@ -868,34 +713,47 @@ UiSlider2D::UiSlider2D(
 
 UiSlider2D::UiSlider2D(UiSlider2D&& other) noexcept
     : UiBase(std::move(other)),
-      palette_(std::move(other.palette_)),
-      cursor_(std::move(other.cursor_)) {
+      sp_track_(std::move(other.sp_track_)),
+      sp_handle_(std::move(other.sp_handle_)) {
   progress_ = other.progress_;
   pressed_ = other.pressed_;
   centre_ = other.centre_;
   length_ = other.length_;
   scale_ = other.scale_;
-  gUiComponents[palette_.GetId() - details::kIdOffsetUi].ui
+  gUiComponents[sp_track_.GetId() - details::kIdOffsetUi].ui
       = static_cast<UiBase*>(this);
+}
+
+void UiSlider2D::SetParentTransform(LocalTransform transform) {
+  sp_track_.SetParentTransform(transform);
+  sp_handle_.SetParentTransform(transform);
 }
 
 void UiSlider2D::Render(glm::vec2 mouse_pos) {
   if (pressed_) {
     SetMousePos(mouse_pos);
   }
-  palette_.Render();
-  cursor_.Render();
-}
-
-void UiSlider2D::RenderIcon() {
-  cursor_.Render();
+  sp_track_.Render();
+  sp_handle_.Render();
 }
 
 void UiSlider2D::RenderPicking() const {
-  palette_.RenderPicking();
+  sp_track_.RenderPicking();
   if (debug::gUiAltMode) {
-    cursor_.RenderPicking();
+    sp_handle_.RenderPicking();
   }
+}
+
+void UiSlider2D::Press() {
+  pressed_ = true;
+}
+
+void UiSlider2D::Release() {
+  pressed_ = false;
+}
+
+void UiSlider2D::SetValue(glm::vec2 value) {
+  SetProgress(value / scale_);
 }
 
 void UiSlider2D::SetMousePos(glm::vec2 mouse_pos) {
@@ -903,34 +761,32 @@ void UiSlider2D::SetMousePos(glm::vec2 mouse_pos) {
   glm::vec2 offset = glm::clamp(
       mouse_pos - centre_, -half_length_, +half_length_);
   progress_ = (offset + half_length_) / length_;
-  cursor_.SetTranslate(offset);
+  sp_handle_.SetTranslate(offset);
 }
 
 void UiSlider2D::SetProgress(glm::vec2 progress) {
-  progress_ = progress;
+  progress_ = glm::clamp(progress, 0.0f, 1.0f);
   glm::vec2 half_length_ = length_ / 2.0f;
   glm::vec2 offset = progress_ * length_ - half_length_;
-  cursor_.SetTranslate(offset);
+  sp_handle_.SetTranslate(offset);
 }
 
 bool UiSlider2D::Scroll(GLuint id, float yoffset) {
-  if (id != palette_.GetId() || id != cursor_.GetId()) {
+  if (id != sp_track_.GetId() || id != sp_handle_.GetId()) {
     return false;
   }
-  glm::vec2 dir = centre_; // unf we can't, we don't have quick mouse pos
-  float factor = 0.01f * yoffset;
   glm::vec2 progress = progress_;
   if (glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-    progress.x = std::clamp(progress_.x + factor, 0.0f, 1.0f);
+    progress.x += 0.01f * yoffset;
   } else {
-    progress.y = std::clamp(progress_.y + factor, 0.0f, 1.0f);
+    progress.y += 0.01f * yoffset;
   }
   SetProgress(progress);
   return true;
 }
 
 glm::vec2 UiSlider2D::GetProgress() const {
-  return (glm::vec2{1.0f} - progress_) * scale_;
+  return progress_ * scale_;
 }
 
 float UiSlider2D::GetProgressX() const {
@@ -942,26 +798,21 @@ float UiSlider2D::GetProgressY() const {
 }
 
 void UiSlider2D::UpdateTransform() {
-  palette_.UpdateTransform();
-  cursor_.UpdateTransform();
+  sp_track_.UpdateTransform();
+  sp_handle_.UpdateTransform();
   length_ =
       {kTrackWidthFactor *
-           (palette_.GetRightBorder() - palette_.GetLeftBorder()),
+           (sp_track_.GetRightBorder() - sp_track_.GetLeftBorder()),
        kTrackHeightFactor *
-           (palette_.GetTopBorder() - palette_.GetBottomBorder())};
+           (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder())};
   centre_ =
-      {(palette_.GetRightBorder() + palette_.GetLeftBorder()) / 2.0f,
-       (palette_.GetTopBorder() + palette_.GetBottomBorder()) / 2.0f};
+      {(sp_track_.GetRightBorder() + sp_track_.GetLeftBorder()) / 2.0f,
+       (sp_track_.GetTopBorder() + sp_track_.GetBottomBorder()) / 2.0f};
   glm::vec2 related_pos = progress_ * length_ - length_ / 2.0f + centre_;
   SetMousePos(related_pos);
 }
 
-void UiSlider2D::SetParentTransform(LocalTransform transform) {
-  palette_.SetParentTransform(transform);
-  cursor_.SetParentTransform(transform);
-}
-
-UiToggle::UiToggle(
+UiToggle4::UiToggle4(
     UiDynamicSprite&& off, UiDynamicSprite&& on1,
     UiDynamicSprite&& on2, UiDynamicSprite&& on3)
     : UiBase(off.GetId(), {}),
@@ -982,7 +833,7 @@ UiToggle::UiToggle(
   UpdateTransform();
 }
 
-UiToggle::UiToggle(UiToggle&& other) noexcept
+UiToggle4::UiToggle4(UiToggle4&& other) noexcept
     : UiBase(std::move(other)),
       off_(std::move(other.off_)),
       on1_(std::move(other.on1_)),
@@ -997,29 +848,49 @@ UiToggle::UiToggle(UiToggle&& other) noexcept
       = static_cast<UiBase*>(this);
 }
 
-void UiToggle::Render() {
+void UiToggle4::Render() {
   UpdateState();
   state_->Render();
 }
 
-void UiToggle::RenderPicking() const {
+void UiToggle4::RenderPicking() const {
   off_.RenderPicking();
 }
 
-void UiToggle::Press() {
-  turned_off_ = !turned_off_;
+void UiToggle4::Press() {
   progress_ = 0.0f;
+  turned_off_ = !turned_off_;
   off_.Press();
 }
 
-void UiToggle::UpdateTransform() {
+void UiToggle4::UpdateTransform() {
   off_.UpdateTransform();
   on1_.UpdateTransform();
   on2_.UpdateTransform();
   on3_.UpdateTransform();
 }
 
-void UiToggle::UpdateState() {
+void UiToggle4::SetParentTransform(LocalTransform transform) {
+  off_.SetParentTransform(transform);
+  on1_.SetParentTransform(transform);
+  on2_.SetParentTransform(transform);
+  on3_.SetParentTransform(transform);
+}
+
+void UiToggle4::SetTranslate(glm::vec2 translate) {
+  off_.SetTranslate(translate);
+  on1_.SetTranslate(translate);
+  on2_.SetTranslate(translate);
+  on3_.SetTranslate(translate);
+}
+
+void UiToggle4::Set(bool value) {
+  if (turned_off_ != value) {
+    Press();
+  }
+}
+
+void UiToggle4::UpdateState() {
   if (turned_off_) {
     state_ = &off_;
   } else {
@@ -1036,25 +907,11 @@ void UiToggle::UpdateState() {
   }
 }
 
-void UiToggle::SetParentTransform(LocalTransform transform) {
-  off_.SetParentTransform(transform);
-  on1_.SetParentTransform(transform);
-  on2_.SetParentTransform(transform);
-  on3_.SetParentTransform(transform);
-}
-
-void UiToggle::SetTranslate(glm::vec2 translate) {
-  off_.SetTranslate(translate);
-  on1_.SetTranslate(translate);
-  on2_.SetTranslate(translate);
-  on3_.SetTranslate(translate);
-}
-
 UiToggle2::UiToggle2(
     UiDynamicSprite&& off, UiDynamicSprite&& on)
     : UiBase(off.GetId(), {}),
       off_(std::move(off)),
-      on_(std::move(on))  {
+      on_(std::move(on)) {
   gUiComponents[on_.GetId() - details::kIdOffsetUi].parent_id_
       = off_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui =
@@ -1072,17 +929,15 @@ UiToggle2::UiToggle2(UiToggle2&& other) noexcept
 }
 
 void UiToggle2::Render() {
-  off_.Render();
-  if (!turned_off_) {
+  if (turned_off_) {
+    off_.Render();
+  } else {
     on_.Render();
   }
 }
 
 void UiToggle2::RenderPicking() const {
   off_.RenderPicking();
-  if (debug::gUiAltMode) {
-    on_.RenderPicking();
-  }
 }
 
 void UiToggle2::Press() {
@@ -1103,4 +958,10 @@ void UiToggle2::SetParentTransform(LocalTransform transform) {
 void UiToggle2::SetTranslate(glm::vec2 translate) {
   off_.SetTranslate(translate);
   on_.SetTranslate(translate);
+}
+
+void UiToggle2::Set(bool value) {
+  if (turned_off_ != value) {
+    Press();
+  }
 }

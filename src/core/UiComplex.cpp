@@ -4,6 +4,207 @@
 #include "../common/ShadersBinding.h"
 #include "../common/TextRenderer.h"
 #include "../common/Details.h"
+#include "../io/Cameras.h"
+
+UiWindowSlider::UiWindowSlider(
+    UiDynamicSprite&& sp_track,
+    UiDynamicSprite&& sp_handle,
+    int slots_num,
+    float track_length_factor,
+    float slots_length_factor)
+    : UiBase(sp_track.GetId(), {}),
+      sp_track_(std::move(sp_track)),
+      sp_handle_(std::move(sp_handle)),
+      slots_num_(slots_num),
+      track_length_factor_(track_length_factor),
+      slots_length_factor_(slots_length_factor),
+      length_(track_length_factor
+              * (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder())),
+      length_slots_(slots_length_factor
+                    * (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder())),
+      centre_((sp_track_.GetTopBorder() + sp_track_.GetBottomBorder()) / 2.0f) {
+  gUiComponents[sp_handle_.GetId() - details::kIdOffsetUi].parent_id_
+      = sp_track_.GetId();
+  gUiComponents[GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
+  UpdateTransform();
+}
+
+UiWindowSlider::UiWindowSlider(UiWindowSlider&& other) noexcept
+    : UiBase(std::move(other)),
+      sp_track_(std::move(other.sp_track_)),
+      sp_handle_(std::move(other.sp_handle_)),
+      track_length_factor_(other.track_length_factor_),
+      slots_length_factor_(other.slots_length_factor_),
+      slots_num_(other.slots_num_),
+      entry_num_(other.entry_num_),
+      slot_(other.slot_),
+      centre_(other.centre_),
+      length_(other.length_),
+      length_slots_(other.length_slots_),
+      progress_(other.progress_),
+      pressed_(other.pressed_),
+      slot_height_(other.slot_height_),
+      scissors_start_(other.scissors_start_),
+      scissors_length_(other.scissors_length_),
+      cur_slots_offset_(other.cur_slots_offset_),
+      start_slot_translate_(other.start_slot_translate_) {
+  gUiComponents[sp_track_.GetId() - details::kIdOffsetUi].ui
+      = static_cast<UiBase*>(this);
+}
+
+void UiWindowSlider::SetParentTransform(LocalTransform transform) {
+  sp_track_.SetParentTransform(transform);
+  sp_handle_.SetParentTransform(transform);
+}
+
+void UiWindowSlider::Render(glm::vec2 mouse_pos) {
+  if (pressed_) {
+    std::cout << entry_num_ << std::endl;
+    Set(mouse_pos);
+  }
+  sp_track_.Render();
+  sp_handle_.Render();
+}
+
+void UiWindowSlider::SetUpScissors() const {
+  glScissor(0, scissors_start_, gWindowWidth, scissors_length_);
+}
+
+void UiWindowSlider::RenderPicking() const {
+  sp_track_.RenderPicking();
+  if (debug::gUiAltMode) {
+    sp_handle_.RenderPicking();
+  }
+}
+
+void UiWindowSlider::Press() {
+  pressed_ = true;
+}
+
+void UiWindowSlider::Release() {
+  pressed_ = false;
+}
+
+void UiWindowSlider::SetValue(float value) {
+  Set(value);
+}
+
+bool UiWindowSlider::Scroll(GLuint id, float yoffset) {
+//  if (id > sp_handle_.GetId() || id < sp_track_.GetId()) {
+//    return false;
+//  }
+//  Set(progress_ + yoffset * 0.01f);
+//  return true;
+  return false;
+}
+
+// hierarchy, ui_event_handler; slot's-content...
+
+void UiWindowSlider::SetTranslate(glm::vec2 translate) {
+  sp_track_.SetTranslate(translate);
+  sp_handle_.SetTranslate(translate);
+}
+
+float UiWindowSlider::GetProgress() const {
+  return progress_;
+}
+
+void UiWindowSlider::UpdateTransform() {
+  length_ = track_length_factor_ *
+            (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder());
+  length_slots_ = slots_length_factor_ *
+                  (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder());
+  centre_ = (sp_track_.GetTopBorder() + sp_track_.GetBottomBorder()) / 2.0f;
+  float related_pos = progress_ * length_ - length_ / 2.0f + centre_;
+  Set({0.0f, related_pos});
+  sp_track_.UpdateTransform();
+  sp_handle_.UpdateTransform();
+}
+
+// ---
+// ---
+// ---
+
+
+void UiWindowSlider::SetEntryNum(int entry_num) {
+  entry_num_ = entry_num;
+  UpdateRenderData();
+}
+
+void UiWindowSlider::UpdateRenderData() {
+#ifndef NDEBUG
+  if (!sp_slot_) {
+//    throw "no sp_slot_, unable to calculate slot_height";
+    return;
+  }
+#endif
+  // total n, visible n or n - 1
+  slot_height_ = slots_length_factor_ *
+                 (sp_slot_->GetTopBorder() - sp_slot_->GetBottomBorder());
+  auto scrollable_slots = static_cast<float>(std::max(entry_num_ - slots_num_ + 1, 0));
+  float float_index = scrollable_slots * progress_;
+  cur_slots_offset_ = (int)float_index;
+  float fractional_part = float_index - cur_slots_offset_;
+  float offset_y = fractional_part * slot_height_;
+  start_slot_translate_ = glm::vec2{0.0f, -0.201f + offset_y};
+
+  float y_ndc = centre_ - length_ / 2;
+  scissors_start_ = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
+  scissors_length_ = int(length_ * 0.5f * gWindowHeight);
+}
+
+int UiWindowSlider::GetSlotId(glm::vec2 mouse_pos) {
+  float half_slot_height = slot_height_ / 2.0f;
+  float border = centre_ + length_slots_ / 2.0f + half_slot_height + start_slot_translate_.y;
+  for (int i = 0; i < slots_num_ - 1; ++i) {
+    if (mouse_pos.y > border) {
+      return i + cur_slots_offset_;
+    }
+    border -= slot_height_;
+  }
+  return slots_num_ - 1 + cur_slots_offset_; // else cond
+}
+
+void UiWindowSlider::Set(glm::vec2 mouse_pos) {
+  float half_length_ = length_slots_ / 2.0f;
+  float offset = glm::clamp(
+      mouse_pos.y - centre_, -half_length_, +half_length_);
+  progress_ = 1.0 - (offset + half_length_) / length_slots_;
+  glm::vec2 translate = {0.0f, offset};
+  sp_handle_.SetTranslate(translate);
+  UpdateRenderData();
+}
+
+void UiWindowSlider::Set(float progress) {
+  // track length unscaled: need just top_border - bottom_border
+  progress_ = progress;
+  float half_length_ = length_slots_ / 2.0f;
+  float offset = -((progress_ - 1.0f) * length_slots_) - half_length_;
+  glm::vec2 translate = {0.0f, offset};
+  sp_handle_.SetTranslate(translate);
+  UpdateRenderData();
+}
+
+void UiWindowSlider::FocusOnSelected(int slot_id) {
+  if (slot_id == -1 || entry_num_ < slots_num_) {
+    return;
+  }
+  float fractional_part;
+  if (slot_id - cur_slots_offset_ == 0) {
+    fractional_part = 0.0f;
+  } else if (slot_id - cur_slots_offset_ == slots_num_ - 1) {
+    fractional_part = 0.99f;
+  } else {
+    return;
+  }
+  float float_index = fractional_part + cur_slots_offset_;
+  auto scrollable_slots = static_cast<float>(std::max(entry_num_ - slots_num_ + 1, 0));
+  std::cout << "was " << progress_;
+  progress_ = float_index / scrollable_slots;
+  std::cout << " become " << progress_ << std::endl;
+  Set(progress_);
+}
 
 UiLoading::UiLoading(
     UiStaticSprite&& sprite0,
@@ -48,14 +249,92 @@ void UiLoading::RenderPicking() const {
   sprites_[0].RenderPicking();
 }
 
+UiCompass::UiCompass(
+    const CameraHandler* camera,
+    UiDynamicSprite&& sp_compass,
+    UiDynamicSprite&& sp_north,
+    UiDynamicSprite&& sp_south,
+    UiDynamicSprite&& sp_east,
+    UiDynamicSprite&& sp_west)
+    : camera_(camera),
+      sp_compass_(std::move(sp_compass)),
+      sp_north_(std::move(sp_north)),
+      sp_south_(std::move(sp_south)),
+      sp_east_(std::move(sp_east)),
+      sp_west_(std::move(sp_west)),
+      hierarchy_(&sp_compass_) {
+  hierarchy_ = UiHierarchy(
+      &sp_compass_, &sp_north_, &sp_south_, &sp_east_, &sp_west_);
+}
+
+UiCompass::UiCompass(UiCompass&& other) noexcept
+    : camera_(other.camera_),
+      sp_compass_(std::move(other.sp_compass_)),
+      sp_north_(std::move(other.sp_north_)),
+      sp_south_(std::move(other.sp_south_)),
+      sp_east_(std::move(other.sp_east_)),
+      sp_west_(std::move(other.sp_west_)),
+      hierarchy_(std::move(other.hierarchy_)) {
+  hierarchy_ = UiHierarchy(
+      &sp_compass_, &sp_north_, &sp_south_, &sp_east_, &sp_west_);
+}
+
+void UiCompass::Render() {
+  float factor =
+      static_cast<float>(gWindowWidth) / static_cast<float>(gWindowHeight);
+  glm::vec2 radius = glm::vec2(0.05f, 0.05f * factor);
+  float yaw = glm::radians(camera_->GetYaw());
+  LocalTransform transform;
+
+  transform.rotate = yaw;
+  sp_compass_.SetParentTransform(transform);
+  transform.rotate = 0.0f;
+
+  // North (yaw)
+  transform.translate = glm::vec2(
+      radius.x * cos(yaw),
+      radius.y * sin(yaw)
+  );
+  sp_north_.SetParentTransform(transform);
+
+  // South (yaw + 180°)
+  transform.translate = glm::vec2(
+      radius.x * cos(yaw + glm::pi<float>()),
+      radius.y * sin(yaw + glm::pi<float>())
+  );
+  sp_south_.SetParentTransform(transform);
+
+  // East (yaw + 90°)
+  transform.translate = glm::vec2(
+      radius.x * cos(yaw + glm::half_pi<float>()),
+      radius.y * sin(yaw + glm::half_pi<float>())
+  );
+  sp_east_.SetParentTransform(transform);
+
+  // West (yaw - 90°)
+  transform.translate = glm::vec2(
+      radius.x * cos(yaw - glm::half_pi<float>()),
+      radius.y * sin(yaw - glm::half_pi<float>())
+  );
+  sp_west_.SetParentTransform(transform);
+
+  sp_compass_.Render();
+  sp_north_.Render();
+  sp_south_.Render();
+  sp_east_.Render();
+  sp_west_.Render();
+}
+
+void UiCompass::RenderPicking() const {
+  sp_compass_.RenderPicking();
+}
+
 UiTopWindowBase::UiTopWindowBase(
     UiDynamicSprite&& desk,
-    UiDynamicSprite&& shadow,
     float size_scale,
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue)
     : desk_(std::move(desk)),
-      shadow_(std::move(shadow)),
       size_scale_(size_scale),
       ui_shared_resources_(ui_shared_resources),
       window_queue_(window_queue),
@@ -65,7 +344,6 @@ UiTopWindowBase::UiTopWindowBase(
 
 UiTopWindowBase::UiTopWindowBase(UiTopWindowBase&& other) noexcept
     : desk_(std::move(other.desk_)),
-      shadow_(std::move(other.shadow_)),
       size_scale_(other.size_scale_),
       ui_shared_resources_(other.ui_shared_resources_),
       window_queue_(other.window_queue_),
@@ -81,27 +359,25 @@ void UiTopWindowBase::Hide() {
 
 UiCaution::UiCaution(
     UiDynamicSprite&& desk,
-    UiDynamicSprite&& shadow,
     float size_scale,
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     UiDynamicSprite&& text)
-    : UiTopWindowBase(std::move(desk), std::move(shadow), size_scale,
+    : UiTopWindowBase(std::move(desk), size_scale,
                       ui_shared_resources, window_queue),
       text_(std::move(text)) {
-  hierarchy_ = UiHierarchy(&desk_, &shadow_, &text_);
+  hierarchy_ = UiHierarchy(&desk_, &text_);
 }
 
 UiCaution::UiCaution(UiCaution&& other) noexcept
     : Base(std::move(other)),
       text_(std::move(other.text_)) {
-  hierarchy_ = UiHierarchy(&desk_, &shadow_, &text_);
+  hierarchy_ = UiHierarchy(&desk_, &text_);
 }
 
 bool UiCaution::Render() {
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   desk_.Render();
-  shadow_.Render();
   //  text_.Render();
   return false;
 }
@@ -109,35 +385,31 @@ bool UiCaution::Render() {
 void UiCaution::RenderPicking() {
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   desk_.RenderPicking();
-  shadow_.RenderPicking();
   //  text_.RenderPicking();
 }
 
 void UiCaution::Press(int id) {
-  if (id == shadow_.GetId()) {
-    Hide();
-  }
+  Hide();
 }
 
 void UiCaution::Release() {}
 
 UiConfirmation::UiConfirmation(
     UiDynamicSprite&& desk,
-    UiDynamicSprite&& shadow,
     float size_scale,
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     UiDynamicSprite&& btn_accept,
     UiDynamicSprite&& btn_decline,
     UiTextMenuId&& text)
-    : UiTopWindowBase(std::move(desk), std::move(shadow), size_scale,
+    : UiTopWindowBase(std::move(desk), size_scale,
                       ui_shared_resources, window_queue),
       btn_accept_(std::move(btn_accept)),
       btn_decline_(std::move(btn_decline)),
       text_(std::move(text)),
       ui_event_handler_({&btn_accept_, &btn_decline_}) {
   hierarchy_ = UiHierarchy(
-      &desk_, &shadow_, &btn_accept_, &btn_decline_, &text_);
+      &desk_, &btn_accept_, &btn_decline_, &text_);
 }
 
 UiConfirmation::UiConfirmation(UiConfirmation&& other) noexcept
@@ -147,13 +419,12 @@ UiConfirmation::UiConfirmation(UiConfirmation&& other) noexcept
       text_(std::move(other.text_)),
       ui_event_handler_({&btn_accept_, &btn_decline_}) {
   hierarchy_ = UiHierarchy(
-      &desk_, &shadow_, &btn_accept_, &btn_decline_, &text_);
+      &desk_, &btn_accept_, &btn_decline_, &text_);
 }
 
 bool UiConfirmation::Render() {
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   desk_.Render();
-  shadow_.Render();
   btn_accept_.Render();
   btn_decline_.Render();
   text_.Render();
@@ -163,7 +434,6 @@ bool UiConfirmation::Render() {
 void UiConfirmation::RenderPicking() {
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   desk_.RenderPicking();
-  shadow_.RenderPicking();
   btn_accept_.RenderPicking();
   btn_decline_.RenderPicking();
   text_.RenderPicking();
@@ -173,7 +443,7 @@ void UiConfirmation::Press(int id) {
 //  ui_event_handler_.Press(id);
   if (id == btn_accept_.GetId()) {
     callable_(); // TODO: but... why not bth_accept_.Press()... should do smt
-  } else if (id != shadow_.GetId() && id != desk_.GetId()) {
+  } else if (id != desk_.GetId()) {
     Hide();
   }
 }
@@ -201,14 +471,13 @@ void UiConfirmation::BtnEscape() {
 
 UiFile::UiFile(
     UiDynamicSprite&& desk,
-    UiDynamicSprite&& shadow,
     float size_scale,
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     UiDynamicSprite&& btn_accept,
     UiDynamicSprite&& btn_decline, UiText&& label,
     UiTextInput&& text)
-    : UiTopWindowBase(std::move(desk), std::move(shadow), size_scale,
+    : UiTopWindowBase(std::move(desk), size_scale,
                       ui_shared_resources, window_queue),
       btn_accept_(std::move(btn_accept)),
       btn_decline_(std::move(btn_decline)),
@@ -216,7 +485,7 @@ UiFile::UiFile(
       text_(std::move(text)),
       ui_event_handler_({&btn_accept_/*, &btn_decline_*/}) {
   hierarchy_ = UiHierarchy(
-      &desk_, &shadow_, &btn_accept_, &btn_decline_, &label_, &text_);
+      &desk_, &btn_accept_, &btn_decline_, &label_, &text_);
   label_.SetText("label");
 }
 
@@ -228,13 +497,12 @@ UiFile::UiFile(UiFile&& other) noexcept
       text_(std::move(other.text_)),
       ui_event_handler_({&btn_accept_/*, &btn_decline_*/}) {
   hierarchy_ = UiHierarchy(
-      &desk_, &shadow_, &btn_accept_, &btn_decline_, &label_, &text_);
+      &desk_, &btn_accept_, &btn_decline_, &label_, &text_);
 }
 
 bool UiFile::Render() {
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   desk_.Render();
-  shadow_.Render();
   btn_accept_.Render();
   btn_decline_.Render();
   label_.Render();
@@ -247,7 +515,6 @@ bool UiFile::Render() {
 void UiFile::RenderPicking() {
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   desk_.RenderPicking();
-  shadow_.RenderPicking();
   btn_accept_.RenderPicking();
   btn_decline_.RenderPicking();
   label_.RenderPicking();
@@ -401,17 +668,12 @@ UiTabMenu::UiTabMenu(
     UiStaticSprite&& btn_mode_biomes,
     UiStaticSprite&& btn_mode_tiles,
 
-    UiToggle&& toggle_terrain,
-    UiToggle&& toggle_water,
-    UiToggle&& toggle_roads,
-    UiToggle&& toggle_fences,
-    UiToggle&& toggle_placement,
-    UiToggle&& toggle_objects,
-    UiToggle&& toggle_biomes,
-    UiToggle&& toggle_tiles,
+    UiToggle4&& toggle_terrain, UiToggle4&& toggle_water,
+    UiToggle4&& toggle_roads, UiToggle4&& toggle_fences,
+    UiToggle4&& toggle_placement, UiToggle4&& toggle_objects,
+    UiToggle4&& toggle_biomes, UiToggle4&& toggle_tiles,
 
-    UiStaticSprite&& btn_shader_wirebound,
-    UiToggle&& toggle_shaders,
+    UiStaticSprite&& btn_shader_wirebound, UiToggle4&& toggle_shaders,
 
     UiDynamicSprite&& arrow_select,
     UiDynamicSprite&& arrow_selected,
@@ -781,15 +1043,14 @@ UiSettings::UiSettings(
     UiDynamicSprite&& resolution_left,
     UiDynamicSprite&& resolution_right,
     UiDynamicSprite&& resolution,
-    UiToggle&& toggle_fullscreen,
+    UiToggle4&& toggle_fullscreen,
     UiSliderH2 sensitivity,
     UiSliderH2&& sound,
-    UiToggle&& toggle_sound,
-    UiSliderH2&& music,
-    UiToggle&& toggle_music,
+    UiToggle4&& toggle_sound,
+    UiSliderH2&& music, UiToggle4&& toggle_music,
     UiDynamicSprite&& tip_info_label,
     UiDynamicSprite&& tip_info,
-    UiToggle&& toggle_tip_info)
+    UiToggle4&& toggle_tip_info)
     : UiWindowPopUp(std::move(sprite), size_scale,
                     std::move(pin), ui_shared_resources,
                     window_queue,
@@ -887,10 +1148,6 @@ bool UiSettings::Render() {
   tip_info_.Render();
   toggle_tip_info_.Render();
 
-  music_.RenderIcon();
-  sound_.RenderIcon();
-  sensitivity_.RenderIcon();
-
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
   ui_shared_resources_.global_glfw_callback_data_.text_renderer
@@ -963,21 +1220,21 @@ UiWaterLayerConfig::UiWaterLayerConfig(
     LocalTransform end_transform,
     UiDynamicSprite&& sprite_layer,
     UiDynamicSprite&& text_layer,
-    UiToggle&& toggle_layer,
+    UiToggle4&& toggle_layer,
     UiDynamicSprite&& scale_text,
-    UiSliderH&& scale,
+    UiSliderH3&& scale,
     UiDynamicSprite&& fetch_text,
-    UiSliderH&& fetch,
+    UiSliderH3&& fetch,
     UiDynamicSprite&& spread_blend_text,
-    UiSliderH&& spread_blend,
+    UiSliderH3&& spread_blend,
     UiDynamicSprite&& swell_text,
-    UiSliderH&& swell,
+    UiSliderH3&& swell,
     UiDynamicSprite&& peak_enhancement_text,
-    UiSliderH&& peak_enhancement,
+    UiSliderH3&& peak_enhancement,
     UiDynamicSprite&& short_waves_fade_text,
-    UiSliderH&& short_waves_fade,
+    UiSliderH3&& short_waves_fade,
     UiDynamicSprite&& lambda_text,
-    UiSliderH&& lambda)
+    UiSliderH3&& lambda)
     : UiWindowPopUp(std::move(sprite), size_scale,
                     std::move(pin), ui_shared_resources,
                     window_queue,
@@ -1083,14 +1340,6 @@ bool UiWaterLayerConfig::Render() {
   peak_enhancement_.Render(mouse_pos);
   short_waves_fade_.Render(mouse_pos);
   lambda_.Render(mouse_pos);
-
-  scale_.RenderIcon();
-  fetch_.RenderIcon();
-  spread_blend_.RenderIcon();
-  swell_.RenderIcon();
-  peak_enhancement_.RenderIcon();
-  short_waves_fade_.RenderIcon();
-  lambda_.RenderIcon();
 
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
@@ -1297,9 +1546,6 @@ void UiEditFences::Render() {
   type_back_.Render();
   type_prev_.Render();
   type_next_.Render();
-
-  color_palette_.RenderIcon();
-  color_brightness_.RenderIcon();
 
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
