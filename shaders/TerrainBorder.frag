@@ -48,6 +48,10 @@ out vec4 FragColor;
 layout(location = 1) uniform sampler2D spriteTex;
 layout(location = 2) uniform float time;
 
+layout(location = 3) uniform bool green;
+layout(location = 4) uniform bool blue;
+// if not green and blue -> red
+
 void main() {
     vec2 uv = TexCoord;
 
@@ -73,11 +77,27 @@ void main() {
 //    0.5 + 0.5 * sin(time * 0.7)
 //    );
 
-    vec3 colorOverlay = vec3(
-    0.3 + 0.2 * sin(time * 4.0 + uvWarped.x * 5.0),  // weaker red
-    0.8 + 0.2 * cos(time * 3.0 + uvWarped.y * 5.0),  // strong green
-    0.1 + 0.1 * sin(time * 2.0 + uvWarped.x * 3.0)   // very subtle blue
-    );
+    vec3 colorOverlay;
+    if (green) {
+        colorOverlay = vec3(
+        0.3 + 0.2 * sin(time * 4.0 + uvWarped.x * 5.0),  // weaker red
+        0.8 + 0.2 * cos(time * 3.0 + uvWarped.y * 5.0),  // strong green
+        0.1 + 0.1 * sin(time * 2.0 + uvWarped.x * 3.0)   // very subtle blue
+        );
+    } else if (blue) {
+        colorOverlay = vec3(
+        0.1 + 0.1 * sin(time * 2.0 + uvWarped.x * 3.0),  // very subtle red
+        0.3 + 0.2 * cos(time * 4.0 + uvWarped.x * 5.0),  // weaker green
+        0.8 + 0.2 * sin(time * 3.0 + uvWarped.y * 5.0)   // strong blue
+        );
+    } else {
+        colorOverlay = vec3(
+        0.8 + 0.2 * sin(time * 3.0 + uvWarped.y * 5.0),  // strong red
+        0.3 + 0.2 * cos(time * 4.0 + uvWarped.x * 5.0),  // weaker green
+        0.1 + 0.1 * sin(time * 2.0 + uvWarped.x * 3.0)   // very subtle blue
+        );
+    }
+
 
 
     vec4 finalColor = mix(texel, vec4(colorOverlay, 1.0), 0.5);

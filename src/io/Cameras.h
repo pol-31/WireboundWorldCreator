@@ -63,6 +63,7 @@ class ICamera {
   virtual void ProcessMouseScroll(float yoffset) = 0;
   virtual void ProcessKey(int key, int scancode, int action, int mods) = 0;
 
+  void BakeCameraPos();
 
   //To smoothly rotate related to object we need set yaw and set the position,
   // then just Update()
@@ -86,6 +87,14 @@ class ICamera {
     return pitch_;
   }
 
+  [[nodiscard]] glm::vec3 GetPosition() const noexcept {
+    return position_;
+  }
+
+  [[nodiscard]] glm::mat4 GetViewMatrix() const noexcept;
+
+  [[nodiscard]] glm::mat4 GetProjMatrix() const noexcept;
+
   void UpdateFrame();
 
   void UpdateConfig();
@@ -95,7 +104,25 @@ class ICamera {
   //TODO: should be called from WindowSizeCallback
   void UpdateProjectionMatrix() const;
 
-  void UpdateCameraVectors();
+  void UpdateCameraVectors(float radius = 1.0f);
+
+ void MoveRotateView(float xoffset, float yoffset);
+
+ void MovePanView(float xoffset, float yoffset);
+
+ void MoveRotateViewSnap(float xoffset, float yoffset);
+
+ [[nodiscard]] glm::vec3 GetDirectionRight() const noexcept {
+   return direction_right_;
+ }
+
+ [[nodiscard]] glm::vec3 GetDirectionUp() const noexcept {
+   return direction_up_;
+ }
+
+ [[nodiscard]] glm::vec3 GetDirectionFront() const noexcept {
+   return direction_front_;
+ }
 
  protected:
   void MoveOnX();
@@ -107,9 +134,14 @@ class ICamera {
   glm::vec3 direction_right_;
   glm::vec3 direction_world_up_;
 
+  glm::vec3 origin_ = glm::vec3(0.0f);
+
   float yaw_;
   float pitch_;
   //we don't need roll
+
+  float yaw_prev_;
+  float pitch_prev_;
 
   glm::vec2 move_vector_;
 
@@ -173,6 +205,14 @@ class CameraHandler {
   void Update();
 
   void ProcessMouseMovement(float xoffset, float yoffset);
+
+
+  void MovePanView(float xoffset, float yoffset);
+
+  void MoveRotateView(float xoffset, float yoffset);
+
+  void MoveRotateViewSnap(float xoffset, float yoffset);
+
 
   void ProcessMouseKey(int button, int action, int mods);
 
@@ -239,6 +279,30 @@ class CameraHandler {
 
   [[nodiscard]] float GetPitch() const noexcept {
     return cameras_[cur_id_]->GetPitch();
+  }
+
+  [[nodiscard]] glm::vec3 GetPosition() const noexcept {
+    return cameras_[cur_id_]->GetPosition();
+  }
+
+  [[nodiscard]] glm::mat4 GetViewMatrix() const noexcept {
+    return cameras_[cur_id_]->GetViewMatrix();
+  }
+
+  [[nodiscard]] glm::mat4 GetProjMatrix() const noexcept {
+    return cameras_[cur_id_]->GetProjMatrix();
+  }
+
+  [[nodiscard]] glm::vec3 GetDirectionRight() const noexcept {
+    return cameras_[cur_id_]->GetDirectionRight();
+  }
+
+  [[nodiscard]] glm::vec3 GetDirectionUp() const noexcept {
+    return cameras_[cur_id_]->GetDirectionUp();
+  }
+
+  [[nodiscard]] glm::vec3 GetDirectionFront() const noexcept {
+    return cameras_[cur_id_]->GetDirectionFront();
   }
 
   static constexpr int gCamerasNum{3};

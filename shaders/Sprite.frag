@@ -12,7 +12,5 @@ out vec4 FragColor;
 void main() {
     vec4 texel = texture(tex, texcoord);
     texel *= color;
-//    vec4 something = vec4(texel.rgb * brightness, texel.a * transparency);
     FragColor = vec4(texel.rgb * brightness, texel.a * transparency);
-//    FragColor = vec4(1.0f);
 }

@@ -29,6 +29,8 @@ class TerrainRenderer {
 
   void RenderWireframe(TerrainInstanceData* terrain);
 
+  void RenderWireframeLines(TerrainInstanceData* terrain);
+
   void RenderPicking(TerrainInstanceData* terrain) const;
 
   [[nodiscard]] glm::vec3 GetYPosition(int vertex_id) const;
@@ -58,6 +60,9 @@ class TerrainRenderer {
   GLuint border_ebo_ = 0;
   Shader border_shader_;
   Texture border_tex_;
+
+  GLuint lines_vao_ = 0;
+  GLuint lines_vbo_ = 0;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_TERRAINRENDERER_H_
