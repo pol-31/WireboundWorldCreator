@@ -6,6 +6,7 @@
 #include "../common/GlobalGlfwCallbackData.h"
 #include "../core/Ui.h"
 #include "../common/PickingFramebuffer.h"
+#include "../renderers/UiRenderer.h"
 
 namespace debug {
 
@@ -38,8 +39,10 @@ void UiMouseButtonCallback(
 
 void UiKeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {
-  auto& ui_debugger = reinterpret_cast<GlobalGlfwCallbackData*>(
-                          glfwGetWindowUserPointer(window))->ui_debugger;
+  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  auto& ui_debugger = global_data->ui_debugger;
+  global_data->ui_renderer->Press(key, action);
   if (action == GLFW_PRESS) {
     // left control key is handled from Interface class (you should hold it)
     if (key == GLFW_KEY_ESCAPE) {

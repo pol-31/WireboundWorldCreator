@@ -127,7 +127,9 @@ UiRenderer::UiRenderer(
                   {data::VboIdMain::kCompassSouth},
                   {data::VboIdMain::kCompassEast},
                   {data::VboIdMain::kCompassWest}),
-      ui_layer_wireframe_(ui_shared_resources_) {
+      ui_layer_wireframe_(ui_shared_resources_),
+      ui_world_origin_(ui_shared_resources_),
+      ui_buttons_(ui_shared_resources_, text_renderer_) {
   Init();
 }
 
@@ -172,6 +174,8 @@ void UiRenderer::Render() {
   if (text_renderer_.InputInProgress()) {
     text_renderer_.RenderInput();
   }
+
+  ui_buttons_.Render();
 }
 
 void UiRenderer::RenderPicking() {
@@ -182,6 +186,11 @@ void UiRenderer::RenderPicking() {
   ui_compass_.RenderPicking();
 
   cur_mode_->RenderPicking();
+  ui_buttons_.RenderPicking();
+}
+
+void UiRenderer::Press(int key, int action) {
+  ui_buttons_.Press(key, action);
 }
 
 void UiRenderer::Parse() {
@@ -230,4 +239,8 @@ void UiRenderer::AskForConfirmation(
   ui_confirmation_.SetText(text_id);
   ui_confirmation_.SetCallable(std::move(callable));
   ui_confirmation_.Show();
+}
+
+void UiRenderer::RenderWorldOrigin(glm::vec4 position, glm::vec4 color) {
+  ui_world_origin_.Render(position, color);
 }

@@ -35,26 +35,24 @@ class UiLayerWireframe {
 
   void InitFbo();
 
-  void InitBillboards();
-
   void DeInit();
 
   void UpdateRatio();
 
-  glm::mat4 GetBillboardMatrix(
-      const glm::vec3& position, const glm::mat4& view,
-      const glm::mat4& projection);
+  glm::vec2 GetBillboardTranslate(glm::mat4 mvp, int idx);
+
+  glm::mat4 GetPointMvpMatrix();
 
   UiSharedResources& ui_shared_resources_;
-  UiDynamicSprite layer_;
-  UiDynamicSprite frame_;
+  UiDynamicSprite sp_layer_;
+  UiDynamicSprite sp_frame_;
+
+  /// order: x_pos, x_neg, y_pox, y_neg, z_pos, z_neg
+  std::array<UiDynamicSprite, 6> sp_points_;
+  std::array<glm::vec4, 6> pos_points_;
+
   Texture layer_tex_;
   GLuint layer_fbo_ = 0;
-
-  GLuint billboard_vao_ = 0;
-  GLuint billboard_vbo_ = 0;
-  Shader shader_billboard_;
-  // don't need UiDynamicSprite for billboard +-XYZ, keep tex_coords only
 
   UiHierarchy hierarchy_;
 };

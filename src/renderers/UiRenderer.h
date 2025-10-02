@@ -16,6 +16,8 @@
 #include "../core/WindowQueue.h"
 
 #include "../core/UiLayerWireframe.h"
+#include "../core/UiWorldOrigin.h"
+#include "../core/UiButtons.h"
 
 #ifndef NDEBUG
 #include "../common/UiDebugger.h"
@@ -40,6 +42,8 @@ class UiRenderer {
 
   void RenderPicking();
 
+  void Press(int key, int action);
+
   void Parse();
 
   void Serialize();
@@ -53,6 +57,8 @@ class UiRenderer {
  UiLayerWireframe& GetUiLayerWireframe() {
    return ui_layer_wireframe_;
  }
+
+ void RenderWorldOrigin(glm::vec4 position, glm::vec4 color);
 
  private:
   void Init();
@@ -89,6 +95,9 @@ class UiRenderer {
   bool render_menu_{false};
 
   UiLayerWireframe ui_layer_wireframe_;
+  UiWorldOrigin ui_world_origin_;
+
+  UiButtons ui_buttons_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_UIRENDERER_H_
