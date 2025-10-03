@@ -5,7 +5,6 @@
 #include <glad/glad.h>
 
 #include "FixedSizeQueue.h"
-#include "../core/EventQueue.h"
 
 class CameraHandler;
 class TileRenderer;
@@ -39,7 +38,6 @@ struct GlobalGlfwCallbackData {
   UiRenderer* ui_renderer{nullptr};
 
   WindowQueue* windows{nullptr};
-  EventQueue event_queue;
 
   glm::dvec2 cursor_pos_{0.0};
   glm::vec2 cursor_pos_tex_norm_{0.0f};

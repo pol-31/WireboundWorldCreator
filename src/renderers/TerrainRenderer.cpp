@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/quaternion.hpp>
+//#include <glm/gtx/quaternion.hpp>
 
 #include "../io/Window.h"
 #include "../common/ShadersBinding.h"
@@ -108,9 +110,7 @@ void TerrainRenderer::RenderWireframe(TerrainInstanceData* terrain) {
   glm::mat4 transform = glm::mat4{1.0f};
   transform = glm::scale(transform, glm::vec3(tile_.map_scale));
   transform = glm::translate(transform, terrain->translate);
-  transform = glm::rotate(transform, glm::radians(terrain->rotate.x), glm::vec3(1,0,0));
-  transform = glm::rotate(transform, glm::radians(terrain->rotate.y), glm::vec3(0,1,0));
-  transform = glm::rotate(transform, glm::radians(terrain->rotate.z), glm::vec3(0,0,1));
+  transform *= glm::mat4_cast(terrain->rotate);
   transform = glm::scale(transform, terrain->scale);
   glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
 
@@ -156,8 +156,9 @@ void TerrainRenderer::RenderSelection(
   terrain->data.hmap.Bind();
   glm::mat4 transform = glm::mat4{1.0f};
   transform = glm::scale(transform, terrain->scale * tile_.map_scale);
-  transform = glm::rotate(
-      transform, glm::length(terrain->rotate) - 1, glm::normalize(terrain->rotate));
+  transform *= glm::mat4_cast(terrain->rotate);
+//  transform = glm::rotate(
+//      transform, glm::length(terrain->rotate) - 1, glm::normalize(terrain->rotate));
   transform = glm::translate(transform, terrain->translate);
   glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
   // NOT terrain->hmap.Bind();
@@ -193,8 +194,9 @@ void TerrainRenderer::RenderPicking(TerrainInstanceData* terrain) const {
   terrain->data.hmap.Bind();
   glm::mat4 transform = glm::mat4{1.0f};
   transform = glm::scale(transform, terrain->scale * tile_.map_scale);
-  transform = glm::rotate(
-      transform, glm::length(terrain->rotate) - 1, glm::normalize(terrain->rotate));
+  transform *= glm::mat4_cast(terrain->rotate);
+//  transform = glm::rotate(
+//      transform, glm::length(terrain->rotate) - 1, glm::normalize(terrain->rotate));
   transform = glm::translate(transform, terrain->translate);
   glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
   glBindVertexArray(vao_);

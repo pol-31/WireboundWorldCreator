@@ -2,6 +2,7 @@
 
 #include "../core/TileRenderer.h"
 #include "../common/OpenGlUtility.h"
+#include "../io/Cameras.h"
 
 UiNoiseLayerConfig::UiNoiseLayerConfig(
     UiSharedResources& ui_shared_resources,
@@ -135,6 +136,8 @@ UiEditTerrain::UiEditTerrain(
       shader_flatten_prep_("../shaders/generate_shaders/FlattenPrep.comp"),
       shader_flatten_step_("../shaders/generate_shaders/FlattenStep.comp"),
       shader_flatten_merge_("../shaders/generate_shaders/FlattenMerge.comp"),
+      shader_project_layer_("../shaders/generate_shaders/ProjectLayer.vert",
+                            "../shaders/generate_shaders/ProjectLayer.frag"),
 
       tex_mesh_(details::gTerrainSize, GL_RGBA32F),
 
@@ -207,6 +210,7 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
       shader_flatten_prep_(std::move(other.shader_flatten_prep_)),
       shader_flatten_step_(std::move(other.shader_flatten_step_)),
       shader_flatten_merge_(std::move(other.shader_flatten_merge_)),
+      shader_project_layer_(std::move(other.shader_project_layer_)),
 
       tex_mesh_(std::move(other.tex_mesh_)),
 
@@ -268,6 +272,71 @@ int UiEditTerrain::CalculateGradientId(const glm::vec3& rotation) {
   return shader_id[id];
 }
 
+// test approach to UpdateHmap(), but using vert + frag shader
+// issues unresolved and the same: need to convert to -32;32 from 0;N,
+// what forces us to "wrap" and "unwrap" transformation matrices and
+// accumulates "transformation" error, especially in rotation
+void UiEditTerrain::UpdateHmap2() {
+  using namespace utility;
+  Texture32F hmap(details::gTerrainSize, GL_R32F);
+  int size = details::gTerrainSize;
+  hmap.Bind();
+  float color_black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+  glClearTexImage(hmap.GetId(), 0, GL_RED, GL_FLOAT, color_black);
+
+  //TODO: skip selected layer, then show as a wireframe on top
+
+  for (int i = 0; i < instances_.size(); ++i) {
+    if (!instances_[i].do_show) {
+      continue;
+    }
+    glClearTexImage(tex_mesh_.GetId(), 0, GL_RGBA, GL_FLOAT, color_black);
+    /// --- hmap to mesh section ---
+    shader_flatten_prep_.Bind();
+    glm::mat4 transform = glm::mat4{1.0f};
+    transform = glm::translate(transform, instances_[i].translate);
+    transform *= glm::mat4_cast(instances_[i].rotate);
+    transform = glm::scale(transform, instances_[i].scale); // don't need map_scale
+
+    glUniformMatrix4fv(0, 1, false, glm::value_ptr(transform));
+    glUniform1i(1, static_cast<int>(instances_[i].do_invert));
+    glUniform1i(2, static_cast<int>(instances_[i].do_tiling));
+    BindImageTexture(0, instances_[i].data.hmap, GL_READ_ONLY);
+    BindImageTexture(1, tex_mesh_, GL_WRITE_ONLY);
+    glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    UnBindImageTexture(0, instances_[i].data.hmap, GL_READ_ONLY);
+    UnBindImageTexture(1, tex_mesh_, GL_WRITE_ONLY);
+
+    /// --- merge section ---
+    shader_project_layer_.Bind();
+    glm::mat4 inverseTransform = glm::inverse(transform);
+    glUniform1i(0, 0);
+    glUniformMatrix4fv(2, 1, GL_FALSE, glm::value_ptr(inverseTransform));
+    glUniform1i(2, static_cast<int>(false));
+    glUniform1i(3, static_cast<int>(false));
+    glUniform1i(4, 1);
+    glActiveTexture(GL_TEXTURE1);
+    tex_mesh_.Bind();
+    glActiveTexture(GL_TEXTURE0);
+    hmap.Bind();
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_layer_);
+    glViewport(0, 0, 1024, 1024);
+    shader_project_layer_.Bind();
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, gWindowWidth, gWindowHeight); // restore
+
+    hmap = std::move(tex_layer_);
+    tex_layer_ = Texture32F(details::gTerrainSize, GL_R32F, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D, tex_layer_.GetId(), 0);
+  }
+  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+      ->cur_tile_.map_terrain_height = std::move(hmap);
+}
+
 void UiEditTerrain::UpdateHmap() {
   using namespace utility;
   Texture32F hmap(details::gTerrainSize, GL_R32F);
@@ -288,13 +357,17 @@ void UiEditTerrain::UpdateHmap() {
     glClearTexImage(tex_mesh_.GetId(), 0, GL_RGBA, GL_FLOAT, color_black);
     /// --- hmap to mesh section ---
     shader_flatten_prep_.Bind();
+
     glm::mat4 transform = glm::mat4{1.0f};
-    transform = glm::translate(transform, instances_[i].translate);
-    auto rotation = glm::radians(instances_[i].rotate);
-    transform = glm::rotate(transform, rotation.x, glm::vec3(1,0,0));
-    transform = glm::rotate(transform, rotation.y, glm::vec3(0,1,0));
-    transform = glm::rotate(transform, rotation.z, glm::vec3(0,0,1));
-    transform = glm::scale(transform, instances_[i].scale); // don't need map_scale
+    // wrap
+    transform = glm::translate(transform, glm::vec3(+512.0f, 0.0f, +512.0f));
+    transform = glm::scale(transform, glm::vec3(16.0f, 1.0f, 16.0f));
+
+    transform *= glm::mat4_cast(instances_[i].rotate);
+    transform = glm::scale(transform, instances_[i].scale);
+    // unwrap
+    transform = glm::scale(transform, glm::vec3(1.0f / 16.0f, 1.0f, 1.0f / 16.0f));
+    transform = glm::translate(transform, glm::vec3(-512.0f, 0.0f, -512.0f));
 
     glUniformMatrix4fv(0, 1, false, glm::value_ptr(transform));
     glUniform1i(1, static_cast<int>(instances_[i].do_invert));
@@ -331,14 +404,6 @@ void UiEditTerrain::UpdateHmap() {
     shader_flatten_merge_.Bind();
     glm::mat4 inverseTransform = glm::inverse(transform);
 
-    glm::vec4 test1 = inverseTransform * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    glm::vec4 test2 = inverseTransform * glm::vec4(-32.0f, 0.0f, 0.0f, 1.0f);
-    glm::vec4 test3 = inverseTransform * glm::vec4(-32.0f, 0.0f, -32.0f, 1.0f);
-    glm::vec4 test4 = inverseTransform * glm::vec4(0.0f, 0.0f, 32.0f, 1.0f);
-    glm::vec4 test5 = inverseTransform * glm::vec4(-32.0f, 0.0f, 32.0f, 1.0f);
-    glm::vec4 test6 = inverseTransform * glm::vec4(32.0f, 0.0f, 0.0f, 1.0f);
-
-
     glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(inverseTransform));
     BindImageTexture(0, hmap, GL_READ_WRITE);
     BindImageTexture(1, tex_mesh_, GL_READ_ONLY);
@@ -364,6 +429,7 @@ bool UiEditTerrain::Press(int id) {
     // can't be nullptr (not possible to get there -
     // - btn_settings is on slot_back)
     terrain_data_->data = Generate();
+//    UpdateHmap2();
     UpdateHmap();
     return true;
   }
@@ -380,7 +446,7 @@ bool UiEditTerrain::Press(int id) {
   } else if (id == noise_layer_config_.toggle_tiling_.GetId()) {
     noises_[pressed_strength_id_]->ToggleDoTiling();
   }
-  return false;//ui_event_handler_.Press(id);
+  return ui_event_handler_.Press(id);
 }
 
 void UiEditTerrain::Release() {
@@ -696,6 +762,22 @@ void UiEditTerrain::Init() {
                &zero, GL_DYNAMIC_DRAW);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_atomic_modified_);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+  // ------------------------- test
+
+  glGenFramebuffers(1, &fbo_layer_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_layer_);
+  tex_layer_ = Texture32F(details::gTerrainSize, GL_R32F/*, GL_NEAREST*/);
+  tex_layer_.Bind();
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                         GL_TEXTURE_2D, tex_layer_.GetId(), 0);
+
+  GLenum drawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
+  glDrawBuffers(1, drawBuffers);
+
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    std::cerr << "FBO not complete!\n";
+  }
 }
 
 void UiEditTerrain::DeInit() {

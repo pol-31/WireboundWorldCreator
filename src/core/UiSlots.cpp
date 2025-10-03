@@ -3,6 +3,7 @@
 #include "../common/TextRenderer.h"
 #include "../common/UiDebugger.h"
 #include "../core/TileRenderer.h"
+#include "../io/Cameras.h"
 
 IUiSlots::IUiSlots(
     size_t vbo_texture_id, UiSharedResources& ui_shared_resources,
@@ -749,29 +750,160 @@ bool UiSlotsTerrain::Scroll(GLuint id, float yoffset) {
   return false;
 }
 
+void UiSlotsTerrain::UpdateStartAngle() {
+  auto mouse_pos =
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_;
+  auto pos_3d = GetInstanceTransform();
+  glm::vec4 object_centre_3d = glm::vec4(pos_3d.x, pos_3d.y, pos_3d.z, 1.0f);
+  auto& global_data = ui_shared_resources_.global_glfw_callback_data_;
+  auto map_scale = global_data.tile_renderer->cur_tile_.map_scale;
+  auto model = glm::mat4(1.0f);
+  model = glm::scale(model, glm::vec3(map_scale));
+  auto view = global_data.camera->GetViewMatrix();
+  auto projection = global_data.camera->GetProjMatrix();
+  auto mvp = projection * view * model;
+
+  glm::vec4 clipPos = mvp * object_centre_3d;
+  glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
+
+  glm::vec2 delta((mouse_pos.x / (gWindowWidth / 2.0f) - 1.0f) - ndc.x,
+                  ndc.y - ((gWindowHeight - mouse_pos.y) / (gWindowHeight / 2.0f) - 1.0f));
+  float factor = static_cast<float>(gWindowWidth)
+                 / static_cast<float>(gWindowHeight);
+  zero_angle_ = std::atan2(delta.y, delta.x * factor);
+  last_angle_ = 0.0f;
+}
+
+float UiSlotsTerrain::UpdateAngle(float xpos, float ypos) {
+  auto pos_3d = GetInstanceTransform();
+  glm::vec4 object_centre_3d = glm::vec4(pos_3d.x, pos_3d.y, pos_3d.z, 1.0f);
+  auto& global_data = ui_shared_resources_.global_glfw_callback_data_;
+  auto map_scale = global_data.tile_renderer->cur_tile_.map_scale;
+  auto model = glm::mat4(1.0f);
+  model = glm::scale(model, glm::vec3(map_scale));
+  auto view = global_data.camera->GetViewMatrix();
+  auto projection = global_data.camera->GetProjMatrix();
+  auto mvp = projection * view * model;
+
+  glm::vec4 clipPos = mvp * object_centre_3d;
+  glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
+
+  glm::vec2 delta((xpos / (gWindowWidth / 2.0f) - 1.0f) - ndc.x,
+                  ndc.y - ((gWindowHeight - ypos) / (gWindowHeight / 2.0f) - 1.0f));
+  float factor = static_cast<float>(gWindowWidth)
+                 / static_cast<float>(gWindowHeight);
+  float angle = std::atan2(delta.y, delta.x * factor) - zero_angle_;
+  float deltaAngle = angle - last_angle_;
+  last_angle_ = angle;
+
+  if (deltaAngle > glm::pi<float>()) deltaAngle -= glm::two_pi<float>();
+  if (deltaAngle < -glm::pi<float>()) deltaAngle += glm::two_pi<float>();
+  return deltaAngle;
+}
+
+void UiSlotsTerrain::InitTranslateStart() {
+  int slot_id = graph_.GetSlotId();
+  if (slot_id != -1) {
+    temp_translate_ = instances_[slot_id].translate;
+  }
+}
+
+void UiSlotsTerrain::InitScaleStart() {
+  int slot_id = graph_.GetSlotId();
+  if (slot_id != -1) {
+    auto mouse_pos =
+        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_;
+
+    auto pos_3d = GetInstanceTransform();
+    glm::vec4 object_centre_3d = glm::vec4(pos_3d.x, pos_3d.y, pos_3d.z, 1.0f);
+    auto& global_data = ui_shared_resources_.global_glfw_callback_data_;
+    auto map_scale = global_data.tile_renderer->cur_tile_.map_scale;
+    auto model = glm::mat4(1.0f);
+    model = glm::scale(model, glm::vec3(map_scale));
+    auto view = global_data.camera->GetViewMatrix();
+    auto projection = global_data.camera->GetProjMatrix();
+    auto mvp = projection * view * model;
+
+    glm::vec4 clipPos = mvp * object_centre_3d;
+    glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
+
+
+    glm::vec2 delta((mouse_pos.x / (gWindowWidth / 2.0f) - 1.0f) - ndc.x,
+                    ndc.y - ((gWindowHeight - mouse_pos.y) / (gWindowHeight / 2.0f) - 1.0f));
+    float factor = static_cast<float>(gWindowWidth)
+                   / static_cast<float>(gWindowHeight);
+    glm::vec2 offset(delta.x, factor * delta.y);
+
+    zero_scale_length_ = glm::length(offset);
+    temp_scale_ = instances_[slot_id].scale;
+  }
+}
+
+void UiSlotsTerrain::InitRotateStart() {
+  int slot_id = graph_.GetSlotId();
+  if (slot_id != -1) {
+    UpdateStartAngle();
+    temp_rotate_ = instances_[slot_id].rotate;
+  }
+}
+
 void UiSlotsTerrain::TranslateSelected(glm::vec3 value) {
   int slot_id = graph_.GetSlotId();
   if (slot_id != -1) {
-    auto prev_value = instances_[slot_id].translate;
+    auto prev_value = temp_translate_;
     instances_[slot_id].translate = glm::clamp(
-        prev_value + value * 100.0f, glm::vec3(-200.0f), glm::vec3(200.0f));
+        prev_value + value, glm::vec3(-200.0f), glm::vec3(200.0f));
   } else {
 //    graph_.MoveSelected(value);
   }
 }
 
-void UiSlotsTerrain::RotateSelected(glm::vec3 value) {
+void UiSlotsTerrain::RotateSelected(float xpos, float ypos, glm::vec3 axis) {
   int slot_id = graph_.GetSlotId();
+  float delta_angle = UpdateAngle(xpos, ypos);
+  glm::quat value = glm::angleAxis(delta_angle, axis);
   if (slot_id != -1) {
-    instances_[slot_id].rotate += value;
+    instances_[slot_id].rotate = glm::normalize(value * instances_[slot_id].rotate);
   }
 }
 
-void UiSlotsTerrain::ScaleSelected(glm::vec3 value) {
+void UiSlotsTerrain::ScaleSelected(float distance_to_centre, glm::vec3 axis) {
   int slot_id = graph_.GetSlotId();
   if (slot_id != -1) {
-    instances_[slot_id].scale += value;
+    auto map_scale = 1.0f;
+    // TODO: need signed distance wrt resolution
+    float bias = 0.0001;
+    float distance = std::max(bias, distance_to_centre); // to avoid / 0.0f
+    float value = glm::clamp(
+        map_scale * distance / zero_scale_length_, 0.0001f, 100.0f);
+    auto prev_value = temp_scale_;
+    // add 1.0f to avoid op with 0 scale (bad), affect only specified axis
+    instances_[slot_id].scale = glm::clamp(
+        prev_value * (glm::vec3(1.0f) - axis + axis * value), glm::vec3(-200.0f), glm::vec3(200.0f));
   }
+  // sum: can be 0 scale, BUT can't be dividing by 0
+  // multiplying: need bias 0.01f
+}
+
+void UiSlotsTerrain::CancelTransform() {
+  int slot_id = graph_.GetSlotId();
+  if (slot_id != -1) {
+    instances_[slot_id].translate = temp_translate_;
+    instances_[slot_id].rotate = temp_rotate_;
+    instances_[slot_id].scale = temp_scale_;
+  }
+}
+
+void UiSlotsTerrain::ApplyTransform() {
+  /* nothing here now */
+}
+
+glm::vec3 UiSlotsTerrain::GetInstanceTransform() {
+  int slot_id = graph_.GetSlotId();
+  if (slot_id != -1) {
+    return instances_[slot_id].translate;
+  }
+  return glm::vec3(0.0f);
 }
 
 int UiSlotsTerrain::GetSlotId() {

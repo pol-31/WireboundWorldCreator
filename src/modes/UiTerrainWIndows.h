@@ -79,6 +79,8 @@ class UiEditTerrain final : public UiWindowAppear {
   // update base hmap (after modifying smt)
   void UpdateHmap();
 
+  void UpdateHmap2();
+
   bool Press(int id) override;
 
   void Release() override;
@@ -162,6 +164,13 @@ class UiEditTerrain final : public UiWindowAppear {
   Shader shader_flatten_prep_;
   Shader shader_flatten_step_;
   Shader shader_flatten_merge_;
+
+  //TODO: test layer projection
+  //TODO: don't forget to glDelete() it
+  Shader shader_project_layer_;
+  Texture32F tex_layer_;
+  GLuint fbo_layer_ = 0;
+
 
   Texture32F tex_mesh_;
 

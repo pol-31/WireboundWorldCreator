@@ -11,7 +11,8 @@
 WireboundWorldCreator::WireboundWorldCreator(
     const Paths& paths)
     : tile_renderer_(paths),
-      ui_renderer_(paths, global_data_, tile_renderer_) {
+      camera_(),
+      ui_renderer_(paths, global_data_, tile_renderer_, &camera_) {
   Init(paths);
 }
 
@@ -36,7 +37,7 @@ void WireboundWorldCreator::RunRenderLoop() {
     global_data_.UpdateCursorPos();
     global_data_.UpdateHoveredId();
 
-    global_data_.event_queue.Process();
+//    global_data_.event_queue.Process();
 
     tile_renderer_.Render();
     ui_renderer_.Render();

@@ -85,15 +85,27 @@ class UiSlotsTerrain final : public IUiSlots {
 
   void TranslateSelected(glm::vec3 value);
 
-  void RotateSelected(glm::vec3 value);
+  void RotateSelected(float xpos, float ypos, glm::vec3 axis);
 
-  void ScaleSelected(glm::vec3 value);
+  void ScaleSelected(float distance_to_centre, glm::vec3 axis);
+
+  void CancelTransform();
+
+  void ApplyTransform();
+
+  glm::vec3 GetInstanceTransform();
 
   int GetSlotId();
 
   void UpdateTransform() override;
 
   void PressGraph(GLuint id) override {};
+
+  void InitTranslateStart();
+
+  void InitScaleStart();
+
+  void InitRotateStart();
 
  private:
   void RenderSlotsSprites();
@@ -104,7 +116,19 @@ class UiSlotsTerrain final : public IUiSlots {
 
   void RenderPickingSlotsText();
 
+  void UpdateStartAngle();
+
+  float UpdateAngle(float xpos, float ypos);
+
   std::vector<TerrainInstanceData> instances_;
+  glm::vec3 temp_translate_{0.0f};
+  glm::quat temp_rotate_{1.0f, 0.0f, 0.0f, 0.0f};
+  glm::vec3 temp_scale_{0.0f};
+
+  float last_angle_ = 0.0f;
+  float zero_angle_ = 0.0f;
+
+  float zero_scale_length_ = 0.0f;
 
 //  UiDynamicSprite handler_;
 //  UiDynamicSprite slider_;

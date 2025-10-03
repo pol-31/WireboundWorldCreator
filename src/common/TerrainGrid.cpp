@@ -2,94 +2,42 @@
 
 #include "../common/PickingFramebuffer.h"
 #include "../core/TileRenderer.h"
+#include "../renderers/UiRenderer.h"
+#include "../core/UiLayerWireframe.h"
 
 TerrainGrid::TerrainGrid(
     UiSharedResources& ui_shared_resources,
     UiEditTerrain& ui_edit_terrain,
     std::vector<TerrainInstanceData>& instances,
-    int& instances_size,
-    const UiSliderV& slider_size,
-    const UiSliderV& slider_falloff)
+    const UiSliderV3& slider_size,
+    const UiSliderV3& slider_falloff)
     : ui_shared_resources_(ui_shared_resources),
       ui_edit_terrain_(ui_edit_terrain),
       instances_(instances),
-      instances_size_(instances_size),
       tex_selection_(details::gTerrainSize, details::gTerrainSize, GL_R8),
       tex_potential_selection_(details::gTerrainSize, details::gTerrainSize, GL_R8),
       slider_size_(slider_size),
-      slider_falloff_(slider_falloff),\
-      layer_(data::VboIdMain::kSpareText1) {
-  Init();
-}
+      slider_falloff_(slider_falloff) {}
 
 TerrainGrid::TerrainGrid(TerrainGrid&& other)
     : ui_shared_resources_(other.ui_shared_resources_),
       ui_edit_terrain_(other.ui_edit_terrain_),
       instances_(other.instances_),
-      instances_size_(other.instances_size_),
       tex_selection_(std::move(other.tex_selection_)),
       tex_potential_selection_(std::move(other.tex_potential_selection_)),
       slider_size_(other.slider_size_),
       slider_falloff_(other.slider_falloff_),
-      layer_(std::move(other.layer_)),
       start_is_end_(other.start_is_end_),
       selected_vertices_(std::move(other.selected_vertices_)),
       pressed_(other.pressed_),
       mouse_check_point_(other.mouse_check_point_),
-      selected_slot_id_(other.selected_slot_id_),
-      layer_tex_(std::move(other.layer_tex_)),
-      layer_fbo_(other.layer_fbo_) {
-  other.layer_fbo_ = 0;
-}
-
-void TerrainGrid::Init() {
-  instances_.resize(gMaxLayers);
-
-  //TODO: fboDepth unhandled
-  GLuint fbo_tex, fboDepth;
-  int fboWidth = gWindowWidth / 4, fboHeight = gWindowHeight / 4; // Preview resolution
-
-  // Create color texture
-  glGenTextures(1, &fbo_tex);
-  glBindTexture(GL_TEXTURE_2D, fbo_tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, fboWidth, fboHeight, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  // Create depth buffer
-  glGenRenderbuffers(1, &fboDepth);
-  glBindRenderbuffer(GL_RENDERBUFFER, fboDepth);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, fboWidth, fboHeight);
-  glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-  // Create framebuffer
-  glGenFramebuffers(1, &layer_fbo_);
-  glBindFramebuffer(GL_FRAMEBUFFER, layer_fbo_);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                         GL_TEXTURE_2D, fbo_tex, 0);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-                            GL_RENDERBUFFER, fboDepth);
-
-  // Check completeness
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    std::cerr << "FBO not complete!" << std::endl;
-  }
-  layer_tex_ = Texture(fbo_tex, 256, 256, GL_RGBA8);
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-void TerrainGrid::DeInit() {
-  glDeleteFramebuffers(1, &layer_fbo_);
-}
+      selected_slot_id_(other.selected_slot_id_) {}
 
 void TerrainGrid::CreateGraph() {
-  if (instances_size_ >= gMaxLayers) {
+  if (instances_.size() >= gMaxLayers) {
     std::cerr << "Unable to add more graphs (data overflow)" << std::endl;
   } else {
-    selected_slot_id_ = instances_size_;
+    selected_slot_id_ = instances_.size();
     ClearSelection();
     TerrainInstanceData instance_data;
     instance_data.name = {};
@@ -100,7 +48,7 @@ void TerrainGrid::CreateGraph() {
     // default scale, rotate, translate, do_tiling, do_invert
 //    instance_data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
     instance_data.heights.fill(0.0f);
-    instances_[instances_size_++] = std::move(instance_data);
+    instances_.push_back(std::move(instance_data));
   }
 }
 
@@ -109,7 +57,7 @@ void TerrainGrid::SelectGraph(int slot_id) {
     std::cout << "already selected" << std::endl;
     return;
   }
-  if (slot_id >= instances_size_) {
+  if (slot_id >= instances_.size()) {
     throw "select non-existent slot id";
   }
   selected_slot_id_ = slot_id;
@@ -117,7 +65,7 @@ void TerrainGrid::SelectGraph(int slot_id) {
 }
 
 bool TerrainGrid::RemoveGraph(int slot_id) {
-  if (slot_id >= instances_size_) {
+  if (slot_id >= instances_.size()) {
     throw "remove non-existent graph id";
   }
   if (selected_slot_id_ > slot_id) {
@@ -126,7 +74,6 @@ bool TerrainGrid::RemoveGraph(int slot_id) {
     selected_slot_id_ = -1;
     ClearSelection();
   }
-  --instances_size_;
   instances_.erase(instances_.begin() + slot_id);
   std::cout << "*slot removed " << slot_id << std::endl;
   return true;
@@ -155,19 +102,6 @@ void TerrainGrid::UpdateMousePotentialSelection(glm::vec2 mouse_pos) {
   glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
 }
 
-void TerrainGrid::UpdateDownScaledWireframe() {
-  glBindFramebuffer(GL_FRAMEBUFFER, layer_fbo_);
-  glViewport(0, 0, gWindowWidth / 4, gWindowHeight / 4);
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
-      ->terrain.RenderWireframe(&instances_[selected_slot_id_]);
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glViewport(0, 0, gWindowWidth, gWindowHeight); /// restore
-}
-
 void TerrainGrid::Render(glm::vec2 mouse_pos) {
   if (pressed_) {
     Select(mouse_pos);
@@ -179,14 +113,21 @@ void TerrainGrid::Render(glm::vec2 mouse_pos) {
     /// selected layer wireframe
     ui_shared_resources_.global_glfw_callback_data_.tile_renderer
         ->terrain.RenderWireframe(&instances_[selected_slot_id_]);
+    glm::vec4 layer_pivot(instances_[selected_slot_id_].translate.x,
+                          instances_[selected_slot_id_].translate.y,
+                          instances_[selected_slot_id_].translate.z,
+                          1.0f);
+    auto color_invert =
+        glm::vec4(1.0f) - instances_[selected_slot_id_].color;
+    color_invert.w = 1.0f;
+    ui_shared_resources_.global_glfw_callback_data_.ui_renderer
+        ->RenderWorldOrigin(layer_pivot, color_invert);
 
     /// wireframe left bottom
-    UpdateDownScaledWireframe();
-    ui_shared_resources_.dynamic_sprite_shader_.Bind();
-    glBindVertexArray(ui_shared_resources_.vao_ui_);
-    glActiveTexture(GL_TEXTURE0);
-    layer_tex_.Bind();
-    layer_.Render();
+    auto& ui_layer_wireframe =
+        ui_shared_resources_.global_glfw_callback_data_
+            .ui_renderer->GetUiLayerWireframe();
+    ui_layer_wireframe.RenderLayerWireframe(&instances_[selected_slot_id_]);
 
     /// selection: mouse move, potential place
     glm::vec3 color = glm::vec3(0.8f, 0.8f, 0.1f);
@@ -203,7 +144,10 @@ void TerrainGrid::Render(glm::vec2 mouse_pos) {
 }
 
 void TerrainGrid::RenderPicking() {
-  layer_.RenderPicking();
+  auto& ui_layer_wireframe =
+      ui_shared_resources_.global_glfw_callback_data_
+          .ui_renderer->GetUiLayerWireframe();
+  ui_layer_wireframe.RenderPickingLayerWireframe();
 }
 
 GLuint TerrainGrid::ProjectCursorOnGrid(glm::vec2 mouse_pos) {
@@ -266,7 +210,7 @@ void TerrainGrid::Select(glm::vec2 mouse_pos) {
 }
 
 int TerrainGrid::GetSize() const noexcept {
-  return instances_size_;
+  return instances_.size();
 }
 
 TerrainInstanceData* TerrainGrid::GetInstanceData() {

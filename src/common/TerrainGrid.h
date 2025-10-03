@@ -25,15 +25,10 @@ class TerrainGrid final : public IGraph {
   TerrainGrid(UiSharedResources& ui_shared_resources,
               UiEditTerrain& ui_edit_terrain,
               std::vector<TerrainInstanceData>& instances,
-              int& instances_size,
-              const UiSliderV& slider_size,
-              const UiSliderV& slider_falloff);
+              const UiSliderV3& slider_size,
+              const UiSliderV3& slider_falloff);
 
   TerrainGrid(TerrainGrid&& other);
-
-  ~TerrainGrid() {
-    DeInit();
-  }
 
   void CreateGraph() override;
 
@@ -79,15 +74,9 @@ class TerrainGrid final : public IGraph {
   static constexpr int gRadius = 10;
 
  private:
-  void Init();
-
-  void DeInit();
-
   void ClearSelection();
 
   void UpdateMousePotentialSelection(glm::vec2 mouse_pos);
-
-  void UpdateDownScaledWireframe();
 
   bool start_is_end_ = true;
 
@@ -101,7 +90,6 @@ class TerrainGrid final : public IGraph {
 
   /// can't use std::array due to stack limitations (1Mb)
   std::vector<TerrainInstanceData>& instances_;
-  int& instances_size_;
 
   int selected_slot_id_ = -1;
   UiSharedResources& ui_shared_resources_;
@@ -110,12 +98,8 @@ class TerrainGrid final : public IGraph {
   Texture tex_selection_;
   Texture tex_potential_selection_;
 
-  const UiSliderV& slider_size_;
-  const UiSliderV& slider_falloff_;
-
-  UiDynamicSprite layer_;
-  Texture layer_tex_;
-  GLuint layer_fbo_;
+  const UiSliderV3& slider_size_;
+  const UiSliderV3& slider_falloff_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TERRAINGRID_H_

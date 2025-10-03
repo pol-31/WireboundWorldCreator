@@ -10,8 +10,8 @@
 #include "../core/Tile.h"
 #include "../core/UiSlots.h"
 #include "../core/UiComplex.h"
-#include "../core/EventQueue.h"
 
+/// everything's public, otherwise need to make too much callback friends
 class UiTerrainMode final : public IUiMode {
  public:
   explicit UiTerrainMode(
@@ -30,22 +30,12 @@ class UiTerrainMode final : public IUiMode {
 
   int GetPrerenderTextIdEnd() const noexcept override;
 
- protected:
-  static void ScrollCallback(
-      GLFWwindow* window, double xoffset, double yoffset);
-
-  static void MouseButtonCallback(
-      GLFWwindow* window, int button, int action, int mods);
-
-  static void KeyCallback(
-      GLFWwindow* window, int key, int scancode, int action, int mods);
-
   UiStaticSprite btn_update_;
   UiStaticSprite sprite_flatten_;
-  UiToggle toggle_flatten_;
+  UiToggle4 toggle_flatten_;
 
-  UiSliderV slider_size_;
-  UiSliderV slider_falloff_;
+  UiSliderV3 slider_size_;
+  UiSliderV3 slider_falloff_;
 
   UiStaticSprite btn_bake_;
   UiTerrainBake ui_bake_;
@@ -53,20 +43,95 @@ class UiTerrainMode final : public IUiMode {
   UiSlotsTerrain slots_;
 
   UiEventHandler<
-      static_cast<int>(data::VboIdMain::kTerrainSlotsFlipPointEdgeFace) -
+      static_cast<int>(data::VboIdMain::kTerrainSlotsCreate) -
       static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1
       > ui_event_handler_;
 
-  Event ev_translate_selected_;
-  Event ev_rotate_selected_;
-  Event ev_scale_selected_;
-  glm::vec3 ev_selected_dir_ = {1.0f, 0.0f, 0.0f}; // default: x
+  void Cancel();
 
-  Event ev_scale_cursor_size_;
-  Event ev_scale_cursor_falloff_;
+  void Apply();
 
-  // intent uninit
-  float remembered_progress_;
+  void CancelTransform();
+
+  void ApplyTransform();
+
+  void SetOriginPosition(GLuint pressed_id);
+
+  glm::vec3 transform_axis_ = glm::vec3(1.0f);
+  bool mouse_process_ = false;
+  int pressed_mouse_key_ = 0;
+
+  glm::vec4 cursor_pos_ = glm::vec4{0.0f, 0.0f, 0.0f, 1.0f};
 };
+
+namespace terrain {
+
+void BindCallbacksDefault();
+
+void ScrollCallback(
+    GLFWwindow* window, double xoffset, double yoffset);
+
+void MouseButtonCallback(
+    GLFWwindow* window, int button, int action, int mods);
+
+void KeyCallback(
+    GLFWwindow* window, int key, int scancode, int action, int mods);
+
+/*
+MMB - 3d rotation around camera lookAt_origin, snap with ALT
+MMB+Shift - move in set up-right plane
+
+LMB - selecting (CursorPosCallback -> add new points in radius)
+LMB+Shift - extend selection
+LMB+Ctrl - deselect
+LMB+Ctrl+Shift - toggle selection
+
+RMB_SHIFT_PRESS - set origin
+ * */
+
+void CursorPosCallback_Mmb(
+    GLFWwindow* window, double xpos, double ypos);
+
+void CursorPosCallback_MmbShift(
+    GLFWwindow* window, double xpos, double ypos);
+
+void CursorPosCallback_Lmb(
+    GLFWwindow* window, double xpos, double ypos);
+
+void CursorPosCallback_LmbShift(
+    GLFWwindow* window, double xpos, double ypos);
+
+void CursorPosCallback_LmbCtrl(
+    GLFWwindow* window, double xpos, double ypos);
+
+void CursorPosCallback_LmbCtrlShift(
+    GLFWwindow* window, double xpos, double ypos);
+
+void CursorPosCallback_RmbShift(
+    GLFWwindow* window, double xpos, double ypos);
+
+
+
+void BindCallbacksTransform();
+
+void ScrollCallbackTransform(
+    GLFWwindow* window, double xoffset, double yoffset);
+
+void MouseButtonCallbackTransform(
+    GLFWwindow* window, int button, int action, int mods);
+
+void KeyCallbackTransform(
+    GLFWwindow* window, int key, int scancode, int action, int mods);
+
+void CursorPosCallback_G(
+    GLFWwindow* window, double xpos, double ypos);
+
+void CursorPosCallback_R(
+    GLFWwindow* window, double xpos, double ypos);
+
+void CursorPosCallback_S(
+    GLFWwindow* window, double xpos, double ypos);
+
+} // namespace terrain
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINMODE_H_

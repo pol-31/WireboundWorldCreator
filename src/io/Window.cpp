@@ -44,17 +44,7 @@ void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
   global_data->ui_shared_resources->UpdateResolution();
 }
 
-void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {
-  float xoffset = xpos - lastX;
-  float yoffset = lastY - ypos;
-
-  lastX = xpos;
-  lastY = ypos;
-
-  void* global_data = glfwGetWindowUserPointer(window);
-  CameraHandler* camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera;
-  camera->ProcessMouseMovement(xoffset, yoffset);
-}
+void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {}
 
 /// wasd movement (for debugging purposes)
 /// each IUiMode has its own set of callbacks (scroll, mouse / keyboard btn),
