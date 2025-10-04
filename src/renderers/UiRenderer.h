@@ -18,12 +18,20 @@
 #include "../core/UiLayerWireframe.h"
 #include "../core/UiWorldOrigin.h"
 #include "../core/UiButtons.h"
+#include "../core/UiGrid.h"
+#include "../core/UiSelection.h"
 
 #ifndef NDEBUG
 #include "../common/UiDebugger.h"
 #endif // NDEBUG
 
 class CameraHandler;
+
+enum class SelectionMode {
+  kSquare,
+  kCircle,
+  kLasso
+};
 
 class UiRenderer {
  public:
@@ -60,8 +68,30 @@ class UiRenderer {
 
  void RenderWorldOrigin(glm::vec4 position, glm::vec4 color);
 
+ void RenderAxis(float width_x, float width_y, float width_z);
+
+ void StartSelecting(glm::vec2 mouse_pos);
+
+ void ResetSelecting();
+
+ void RenderSelection();
+
+ void UpdateSelection(glm::vec2 mouse_pos);
+
+ void SetSelectionMode(SelectionMode mode) {
+   selection_mode_ = mode;
+ }
+
+ bool ScrollSelection(float yoffset);
+
  private:
   void Init();
+
+  void SetRectangleSelection(glm::vec2 mouse_pos);
+
+  void SetCircleSelection(glm::vec2 mouse_pos);
+
+  void SetLassoSelection(glm::vec2 mouse_pos);
 
   UiSharedResources ui_shared_resources_;
 
@@ -80,7 +110,6 @@ class UiRenderer {
   UiPlacementMode placement_;
   UiTilesMode tiles_;
 
-
   Menu menu_;
   UiSettings ui_settings_;
   UiConfirmation ui_confirmation_;
@@ -98,6 +127,13 @@ class UiRenderer {
   UiWorldOrigin ui_world_origin_;
 
   UiButtons ui_buttons_;
+  UiGrid ui_grid_;
+  UiAxis ui_axis_;
+
+  UiSelection ui_selection_;
+  std::vector<glm::vec2> selection_data_;
+  bool selecting_ = false;
+  SelectionMode selection_mode_ = SelectionMode::kSquare;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_UIRENDERER_H_

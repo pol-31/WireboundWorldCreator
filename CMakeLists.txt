@@ -92,8 +92,14 @@ add_executable(WireboundWorldCreator
         src/modes/TerrainInstanceData.h
         src/core/UiLayerWireframe.cpp
         src/core/UiLayerWireframe.h
-        src/core/UiPressedButtons.cpp
-        src/core/UiPressedButtons.h
+        src/core/UiWorldOrigin.cpp
+        src/core/UiWorldOrigin.h
+        src/core/UiButtons.cpp
+        src/core/UiButtons.h
+        src/core/UiGrid.cpp
+        src/core/UiGrid.h
+        src/core/UiSelection.cpp
+        src/core/UiSelection.h
 
 )
 

@@ -81,6 +81,7 @@ void KeyCallback(
 MMB - 3d rotation around camera lookAt_origin, snap with ALT
 MMB+Shift - move in set up-right plane
 
+1-2-3-4 modes: square, circle, lasso, toggle
 LMB - selecting (CursorPosCallback -> add new points in radius)
 LMB+Shift - extend selection
 LMB+Ctrl - deselect

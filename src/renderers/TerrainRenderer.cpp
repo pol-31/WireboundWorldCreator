@@ -35,10 +35,10 @@ TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
 }
 
 void TerrainRenderer::DeInit() {
-  GLuint vbos[] = {vbo_quad_, vbo_ids_, border_vbo_, border_ebo_, lines_vbo_};
-  glDeleteBuffers(5, vbos);
-  GLuint vaos[] = {vao_, border_vao_, lines_vao_};
-  glDeleteVertexArrays(3, vaos);
+  GLuint vbos[] = {vbo_quad_, vbo_ids_, border_vbo_, border_ebo_};
+  glDeleteBuffers(4, vbos);
+  GLuint vaos[] = {vao_, border_vao_};
+  glDeleteVertexArrays(2, vaos);
 }
 
 void TerrainRenderer::Render() {
@@ -125,28 +125,6 @@ void TerrainRenderer::RenderWireframe(TerrainInstanceData* terrain) {
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void TerrainRenderer::RenderWireframeLines(TerrainInstanceData* terrain) {
-  /// render SUM-layer borders
-  border_shader_.Bind();
-  glBindVertexArray(lines_vao_);
-  glActiveTexture(GL_TEXTURE0);
-  glUniform1i(1, 0);
-  border_tex_.Bind();
-
-  glm::mat4 model_mat = glm::scale(glm::mat4(1.0f), glm::vec3(tile_.map_scale * 64.0f));
-  glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(model_mat));
-  glUniform1f(2, glfwGetTime() / 100.0f);
-//  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); /// wireframe
-  glUniform1i(3, static_cast<int>(false)); // no green
-  glUniform1i(4, static_cast<int>(false)); // no blue
-  glDrawArrays(GL_LINE_STRIP, 0, 6);
-  glUniform1i(4, static_cast<int>(true)); // blue
-  glDrawArrays(GL_LINE_STRIP, 6, 6);
-  glUniform1i(3, static_cast<int>(true)); // green
-  glDrawArrays(GL_LINE_STRIP, 12, 6);
-//  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-}
-
 void TerrainRenderer::RenderSelection(
     TerrainInstanceData* terrain,
     const Texture& selection_mask, glm::vec3 color) {
@@ -226,20 +204,18 @@ void TerrainRenderer::UpdateTransformUniform(glm::mat4 mat) {
 }
 
 void TerrainRenderer::Init() {
-  GLuint vaos[3];
-  glGenVertexArrays(3, vaos);
+  GLuint vaos[2];
+  glGenVertexArrays(2, vaos);
   vao_ = vaos[0];
   border_vao_ = vaos[1];
-  lines_vao_ = vaos[2];
   glBindVertexArray(vao_);
 
-  GLuint vbos[5];
-  glGenBuffers(5, vbos);
+  GLuint vbos[4];
+  glGenBuffers(4, vbos);
   vbo_quad_ = vbos[0];
   vbo_ids_ = vbos[1];
   border_vbo_ = vbos[2];
   border_ebo_ = vbos[3];
-  lines_vbo_ = vbos[4];
   glBindBuffer(GL_ARRAY_BUFFER, vbo_quad_);
 
   const float quad[] = {
@@ -320,42 +296,6 @@ void TerrainRenderer::Init() {
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, border_ebo_);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-
-  glBindVertexArray(0);
-
-
-  float lineVertices[] = {
-      4.0f,  0.0f,  0.0f,  0.5f, 0.5f,
-      -4.0f,  0.0f, -0.0f,  0.5f, 0.5f,
-      0.0f, 0.001f, 0.0f, 0.5f, 0.5f,
-      4.0f,  0.0f,  0.0f,  0.5f, 0.5f,
-      -4.0f,  0.0f, -0.0f,  0.5f, 0.5f,
-      0.0f, 0.001f, 0.0f, 0.5f, 0.5f,
-
-      0.0f,  4.0f,  0.0f,  0.0f, 1.0f,
-      0.0f,  -4.0f, -0.0f,  1.0f, 0.0f,
-      0.001f, 0.0f, 0.0f, 0.5f, 0.5f,
-      0.0f,  4.0f,  0.0f,  0.0f, 1.0f,
-      0.0f,  -4.0f, -0.0f,  1.0f, 0.0f,
-      0.001f, 0.0f, 0.0f, 0.5f, 0.5f,
-
-      0.0f,  0.0f, 4.0f,  0.0f, 0.0f,
-      0.0f,  0.0f, -4.0f,  1.0f, 1.0f,
-      0.0f, 0.001f, 0.0f, 0.5f, 0.5f,
-      0.0f,  0.0f, 4.0f,  0.0f, 0.0f,
-      0.0f,  0.0f, -4.0f,  1.0f, 1.0f,
-      0.0f, 0.001f, 0.0f, 0.5f, 0.5f,
-  };
-
-  glBindVertexArray(lines_vao_);
-
-  glBindBuffer(GL_ARRAY_BUFFER, lines_vbo_);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(lineVertices), lineVertices, GL_STATIC_DRAW);
 
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);

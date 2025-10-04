@@ -129,7 +129,10 @@ UiRenderer::UiRenderer(
                   {data::VboIdMain::kCompassWest}),
       ui_layer_wireframe_(ui_shared_resources_),
       ui_world_origin_(ui_shared_resources_),
-      ui_buttons_(ui_shared_resources_, text_renderer_) {
+      ui_buttons_(ui_shared_resources_, text_renderer_),
+      ui_grid_(ui_shared_resources_),
+      ui_axis_(ui_shared_resources_),
+      ui_selection_(ui_shared_resources_) {
   Init();
 }
 
@@ -148,6 +151,9 @@ void UiRenderer::Render() {
   }
   debug_ui_prev_ = debug::gUiAltMode;
 #endif // NDEBUG
+
+  ui_grid_.Render();
+  ui_axis_.Render(1.0f, 1.0f, 1.0f);
 
   cur_mode_->Render();
   glActiveTexture(GL_TEXTURE0);
@@ -174,7 +180,6 @@ void UiRenderer::Render() {
   if (text_renderer_.InputInProgress()) {
     text_renderer_.RenderInput();
   }
-
   ui_buttons_.Render();
 }
 
@@ -243,4 +248,64 @@ void UiRenderer::AskForConfirmation(
 
 void UiRenderer::RenderWorldOrigin(glm::vec4 position, glm::vec4 color) {
   ui_world_origin_.Render(position, color);
+}
+
+void UiRenderer::RenderAxis(float width_x, float width_y, float width_z) {
+  ui_axis_.Render(width_x, width_y, width_z);
+}
+
+void UiRenderer::RenderSelection() {
+  if (selecting_) {
+    ui_selection_.Render();
+  }
+  if (selection_mode_ == SelectionMode::kCircle) {
+    ui_selection_.RenderSelectionCircle();
+  }
+}
+
+void UiRenderer::StartSelecting(glm::vec2 mouse_pos) {
+  selection_data_.clear();
+  ui_selection_.ResetBufferData();
+  ui_selection_.SetStartPos(mouse_pos);
+  selecting_ = true;
+}
+
+void UiRenderer::ResetSelecting() {
+  selection_data_.clear();
+  ui_selection_.ResetBufferData();
+  selecting_ = false;
+}
+
+void UiRenderer::UpdateSelection(glm::vec2 mouse_pos) {
+  switch (selection_mode_) {
+    case SelectionMode::kSquare:
+      SetRectangleSelection(mouse_pos);
+      break;
+    case SelectionMode::kCircle:
+      SetCircleSelection(mouse_pos);
+      break;
+    case SelectionMode::kLasso:
+      SetLassoSelection(mouse_pos);
+      break;
+  }
+}
+
+void UiRenderer::SetRectangleSelection(glm::vec2 mouse_pos) {
+  ui_selection_.SetRectangleSelection(mouse_pos);
+}
+
+void UiRenderer::SetCircleSelection(glm::vec2 mouse_pos) {
+  ui_selection_.SetCircleSelection(mouse_pos);
+}
+
+bool UiRenderer::ScrollSelection(float yoffset) {
+  if (selecting_) {
+    ui_selection_.StepCircleRadius(yoffset * 0.01f);
+  }
+  return selecting_;
+}
+
+void UiRenderer::SetLassoSelection(glm::vec2 mouse_pos) {
+  selection_data_.push_back(mouse_pos);
+  ui_selection_.SetLassoSelection(selection_data_);
 }

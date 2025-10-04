@@ -2,6 +2,7 @@
 
 #include "../modes/TerrainInstanceData.h"
 #include "TileRenderer.h"
+#include "../renderers/UiRenderer.h"
 
 #include "../io/Cameras.h"
 
@@ -70,8 +71,8 @@ void UiLayerWireframe::UpdateLayerWireframe(
 
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer
       ->terrain.RenderWireframe(terrain);
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
-      ->terrain.RenderWireframeLines(terrain);
+  ui_shared_resources_.global_glfw_callback_data_.ui_renderer
+      ->RenderAxis(4.0f, 4.0f, 4.0f);
 
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);

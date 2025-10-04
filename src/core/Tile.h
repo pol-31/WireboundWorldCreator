@@ -102,13 +102,9 @@ struct Tile {
 
   explicit Tile(const TileInfo& tile_info);
 
-  void UpScale() {
-    map_scale *= details::kMapScaleFactor;
-  }
+  void UpScale();
 
-  void DownScale() {
-    map_scale /= details::kMapScaleFactor;
-  }
+  void DownScale();
 
   /* Can we compute only 9... why not - at least for grass and water yes:
    * 1 2 3 4 4 4 ...

@@ -1,5 +1,7 @@
 #include "Tile.h"
 
+#include <iostream>
+
 Tile::Tile(const TileInfo& tile_info) {
   // TODO; use placeholders (full black / full white texture)
 
@@ -41,4 +43,16 @@ Tile::Tile(const TileInfo& tile_info) {
 
   /// see explanation at header file (Tile.h)
   water_heights_ = water_heights_init_;
+}
+
+void Tile::UpScale() {
+  float new_map_scale = map_scale * details::kMapScaleFactor;
+  map_scale = std::min(new_map_scale, 100.0f);
+  std::cout << map_scale << std::endl;
+}
+
+void Tile::DownScale() {
+  float new_map_scale = map_scale / details::kMapScaleFactor;
+  map_scale = std::max(new_map_scale, 0.01f);
+  std::cout << map_scale << std::endl;
 }

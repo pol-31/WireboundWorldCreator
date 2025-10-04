@@ -150,14 +150,14 @@ void UiTerrainMode::Render() {
   slots_.Render(mouse_pos);
   ui_shared_resources_.tex_ui_.Bind();
 
+  ui_shared_resources_.global_glfw_callback_data_.ui_renderer
+      ->RenderWorldOrigin(cursor_pos_, glm::vec4(1.0f));
+
   ui_shared_resources_.tex_ui_.Bind();
   window_queue_.Render();
 
-  ui_shared_resources_.global_glfw_callback_data_.ui_renderer
-      ->RenderWorldOrigin(cursor_pos_, glm::vec4(1.0f));
+  ui_shared_resources_.global_glfw_callback_data_.ui_renderer->RenderSelection();
 }
-
-
 
 void UiTerrainMode::RenderPicking() {
   glActiveTexture(GL_TEXTURE0);
@@ -235,6 +235,11 @@ void ScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
+
+  if (global_data->ui_renderer->ScrollSelection(yoffset)) {
+    return;
+  }
+
   auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
@@ -270,12 +275,14 @@ void MouseButtonCallback(
       if (button == terrain->pressed_mouse_key_) {
         terrain->Apply();
       }
+//      glfwSetCursorPosCallback(window, nullptr);
+//      std::cout << "dis" << std::endl;
+      global_data->ui_renderer->ResetSelecting();
     }
   } else {
     if (action == GLFW_PRESS) {
       bool mod_shift = mods & GLFW_MOD_SHIFT;
       bool mod_ctrl = mods & GLFW_MOD_CONTROL;
-      bool mod_alt = mods & GLFW_MOD_ALT;
       terrain->pressed_mouse_key_ = button;
       double xpos, ypos;
       glfwGetCursorPos(gWindow, &xpos, &ypos);
@@ -290,6 +297,7 @@ void MouseButtonCallback(
         if (ui_handled) {
           return;
         }
+        global_data->ui_renderer->StartSelecting(global_data->cursor_pos_tex_norm_);
         if (mod_shift) {
           if (mod_ctrl) {
             glfwSetCursorPosCallback(gWindow, CursorPosCallback_LmbCtrlShift);
@@ -368,6 +376,12 @@ void KeyCallback(
       } else if (key == GLFW_KEY_R) {
         glfwSetCursorPosCallback(gWindow, CursorPosCallback_R);
         BindCallbacksTransform();
+      } else if (key == GLFW_KEY_1) {
+        global_data->ui_renderer->SetSelectionMode(SelectionMode::kSquare);
+      } else if (key == GLFW_KEY_2) {
+        global_data->ui_renderer->SetSelectionMode(SelectionMode::kCircle);
+      } else if (key == GLFW_KEY_3) {
+        global_data->ui_renderer->SetSelectionMode(SelectionMode::kLasso);
       }
     }
   }
@@ -400,7 +414,11 @@ void CursorPosCallback_MmbShift(
 }
 
 void CursorPosCallback_Lmb(
-    GLFWwindow* window, double xpos, double ypos) {}
+    GLFWwindow* window, double xpos, double ypos) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  global_data->ui_renderer->UpdateSelection(global_data->cursor_pos_tex_norm_);
+}
 
 void CursorPosCallback_LmbShift(
     GLFWwindow* window, double xpos, double ypos) {}
