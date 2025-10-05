@@ -68,7 +68,7 @@ class UiRenderer {
 
  void RenderWorldOrigin(glm::vec4 position, glm::vec4 color);
 
- void RenderAxis(float width_x, float width_y, float width_z);
+ void RenderAxis(float scale);
 
  void StartSelecting(glm::vec2 mouse_pos);
 
@@ -128,7 +128,6 @@ class UiRenderer {
 
   UiButtons ui_buttons_;
   UiGrid ui_grid_;
-  UiAxis ui_axis_;
 
   UiSelection ui_selection_;
   std::vector<glm::vec2> selection_data_;

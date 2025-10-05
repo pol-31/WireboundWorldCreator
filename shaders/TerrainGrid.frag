@@ -7,27 +7,19 @@ in vec3 world_pos;
 out vec4 FragColor;
 
 void main() {
-    float scale = sqrt(map_scale);
-
-    // coloring major lines (every 10th)
-    bool majorX = int(floor(world_pos.x / scale)) % 10 == 0;
-    bool majorZ = int(floor(world_pos.z / scale)) % 10 == 0;
-    vec3 color = vec3(0.3); // default grey
-    if (majorX || majorZ) {
-        color = vec3(0.6); // brighter for major lines
-    }
-
+    float scale = 1.0f / map_scale;
 
     float dist_to_camera = length(camera_pos - world_pos) / 16.0f;
+    float dist_to_axis = min(abs(world_pos.x), abs(world_pos.z));
+    float height_factor = abs(camera_pos.y) / 16.0f;
 
-    float thickness = mix(0.05, 0.1, pow(1 - dist_to_camera, 2));
-//    float thickness = 0.05 + 0.05 * pow(1 - dist_to_camera, 2);
-
-    // distance to nearest grid line along X and Z
-    float lineX = abs(fract(world_pos.x / scale) - 0.5);
-    float lineZ = abs(fract(world_pos.z / scale) - 0.5);
+    float lineX = abs(fract(log2(abs(world_pos.x) * scale)) - 0.5f);
+    float lineZ = abs(fract(log2(abs(world_pos.z) * scale)) - 0.5f);
     float dist = min(lineX, lineZ);
 
-    float alpha = smoothstep(thickness, 0.0, dist);
-    FragColor = vec4(color, alpha * (1.0f - dist_to_camera));
+    float thickness = 0.03f * height_factor;
+    float alpha = 2.0f * smoothstep(thickness, 0.0, dist) * height_factor * dist_to_axis * (1.0f - pow(dist_to_camera, 2));
+
+    vec3 color = vec3(1.0f);
+    FragColor = vec4(color, smoothstep(0.0f, 1.0f, alpha));
 }

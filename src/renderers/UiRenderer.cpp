@@ -131,7 +131,6 @@ UiRenderer::UiRenderer(
       ui_world_origin_(ui_shared_resources_),
       ui_buttons_(ui_shared_resources_, text_renderer_),
       ui_grid_(ui_shared_resources_),
-      ui_axis_(ui_shared_resources_),
       ui_selection_(ui_shared_resources_) {
   Init();
 }
@@ -152,8 +151,8 @@ void UiRenderer::Render() {
   debug_ui_prev_ = debug::gUiAltMode;
 #endif // NDEBUG
 
-  ui_grid_.Render();
-  ui_axis_.Render(1.0f, 1.0f, 1.0f);
+  ui_grid_.RenderAxis(1.0f);
+  ui_grid_.RenderGrid();
 
   cur_mode_->Render();
   glActiveTexture(GL_TEXTURE0);
@@ -250,8 +249,8 @@ void UiRenderer::RenderWorldOrigin(glm::vec4 position, glm::vec4 color) {
   ui_world_origin_.Render(position, color);
 }
 
-void UiRenderer::RenderAxis(float width_x, float width_y, float width_z) {
-  ui_axis_.Render(width_x, width_y, width_z);
+void UiRenderer::RenderAxis(float scale) {
+  ui_grid_.RenderAxis(scale);
 }
 
 void UiRenderer::RenderSelection() {

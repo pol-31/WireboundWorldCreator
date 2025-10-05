@@ -72,7 +72,7 @@ void UiLayerWireframe::UpdateLayerWireframe(
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer
       ->terrain.RenderWireframe(terrain);
   ui_shared_resources_.global_glfw_callback_data_.ui_renderer
-      ->RenderAxis(4.0f, 4.0f, 4.0f);
+      ->RenderAxis(5.0f);
 
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
@@ -80,8 +80,11 @@ void UiLayerWireframe::UpdateLayerWireframe(
 
   for (int i = 0; i < sp_points_.size(); i++) {
     auto mvp = GetPointMvpMatrix();
-    glm::vec2 translate = GetBillboardTranslate(mvp, i);
-    sp_points_[i].SetTranslate(translate);
+    glm::vec3 translate = GetBillboardTranslate(mvp, i);
+    if (translate.z >= 1.0f) {
+      continue; // skip if beyond the screen
+    }
+    sp_points_[i].SetTranslate(glm::vec2(translate.x, translate.y));
     sp_points_[i].Render();
   }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -89,9 +92,9 @@ void UiLayerWireframe::UpdateLayerWireframe(
 }
 
 glm::mat4 UiLayerWireframe::GetPointMvpMatrix() {
+  auto model = glm::mat4(1.0f);
   auto map_scale = ui_shared_resources_.global_glfw_callback_data_.
       tile_renderer->cur_tile_.map_scale;
-  auto model = glm::mat4(1.0f);
   model = glm::scale(model, glm::vec3(map_scale));
   auto view = ui_shared_resources_.global_glfw_callback_data_
                   .camera->GetViewMatrix();
@@ -100,7 +103,7 @@ glm::mat4 UiLayerWireframe::GetPointMvpMatrix() {
   return projection * view * model;
 }
 
-glm::vec2 UiLayerWireframe::GetBillboardTranslate(glm::mat4 mvp, int idx) {
+glm::vec3 UiLayerWireframe::GetBillboardTranslate(glm::mat4 mvp, int idx) {
   glm::vec4 clipPos = mvp * pos_points_[idx];
   glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
   return ndc;

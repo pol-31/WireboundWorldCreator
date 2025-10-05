@@ -14,7 +14,10 @@ class UiGrid {
     DeInit();
   }
 
-  void Render();
+  void RenderGrid();
+
+  // scale for UiLayerWireframe axis render
+  void RenderAxis(float scale);
 
  private:
   void Init();
@@ -22,28 +25,8 @@ class UiGrid {
   void DeInit();
 
   UiSharedResources& ui_shared_resources_;
-  Shader shader_;
-  GLuint vao_;
-  GLuint vbo_;
-};
-
-class UiAxis {
- public:
-  UiAxis(UiSharedResources& ui_shared_resources);
-
-  ~UiAxis() {
-    DeInit();
-  }
-
-  void Render(float width_x, float width_y, float width_z);
-
- private:
-  void Init();
-
-  void DeInit();
-
-  UiSharedResources& ui_shared_resources_;
-  Shader shader_;
+  Shader shader_grid_;
+  Shader shader_axis_;
   GLuint vao_;
   GLuint vbo_;
 };
