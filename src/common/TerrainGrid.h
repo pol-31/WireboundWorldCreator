@@ -70,6 +70,12 @@ class TerrainGrid final : public IGraph {
 
   TerrainInstanceData* GetInstanceData();
 
+  void SelectVertices(const std::vector<GLuint>& points);
+
+  void SetSelectionMask(const Texture* mask);
+
+  void MoveSelected(float value);
+
   static constexpr size_t gMaxLayers = 10;
   static constexpr int gRadius = 10;
 
@@ -100,6 +106,11 @@ class TerrainGrid final : public IGraph {
 
   const UiSliderV3& slider_size_;
   const UiSliderV3& slider_falloff_;
+
+  Shader vertices_transform_shader_;
+  Shader selection_blur_shader_;
+  const Texture* selection_mask_ = nullptr;
+  Texture selection_mask_blured_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TERRAINGRID_H_

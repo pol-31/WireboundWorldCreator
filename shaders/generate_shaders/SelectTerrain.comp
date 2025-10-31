@@ -1,0 +1,31 @@
+#version 460 core
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout (r32ui, binding = 0) uniform readonly uimage2D picking;
+layout (r8,    binding = 1) uniform readonly image2D selection;
+layout (r8,    binding = 2) uniform writeonly image2D surface;
+
+layout (location = 0) uniform uint kIdOffsetWater;
+
+// 1: add (shift) connect last to new,
+// 1: add (ctrl) no connect last to new,
+// 0: erase (ctrl + shift)
+layout (location = 1) uniform float mask_value;
+
+ivec2 IdToSurfacePos(uint id) {
+    // terrain grid is 1024 by 1024
+    int y = int(id & 1023u);
+    int x = int(id >> 10);
+    return ivec2(x, y);
+}
+
+void main() {
+    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+    uint id = imageLoad(picking, coords).r;
+    float sel = imageLoad(selection, coords).r;
+
+    if (sel > 0.0 && id < kIdOffsetWater) {
+        ivec2 pos = IdToSurfacePos(id);
+        imageStore(surface, pos, vec4(mask_value));
+    }
+}

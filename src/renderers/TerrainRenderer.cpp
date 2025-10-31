@@ -126,18 +126,14 @@ void TerrainRenderer::RenderWireframe(TerrainInstanceData* terrain) {
 }
 
 void TerrainRenderer::RenderSelection(
-    TerrainInstanceData* terrain,
+    const Texture32F* surface,
     const Texture& selection_mask, glm::vec3 color) {
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); /// wireframe
   shader_selection_.Bind();
   glActiveTexture(GL_TEXTURE0);
-  terrain->data.hmap.Bind();
+  surface->Bind();
   glm::mat4 transform = glm::mat4{1.0f};
-  transform = glm::scale(transform, terrain->scale * tile_.map_scale);
-  transform *= glm::mat4_cast(terrain->rotate);
-//  transform = glm::rotate(
-//      transform, glm::length(terrain->rotate) - 1, glm::normalize(terrain->rotate));
-  transform = glm::translate(transform, terrain->translate);
+  transform = glm::scale(transform, glm::vec3(tile_.map_scale));
   glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
   // NOT terrain->hmap.Bind();
   glActiveTexture(GL_TEXTURE1);

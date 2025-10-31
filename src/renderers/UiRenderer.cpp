@@ -1,12 +1,12 @@
 #include "UiRenderer.h"
 
-#include "../io/Cameras.h"
+#include "../io/Camera.h"
 
 UiRenderer::UiRenderer(
     const Paths& paths,
     GlobalGlfwCallbackData& global_glfw_data_,
     TileRenderer& tile_renderer,
-    const CameraHandler* camera)
+    const Camera* camera)
     : ui_shared_resources_(paths, global_glfw_data_),
       ui_debugger_(paths, ui_shared_resources_.vbo_ui_,
                    ui_shared_resources_.vbo_ui_transform_,
@@ -24,9 +24,10 @@ UiRenderer::UiRenderer(
       objects_(ui_shared_resources_, windows_),
       placement_(ui_shared_resources_, windows_, paths),
       tiles_(ui_shared_resources_, windows_),
+      player_(ui_shared_resources_, windows_, text_renderer_, tile_renderer.cur_tile_),
       menu_(ui_shared_resources_, windows_, text_renderer_, &terrain_,
             &water_, &roads_, &fences_, &placement_, &objects_, &biomes_,
-            &tiles_, cur_mode_),
+            &tiles_, &player_, cur_mode_),
       ui_settings_(
           {data::VboIdMain::kSettingsDesk},
           2.0f,
@@ -130,8 +131,7 @@ UiRenderer::UiRenderer(
       ui_layer_wireframe_(ui_shared_resources_),
       ui_world_origin_(ui_shared_resources_),
       ui_buttons_(ui_shared_resources_, text_renderer_),
-      ui_grid_(ui_shared_resources_),
-      ui_selection_(ui_shared_resources_) {
+      ui_grid_(ui_shared_resources_) {
   Init();
 }
 
@@ -251,60 +251,4 @@ void UiRenderer::RenderWorldOrigin(glm::vec4 position, glm::vec4 color) {
 
 void UiRenderer::RenderAxis(float scale) {
   ui_grid_.RenderAxis(scale);
-}
-
-void UiRenderer::RenderSelection() {
-  if (selecting_) {
-    ui_selection_.Render();
-  }
-  if (selection_mode_ == SelectionMode::kCircle) {
-    ui_selection_.RenderSelectionCircle();
-  }
-}
-
-void UiRenderer::StartSelecting(glm::vec2 mouse_pos) {
-  selection_data_.clear();
-  ui_selection_.ResetBufferData();
-  ui_selection_.SetStartPos(mouse_pos);
-  selecting_ = true;
-}
-
-void UiRenderer::ResetSelecting() {
-  selection_data_.clear();
-  ui_selection_.ResetBufferData();
-  selecting_ = false;
-}
-
-void UiRenderer::UpdateSelection(glm::vec2 mouse_pos) {
-  switch (selection_mode_) {
-    case SelectionMode::kSquare:
-      SetRectangleSelection(mouse_pos);
-      break;
-    case SelectionMode::kCircle:
-      SetCircleSelection(mouse_pos);
-      break;
-    case SelectionMode::kLasso:
-      SetLassoSelection(mouse_pos);
-      break;
-  }
-}
-
-void UiRenderer::SetRectangleSelection(glm::vec2 mouse_pos) {
-  ui_selection_.SetRectangleSelection(mouse_pos);
-}
-
-void UiRenderer::SetCircleSelection(glm::vec2 mouse_pos) {
-  ui_selection_.SetCircleSelection(mouse_pos);
-}
-
-bool UiRenderer::ScrollSelection(float yoffset) {
-  if (selecting_) {
-    ui_selection_.StepCircleRadius(yoffset * 0.01f);
-  }
-  return selecting_;
-}
-
-void UiRenderer::SetLassoSelection(glm::vec2 mouse_pos) {
-  selection_data_.push_back(mouse_pos);
-  ui_selection_.SetLassoSelection(selection_data_);
 }

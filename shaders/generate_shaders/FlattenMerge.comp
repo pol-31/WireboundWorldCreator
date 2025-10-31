@@ -15,10 +15,17 @@ void main() {
     ivec2 halfsize = size / 2;
     // convert to [-1;1) , NOT, le'ts trye -32 to 32.0f asin Terrain.vert
     //TODO: use C++ matrix transformations instead
-    vec4 srcPos = inverse_transform * vec4(coord.x / 16.0f - 32.0f, 0.0f, coord.y / 16.0f - 32.0f, 1.0f);
-    ivec2 mesh_coord = ivec2((srcPos.x + 32.0f) * 16.0f, (srcPos.z + 32.0f) * 16.0f);
+//    vec4 srcPos = inverse_transform * vec4(coord.x / 16.0f - 32.0f, 0.0f, coord.y / 16.0f - 32.0f, 1.0f);
+//    ivec2 mesh_coord = ivec2((srcPos.x + 32.0f) * 16.0f, (srcPos.z + 32.0f) * 16.0f);
+
+//    ivec2 mesh_coord = ivec2(srcPos.x, srcPos.z);
 //    vec4 srcPos = inverse_transform * vec4(coord.x, 0.0f, coord.y, 1.0f);
 //    ivec2 mesh_coord = ivec2(srcPos.x, srcPos.z);
+
+
+    vec4 srcPos = inverse_transform * vec4(coord.x, 0.0f, coord.y, 1.0f);
+//    ivec2 mesh_coord = ivec2((srcPos.x + 32.0f) * 16.0f, (srcPos.z + 32.0f) * 16.0f);
+    ivec2 mesh_coord = ivec2(srcPos.xz);
 
     // convert back to [0;size)
     vec4 mesh_value = imageLoad(mesh, mesh_coord);

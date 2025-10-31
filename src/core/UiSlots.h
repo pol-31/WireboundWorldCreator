@@ -107,6 +107,13 @@ class UiSlotsTerrain final : public IUiSlots {
 
   void InitRotateStart();
 
+  // ---
+  void SelectPoints(const std::vector<GLuint>& points);
+
+  void SetVertexSelectionMask(const Texture* mask);
+
+  TerrainInstanceData* GetTerrainInstantanceData();
+
  private:
   void RenderSlotsSprites();
 
@@ -129,6 +136,8 @@ class UiSlotsTerrain final : public IUiSlots {
   float zero_angle_ = 0.0f;
 
   float zero_scale_length_ = 0.0f;
+
+  float prev_value_y_ = 0.0f;
 
 //  UiDynamicSprite handler_;
 //  UiDynamicSprite slider_;

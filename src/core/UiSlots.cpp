@@ -3,7 +3,7 @@
 #include "../common/TextRenderer.h"
 #include "../common/UiDebugger.h"
 #include "../core/TileRenderer.h"
-#include "../io/Cameras.h"
+#include "../io/Camera.h"
 
 IUiSlots::IUiSlots(
     size_t vbo_texture_id, UiSharedResources& ui_shared_resources,
@@ -849,12 +849,16 @@ void UiSlotsTerrain::InitRotateStart() {
 
 void UiSlotsTerrain::TranslateSelected(glm::vec3 value) {
   int slot_id = graph_.GetSlotId();
-  if (slot_id != -1) {
-    auto prev_value = temp_translate_;
-    instances_[slot_id].translate = glm::clamp(
-        prev_value + value, glm::vec3(-200.0f), glm::vec3(200.0f));
-  } else {
-//    graph_.MoveSelected(value);
+  if (slot_id == -1) { // move selected points
+    graph_.MoveSelected(value.y - prev_value_y_);
+    prev_value_y_ = value.y;
+  } else { // move wholelayer
+    graph_.MoveSelected(value.y - prev_value_y_);
+    prev_value_y_ = value.y;
+
+//    auto prev_value = temp_translate_;
+//    instances_[slot_id].translate = glm::clamp(
+//        prev_value + value, glm::vec3(-200.0f), glm::vec3(200.0f));
   }
 }
 
@@ -891,10 +895,12 @@ void UiSlotsTerrain::CancelTransform() {
     instances_[slot_id].translate = temp_translate_;
     instances_[slot_id].rotate = temp_rotate_;
     instances_[slot_id].scale = temp_scale_;
+    prev_value_y_ = 0;
   }
 }
 
 void UiSlotsTerrain::ApplyTransform() {
+  prev_value_y_ = 0;
   /* nothing here now */
 }
 
@@ -909,4 +915,21 @@ glm::vec3 UiSlotsTerrain::GetInstanceTransform() {
 int UiSlotsTerrain::GetSlotId() {
   return sl_data_.GetSlotId(
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
+}
+
+void UiSlotsTerrain::SelectPoints(
+    const std::vector<GLuint>& points) {
+  graph_.SelectVertices(points);
+}
+
+TerrainInstanceData* UiSlotsTerrain::GetTerrainInstantanceData() {
+  int slot_id = graph_.GetSlotId();
+  if (slot_id == -1) {
+    return nullptr;
+  }
+  return &instances_[slot_id];
+}
+
+void UiSlotsTerrain::SetVertexSelectionMask(const Texture* mask) {
+  graph_.SetSelectionMask(mask);
 }

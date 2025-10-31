@@ -17,7 +17,10 @@ TerrainGrid::TerrainGrid(
       tex_selection_(details::gTerrainSize, details::gTerrainSize, GL_R8),
       tex_potential_selection_(details::gTerrainSize, details::gTerrainSize, GL_R8),
       slider_size_(slider_size),
-      slider_falloff_(slider_falloff) {}
+      slider_falloff_(slider_falloff),
+      selection_mask_blured_(details::gTerrainSize, details::gTerrainSize, GL_R8),
+      vertices_transform_shader_("../shaders/generate_shaders/VerticesTransform.comp"),
+      selection_blur_shader_("../shaders/generate_shaders/SelectionBlur.comp") {}
 
 TerrainGrid::TerrainGrid(TerrainGrid&& other)
     : ui_shared_resources_(other.ui_shared_resources_),
@@ -31,7 +34,8 @@ TerrainGrid::TerrainGrid(TerrainGrid&& other)
       selected_vertices_(std::move(other.selected_vertices_)),
       pressed_(other.pressed_),
       mouse_check_point_(other.mouse_check_point_),
-      selected_slot_id_(other.selected_slot_id_) {}
+      selected_slot_id_(other.selected_slot_id_),
+      vertices_transform_shader_(std::move(other.vertices_transform_shader_)) {}
 
 void TerrainGrid::CreateGraph() {
   if (instances_.size() >= gMaxLayers) {
@@ -83,7 +87,7 @@ void TerrainGrid::UpdateMousePotentialSelection(glm::vec2 mouse_pos) {
   GLuint black = 0;
   glClearTexImage(tex_potential_selection_.GetId(), 0, GL_RED,
                   GL_UNSIGNED_BYTE, &black);
-  ui_shared_resources_.shader_terrain_selection_.Bind();
+ /* ui_shared_resources_.shader_terrain_selection_.Bind();
   glBindImageTexture(
       0, tex_potential_selection_.GetId(), 0,
       GL_FALSE, 0, GL_READ_WRITE, GL_R8);
@@ -92,14 +96,14 @@ void TerrainGrid::UpdateMousePotentialSelection(glm::vec2 mouse_pos) {
   glUniform1f(3, slider_falloff_.GetProgress());
   GLuint id = ui_shared_resources_.global_glfw_callback_data_.
               picking_fbo->GetIdByMousePos(mouse_pos);
-  glm::uvec2 pos(id & 1023, id >> 10);
+  glm::uvec2 pos(id >> 10, id & 1023);
   glUniform2uiv(0, 1, glm::value_ptr(pos));
   glUniform2uiv(1, 1, glm::value_ptr(pos));
   GLuint workGroupSizeX = (1024 + 15) / 16;
   GLuint workGroupSizeY = (1024 + 15) / 16;
   glDispatchCompute(workGroupSizeX, workGroupSizeY, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+  glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);*/
 }
 
 void TerrainGrid::Render(glm::vec2 mouse_pos) {
@@ -129,17 +133,19 @@ void TerrainGrid::Render(glm::vec2 mouse_pos) {
             .ui_renderer->GetUiLayerWireframe();
     ui_layer_wireframe.RenderLayerWireframe(&instances_[selected_slot_id_]);
 
-    /// selection: mouse move, potential place
-    glm::vec3 color = glm::vec3(0.8f, 0.8f, 0.1f);
+/* REMOVED
+ * /// selection: mouse move, potential place
     ui_shared_resources_.global_glfw_callback_data_.tile_renderer
         ->terrain.RenderSelection(
-            &instances_[selected_slot_id_], tex_potential_selection_, color);
+            &instances_[selected_slot_id_], tex_potential_selection_, color);*/
 
     /// selection: already drawn, selected
+    //TODO: test in UiSelection
+/*    glm::vec3 color = glm::vec3(0.8f, 0.8f, 0.1f);
     color = glm::vec3(0.2f, 0.2f, 0.8f);
     ui_shared_resources_.global_glfw_callback_data_.tile_renderer
         ->terrain.RenderSelection(
-            &instances_[selected_slot_id_], tex_selection_, color);
+            &instances_[selected_slot_id_], tex_selection_, color);*/
   }
 }
 
@@ -181,9 +187,10 @@ void TerrainGrid::Release() {
 }
 
 void TerrainGrid::Select(glm::vec2 mouse_pos) {
+  //TODO: only if mode == kCircle or kTweak
   // shift and ctrl doesn't matter
   ui_shared_resources_.shader_terrain_selection_.Bind();
-  glBindImageTexture(
+  /*glBindImageTexture(
       0, tex_selection_.GetId(), 0,
       GL_FALSE, 0, GL_READ_WRITE, GL_R8);
   glm::uvec2 point{};
@@ -198,14 +205,14 @@ void TerrainGrid::Select(glm::vec2 mouse_pos) {
     start_is_end_ = false;
   }
   glUniform2uiv(0, 1,
-                glm::value_ptr(glm::uvec2(start & 1023, start >> 10)));
+                glm::value_ptr(glm::uvec2(start >> 10, start & 1023)));
   glUniform2uiv(1, 1,
-                glm::value_ptr(glm::uvec2(end & 1023, end >> 10)));
+                glm::value_ptr(glm::uvec2(end >> 10, start & 1023)));
   GLuint workGroupSizeX = (1024 + 15) / 16;
   GLuint workGroupSizeY = (1024 + 15) / 16;
   glDispatchCompute(workGroupSizeX, workGroupSizeY, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  mouse_check_point_ = mouse_pos;
+  mouse_check_point_ = mouse_pos;*/
   glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
 }
 
@@ -219,4 +226,30 @@ TerrainInstanceData* TerrainGrid::GetInstanceData() {
   } else {
     return nullptr;
   }
+}
+
+void TerrainGrid::SelectVertices(const std::vector<GLuint>& points) {
+  selected_vertices_.insert(points.begin(), points.end());
+}
+
+void TerrainGrid::SetSelectionMask(const Texture* mask) {
+  selection_mask_ = mask;
+}
+
+void TerrainGrid::MoveSelected(float value) {
+  if (!selection_mask_ || selected_slot_id_ == -1) {
+    return;
+  }
+  vertices_transform_shader_.Bind();
+  utility::BindImageTexture(0, instances_[selected_slot_id_].data.hmap, GL_READ_WRITE);
+  utility::BindImageTexture(1, *selection_mask_, GL_READ_ONLY);
+  glUniform1f(0, value);
+  glUniform1f(1, slider_falloff_.GetProgress());
+  GLuint workGroupSizeX = (1024 + 15) / 16;
+  GLuint workGroupSizeY = (1024 + 15) / 16;
+  glDispatchCompute(workGroupSizeX, workGroupSizeY, 1);
+  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+  utility::UnBindImageTexture(0, instances_[selected_slot_id_].data.hmap, GL_READ_WRITE);
+  utility::UnBindImageTexture(1, *selection_mask_, GL_READ_ONLY);
 }

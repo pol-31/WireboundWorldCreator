@@ -22,8 +22,9 @@ class TerrainRenderer {
   //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
   void RenderPicking() const;
 
-  void RenderSelection(TerrainInstanceData* terrain,
-                       const Texture& selection_mask, glm::vec3 color);
+  void RenderSelection(
+      const Texture32F* surface,
+      const Texture& selection_mask, glm::vec3 color);
 
   void Render(TerrainInstanceData* terrain);
 
