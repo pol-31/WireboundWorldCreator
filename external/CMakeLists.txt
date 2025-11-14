@@ -13,6 +13,9 @@ add_subdirectory(glm EXCLUDE_FROM_ALL)
 message(STATUS "---> stb_image building")
 add_subdirectory(stb EXCLUDE_FROM_ALL)
 
+message(STATUS "---> rapidjson building")
+add_subdirectory(rapidjson EXCLUDE_FROM_ALL)
+
 # utfcpp header-only, so included directly
 
 message(STATUS "---> tinygltf building")

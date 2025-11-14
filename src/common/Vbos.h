@@ -72,6 +72,8 @@ enum class VboIdMain {
   kMenuTilesOn2,
   kMenuTilesOn3,
 
+  kMenuPlayer,
+
   kMenuShaderWirebound,
   kMenuShadersOff,
   kMenuShadersOn1,
@@ -699,6 +701,16 @@ enum class VboIdMain {
 
   kTextRendererCursor,
   kTextRendererPrerenderSlot,
+
+  kHealthPoint,
+  kStaminaPoint,
+
+  kPhone,
+
+  kCursorRectangle,
+  kCursorCircle,
+  kCursorLasso,
+  kCursorTweak,
 
   kCompass,
   kCompassNorth,

@@ -58,8 +58,6 @@ add_executable(WireboundWorldCreator
         src/common/UiDebugger.h
         src/renderers/water/MacLabSwe.cpp
         src/renderers/water/MacLabSwe.h
-        src/io/Cameras.cpp
-        src/io/Cameras.h
         src/common/PlayerCharacter.h
         src/common/SkylineBottomLeft.h
         src/common/LocalTransform.h
@@ -100,6 +98,22 @@ add_executable(WireboundWorldCreator
         src/core/UiGrid.h
         src/core/UiSelection.cpp
         src/core/UiSelection.h
+        src/modes/UiPlayerMode.cpp
+        src/modes/UiPlayerMode.h
+        src/io/Camera.cpp
+        src/io/Camera.h
+        src/common/models/ModelLoader.cpp
+        src/common/models/ModelLoader.h
+        src/common/models/Player.cpp
+        src/common/models/Player.h
+        src/common/models/Creature.cpp
+        src/common/models/Creature.h
+        src/common/models/RigidBody.cpp
+        src/common/models/RigidBody.h
+        src/common/models/Obstacle.cpp
+        src/common/models/Obstacle.h
+        src/common/models/ModelManager.cpp
+        src/common/models/ModelManager.h
 
 )
 
@@ -110,9 +124,9 @@ target_include_directories(WireboundWorldCreator
         PUBLIC ${EXTERNAL_DIR}/glfw/include
         PUBLIC ${EXTERNAL_DIR}/glm/glm
         PUBLIC ${EXTERNAL_DIR}/utfcpp
-        PUBLIC ${EXTERNAL_DIR}/stb
-        PRIVATE ${CMAKE_SOURCE_DIR}/external/rapidjson
-        PRIVATE ${CMAKE_SOURCE_DIR}/external/tinygltf
+#        PUBLIC ${EXTERNAL_DIR}/stb
+#        PUBLIC ${CMAKE_SOURCE_DIR}/external/rapidjson/include
+#        PRIVATE ${CMAKE_SOURCE_DIR}/external/tinygltf
 )
 
 target_link_libraries(WireboundWorldCreator
@@ -120,6 +134,7 @@ target_link_libraries(WireboundWorldCreator
         PUBLIC glfw
         PUBLIC glm
         PUBLIC stb
+        PUBLIC rapidjson
         PRIVATE tinygltf
 )
 
