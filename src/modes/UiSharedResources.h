@@ -50,6 +50,10 @@ class UiSharedResources {
 
   GlobalGlfwCallbackData& global_glfw_callback_data_;
 
+  Shader shader_model_;
+  Shader shader_model_picking_;
+  Shader shader_model_selected_;
+
  private:
   void Init();
 

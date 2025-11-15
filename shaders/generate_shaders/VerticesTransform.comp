@@ -31,30 +31,3 @@ void main() {
     float height = hmap_value + extra_height * blured_mask_value;
     imageStore(hmap, coords, vec4(height));
 }
-
-
-void foo() {
-    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
-    float hmap_value = imageLoad(hmap, coords).r;
-    float mask_value = imageLoad(mask, coords).r; // TODO: taken wrt faloff factor
-    float height = mix(hmap_value, extra_height, mask_value);
-
-    ivec2 size = imageSize(mask);
-    float sum = 0.0;
-    float weight_sum = 0.0;
-    int radius = int(blur_factor);
-    radius = 10;
-    for (int y = -radius; y <= radius; ++y) {
-        for (int x = -radius; x <= radius; ++x) {
-            ivec2 sample_coords = clamp(coords + ivec2(x, y), ivec2(0), size - ivec2(1));
-            float sampl = imageLoad(mask, sample_coords).r;
-            // simple uniform weight (box blur)
-            float weight = 1.0;
-            sum += sampl * weight;
-            weight_sum += weight;
-        }
-    }
-    float blured_value = sum / weight_sum;
-
-    imageStore(hmap, coords, vec4(hmap_value + extra_height * blured_value));
-}

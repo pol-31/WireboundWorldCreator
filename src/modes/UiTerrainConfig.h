@@ -1,6 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_
 
+#include <random>
 #include <span>
 
 #include "../core/UiComplex.h"
@@ -13,6 +14,10 @@ class ITerrainNoise {
   virtual std::span<float> GetValueSpan() noexcept = 0;
   virtual std::span<data::TextId> GetTextIdSpan() noexcept = 0;
   virtual data::TextId GetTextId() const noexcept = 0;
+  virtual void Randomize(
+      std::mt19937& gen,
+      std::uniform_real_distribution<float>& dist_float,
+      std::bernoulli_distribution& dist_bool) noexcept = 0;
 
   NoiseDataBase* GetBaseConfigPtr() {
     return &base_data_;
@@ -50,6 +55,18 @@ class TerrainNoiseBase : public ITerrainNoise {
     return text_id_;
   }
   /// no GetScaleSpan(), scale applied internally at glUniform
+
+  void Randomize(
+      std::mt19937& gen,
+      std::uniform_real_distribution<float>& dist_float,
+      std::bernoulli_distribution& dist_bool) noexcept {
+    for (int i = 0; i < value_.size(); ++i) {
+      value_[i] = dist_float(gen)/* * scale_[i]*/;
+    }
+    base_data_.strength = dist_float(gen);
+    base_data_.do_tiling = dist_bool(gen);
+    base_data_.do_invert = dist_bool(gen);
+  }
 
  protected:
   std::array<float, gParamNum> value_;

@@ -1,6 +1,8 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINWINDOWS_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINWINDOWS_H_
 
+#include <random>
+
 #include "../core/UiComplex.h"
 #include "../core/Tile.h"
 
@@ -51,19 +53,9 @@ class UiEditTerrain final : public UiWindowAppear {
 
   UiEditTerrain(
       Tile& cur_tile,
-      UiDynamicSprite&& sprite, // c
-      float size_scale,         // c
-      UiToggle2&& pin,          // w
       UiSharedResources& ui_shared_resources, // c
       WindowQueue& window_queue, // w
       TextRenderer& text_renderer,
-      UiDynamicSprite&& accept,
-      UiDynamicSprite&& name,
-      UiDynamicSprite&& name_back,
-      UiSlider2D&& color_palette,
-      UiSliderH2&& color_brightness,
-      UiDynamicSprite&& color_indicator,
-      UiDynamicSprite&& random_generate,
       const std::vector<TerrainInstanceData>& instances);
 
   ~UiEditTerrain() {
@@ -76,10 +68,8 @@ class UiEditTerrain final : public UiWindowAppear {
   UiEditTerrain& operator=(UiEditTerrain&& other) = delete;
   UiEditTerrain& operator=(const UiEditTerrain& other) = delete;
 
-  // update base hmap (after modifying smt)
+  /// update base hmap (after modifying)
   void UpdateHmap();
-
-  void UpdateHmap2();
 
   bool Press(int id) override;
 
@@ -97,6 +87,8 @@ class UiEditTerrain final : public UiWindowAppear {
   NoiseTerrainData Generate();
 
   void HideAll();
+
+  void RandomGenerate();
 
  private:
   void Init();
@@ -157,22 +149,19 @@ class UiEditTerrain final : public UiWindowAppear {
 
   UiTerrainNoise ui_terrain_noise_;
 
+  std::mt19937 random_generator_;
+
   // we modify it here, non const
   TerrainInstanceData* terrain_data_ = nullptr;
 
-  Shader shader_merge_noises_;
+  Shader shader_merge_noises_; /// 7 times merging (8 noises)
+
+  /// generate hmap from transformed layers
   Shader shader_flatten_prep_;
   Shader shader_flatten_step_;
   Shader shader_flatten_merge_;
 
-  //TODO: test layer projection
-  //TODO: don't forget to glDelete() it
-  Shader shader_project_layer_;
-  Texture32F tex_layer_;
-  GLuint fbo_layer_ = 0;
-
-
-  Texture32F tex_mesh_;
+  Texture32F tex_mesh_; /// temp for base hmap baking
 
 //  ITerrainNoise* selected_noise_ = nullptr;
 

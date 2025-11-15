@@ -33,7 +33,12 @@ UiSharedResources::UiSharedResources(
       hmap_shader_(paths.shader_sprite_dynamic_vert,
                    "../shaders/SpriteHmap.frag"),
       shader_terrain_selection_("../shaders/DrawSelection.comp"),
-      global_glfw_callback_data_(global_glfw_callback_data) {
+      global_glfw_callback_data_(global_glfw_callback_data),
+      shader_model_("../shaders/Model.vert", "../shaders/Model.frag"),
+      shader_model_picking_("../shaders/Model.vert",
+                            "../shaders/ModelPicking.frag"),
+      shader_model_selected_("../shaders/Model.vert",
+                             "../shaders/ModelSelected.frag") {
   Init();
 }
 
@@ -108,6 +113,13 @@ void UiSharedResources::Init() {
 
   hmap_shader_.Bind();
   glUniform1i(shader::kSpriteTexture, 0);
+
+  shader_model_.Bind();
+  glUniform1i(1, 0);
+//  glUniform1i(2, 1);
+//  glUniform1i(3, 2);
+//  glUniform1i(4, 3);
+//  glUniform1i(5, 4);
 
   glUseProgram(0);
   //  static_sprite_picking_shader_.Bind();

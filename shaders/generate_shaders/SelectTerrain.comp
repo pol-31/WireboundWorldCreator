@@ -5,12 +5,13 @@ layout (r32ui, binding = 0) uniform readonly uimage2D picking;
 layout (r8,    binding = 1) uniform readonly image2D selection;
 layout (r8,    binding = 2) uniform writeonly image2D surface;
 
-layout (location = 0) uniform uint kIdOffsetWater;
+layout (location = 0) uniform uint bound_min;
+layout (location = 1) uniform uint bound_max;
 
 // 1: add (shift) connect last to new,
 // 1: add (ctrl) no connect last to new,
 // 0: erase (ctrl + shift)
-layout (location = 1) uniform float mask_value;
+layout (location = 2) uniform float mask_value;
 
 ivec2 IdToSurfacePos(uint id) {
     // terrain grid is 1024 by 1024
@@ -24,8 +25,9 @@ void main() {
     uint id = imageLoad(picking, coords).r;
     float sel = imageLoad(selection, coords).r;
 
-    if (sel > 0.0 && id < kIdOffsetWater) {
-        ivec2 pos = IdToSurfacePos(id);
+    //TODO: clamp (-1; kIdOffsetWater) > ... idk, need smt like that
+    if (sel > 0.0 && id > bound_min && id < bound_max) {
+        ivec2 pos = IdToSurfacePos(id - bound_min);
         imageStore(surface, pos, vec4(mask_value));
     }
 }
