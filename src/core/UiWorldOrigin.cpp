@@ -3,7 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "../io/Cameras.h"
+#include "../io/Camera.h"
 #include "TileRenderer.h"
 
 UiWorldOrigin::UiWorldOrigin(UiSharedResources& ui_shared_resources)
@@ -24,7 +24,7 @@ void UiWorldOrigin::Render(glm::vec4 position, glm::vec4 color) {
   auto model = glm::mat4(1.0f);
   model = glm::scale(model, glm::vec3(map_scale));
   auto view = ui_shared_resources_.global_glfw_callback_data_
-                  .camera->GetViewMatrix();
+                  .camera->GetViewMatrix(map_scale);
   auto projection = ui_shared_resources_.global_glfw_callback_data_
                         .camera->GetProjMatrix();
   auto mvp = projection * view * model;

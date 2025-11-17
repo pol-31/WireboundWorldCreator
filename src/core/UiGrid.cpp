@@ -4,7 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "TileRenderer.h"
-#include "../io/Cameras.h"
+#include "../io/Camera.h"
 
 UiGrid::UiGrid(UiSharedResources& ui_shared_resources)
     : ui_shared_resources_(ui_shared_resources),

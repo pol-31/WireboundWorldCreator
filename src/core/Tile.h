@@ -86,7 +86,7 @@ struct Tile {
   Texture32F map_water_accum{}; // r32f
   Texture map_water_flow{}; // rg8
 
-  Texture map_water_height{};
+  Texture map_water_height{}; // rg8
   // other data serializing called individually (e.g. graphs, placement)
 
   //TODO; indeed, wisdom here is
@@ -105,6 +105,11 @@ struct Tile {
   void UpScale();
 
   void DownScale();
+
+  void UpdateTerrainHmap(Texture32F&& hmap);
+
+  /// reset all baked hmaps (but not sources & objects with pos)
+  void ResetTerrain();
 
   /* Can we compute only 9... why not - at least for grass and water yes:
    * 1 2 3 4 4 4 ...

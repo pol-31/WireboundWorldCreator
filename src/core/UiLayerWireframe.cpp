@@ -4,7 +4,7 @@
 #include "TileRenderer.h"
 #include "../renderers/UiRenderer.h"
 
-#include "../io/Cameras.h"
+#include "../io/Camera.h"
 
 UiLayerWireframe::UiLayerWireframe(
     UiSharedResources& ui_shared_resources)
@@ -12,20 +12,20 @@ UiLayerWireframe::UiLayerWireframe(
       sp_layer_(data::VboIdMain::kWireframeWindow),
       sp_frame_(data::VboIdMain::kWireframeWindowFrame),
       sp_points_({
-          {data::VboIdMain::kWireframeWindowXpos},
           {data::VboIdMain::kWireframeWindowXneg},
-          {data::VboIdMain::kWireframeWindowYpos},
+          {data::VboIdMain::kWireframeWindowXpos},
           {data::VboIdMain::kWireframeWindowYneg},
+          {data::VboIdMain::kWireframeWindowYpos},
+          {data::VboIdMain::kWireframeWindowZneg},
           {data::VboIdMain::kWireframeWindowZpos},
-          {data::VboIdMain::kWireframeWindowZneg}
       }),
       pos_points_({
-          {32.0f, 0.0f, 0.0f, 1.0f},
-          {-32.0f, 0.0f, 0.0f, 1.0f},
-          {0.0f, 32.0f, 0.0f, 1.0f},
-          {0.0f, -32.0f, 0.0f, 1.0f},
-          {0.0f, 0.0f, 32.0f, 1.0f},
-          {0.0f, 0.0f, -32.0f, 1.0f},
+          {-8.0f, 0.0f, 0.0f, 1.0f},
+          {8.0f, 0.0f, 0.0f, 1.0f},
+          {0.0f, -8.0f, 0.0f, 1.0f},
+          {0.0f, 8.0f, 0.0f, 1.0f},
+          {0.0f, 0.0f, -8.0f, 1.0f},
+          {0.0f, 0.0f, 8.0f, 1.0f},
       }),
       hierarchy_(&sp_frame_) {
   hierarchy_ = UiHierarchy(&sp_frame_, &sp_layer_);
@@ -78,26 +78,45 @@ void UiLayerWireframe::UpdateLayerWireframe(
   glBindVertexArray(ui_shared_resources_.vao_ui_);
   ui_shared_resources_.tex_ui_.Bind();
 
-  for (int i = 0; i < sp_points_.size(); i++) {
-    auto mvp = GetPointMvpMatrix();
-    glm::vec3 translate = GetBillboardTranslate(mvp, i);
-    if (translate.z >= 1.0f) {
-      continue; // skip if beyond the screen
-    }
-    sp_points_[i].SetTranslate(glm::vec2(translate.x, translate.y));
-    sp_points_[i].Render();
-  }
+  RenderAxis(0); // x
+  RenderAxis(2); // y
+  RenderAxis(4); // z
+
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, gWindowWidth, gWindowHeight); /// restore
+}
+
+void UiLayerWireframe::RenderAxis(int first_idx) {
+  // at least one of X+ and X- should be drawn (for each axis)
+  bool neg_axis_skipped_ = false;
+  int i = first_idx;
+  auto mvp = GetPointMvpMatrix();
+  glm::vec3 translate = GetBillboardTranslate(mvp, i);
+  if (translate.z >= 1.0f) {
+    neg_axis_skipped_ = true;
+  } else {
+    sp_points_[i].SetTranslate(glm::clamp(glm::vec2(translate.x, translate.y), -0.9f, 0.9f));
+    sp_points_[i].Render();
+  }
+  ++i;
+  mvp = GetPointMvpMatrix();
+  translate = GetBillboardTranslate(mvp, i);
+  if (translate.z < 1.0f) {
+    sp_points_[i].SetTranslate(glm::clamp(glm::vec2(translate.x, translate.y), -0.9f, 0.9f));
+    sp_points_[i].Render();
+  } else if (neg_axis_skipped_) {
+    sp_points_[i].SetTranslate(glm::normalize(glm::vec2(translate.x, translate.y)) * 0.9f);
+    sp_points_[i].Render();
+  }
 }
 
 glm::mat4 UiLayerWireframe::GetPointMvpMatrix() {
   auto model = glm::mat4(1.0f);
   auto map_scale = ui_shared_resources_.global_glfw_callback_data_.
       tile_renderer->cur_tile_.map_scale;
-  model = glm::scale(model, glm::vec3(map_scale));
+  model = glm::scale(model, glm::vec3(glm::sqrt(map_scale)));
   auto view = ui_shared_resources_.global_glfw_callback_data_
-                  .camera->GetViewMatrix();
+                  .camera->GetViewMatrix(map_scale);
   auto projection = ui_shared_resources_.global_glfw_callback_data_
                         .camera->GetProjMatrix();
   return projection * view * model;

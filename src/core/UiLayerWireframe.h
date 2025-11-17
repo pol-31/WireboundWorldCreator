@@ -39,6 +39,8 @@ class UiLayerWireframe {
 
   void UpdateRatio();
 
+  void RenderAxis(int first_idx);
+
   glm::vec3 GetBillboardTranslate(glm::mat4 mvp, int idx);
 
   glm::mat4 GetPointMvpMatrix();

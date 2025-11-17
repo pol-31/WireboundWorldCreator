@@ -5,7 +5,7 @@
 #include "UiText.h"
 #include "WindowQueue.h"
 
-class CameraHandler;
+class Camera;
 
 class UiWindowSlider final : public UiBase {
  public:
@@ -189,7 +189,7 @@ class UiLoading {
 /// loading only on the bottom of the screen (so use UiStaticSprite)
 class UiCompass {
  public:
-  UiCompass(const CameraHandler* camera,
+  UiCompass(const Camera* camera,
             UiDynamicSprite&& sp_compass,
             UiDynamicSprite&& sp_north,
             UiDynamicSprite&& sp_south,
@@ -207,7 +207,7 @@ class UiCompass {
   void RenderPicking() const;
 
  private:
-  const CameraHandler* camera_;
+  const Camera* camera_;
   UiDynamicSprite sp_compass_;
   UiDynamicSprite sp_north_;
   UiDynamicSprite sp_south_;
@@ -490,6 +490,7 @@ class UiTabMenu final : public UiWindowAppear {
       UiStaticSprite&& btn_mode_objects,
       UiStaticSprite&& btn_mode_biomes,
       UiStaticSprite&& btn_mode_tiles,
+      UiStaticSprite&& btn_mode_player,
 
             UiToggle4&& toggle_terrain, UiToggle4&& toggle_water,
             UiToggle4&& toggle_roads, UiToggle4&& toggle_fences,
@@ -530,6 +531,7 @@ class UiTabMenu final : public UiWindowAppear {
   UiStaticSprite btn_mode_objects_;
   UiStaticSprite btn_mode_biomes_;
   UiStaticSprite btn_mode_tiles_;
+  UiStaticSprite btn_mode_player_;
 
   UiToggle4 toggle_terrain_;
   UiToggle4 toggle_water_;

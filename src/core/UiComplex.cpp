@@ -4,7 +4,7 @@
 #include "../common/ShadersBinding.h"
 #include "../common/TextRenderer.h"
 #include "../common/Details.h"
-#include "../io/Cameras.h"
+#include "../io/Camera.h"
 
 UiWindowSlider::UiWindowSlider(
     UiDynamicSprite&& sp_track,
@@ -250,7 +250,7 @@ void UiLoading::RenderPicking() const {
 }
 
 UiCompass::UiCompass(
-    const CameraHandler* camera,
+    const Camera* camera,
     UiDynamicSprite&& sp_compass,
     UiDynamicSprite&& sp_north,
     UiDynamicSprite&& sp_south,
@@ -667,6 +667,7 @@ UiTabMenu::UiTabMenu(
     UiStaticSprite&& btn_mode_objects,
     UiStaticSprite&& btn_mode_biomes,
     UiStaticSprite&& btn_mode_tiles,
+    UiStaticSprite&& btn_mode_player,
 
     UiToggle4&& toggle_terrain, UiToggle4&& toggle_water,
     UiToggle4&& toggle_roads, UiToggle4&& toggle_fences,
@@ -690,6 +691,7 @@ UiTabMenu::UiTabMenu(
       btn_mode_objects_(std::move(btn_mode_objects)),
       btn_mode_biomes_(std::move(btn_mode_biomes)),
       btn_mode_tiles_(std::move(btn_mode_tiles)),
+      btn_mode_player_(std::move(btn_mode_player)),
 
       toggle_terrain_(std::move(toggle_terrain)),
       toggle_water_(std::move(toggle_water)),
@@ -717,6 +719,7 @@ UiTabMenu::UiTabMenu(
           &btn_mode_objects_,
           &btn_mode_biomes_,
           &btn_mode_tiles_,
+          &btn_mode_player_,
 
           &toggle_terrain_,
           &toggle_water_,
@@ -736,6 +739,7 @@ UiTabMenu::UiTabMenu(
       &sprite_, &pin_, &btn_mode_terrain_, &btn_mode_water_,
       &btn_mode_roads_, &btn_mode_fences_, &btn_mode_placement_,
       &btn_mode_objects_, &btn_mode_biomes_, &btn_mode_tiles_,
+      &btn_mode_player_,
       &toggle_terrain_, &toggle_water_, &toggle_roads_, &toggle_fences_,
       &toggle_placement_, &toggle_objects_, &toggle_biomes_, &toggle_tiles_,
       &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_, &arrow_selected_,
@@ -753,6 +757,7 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
       btn_mode_objects_(std::move(other.btn_mode_objects_)),
       btn_mode_biomes_(std::move(other.btn_mode_biomes_)),
       btn_mode_tiles_(std::move(other.btn_mode_tiles_)),
+      btn_mode_player_(std::move(other.btn_mode_player_)),
 
       toggle_terrain_(std::move(other.toggle_terrain_)),
       toggle_water_(std::move(other.toggle_water_)),
@@ -781,6 +786,7 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
           &btn_mode_objects_,
           &btn_mode_biomes_,
           &btn_mode_tiles_,
+          &btn_mode_player_,
 
           &toggle_terrain_,
           &toggle_water_,
@@ -800,6 +806,7 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
       &sprite_, &pin_, &btn_mode_terrain_, &btn_mode_water_,
       &btn_mode_roads_, &btn_mode_fences_, &btn_mode_placement_,
       &btn_mode_objects_, &btn_mode_biomes_, &btn_mode_tiles_,
+      &btn_mode_player_,
       &toggle_terrain_, &toggle_water_, &toggle_roads_, &toggle_fences_,
       &toggle_placement_, &toggle_objects_, &toggle_biomes_, &toggle_tiles_,
       &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_, &arrow_selected_,
@@ -808,6 +815,7 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
 
 // returns "stop render"
 bool UiTabMenu::Render() {
+  ui_shared_resources_.tex_ui_.Bind();
   bool stop_show = Base::RenderBack(true);
 //  if (!Base::BackIsReady()) {
 //    return stop_show;
@@ -823,6 +831,7 @@ bool UiTabMenu::Render() {
   btn_mode_objects_.Render();
   btn_mode_biomes_.Render();
   btn_mode_tiles_.Render();
+  btn_mode_player_.Render();
 
   toggle_terrain_.Render();
   toggle_water_.Render();
@@ -865,6 +874,7 @@ void UiTabMenu::RenderPicking() {
   btn_mode_objects_.RenderPicking();
   btn_mode_biomes_.RenderPicking();
   btn_mode_tiles_.RenderPicking();
+  btn_mode_player_.RenderPicking();
 
   toggle_terrain_.RenderPicking();
   toggle_water_.RenderPicking();
