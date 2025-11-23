@@ -4,478 +4,24 @@
 #include "../common/UiDebugger.h"
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"
-
-IUiSlots::IUiSlots(
-    size_t vbo_texture_id, UiSharedResources& ui_shared_resources,
-    UiWindowSlider&& sl_data)
-    : UiBase(vbo_texture_id, {}),
-      ui_shared_resources_(ui_shared_resources),
-      sl_data_(std::move(sl_data)) {}
-
-void IUiSlots::Press() {
-//  sl_data_.pressed_ = true;
-}
-
-void IUiSlots::Release() {
-//  sl_data_.pressed_ = false;
-  ui_event_handler_->Release();
-  graph_->Release();
-}
-
-/// as a decorator for graph_
-
-void IUiSlots::CreateGraph() {
-  graph_->CreateGraph();
-}
-
-void IUiSlots::SelectGraph(GLuint id) {
-  graph_->SelectGraph(id);
-}
-
-void IUiSlots::RemoveGraph(GLuint id) {
-  graph_->RemoveGraph(id);
-}
-
-void IUiSlots::RenderGraph() {
-  graph_->Render(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_);
-}
-
-int IUiSlots::GetSize() const noexcept {
-  return graph_->GetSize();
-}
+#include "../common/OpenGlUtility.h"
 
 /// parent is back_ BUT UiSlots is taken from slider, so
 /// outside is's shown as a slider area
-UiSlotsModels::UiSlotsModels(
-    UiSharedResources& ui_shared_resources,
-    UiDynamicSprite&& handler,
-    UiDynamicSprite&& slider,
-    UiDynamicSprite&& back,
-    UiDynamicSprite&& create,
-    data::VboIdMain flip_select_edit_back_vbo_texture,
-    data::VboIdMain flip_point_edge_back_vbo_texture,
-    UiDynamicSprite&& flip_select_edit_sprite,
-    UiDynamicSprite&& flip_point_edge_sprite,
-    UiDynamicSprite&& slot_name,
-    UiDynamicSprite&& slot_config, UiToggle4&& toggle_slot_visible,
-    UiDynamicSprite&& slot_back,
-    UiDynamicSprite&& slot_color,
-    UiDynamicSprite&& slot_remove,
-    UiDynamicSprite&& slot_selected)
-    : IUiSlots(back.GetId(), ui_shared_resources,
-               {{data::VboIdMain::kSpare1}, {data::VboIdMain::kSpare2},
-                6, 0.75f, 0.8f}),
-      handler_(std::move(handler)),
-      slider_(std::move(slider)),
-      back_(std::move(back)),
-      create_(std::move(create)),
-      flip_select_edit_back_(
-          flip_select_edit_back_vbo_texture, [this]() {
-            this->NextSelectMode();
-          }),
-      flip_point_edge_back_(
-          flip_point_edge_back_vbo_texture, [this]() {
-            this->NextClickMode();
-          }),
-      flip_select_edit_sprite_(std::move(flip_select_edit_sprite)),
-      flip_point_edge_sprite_(std::move(flip_point_edge_sprite)),
-      flip_select_edit_(
-          flip_select_edit_sprite_,
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          LocalTransform{glm::vec2{0.0f}, 1.0f, glm::pi<float>()}),
-      flip_point_edge_(
-          flip_point_edge_sprite_,
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          LocalTransform{glm::vec2{0.0f}, 1.0f, glm::pi<float>()}),
-      slot_name_(std::move(slot_name)),
-      slot_config_(std::move(slot_config)),
-      toggle_slot_visible_(std::move(toggle_slot_visible)),
-      slot_back_(std::move(slot_back)),
-      slot_color_(std::move(slot_color)),
-      slot_remove_(std::move(slot_remove)),
-      slot_selected_(std::move(slot_selected)),
-      graph_(ui_shared_resources),
-      ui_edit_(
-          ui_shared_resources,
-          {data::VboIdMain::kFencesEditDesk},
-          {data::VboIdMain::kFencesEditAccept},
-          {data::VboIdMain::kFencesEditName},
-          {data::VboIdMain::kFencesEditNameBack},
-
-          {{data::VboIdMain::kFencesColorPaletteHS},
-           {data::VboIdMain::kFencesColorColorCursor},
-           glm::vec2{1.0f}},
-          {{data::VboIdMain::kFencesColorPaletteB},
-           {data::VboIdMain::kFencesColorBrightnessCursor},
-           1.0f},
-
-          {data::VboIdMain::kFencesColorIndicator},
-          {data::VboIdMain::kFencesTypeBack},
-          {data::VboIdMain::kFencesTypeText},
-          {data::VboIdMain::kFencesTypePrevious},
-          {data::VboIdMain::kFencesTypeNext}),
-      ui_event_handler_({&create_, &flip_select_edit_back_,
-                         &flip_point_edge_back_}),
-      ui_shared_resources_(ui_shared_resources) {
-  /*hierarchy_ = UiHierarchy(
-      &back_, &handler_, &slider_, &create_, &flip_select_edit_back_,
-      &flip_point_edge_back_, &flip_select_edit_sprite_,
-      &flip_point_edge_sprite_);
-  hierarchy_.AddNested(
-      &slot_back_, &slot_name_, &slot_config_, &toggle_slot_visible_,
-      &slot_color_, &slot_remove_, &slot_selected_);*/
-
-  /*sl_data_.slots_num = 6;
-  sl_data_.track_length_factor =  0.75f;
-  sl_data_.slots_length_factor =  0.8f;
-  sl_data_.length_ = sl_data_.track_length_factor
-                     * (back_.GetTopBorder() - back_.GetBottomBorder());
-  sl_data_.length_slots_ = sl_data_.slots_length_factor
-                           * (back_.GetTopBorder() - back_.GetBottomBorder());
-  sl_data_.centre_ = (back_.GetTopBorder() + back_.GetBottomBorder()) / 2.0f;*/
-
-  IUiSlots::ui_event_handler_ = &ui_event_handler_;
-  IUiSlots::graph_ = &graph_;
-//  IUiSlots::ui_edit_ = &ui_edit_;
-  sl_data_.SetSlotPtr(&slot_back_);
-}
-
-UiSlotsModels::UiSlotsModels(UiSlotsModels&& other) noexcept
-    : IUiSlots(std::move(other)),
-      handler_(std::move(other.handler_)),
-      slider_(std::move(other.slider_)),
-      back_(std::move(other.back_)),
-      create_(std::move(other.create_)),
-      flip_select_edit_back_(std::move(other.flip_select_edit_back_)),
-      flip_point_edge_back_(std::move(other.flip_point_edge_back_)),
-      flip_select_edit_sprite_(std::move(other.flip_select_edit_sprite_)),
-      flip_point_edge_sprite_(std::move(other.flip_point_edge_sprite_)),
-      flip_select_edit_(
-          flip_select_edit_sprite_, other.flip_select_edit_.GetStart(),
-          other.flip_select_edit_.GetEnd()),
-      flip_point_edge_(
-          flip_point_edge_sprite_, other.flip_point_edge_.GetStart(),
-          other.flip_point_edge_.GetEnd()),
-      slot_name_(std::move(other.slot_name_)),
-      slot_config_(std::move(other.slot_config_)),
-      toggle_slot_visible_(std::move(other.toggle_slot_visible_)),
-      slot_back_(std::move(other.slot_back_)),
-      slot_color_(std::move(other.slot_color_)),
-      slot_remove_(std::move(other.slot_remove_)),
-      slot_selected_(std::move(other.slot_selected_)),
-      graph_(std::move(other.graph_)),
-      ui_edit_(std::move(other.ui_edit_)),
-      ui_event_handler_({&create_, &flip_select_edit_back_,
-                         &flip_point_edge_back_}),
-      ui_shared_resources_(other.ui_shared_resources_) {
-  /*hierarchy_ = UiHierarchy(
-      &back_, &handler_, &slider_, &create_, &flip_select_edit_back_,
-      &flip_point_edge_back_, &flip_select_edit_sprite_,
-      &flip_point_edge_sprite_, &slot_name_, &slot_config_,
-      &toggle_slot_visible_, &slot_back_, &slot_color_);
-  hierarchy_.AddNested(&slot_back_, &slot_remove_, &slot_selected_);*/
-  IUiSlots::ui_event_handler_ = &ui_event_handler_;
-  IUiSlots::graph_ = &graph_;
-  //  IUiSlots::ui_edit_ = &ui_edit_;
-}
-
-void UiSlotsModels::Render(glm::vec2 mouse_pos) {
-  /*if (sl_data_.pressed_) {
-    sl_data_.Set(mouse_pos, handler_,
-                 back_.GetTopBorder() - back_.GetBottomBorder(),
-                 graph_.GetSize());
-  }*/
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
-  back_.Render();
-  slider_.Render();
-  handler_.Render();
-  glEnable(GL_SCISSOR_TEST);
-  glScissor(0, sl_data_.scissors_start_, 4000, sl_data_.scissors_length_);
-
-  bool show_selected = false;
-  glm::vec2 selected_offset{0.0f};
-  auto selected_slot_id = graph_.GetSlotId();
-  auto graphs_num = graph_.GetSize();
-  glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  for (int i = 0; i < std::min(sl_data_.slots_num_, graphs_num); ++i) {
-    slot_back_.SetTranslate(next_offset);
-    slot_remove_.SetTranslate(next_offset);
-    slot_config_.SetTranslate(next_offset);
-    toggle_slot_visible_.SetTranslate(next_offset);
-    slot_color_.SetTranslate(next_offset);
-    if (selected_slot_id - sl_data_.cur_slots_offset_ == i) {
-      show_selected = true;
-      selected_offset = next_offset;
-    }
-    slot_back_.Render();
-    slot_remove_.Render();
-    slot_config_.Render();
-    toggle_slot_visible_.Render();
-    slot_color_.Render();
-    next_offset.y -= sl_data_.slot_height_;
-  }
-  next_offset = sl_data_.start_slot_translate_;
-  for (int i = 0; i < std::min(sl_data_.slots_num_, graphs_num - sl_data_.cur_slots_offset_); ++i) {
-    auto graph_name = graph_.GetNameRef(i + sl_data_.cur_slots_offset_);
-    ui_shared_resources_.global_glfw_callback_data_.text_renderer->
-        RenderText(slot_name_, *graph_name, 1.0f, next_offset);
-    next_offset.y -= sl_data_.slot_height_;
-  }
-
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
-  // we should draw it last (on top of slots)
-  if (show_selected) {
-    slot_selected_.SetTranslate(selected_offset);
-    slot_selected_.Render();
-  }
-  glDisable(GL_SCISSOR_TEST);
-
-  create_.Render();
-  flip_select_edit_back_.Render();
-  flip_point_edge_back_.Render();
-  flip_select_edit_.Render();
-  flip_point_edge_.Render();
-
-//  ui_edit_.Render();
-}
-
-/* std::vector<GLuint> selected_vertices_;
- * std::vector<GLuint> selected_edges_; - by id, so RenderPicking select either
- *   kVertex \ kEdge \ kFace
- * std::vector<GLuint> selected_faces_; - similar to above - faceid
- *
- * ... then how to switch between them?
- * - vertex provides its own id as a terrain grid id
- * - edge should provide info {id, vertex_1, vertex_2}
- * - face should provide info {id, vertex_...} idk...
- *
- *
- *
- * */
-
-void UiSlotsModels::UpdateTransform() {
-  /*sl_data_.length_ = sl_data_.track_length_factor *
-            (back_.GetTopBorder() - back_.GetBottomBorder());
-  sl_data_.length_slots_ = sl_data_.slots_length_factor *
-                  (back_.GetTopBorder() - back_.GetBottomBorder());
-  sl_data_.centre_ = (back_.GetTopBorder() + back_.GetBottomBorder()) / 2.0f;
-  float related_pos = sl_data_.progress_ * sl_data_.length_ - sl_data_.length_ / 2.0f + sl_data_.centre_;
-  sl_data_.Set({0.0f, related_pos}, handler_,
-               back_.GetTopBorder() - back_.GetBottomBorder(),
-               graph_.GetSize());*/
-}
-
-void UiSlotsModels::RenderPicking() {
-  back_.RenderPicking();
-  slider_.RenderPicking();
-  glEnable(GL_SCISSOR_TEST);
-  glScissor(0, sl_data_.scissors_start_, 4000, sl_data_.scissors_length_);
-
-  bool show_selected = false;
-  glm::vec2 selected_offset{0.0f};
-  auto selected_slot_id = graph_.GetSlotId();
-  auto graphs_num = graph_.GetSize();
-  glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  for (int i = 0; i < std::min(sl_data_.slots_num_, graphs_num); ++i) {
-    slot_back_.SetTranslate(next_offset);
-    slot_remove_.SetTranslate(next_offset);
-    slot_config_.SetTranslate(next_offset);
-    toggle_slot_visible_.SetTranslate(next_offset);
-    slot_color_.SetTranslate(next_offset);
-    if (debug::gUiAltMode && (selected_slot_id - sl_data_.cur_slots_offset_) == i) {
-      show_selected = true;
-      selected_offset = next_offset;
-    }
-    slot_back_.RenderPicking();
-    slot_remove_.RenderPicking();
-    slot_config_.RenderPicking();
-    toggle_slot_visible_.RenderPicking();
-    slot_color_.RenderPicking();
-    next_offset.y -= sl_data_.slot_height_;
-  }
-
-  next_offset = sl_data_.start_slot_translate_;
-  for (int i = 0; i < std::min(sl_data_.slots_num_, graphs_num - sl_data_.cur_slots_offset_); ++i) {
-    auto graph_name = graph_.GetNameRef(i + sl_data_.cur_slots_offset_);
-    ui_shared_resources_.global_glfw_callback_data_.text_renderer->
-        RenderTextPicking(slot_name_, *graph_name, 1.0f, next_offset);
-    next_offset.y -= sl_data_.slot_height_;
-  }
-
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
-  // we should draw it last (on top of slots)
-  if (debug::gUiAltMode && show_selected) {
-    slot_selected_.SetTranslate(selected_offset);
-    slot_selected_.RenderPicking();
-  }
-  glDisable(GL_SCISSOR_TEST);
-
-  create_.RenderPicking();
-  flip_select_edit_back_.RenderPicking();
-  flip_point_edge_back_.RenderPicking();
-  if (debug::gUiAltMode) {
-    handler_.RenderPicking();
-    //    flip_select_edit_.RenderPicking();
-    //    flip_point_edge_.RenderPicking();
-    flip_select_edit_.RenderPicking();
-    flip_point_edge_.RenderPicking();
-  }
-
-//  ui_edit_.RenderPicking();
-}
-
-bool UiSlotsModels::Press(int id) {
-  if (id == slot_back_.GetId()) {
-    auto slot_id = sl_data_.GetSlotId(
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-    graph_.SelectGraph(slot_id);
-    sl_data_.FocusOnSelected(slot_id);
-  } else if (id == slot_remove_.GetId()) {
-    auto removed_id = sl_data_.GetSlotId(
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-    if (graph_.GetSize() > 0) {
-      std::cout << "graph removed " << removed_id << std::endl;
-      graph_.RemoveGraph(removed_id);
-      sl_data_.UpdateRenderData();
-    }
-  } else {
-    bool handled = ui_event_handler_.Press(id);
-//    if (!handled) {
-//      handled = ui_edit_.Press(id);
-//    }
-    if (id == create_.GetId()) {
-      // instead of FocusOnSelected();
-      sl_data_.Set(1.0f);
-    }
-    return handled;
-  }
-  return true;
-}
-
-bool UiSlotsModels::Scroll(GLuint id, float yoffset) {
-  return false;
-}
-
-void UiSlotsModels::NextSelectMode() {
-  switch (press_state_) {
-    case PressState::kSelect:
-      press_state_ = PressState::kModify;
-      break;
-    case PressState::kModify:
-      press_state_ = PressState::kSelect;
-      break;
-  }
-  flip_select_edit_.StopAnimation();
-  switch (press_state_) {
-    case PressState::kModify:
-      flip_select_edit_.SetStart(
-          {glm::vec2{0.0f}, 1.0f, 0.0f});
-      flip_select_edit_.SetEnd(
-          {glm::vec2{0.0f}, 1.0f, glm::pi<float>()});
-      break;
-    case PressState::kSelect:
-      flip_select_edit_.SetStart(
-          {glm::vec2{0.0f}, 1.0f, glm::pi<float>()});
-      flip_select_edit_.SetEnd(
-          {glm::vec2{0.0f}, 1.0f, glm::two_pi<float>()});
-      break;
-  }
-  flip_select_edit_.RunAnimation();
-}
-
-void UiSlotsModels::NextClickMode() {
-  switch (edit_state_) {
-    case EditState::kVertices:
-      edit_state_ = EditState::kEdges;
-      break;
-    case EditState::kEdges:
-      edit_state_ = EditState::kFaces;
-      break;
-    case EditState::kFaces:
-      edit_state_ = EditState::kVertices;
-      break;
-  }
-  flip_point_edge_.StopAnimation();
-  switch (edit_state_) {
-    case EditState::kVertices:
-      flip_point_edge_.SetStart(
-          {glm::vec2{0.0f}, 1.0f, 0.0f});
-      flip_point_edge_.SetEnd(
-          {glm::vec2{0.0f}, 1.0f, glm::pi<float>() / 3.0f});
-      break;
-    case EditState::kEdges:
-      flip_point_edge_.SetStart(
-          {glm::vec2{0.0f}, 1.0f, glm::pi<float>() / 3.0f});
-      flip_point_edge_.SetEnd(
-          {glm::vec2{0.0f}, 1.0f, 2.0f * glm::pi<float>() / 3.0f});
-      break;
-    case EditState::kFaces:
-      flip_point_edge_.SetStart(
-          {glm::vec2{0.0f}, 1.0f, 2.0f * glm::pi<float>() / 3.0f});
-      flip_point_edge_.SetEnd(
-          {glm::vec2{0.0f}, 1.0f, glm::two_pi<float>()});
-      break;
-  }
-  flip_point_edge_.RunAnimation();
-}
-
-void UiSlotsModels::PressGraph(GLuint id) {
-  if (press_state_ == PressState::kSelect) {
-    switch (edit_state_) {
-      case EditState::kVertices:
-        break;
-      case EditState::kEdges:
-        break;
-      case EditState::kFaces:
-        break;
-    }
-  } else { // PressState::kModify
-    switch (edit_state_) {
-      case EditState::kVertices:
-        break;
-      case EditState::kEdges:
-        break;
-      case EditState::kFaces:
-        break;
-    }
-  }
-}
-
-// --- --- --- --- --- ---
-// --- --- --- --- --- ---
-// --- --- --- --- --- ---
-// --- --- --- --- --- ---
-// --- --- --- --- --- ---
-// --- --- --- --- --- ---
-// --- --- --- --- --- ---
-// --- --- --- --- --- ---
-
-/// parent is back_ BUT UiSlots is taken from slider, so
-/// outside is's shown as a slider area
-UiSlotsTerrain::UiSlotsTerrain(
+UiSlots::UiSlots(
     Tile& cur_tile,
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
-    TextRenderer& text_renderer,
-    const UiSliderV3& slider_size,
-    const UiSliderV3& slider_falloff)
-    : IUiSlots(static_cast<int>(data::VboIdMain::kTerrainSlotsBack),
-               ui_shared_resources,
-               {{data::VboIdMain::kTerrainSlotsSlider},
+    TextRenderer& text_renderer)
+    : UiBase(static_cast<int>(data::VboIdMain::kTerrainSlotsBack), {}),
+      ui_shared_resources_(ui_shared_resources),
+      sl_data_({{data::VboIdMain::kTerrainSlotsSlider},
                 {data::VboIdMain::kTerrainSlotsHandler},
                 6, 0.75f, 0.8f}),
-//      handler_(data::VboIdMain::kTerrainSlotsHandler),
-//      slider_(data::VboIdMain::kTerrainSlotsSlider),
       back_(data::VboIdMain::kTerrainSlotsBack),
       create_(data::VboIdMain::kTerrainSlotsCreate,
               [this]() {
                 this->CreateGraph();
-                std::cout << "there input starts" << std::endl;
-                std::cout << "-- slot create (create)" << std::endl;
-                // instead of FocusOnSelected();
                 SelectGraph(instances_.size() - 1);
                 sl_data_.SetEntryNum(instances_.size());
                 sl_data_.Set(1.0f);
@@ -484,7 +30,7 @@ UiSlotsTerrain::UiSlotsTerrain(
       slot_config_(data::VboIdMain::kTerrainSlotsConfig,
                    [this]() {
                      SelectGraph(GetSlotId());
-                     ui_edit_.Show();
+                     ui_edit_->Show();
                    }),
       toggle_slot_visible_(
           {data::VboIdMain::kTerrainVisibleOff,
@@ -498,49 +44,31 @@ UiSlotsTerrain::UiSlotsTerrain(
           {data::VboIdMain::kTerrainVisibleOn3}),
       slot_back_(data::VboIdMain::kTerrainSlotsSlot,
                  [this]() {
-                   SelectGraph(GetSlotId());
+                   auto cursor_slot_id = GetSlotId();
+                   if (selected_slot_id_ == cursor_slot_id) {
+
+                     selected_slot_id_ = -1;
+                   } else {
+                     SelectGraph(cursor_slot_id);
+                   }
                  }),
       slot_color_(data::VboIdMain::kTerrainSlotsSlotColor),
       slot_remove_(data::VboIdMain::kTerrainSlotsRemove,
                    [this]() {
                      auto slot_id = GetSlotId();
                      std::cout << "graph removed " << slot_id << std::endl;
-                     if (slot_id == graph_.GetSlotId()) {
-                       ui_edit_.HideAll();
+                     if (slot_id == GetSelectedSlotId()) {
+                       ui_edit_->HideAll();
                      }
-                     graph_.RemoveGraph(slot_id);
-                     ui_edit_.UpdateHmap();
+                     RemoveGraph(slot_id);
+                     ui_edit_->UpdateConfig();
                      sl_data_.UpdateRenderData(
                          /*slot_back_.GetTopBorder() - slot_back_.GetBottomBorder(),
                          graph_.GetSize()*/);
                    }),
       slot_selected_(data::VboIdMain::kTerrainSlotsSelected),
-      graph_(ui_shared_resources, ui_edit_, instances_,
-             slider_size, slider_falloff),
-      ui_edit_(
-          cur_tile,
-          {data::VboIdMain::kTerrainEditDesk},
-          1.0f,
-          {{data::VboIdMain::kTerrainEditDeskPinBack, []() {}},
-          {data::VboIdMain::kTerrainEditDeskPinPoint}},
-          ui_shared_resources,
-          window_queue,
-          text_renderer,
-          {data::VboIdMain::kTerrainEditAccept},
-          {data::VboIdMain::kTerrainEditName},
-          {data::VboIdMain::kTerrainEditNameBack},
-          {{data::VboIdMain::kTerrainColorPaletteHS},
-           {data::VboIdMain::kTerrainColorColorCursor},
-           glm::vec2{1.0f}},
-          {{data::VboIdMain::kTerrainColorPaletteB},
-           {data::VboIdMain::kTerrainColorBrightnessCursor},
-           1.0f},
-          {data::VboIdMain::kTerrainColorIndicator},
-          {data::VboIdMain::kTerrainEditRandomGeneration},
-          instances_),
-      ui_event_handler_({&create_, &slot_config_,
-                         &toggle_slot_visible_, &slot_back_, &slot_remove_}),
-      ui_shared_resources_(ui_shared_resources),
+//      ui_event_handler_({&create_, &slot_config_,
+//                         &toggle_slot_visible_, &slot_back_, &slot_remove_}),
       hierarchy_(&back_) {
   hierarchy_ = UiHierarchy(
       &back_, &create_, &sl_data_);
@@ -549,14 +77,14 @@ UiSlotsTerrain::UiSlotsTerrain(
       &slot_color_, &slot_remove_, &slot_selected_);
 //  gUiComponents[hierarchy_.parent_->GetId() - details::kIdOffsetUi].ui =
 //      static_cast<UiBase*>(this);
-  IUiSlots::ui_event_handler_ = &ui_event_handler_;
-  IUiSlots::graph_ = &graph_;
+//  IUiSlots::ui_event_handler_ = &ui_event_handler_;
 //  IUiSlots::ui_edit_ = &ui_edit_;
   sl_data_.SetSlotPtr(&slot_back_);
 }
 
-UiSlotsTerrain::UiSlotsTerrain(UiSlotsTerrain&& other) noexcept
-    : IUiSlots(std::move(other)),
+UiSlots::UiSlots(UiSlots&& other) noexcept
+    : UiBase(std::move(other)),
+      sl_data_(std::move(other.sl_data_)),
 //      handler_(std::move(other.handler_)),
 //      slider_(std::move(other.slider_)),
       back_(std::move(other.back_)),
@@ -568,10 +96,10 @@ UiSlotsTerrain::UiSlotsTerrain(UiSlotsTerrain&& other) noexcept
       slot_color_(std::move(other.slot_color_)),
       slot_remove_(std::move(other.slot_remove_)),
       slot_selected_(std::move(other.slot_selected_)),
-      graph_(std::move(other.graph_)),
-      ui_edit_(std::move(other.ui_edit_)),
-      ui_event_handler_({&create_, &slot_config_,
-                         &toggle_slot_visible_, &slot_back_, &slot_remove_}),
+      ui_edit_(other.ui_edit_),
+      selected_slot_id_(other.selected_slot_id_),
+//      ui_event_handler_({&create_, &slot_config_,
+//                         &toggle_slot_visible_, &slot_back_, &slot_remove_}),
       ui_shared_resources_(other.ui_shared_resources_),
       hierarchy_(std::move(other.hierarchy_)) {
   hierarchy_ = UiHierarchy(
@@ -579,17 +107,49 @@ UiSlotsTerrain::UiSlotsTerrain(UiSlotsTerrain&& other) noexcept
   hierarchy_.AddNested(
       &slot_back_, &slot_name_, &slot_config_, &toggle_slot_visible_,
       &slot_color_, &slot_remove_, &slot_selected_);
-  IUiSlots::ui_event_handler_ = &ui_event_handler_;
-  IUiSlots::graph_ = &graph_;
+//  IUiSlots::ui_event_handler_ = &ui_event_handler_;
   //  IUiSlots::ui_edit_ = &ui_edit_;
 }
 
-void UiSlotsTerrain::RenderSlotsSprites() {
+void UiSlots::AddInstance(BaseInstanceData&& data) {
+  if (instances_.size() >= gMaxLayers) {
+    std::cerr << "Unable to add more graphs (data overflow)" << std::endl;
+  } else {
+    ui_edit_->CreateInstance();
+    instances_.push_back(data);
+  }
+  sl_data_.SetEntryNum(instances_.size());
+  sl_data_.Set(0.0f);
+}
+
+bool UiSlots::Press(int pressed_id) {
+  if (pressed_id == create_.GetId()) {
+    create_.Press();
+  } else if (pressed_id == slot_config_.GetId()) {
+    slot_config_.Press();
+  } else if (pressed_id == toggle_slot_visible_.GetId()) {
+    toggle_slot_visible_.Press();
+  } else if (pressed_id == slot_back_.GetId()) {
+    slot_back_.Press();
+  } else if (pressed_id == slot_remove_.GetId()) {
+    slot_remove_.Press();
+  } else {
+    return false;
+  }
+  return true;
+}
+
+void UiSlots::Release() {
+  // no components really need it
+}
+
+void UiSlots::RenderSlotsSprites() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render = std::min(sl_data_.slots_num_, graph_.GetSize());
+  int slots_to_render = std::min(
+      sl_data_.slots_num_, static_cast<int>(instances_.size()));
   glm::vec4 color_reset = glm::vec4{1.0f};
   for (int i = 0; i < slots_to_render; ++i) {
-    auto graph_base_data = graph_.GetBaseInstanceData(i + sl_data_.cur_slots_offset_);
+    auto graph_base_data = &instances_[i + sl_data_.cur_slots_offset_];
     slot_back_.SetTranslate(next_offset);
     slot_remove_.SetTranslate(next_offset);
     slot_config_.SetTranslate(next_offset);
@@ -606,7 +166,7 @@ void UiSlotsTerrain::RenderSlotsSprites() {
     slot_color_.Render();
     glUniform4fv(7, 1, glm::value_ptr(color_reset));
 
-    if (graph_.GetSlotId() - sl_data_.cur_slots_offset_ == i) {
+    if (GetSelectedSlotId() - sl_data_.cur_slots_offset_ == i) {
       slot_selected_.SetTranslate(next_offset);
       slot_selected_.Render();
     }
@@ -615,17 +175,18 @@ void UiSlotsTerrain::RenderSlotsSprites() {
   }
 }
 
-void UiSlotsTerrain::RenderSlotsText() {
+void UiSlots::RenderSlotsText() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render = std::min(sl_data_.slots_num_, graph_.GetSize());
+  int slots_to_render = std::min(
+      sl_data_.slots_num_, static_cast<int>(instances_.size()));
   for (int i = 0; i < slots_to_render; ++i) {
-    auto graph_name = graph_.GetNameRef(i + sl_data_.cur_slots_offset_);
+    auto graph_name = &instances_[i + sl_data_.cur_slots_offset_].name;
     slot_name_.Render(*graph_name, 1.0f, next_offset);
     next_offset.y -= sl_data_.slot_height_;
   }
 }
 
-void UiSlotsTerrain::Render(glm::vec2 mouse_pos) { // done
+void UiSlots::Render(glm::vec2 mouse_pos) { // done
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   back_.Render();
@@ -642,9 +203,10 @@ void UiSlotsTerrain::Render(glm::vec2 mouse_pos) { // done
   create_.Render();
 }
 
-void UiSlotsTerrain::RenderPickingSlotsSprites() {
+void UiSlots::RenderPickingSlotsSprites() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render = std::min(sl_data_.slots_num_, graph_.GetSize());
+  int slots_to_render = std::min(
+      sl_data_.slots_num_, static_cast<int>(instances_.size()));
   for (int i = 0; i < slots_to_render; ++i) {
     slot_back_.SetTranslate(next_offset);
     slot_remove_.SetTranslate(next_offset);
@@ -658,7 +220,7 @@ void UiSlotsTerrain::RenderPickingSlotsSprites() {
     toggle_slot_visible_.RenderPicking();
     slot_color_.RenderPicking();
 
-    if (debug::gUiAltMode && (graph_.GetSlotId() - sl_data_.cur_slots_offset_) == i) {
+    if (debug::gUiAltMode && (GetSelectedSlotId() - sl_data_.cur_slots_offset_) == i) {
       slot_selected_.SetTranslate(next_offset);
       slot_selected_.RenderPicking();
     }
@@ -666,17 +228,18 @@ void UiSlotsTerrain::RenderPickingSlotsSprites() {
   }
 }
 
-void UiSlotsTerrain::RenderPickingSlotsText() {
+void UiSlots::RenderPickingSlotsText() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render = std::min(sl_data_.slots_num_, graph_.GetSize());
+  int slots_to_render = std::min(
+      sl_data_.slots_num_, static_cast<int>(instances_.size()));
   for (int i = 0; i < slots_to_render; ++i) {
-    auto graph_name = graph_.GetNameRef(i + sl_data_.cur_slots_offset_);
+    auto graph_name = &instances_[i + sl_data_.cur_slots_offset_].name;
     slot_name_.RenderPicking(*graph_name, 1.0f, next_offset);
     next_offset.y -= sl_data_.slot_height_;
   }
 }
 
-void UiSlotsTerrain::RenderPicking() { // done
+void UiSlots::RenderPicking() { // done
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   back_.RenderPicking();
@@ -689,10 +252,44 @@ void UiSlotsTerrain::RenderPicking() { // done
   ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   create_.RenderPicking();
-  graph_.RenderPicking();
 }
 
-void UiSlotsTerrain::UpdateTransform() {
+void UiSlots::CreateGraph() {
+  if (instances_.size() >= gMaxLayers) {
+    std::cerr << "Unable to add more graphs (data overflow)" << std::endl;
+  } else {
+    ui_edit_->CreateInstance();
+    instances_.emplace_back();
+  }
+}
+
+void UiSlots::SelectGraph(GLuint id) {
+  if (id >= instances_.size()) {
+    throw "select non-existent slot id";
+  }
+  selected_slot_id_ = id;
+  sl_data_.FocusOnSelected(id);
+  ui_edit_->SetInstanceId(id);
+}
+
+void UiSlots::RemoveGraph(GLuint id) {
+  if (id >= instances_.size()) {
+    throw "remove non-existent graph id";
+  }
+  if (selected_slot_id_ > id) {
+    --selected_slot_id_;
+  } else if (selected_slot_id_ == id) {
+    selected_slot_id_ = -1;
+  }
+  instances_.erase(instances_.begin() + id);
+  std::cout << "*slot removed " << id << std::endl;
+}
+
+int UiSlots::GetSize() const noexcept {
+  return instances_.size();
+}
+
+void UiSlots::UpdateTransform() {
   /*sl_data_.length_ = sl_data_.track_length_factor *
                      (back_.GetTopBorder() - back_.GetBottomBorder());
   sl_data_.length_slots_ = sl_data_.slots_length_factor *
@@ -705,37 +302,7 @@ void UiSlotsTerrain::UpdateTransform() {
   hierarchy_.UpdateTransform();*/
 }
 
-void UiSlotsTerrain::SelectGraph(GLuint id) {
-/*  if (id == graph_.GetSlotId()) {
-    graph_.SelectGraph(-1); // TODO: graph::DeSelect()
-    ui_edit_.SetTerrainData(graph_.GetInstanceData());
-    UpdateTransformUniform();
-    ui_edit_.UpdateHmap(); // TODO: at some point we have terrain_data as nullptr
-    return;
-  }*/
-  std::cout << "-- slot back (selected)" << std::endl;
-  graph_.SelectGraph(id);
-  sl_data_.FocusOnSelected(id);
-  ui_edit_.SetTerrainData(graph_.GetInstanceData());
-}
-
-bool UiSlotsTerrain::Press(int id) {
-  std::cout << "Press()" << std::endl;
-  if (id < details::kIdOffsetWater) {
-    std::cout << "Add point #" << id << std::endl;
-    std::cout << "Coordinates are: " << (id & 1023)
-              << " and " << (id >> 10) << std::endl;
-    //TODO: if water/other subtract maybe...
-    bool shift_pressed = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT);
-    bool ctrl_pressed = glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL);
-    graph_.Press(ui_shared_resources_.global_glfw_callback_data_.cursor_pos_,
-                 shift_pressed, ctrl_pressed);
-    return false;
-  }
-  return ui_event_handler_.Press(id);
-}
-
-bool UiSlotsTerrain::Scroll(GLuint id, float yoffset) {
+bool UiSlots::Scroll(GLuint id, float yoffset) {
   /*if (!ui_event_handler_.IsInRange(id)) {
 //  if (id < slot_back_.GetId()) {
     return false;
@@ -750,186 +317,22 @@ bool UiSlotsTerrain::Scroll(GLuint id, float yoffset) {
   return false;
 }
 
-void UiSlotsTerrain::UpdateStartAngle() {
-  auto mouse_pos =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_;
-  auto pos_3d = GetInstanceTransform();
-  glm::vec4 object_centre_3d = glm::vec4(pos_3d.x, pos_3d.y, pos_3d.z, 1.0f);
-  auto& global_data = ui_shared_resources_.global_glfw_callback_data_;
-  auto map_scale = global_data.tile_renderer->cur_tile_.map_scale;
-  auto model = glm::mat4(1.0f);
-  model = glm::scale(model, glm::vec3(map_scale));
-  auto view = global_data.camera->GetViewMatrix();
-  auto projection = global_data.camera->GetProjMatrix();
-  auto mvp = projection * view * model;
-
-  glm::vec4 clipPos = mvp * object_centre_3d;
-  glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
-
-  glm::vec2 delta((mouse_pos.x / (gWindowWidth / 2.0f) - 1.0f) - ndc.x,
-                  ndc.y - ((gWindowHeight - mouse_pos.y) / (gWindowHeight / 2.0f) - 1.0f));
-  float factor = static_cast<float>(gWindowWidth)
-                 / static_cast<float>(gWindowHeight);
-  zero_angle_ = std::atan2(delta.y, delta.x * factor);
-  last_angle_ = 0.0f;
-}
-
-float UiSlotsTerrain::UpdateAngle(float xpos, float ypos) {
-  auto pos_3d = GetInstanceTransform();
-  glm::vec4 object_centre_3d = glm::vec4(pos_3d.x, pos_3d.y, pos_3d.z, 1.0f);
-  auto& global_data = ui_shared_resources_.global_glfw_callback_data_;
-  auto map_scale = global_data.tile_renderer->cur_tile_.map_scale;
-  auto model = glm::mat4(1.0f);
-  model = glm::scale(model, glm::vec3(map_scale));
-  auto view = global_data.camera->GetViewMatrix();
-  auto projection = global_data.camera->GetProjMatrix();
-  auto mvp = projection * view * model;
-
-  glm::vec4 clipPos = mvp * object_centre_3d;
-  glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
-
-  glm::vec2 delta((xpos / (gWindowWidth / 2.0f) - 1.0f) - ndc.x,
-                  ndc.y - ((gWindowHeight - ypos) / (gWindowHeight / 2.0f) - 1.0f));
-  float factor = static_cast<float>(gWindowWidth)
-                 / static_cast<float>(gWindowHeight);
-  float angle = std::atan2(delta.y, delta.x * factor) - zero_angle_;
-  float deltaAngle = angle - last_angle_;
-  last_angle_ = angle;
-
-  if (deltaAngle > glm::pi<float>()) deltaAngle -= glm::two_pi<float>();
-  if (deltaAngle < -glm::pi<float>()) deltaAngle += glm::two_pi<float>();
-  return deltaAngle;
-}
-
-void UiSlotsTerrain::InitTranslateStart() {
-  int slot_id = graph_.GetSlotId();
-  if (slot_id != -1) {
-    temp_translate_ = instances_[slot_id].translate;
-  }
-}
-
-void UiSlotsTerrain::InitScaleStart() {
-  int slot_id = graph_.GetSlotId();
-  if (slot_id != -1) {
-    auto mouse_pos =
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_;
-
-    auto pos_3d = GetInstanceTransform();
-    glm::vec4 object_centre_3d = glm::vec4(pos_3d.x, pos_3d.y, pos_3d.z, 1.0f);
-    auto& global_data = ui_shared_resources_.global_glfw_callback_data_;
-    auto map_scale = global_data.tile_renderer->cur_tile_.map_scale;
-    auto model = glm::mat4(1.0f);
-    model = glm::scale(model, glm::vec3(map_scale));
-    auto view = global_data.camera->GetViewMatrix();
-    auto projection = global_data.camera->GetProjMatrix();
-    auto mvp = projection * view * model;
-
-    glm::vec4 clipPos = mvp * object_centre_3d;
-    glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
-
-
-    glm::vec2 delta((mouse_pos.x / (gWindowWidth / 2.0f) - 1.0f) - ndc.x,
-                    ndc.y - ((gWindowHeight - mouse_pos.y) / (gWindowHeight / 2.0f) - 1.0f));
-    float factor = static_cast<float>(gWindowWidth)
-                   / static_cast<float>(gWindowHeight);
-    glm::vec2 offset(delta.x, factor * delta.y);
-
-    zero_scale_length_ = glm::length(offset);
-    temp_scale_ = instances_[slot_id].scale;
-  }
-}
-
-void UiSlotsTerrain::InitRotateStart() {
-  int slot_id = graph_.GetSlotId();
-  if (slot_id != -1) {
-    UpdateStartAngle();
-    temp_rotate_ = instances_[slot_id].rotate;
-  }
-}
-
-void UiSlotsTerrain::TranslateSelected(glm::vec3 value) {
-  int slot_id = graph_.GetSlotId();
-  if (slot_id == -1) { // move selected points
-    graph_.MoveSelected(value.y - prev_value_y_);
-    prev_value_y_ = value.y;
-  } else { // move wholelayer
-    graph_.MoveSelected(value.y - prev_value_y_);
-    prev_value_y_ = value.y;
-
-//    auto prev_value = temp_translate_;
-//    instances_[slot_id].translate = glm::clamp(
-//        prev_value + value, glm::vec3(-200.0f), glm::vec3(200.0f));
-  }
-}
-
-void UiSlotsTerrain::RotateSelected(float xpos, float ypos, glm::vec3 axis) {
-  int slot_id = graph_.GetSlotId();
-  float delta_angle = UpdateAngle(xpos, ypos);
-  glm::quat value = glm::angleAxis(delta_angle, axis);
-  if (slot_id != -1) {
-    instances_[slot_id].rotate = glm::normalize(value * instances_[slot_id].rotate);
-  }
-}
-
-void UiSlotsTerrain::ScaleSelected(float distance_to_centre, glm::vec3 axis) {
-  int slot_id = graph_.GetSlotId();
-  if (slot_id != -1) {
-    auto map_scale = 1.0f;
-    // TODO: need signed distance wrt resolution
-    float bias = 0.0001;
-    float distance = std::max(bias, distance_to_centre); // to avoid / 0.0f
-    float value = glm::clamp(
-        map_scale * distance / zero_scale_length_, 0.0001f, 100.0f);
-    auto prev_value = temp_scale_;
-    // add 1.0f to avoid op with 0 scale (bad), affect only specified axis
-    instances_[slot_id].scale = glm::clamp(
-        prev_value * (glm::vec3(1.0f) - axis + axis * value), glm::vec3(-200.0f), glm::vec3(200.0f));
-  }
-  // sum: can be 0 scale, BUT can't be dividing by 0
-  // multiplying: need bias 0.01f
-}
-
-void UiSlotsTerrain::CancelTransform() {
-  int slot_id = graph_.GetSlotId();
-  if (slot_id != -1) {
-    instances_[slot_id].translate = temp_translate_;
-    instances_[slot_id].rotate = temp_rotate_;
-    instances_[slot_id].scale = temp_scale_;
-    prev_value_y_ = 0;
-  }
-}
-
-void UiSlotsTerrain::ApplyTransform() {
-  prev_value_y_ = 0;
-  /* nothing here now */
-}
-
-glm::vec3 UiSlotsTerrain::GetInstanceTransform() {
-  int slot_id = graph_.GetSlotId();
-  if (slot_id != -1) {
-    return instances_[slot_id].translate;
-  }
-  return glm::vec3(0.0f);
-}
-
-int UiSlotsTerrain::GetSlotId() {
+int UiSlots::GetSlotId() {
   return sl_data_.GetSlotId(
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
 }
 
-void UiSlotsTerrain::SelectPoints(
-    const std::vector<GLuint>& points) {
-  graph_.SelectVertices(points);
+int UiSlots::GetSelectedSlotId() {
+  return selected_slot_id_;
 }
 
-TerrainInstanceData* UiSlotsTerrain::GetTerrainInstantanceData() {
-  int slot_id = graph_.GetSlotId();
-  if (slot_id == -1) {
-    return nullptr;
-  }
-  return &instances_[slot_id];
+void UiSlots::Reset() {
+  sl_data_.SetEntryNum(0);
+  ui_edit_->ForceHide();
+  instances_.clear(); // for some reason doesn't work
+  selected_slot_id_ = -1;
 }
 
-void UiSlotsTerrain::SetVertexSelectionMask(const Texture* mask) {
-  graph_.SetSelectionMask(mask);
+BaseInstanceData* UiSlots::GetInstanceBaseData() {
+  return &instances_[selected_slot_id_];
 }

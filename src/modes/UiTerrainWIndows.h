@@ -47,16 +47,47 @@ class UiNoiseLayerConfig {
   UiSharedResources& ui_shared_resources_;
 };
 
-class UiEditTerrain final : public UiWindowAppear {
+class UiEditBase : public UiWindowAppear {
  public:
-  using Base = UiWindowAppear;
+  using UiWindowAppear::UiWindowAppear;
+  virtual void UpdateConfig() = 0; // e.g. UpdateHmap()
+  virtual void SetInstanceId(int id) = 0; // insctances_[id]
+  virtual void HideAll() = 0;
+  virtual void CreateInstance() = 0;
+  virtual void Reset() = 0;
+};
+class UiEditObjects : public UiEditBase {
+ public:
+  using Base = UiEditBase;
+  UiEditObjects(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue);
+
+  void UpdateConfig() override {}
+  void SetInstanceId(int id) override {}
+  void HideAll() override {}
+  void CreateInstance() override {}
+
+  bool Press(int id) override {return false;}
+  void Release() override {}
+  bool Scroll(GLuint id, float yoffset) override {return false;}
+  bool Render() override {return false;}
+  void RenderPicking() override {}
+
+  void Reset() override {}
+};
+
+class UiEditTerrain final : public UiEditBase {
+ public:
+  using Base = UiEditBase;
 
   UiEditTerrain(
       Tile& cur_tile,
       UiSharedResources& ui_shared_resources, // c
       WindowQueue& window_queue, // w
       TextRenderer& text_renderer,
-      const std::vector<TerrainInstanceData>& instances);
+      std::vector<BaseInstanceData>& base_instances,
+      const int& selected_id);
 
   ~UiEditTerrain() {
     DeInit();
@@ -68,8 +99,16 @@ class UiEditTerrain final : public UiWindowAppear {
   UiEditTerrain& operator=(UiEditTerrain&& other) = delete;
   UiEditTerrain& operator=(const UiEditTerrain& other) = delete;
 
+  void HideAll() override;
+
+  void CreateInstance() override;
+
   /// update base hmap (after modifying)
-  void UpdateHmap();
+  void UpdateConfig() override;
+
+  void SetInstanceId(int id) override {
+    SetTerrainData(id);
+  }
 
   bool Press(int id) override;
 
@@ -80,15 +119,23 @@ class UiEditTerrain final : public UiWindowAppear {
   bool Render() override;
 
   // can't use Render(terrain_data) because of must-have virtual-ness
-  void SetTerrainData(TerrainInstanceData* terrain_data);
+  void SetTerrainData(int id);
 
   void RenderPicking() override;
 
   NoiseTerrainData Generate();
 
-  void HideAll();
-
   void RandomGenerate();
+
+  void SetPivotPosition(GLuint pressed_id);
+
+ [[nodiscard]] TerrainInstanceData& GetInstanceData() noexcept {
+   return instances_[selected_id_];
+ }
+
+ void RenderGraph();
+
+ void Reset() override;
 
  private:
   void Init();
@@ -107,6 +154,15 @@ class UiEditTerrain final : public UiWindowAppear {
   int GetSliderNoiseId(glm::vec2 mouse_pos);
 
   float GetEntryHeight();
+
+  glm::vec4 GetLayerCentre();
+
+  //TODO: integrate with UiSlotsTerrain::instances_
+  std::vector<TerrainInstanceData> instances_;
+
+  const int& selected_id_;
+  std::vector<BaseInstanceData>& base_instances_;
+
 
   Texture32F& tex_hmap_;
   std::vector<GLfloat>& hmap_heights_;
@@ -151,9 +207,6 @@ class UiEditTerrain final : public UiWindowAppear {
 
   std::mt19937 random_generator_;
 
-  // we modify it here, non const
-  TerrainInstanceData* terrain_data_ = nullptr;
-
   Shader shader_merge_noises_; /// 7 times merging (8 noises)
 
   /// generate hmap from transformed layers
@@ -172,9 +225,9 @@ class UiEditTerrain final : public UiWindowAppear {
 
   UiSharedResources& ui_shared_resources_;
 
-  const std::vector<TerrainInstanceData>& instances_;
-
   int pressed_strength_id_ = -1.0f;
+
+  glm::vec4 pivot_offset_ = glm::vec4(0.0f);
 };
 
 class UiTerrainBake final : public UiWindowAppear {

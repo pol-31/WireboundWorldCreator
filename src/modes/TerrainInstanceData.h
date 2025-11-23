@@ -7,11 +7,11 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "../common/Texture.h"
-#include "../common/IGraph.h"
+#include "../common/BaseInstanceData.h"
 #include "TerrainNoiseData.h"
 
-struct TerrainInstanceData : public IGraph::BaseInstanceData {
-  NoiseTerrainData data;
+struct TerrainInstanceData {
+  NoiseTerrainData data = {}; // hmap inside
 
   glm::vec3 scale = glm::vec3{1.0f};
   glm::quat rotate = glm::quat{1.0f, 0.0f, 0.0f, 0.0f};
@@ -19,10 +19,6 @@ struct TerrainInstanceData : public IGraph::BaseInstanceData {
 
   bool do_tiling = false;
   bool do_invert = false;
-
-  // including transformation & modifiers - final result
-//  Texture32F hmap;
-  std::array<uint8_t, 1024 * 1024> heights;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_TERRAININSTANCEDATA_H_

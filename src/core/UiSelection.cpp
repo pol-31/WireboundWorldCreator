@@ -1,5 +1,7 @@
 #include "UiSelection.h"
 
+#include <stb_image.h>
+
 #include "../common/OpenGLUtility.h"
 #include "../common/PickingFramebuffer.h"
 #include "../modes/TerrainInstanceData.h"
@@ -51,6 +53,36 @@ void UiSelection::Init() {
   sp_selection_.SetScale(scale_diff);
 
   ClearSelection();
+
+  InitCursors();
+}
+
+void UiSelection::InitCursors() {
+  GLFWimage csr_image;
+  csr_image.width = 32;
+  csr_image.height = 32;
+  unsigned char* csr_data;
+  int width, height, channels;
+
+  stbi_set_flip_vertically_on_load(false);
+
+  csr_data = stbi_load("../assets/CursorRectangle.png", &width, &height, &channels, 0);
+  csr_image.pixels = csr_data;
+  csr_rectangle_ = glfwCreateCursor(&csr_image, 0, 0);
+
+  csr_data = stbi_load("../assets/CursorCircle.png", &width, &height, &channels, 0);
+  csr_image.pixels = csr_data;
+  csr_circle_ = glfwCreateCursor(&csr_image, 0, 0);
+
+  csr_data = stbi_load("../assets/CursorLasso.png", &width, &height, &channels, 0);
+  csr_image.pixels = csr_data;
+  csr_lasso_ = glfwCreateCursor(&csr_image, 0, 0);
+
+  csr_data = stbi_load("../assets/CursorTweak.png", &width, &height, &channels, 0);
+  csr_image.pixels = csr_data;
+  csr_tweak_ = glfwCreateCursor(&csr_image, 0, 0);
+
+  stbi_set_flip_vertically_on_load(true);
 }
 
 void UiSelection::InitSelectionFbo() {
@@ -78,9 +110,13 @@ void UiSelection::DeInit() {
   glDeleteVertexArrays(1, &vao_);
   glDeleteBuffers(1, &vbo_);
   glDeleteFramebuffers(1, &selection_fbo_);
+  glfwDestroyCursor(csr_rectangle_);
+  glfwDestroyCursor(csr_circle_);
+  glfwDestroyCursor(csr_lasso_);
+  glfwDestroyCursor(csr_tweak_);
 }
 
-void UiSelection::RenderAreaLike(const Texture32F* surface) {
+void UiSelection::RenderAreaLike() {
   glBindVertexArray(vao_);
   shader_.Bind();
   glUniform2fv(0, 1, glm::value_ptr(render_offset_));
@@ -92,15 +128,13 @@ void UiSelection::RenderAreaLike(const Texture32F* surface) {
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, selection_fbo_);
   glDrawArrays(GL_TRIANGLE_FAN, 0, vertex_num_);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-  RenderSurfaceSelection(surface);
 }
 
-void UiSelection::RenderCircleLike(const Texture32F* surface) {
+void UiSelection::RenderCircleLike() {
   glBindVertexArray(vao_);
   shader_.Bind();
   glUniform2fv(0, 1, glm::value_ptr(render_offset_));
   glDrawArrays(GL_LINE_STRIP, 0, vertex_num_);
-  RenderSurfaceSelection(surface);
 }
 
 void UiSelection::RenderSurfaceSelection(const Texture32F* surface) {
@@ -264,20 +298,16 @@ void UiSelection::UpdateSurfaceSelection(float radius) {
   utility::UnBindImageTexture(1, fbo_tex, GL_READ_ONLY);
 }
 
-void UiSelection::Render(const Texture32F* surface) {
-  if (!surface) {
-    return;
-  }
+void UiSelection::Render() {
   switch (selection_mode_) {
     case SelectionMode::kCircle:
-      RenderCircleLike(surface);
+      RenderCircleLike();
       RenderSelectionCircle();
       break;
     case SelectionMode::kTweak:
-      RenderSurfaceSelection(surface);
       break;
     default:
-      RenderAreaLike(surface);
+      RenderAreaLike();
   }
 }
 
@@ -317,14 +347,15 @@ void UiSelection::StartSelecting(
   } else if (!mod_ctrl_ && !mod_shift_) { // mod_ctrl_ or no mods at all
     ResetBufferData();
     ClearSelection();
+//    ClearSelectionFbo();
   }
   selecting_ = true;
 }
 
-const Texture* UiSelection::StopSelecting(glm::vec2 cursor_pos) {
+void UiSelection::StopSelecting(glm::vec2 cursor_pos) {
   UpdateSelection(cursor_pos);
   selecting_ = false;
-  return SelectPoints();
+  SelectPoints();
 }
 
 void UiSelection::Release() {
@@ -343,7 +374,8 @@ void UiSelection::ApplySelection() {
   utility::BindImageTexture(0, fbo_tex, GL_READ_ONLY);
   utility::BindImageTexture(1, selection_tex_, GL_READ_ONLY);
   utility::BindImageTexture(2, selection_tex_surface_, GL_WRITE_ONLY);
-  glUniform1ui(0, details::kIdOffsetWater);
+  glUniform1ui(0, bound_min_);
+  glUniform1ui(1, bound_max_);
   // 1: add (shift) connect last to new,
   // 1: add (ctrl) no connect last to new,
   // 0: erase (ctrl + shift)
@@ -351,7 +383,7 @@ void UiSelection::ApplySelection() {
   if (mod_ctrl_ && mod_shift_) {
     mask_factor = 0.0f;
   }
-  glUniform1f(1, mask_factor);
+  glUniform1f(2, mask_factor);
   GLuint workGroupSizeX = (gWindowWidth  + 15) / 16;
   GLuint workGroupSizeY = (gWindowHeight + 15) / 16;
   glDispatchCompute(workGroupSizeX, workGroupSizeY, 1);
@@ -361,19 +393,86 @@ void UiSelection::ApplySelection() {
   utility::UnBindImageTexture(2, selection_tex_surface_, GL_WRITE_ONLY);
 }
 
-const Texture* UiSelection::SelectPoints() {
+void UiSelection::SelectPoints() {
   ApplySelection();
   ClearSelectionFbo();
   ResetBufferData();
   mouse_check_point_ =
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_;
   mouse_check_point_.y = gWindowHeight - mouse_check_point_.y;
-  return &selection_tex_surface_;
 }
 
 void UiSelection::SetSelectionMode(SelectionMode mode) {
-  if (selection_mode_ != mode) {
-    ResetSelection();
-    selection_mode_ = mode;
+  if (selecting_ || selection_mode_ == mode) {
+    return;
   }
+  ResetSelection();
+  selection_mode_ = mode;
+  switch (selection_mode_) {
+    case SelectionMode::kRectangle:
+      glfwSetCursor(gWindow, csr_rectangle_);
+      break;
+    case SelectionMode::kCircle:
+      glfwSetCursor(gWindow, csr_circle_);
+      break;
+    case SelectionMode::kLasso:
+      glfwSetCursor(gWindow, csr_lasso_);
+      break;
+    case SelectionMode::kTweak:
+      glfwSetCursor(gWindow, csr_tweak_);
+      break;
+  }
+}
+
+void UiSelection::SetSelectionModeForce(SelectionMode mode) {
+  if (selecting_) {
+    StopSelecting(rectangle_start_pos_);
+  }
+  ResetSelection();
+  selection_mode_ = mode;
+  switch (selection_mode_) {
+    case SelectionMode::kRectangle:
+      glfwSetCursor(gWindow, csr_rectangle_);
+      break;
+    case SelectionMode::kCircle:
+      glfwSetCursor(gWindow, csr_circle_);
+      break;
+    case SelectionMode::kLasso:
+      glfwSetCursor(gWindow, csr_lasso_);
+      break;
+    case SelectionMode::kTweak:
+      glfwSetCursor(gWindow, csr_tweak_);
+      break;
+  }
+}
+
+void UiSelection::SetIdBounds(GLuint bound_min, GLuint bound_max) {
+  bound_min_ = bound_min;
+  bound_max_ = bound_max;
+}
+
+void UiSelection::NextSelectionMode() {
+  SelectionMode next_mode;
+  switch (selection_mode_) {
+    case SelectionMode::kRectangle:
+      next_mode = SelectionMode::kCircle;
+      break;
+    case SelectionMode::kCircle:
+      next_mode = SelectionMode::kLasso;
+      break;
+    case SelectionMode::kLasso:
+      next_mode = SelectionMode::kTweak;
+      break;
+    default:
+      next_mode = SelectionMode::kRectangle;
+  }
+  // force, so ignore current selection
+  SetSelectionModeForce(next_mode);
+}
+
+void UiSelection::SetSelectionMask(const Texture& mask) {
+  glCopyImageSubData(
+      mask.GetId(), GL_TEXTURE_2D, 0, 0, 0, 0,
+      selection_tex_surface_.GetId(), GL_TEXTURE_2D, 0, 0, 0, 0,
+      details::gTerrainSize, details::gTerrainSize, 1);
 }

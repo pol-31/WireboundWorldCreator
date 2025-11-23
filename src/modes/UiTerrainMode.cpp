@@ -2,7 +2,7 @@
 
 #include "../io/Window.h"
 #include "../core/Menu.h"
-#include "../io/Cameras.h"
+#include "../io/Camera.h"
 #include "../common/PickingFramebuffer.h"
 #include "../core/TileRenderer.h"
 #include "../renderers/UiRenderer.h"
@@ -14,15 +14,18 @@ UiTerrainMode::UiTerrainMode(
     Tile& cur_tile)
     : IUiMode(
           ui_shared_resources,
-          window_queue,
           {data::VboIdMain::kTerrainTerrainMode}),
       btn_update_(data::VboIdMain::kTerrainUpdate,
-          [this]() {
+                  [this]() {
                     std::cout << "btn_update?" << std::endl;
                     ui_bake_.Bake(1000, 1000, 0.1f);
-          }),
-      sprite_flatten_(data::VboIdMain::kTerrainFlatten),
-      toggle_flatten_(
+                  }),
+      btn_reset_(data::VboIdMain::kTerrainFlatten,
+                [this]() {
+                  std::cerr << "-- reset --" << std::endl;
+                  this->Reset();
+                }),
+      tg_flatten_(
           {data::VboIdMain::kTerrainFlattenOff,
            [this]() {
              std::cout << "toggle_flatten" << std::endl;
@@ -31,17 +34,11 @@ UiTerrainMode::UiTerrainMode(
           {data::VboIdMain::kTerrainFlattenOn2},
           {data::VboIdMain::kTerrainFlattenOn3}
           ),
-      slider_size_(
-          {data::VboIdMain::kTerrainSizeFill},
-          {data::VboIdMain::kTerrainSizeBack},
-          {data::VboIdMain::kTerrainSizeIcon},
-          100.0f
-          ),
-      slider_falloff_(
+      sl_falloff_(
           {data::VboIdMain::kTerrainFalloffFill},
           {data::VboIdMain::kTerrainFalloffBack},
           {data::VboIdMain::kTerrainFalloffIcon},
-          1.0f
+          100.0f
           ),
       btn_bake_(data::VboIdMain::kTerrainBake,
                 [this]() {
@@ -69,49 +66,30 @@ UiTerrainMode::UiTerrainMode(
           {text_renderer,
            {data::VboIdMain::kTerrainBakeWeatheringStepInputText},
            {data::VboIdMain::kTerrainBakeWeatheringStepInputBack}}),
-      slots_(
-          cur_tile, ui_shared_resources_, window_queue,
-          text_renderer, slider_size_, slider_falloff_),
+      ui_slots_(
+          cur_tile, ui_shared_resources_, window_queue, text_renderer),
+      ui_edit_(cur_tile, ui_shared_resources, window_queue,
+               text_renderer, ui_slots_.GetInstancesRef(),
+               ui_slots_.GetSelectedIdRef()),
+      ui_selection_(ui_shared_resources),
+      mouse_transform_(ui_shared_resources),
       ui_event_handler_({
-          &btn_update_, &slider_size_,
-          &slider_falloff_, &toggle_flatten_, &btn_bake_, &slots_})/*,
-      ev_translate_selected_([this]() {}),
-      ev_rotate_selected_([this]() {
-        float cursor_diff =
-            glm::distance(
-                glm::vec2(this->ui_shared_resources_.global_glfw_callback_data_.cursor_pos_),
-                glm::vec2{static_cast<float>(gEventMouseStartPosX),
-                          static_cast<float>(gEventMouseStartPosY)});
-        this->slots_.RotateSelected(
-            this->ev_selected_dir_ * (cursor_diff / gWindowHeight));
-      }),
-      ev_scale_selected_([this]() {
-        float cursor_diff =
-            glm::distance(
-                glm::vec2(this->ui_shared_resources_.global_glfw_callback_data_.cursor_pos_),
-                glm::vec2{static_cast<float>(gEventMouseStartPosX),
-                          static_cast<float>(gEventMouseStartPosY)});
-        this->slots_.ScaleSelected(
-            this->ev_selected_dir_ * (cursor_diff / gWindowHeight));
-      }),
-      ev_scale_cursor_size_([this]() {
-        slider_size_.SetMouseDiff(
-            remembered_progress_,
-            {gEventMouseStartPosX, gEventMouseStartPosY},
-            this->ui_shared_resources_.global_glfw_callback_data_.cursor_pos_);
-      }),
-      ev_scale_cursor_falloff_([this]() {
-        slider_falloff_.SetMouseDiff(
-            remembered_progress_,
-            {gEventMouseStartPosX, gEventMouseStartPosY},
-            this->ui_shared_resources_.global_glfw_callback_data_.cursor_pos_);
-      })*/ {}
+          &btn_update_, &btn_reset_,
+          &sl_falloff_, &tg_flatten_, &btn_bake_, &ui_slots_}) {
+  ui_slots_.SetConfigWindow(&ui_edit_);
+  sl_falloff_.SetValue(1.0f);
+}
 
-void UiTerrainMode::BindCallbacks() {
+void UiTerrainMode::Setup() {
   terrain::BindCallbacksDefault();
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(gWindow));
-  global_data->camera->SetInspectCamera();
+  auto camera = ui_shared_resources_.global_glfw_callback_data_.camera;
+  camera->SetPosition(glm::vec3{5.0f});
+  camera->SetPitch(45.0f);
+  camera->SetYaw(0.0f);
+  camera->SetOrigin(glm::vec3{0.0f});
+  camera->MoveRotateViewOrigin(0.0f, 0.0f); // to update camera vectors
+  ui_selection_.SetIdBounds(details::kIdOffsetTerrain, details::kIdOffsetWater);
+  ui_selection_.SetSelectionModeForce(SelectionMode::kRectangle);
 }
 
 int UiTerrainMode::GetPrerenderTextIdStart() const noexcept {
@@ -124,39 +102,35 @@ int UiTerrainMode::GetPrerenderTextIdEnd() const noexcept {
 
 void UiTerrainMode::Render() {
   //TODO: should we call it RenderUi() and RenderTerrain()?
-  slots_.RenderGraph(); // should be first (terrain render before ui render)
+  ui_edit_.RenderGraph(); // should be first (terrain render before ui render)
+  ui_selection_.Render();
+  ui_selection_.RenderSurfaceSelection(
+      &ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+           ->cur_tile_.map_terrain_height);
 
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
-
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
-  sprite_flatten_.Render();
-  sprite_mode_.Render();
+  btn_reset_.Render();
+  sp_mode_.Render();
 
   btn_update_.Render();
   btn_bake_.Render();
 
-  slider_size_.Render(
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-  slider_falloff_.Render(
+  sl_falloff_.Render(
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
 
-  toggle_flatten_.Render();
+  tg_flatten_.Render();
 
   auto mouse_pos
       = ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
-  slots_.Render(mouse_pos);
-  ui_shared_resources_.tex_ui_.Bind();
+  ui_slots_.Render(mouse_pos);
 
-  ui_shared_resources_.global_glfw_callback_data_.ui_renderer
-      ->RenderWorldOrigin(cursor_pos_, glm::vec4(1.0f));
-
-  ui_shared_resources_.tex_ui_.Bind();
-  window_queue_.Render();
-
-  ui_shared_resources_.global_glfw_callback_data_.ui_renderer->RenderSelection();
+  ui_shared_resources_.global_glfw_callback_data_.windows->Render();
+  auto camera = ui_shared_resources_.global_glfw_callback_data_.camera;
+  camera->Update(1.0f); // const pos
 }
 
 void UiTerrainMode::RenderPicking() {
@@ -164,58 +138,46 @@ void UiTerrainMode::RenderPicking() {
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
 
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
 
-  sprite_flatten_.RenderPicking();
-  sprite_mode_.RenderPicking();
+  btn_reset_.RenderPicking();
+  sp_mode_.RenderPicking();
 
   btn_update_.RenderPicking();
   btn_bake_.RenderPicking();
 
-  slider_size_.RenderPicking();
-  slider_falloff_.RenderPicking();
+  sl_falloff_.RenderPicking();
 
-  toggle_flatten_.RenderPicking();
+  tg_flatten_.RenderPicking();
 
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-  slots_.RenderPicking();
-
-  window_queue_.RenderPicking();
-}
-
-void UiTerrainMode::Cancel() {
-  std::cout << "Cancel" << std::endl;
-  mouse_process_ = false;
-  glfwSetCursorPosCallback(gWindow, CallbackCursorPos);
-}
-
-void UiTerrainMode::Apply() {
-  std::cout << "Apply" << std::endl;
-  mouse_process_ = false;
-  glfwSetCursorPosCallback(gWindow, CallbackCursorPos);
+  ui_slots_.RenderPicking();
+  auto& ui_layer_wireframe =
+      ui_shared_resources_.global_glfw_callback_data_
+          .ui_renderer->GetUiLayerWireframe();
+  ui_layer_wireframe.RenderPickingLayerWireframe();
+  ui_shared_resources_.global_glfw_callback_data_.windows->RenderPicking();
 }
 
 void UiTerrainMode::CancelTransform() {
   std::cout << "CancelTransform" << std::endl;
-  slots_.CancelTransform();
+  mouse_transform_.CancelTransform();
   terrain::BindCallbacksDefault();
 }
 
 void UiTerrainMode::ApplyTransform() {
   std::cout << "ApplyTransform" << std::endl;
-  slots_.ApplyTransform();
+  mouse_transform_.ApplyTransform();
   terrain::BindCallbacksDefault();
 }
 
-void UiTerrainMode::SetOriginPosition(GLuint pressed_id) {
-  if (pressed_id < details::kIdOffsetWater) {
-    glm::uvec2 pos(pressed_id >> 10, pressed_id & 1023);
-    cursor_pos_.x = pos.x / 16.0f - 32.0f;
-    cursor_pos_.z = pos.y / 16.0f - 32.0f;
-    cursor_pos_.y =
-        ui_shared_resources_.global_glfw_callback_data_.tile_renderer
-            ->cur_tile_.terrain_heights_[pressed_id];
-  }
+void UiTerrainMode::Reset() {
+  ui_selection_.StopSelecting(glm::vec2{0.0f});
+  ui_bake_.ForceHide();
+  ui_slots_.Reset();
+  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+      ->cur_tile_.ResetTerrain();
+  mouse_transform_.Reset();
+  ui_edit_.Reset();
 }
 
 namespace terrain {
@@ -235,19 +197,16 @@ void ScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
-
-  if (global_data->ui_renderer->ScrollSelection(yoffset)) {
+  auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
+  if (terrain->ui_selection_.ScrollSelection(yoffset)) {
     return;
   }
-
-  auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
   if (pressed_id >= details::kIdOffsetUi &&
       pressed_id != static_cast<GLuint>(-1)) {
-    terrain->slider_falloff_.Scroll(pressed_id, yoffset);
-    terrain->slider_size_.Scroll(pressed_id, yoffset);
-    terrain->slots_.Scroll(pressed_id, yoffset);
+    terrain->sl_falloff_.Scroll(pressed_id, yoffset);
+    terrain->ui_slots_.Scroll(pressed_id, yoffset);
     global_data->windows->Scroll(pressed_id, yoffset);
     return;
   }
@@ -268,69 +227,93 @@ void MouseButtonCallback(
   auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
 //  global_data->camera->ProcessMouseKey(button, action, mods);
 
-  if (terrain->mouse_process_) {
-    if (action == GLFW_PRESS) {
-      terrain->Cancel(); // we can press the same without release
-    } else { // GLFW_RELEASE
-      if (button == terrain->pressed_mouse_key_) {
-        terrain->Apply();
+  bool mod_ctrl = mods & GLFW_MOD_CONTROL;
+  bool mod_shift = mods & GLFW_MOD_SHIFT;
+  if (action == GLFW_PRESS) {
+    double xpos, ypos;
+    glfwGetCursorPos(gWindow, &xpos, &ypos);
+    lastX = xpos;
+    lastY = ypos;
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+      auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+      std::cout << "Pressed id: " << pressed_id << std::endl;
+      bool ui_handled = global_data->windows->Press(pressed_id) ||
+                        terrain->ui_slots_.Press(pressed_id) ||
+                        terrain->ui_event_handler_.Press(pressed_id);
+      if (ui_handled) {
+        return;
       }
-//      glfwSetCursorPosCallback(window, nullptr);
-//      std::cout << "dis" << std::endl;
-      global_data->ui_renderer->ResetSelecting();
+      terrain->ui_selection_.StartSelecting(
+          global_data->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
+      glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
+      glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
+      glfwSetKeyCallback(gWindow, KeyCallback_Blocked);
+    } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+      if (mod_shift) {
+        terrain->ui_edit_.SetPivotPosition(pressed_id);
+        glfwSetCursorPosCallback(gWindow, CursorPosCallback_RmbShift);
+        glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_RmbShift);
+        glfwSetKeyCallback(gWindow, KeyCallback_Blocked);
+      }
+    } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+      if (mod_shift) {
+        glfwSetCursorPosCallback(gWindow, CursorPosCallback_MmbShift);
+      } else {
+        glfwSetCursorPosCallback(gWindow, CursorPosCallback_Mmb);
+      }
+      glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Mmb_MmbShift);
+      glfwSetKeyCallback(gWindow, KeyCallback_Blocked);
     }
-  } else {
-    if (action == GLFW_PRESS) {
-      bool mod_shift = mods & GLFW_MOD_SHIFT;
-      bool mod_ctrl = mods & GLFW_MOD_CONTROL;
-      terrain->pressed_mouse_key_ = button;
-      double xpos, ypos;
-      glfwGetCursorPos(gWindow, &xpos, &ypos);
-      lastX = xpos;
-      lastY = ypos;
-      if (button == GLFW_MOUSE_BUTTON_LEFT) {
-        auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
-        std::cout << "Pressed id: " << pressed_id << std::endl;
-        bool ui_handled = global_data->windows->Press(pressed_id) ||
-                          terrain->slots_.Press(pressed_id) ||
-                          terrain->ui_event_handler_.Press(pressed_id);
-        if (ui_handled) {
-          return;
-        }
-        global_data->ui_renderer->StartSelecting(global_data->cursor_pos_tex_norm_);
-        if (mod_shift) {
-          if (mod_ctrl) {
-            glfwSetCursorPosCallback(gWindow, CursorPosCallback_LmbCtrlShift);
-          } else {
-            glfwSetCursorPosCallback(gWindow, CursorPosCallback_LmbShift);
-          }
-        } else if (mod_ctrl) {
-          glfwSetCursorPosCallback(gWindow, CursorPosCallback_LmbCtrl);
-        } else {
-          glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
-        }
-        terrain->mouse_process_ = true;
-      } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-        if (mod_shift) {
-          glfwSetCursorPosCallback(gWindow, CursorPosCallback_RmbShift);
-          terrain->mouse_process_ = true;
-          terrain->SetOriginPosition(pressed_id);
-        }
-      } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-        if (mod_shift) {
-          glfwSetCursorPosCallback(gWindow, CursorPosCallback_MmbShift);
-        } else {
-          glfwSetCursorPosCallback(gWindow, CursorPosCallback_Mmb);
-        }
-        terrain->mouse_process_ = true;
-      }
-    } else { // GLFW_RELEASE
-      if (button == GLFW_MOUSE_BUTTON_LEFT) {
-        terrain->slots_.Release();
-        global_data->windows->Release();
-      }
-      // if GLFW_RELEASE... if not process... we haven't done anything...
+  } else { // GLFW_RELEASE
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+      terrain->ui_slots_.Release();
+      global_data->windows->Release();
+      terrain->ui_selection_.Release();
+      terrain->sl_falloff_.Release();
     }
+    // if GLFW_RELEASE... if not process... we haven't done anything...
+  }
+}
+
+void MouseButtonCallback_Lmb(
+    GLFWwindow* window, int button, int action, int mods) {
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
+      glfwGetWindowUserPointer(window));
+  auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
+  glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  if (action == GLFW_PRESS) {
+    BindCallbacksDefault();
+  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
+    terrain->ui_selection_.StopSelecting(cursor_pos);
+    BindCallbacksDefault();
+  }
+}
+
+void MouseButtonCallback_RmbShift(
+    GLFWwindow* window, int button, int action, int mods) {
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
+      glfwGetWindowUserPointer(window));
+  auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
+  glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  if (action == GLFW_PRESS) {
+    glfwSetCursorPosCallback(gWindow, CallbackCursorPos); // we can press the same without release
+    glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
+  } else { // GLFW_RELEASE
+    if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+      glfwSetCursorPosCallback(gWindow, CallbackCursorPos);
+    }
+    terrain->ui_selection_.StopSelecting(cursor_pos);
+    glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
+    glfwSetKeyCallback(gWindow, KeyCallback);
+  }
+}
+
+void MouseButtonCallback_Mmb_MmbShift(
+    GLFWwindow* window, int button, int action, int mods) {
+  if (action == GLFW_PRESS ||
+      (action == GLFW_RELEASE ||
+       button == GLFW_MOUSE_BUTTON_MIDDLE)) {
+    BindCallbacksDefault();
   }
 }
 
@@ -341,49 +324,62 @@ void KeyCallback(
   auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
   global_data->ui_renderer->Press(key, action);
 
-  if (terrain->mouse_process_) {
-    if (action != GLFW_RELEASE) { // GLFW_REPEAT, GLFW_PRESS
-      if (key == GLFW_KEY_ENTER) {
-        terrain->Apply();
-      } else if (key == GLFW_KEY_ESCAPE) {
-        terrain->Cancel();
-      }
+  bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
+  bool mod_shift = (mods & GLFW_MOD_SHIFT);
+  if (action != GLFW_PRESS) {
+    return;
+  }
+  if (key == GLFW_KEY_ESCAPE) {
+    if (mod_shift) {
+      glfwSetWindowShouldClose(window, true);
+    } else if (!global_data->windows->GetTopWindow() &&
+               global_data->windows->GetSize() == 0) {
+      global_data->ui_renderer->AskForConfirmation(
+          data::TextId::kConfirmationExit, []() {
+            glfwSetWindowShouldClose(gWindow, true);
+          });
+    } else {
+      global_data->windows->BtnEscape();
     }
-  } else {
-    if (action == GLFW_PRESS) {
-      bool shift_pressed = (mods & GLFW_MOD_SHIFT);
-      bool ctrl_pressed = (mods & GLFW_MOD_CONTROL);
-      if (key == GLFW_KEY_ESCAPE) {
-        if (shift_pressed) {
-          glfwSetWindowShouldClose(window, true);
-        } else if (!global_data->windows->GetTopWindow() &&
-                   global_data->windows->GetSize() == 0) {
-          global_data->ui_renderer->AskForConfirmation(
-              data::TextId::kConfirmationExit, []() {
-                glfwSetWindowShouldClose(gWindow, true);
-              });
-        } else {
-          global_data->windows->BtnEscape();
-        }
-      } else if (key == GLFW_KEY_ENTER) {
-        global_data->windows->BtnEnter();
-      } else if (key == GLFW_KEY_G) {
-        glfwSetCursorPosCallback(gWindow, CursorPosCallback_G);
-        BindCallbacksTransform();
-      } else if (key == GLFW_KEY_S) {
-        glfwSetCursorPosCallback(gWindow, CursorPosCallback_S);
-        BindCallbacksTransform();
-      } else if (key == GLFW_KEY_R) {
-        glfwSetCursorPosCallback(gWindow, CursorPosCallback_R);
-        BindCallbacksTransform();
-      } else if (key == GLFW_KEY_1) {
-        global_data->ui_renderer->SetSelectionMode(SelectionMode::kSquare);
-      } else if (key == GLFW_KEY_2) {
-        global_data->ui_renderer->SetSelectionMode(SelectionMode::kCircle);
-      } else if (key == GLFW_KEY_3) {
-        global_data->ui_renderer->SetSelectionMode(SelectionMode::kLasso);
-      }
+  } else if (key == GLFW_KEY_ENTER) {
+    global_data->windows->BtnEnter();
+  } else if (key == GLFW_KEY_1) {
+    terrain->ui_selection_.SetSelectionMode(SelectionMode::kRectangle);
+  } else if (key == GLFW_KEY_2) {
+    terrain->ui_selection_.SetSelectionMode(SelectionMode::kCircle);
+  } else if (key == GLFW_KEY_3) {
+    terrain->ui_selection_.SetSelectionMode(SelectionMode::kLasso);
+  } else if (key == GLFW_KEY_4) {
+    terrain->ui_selection_.SetSelectionMode(SelectionMode::kTweak);
+  }
+  if (terrain->ui_slots_.GetSelectedSlotId() == -1) {
+    if (key == GLFW_KEY_G) {
+      BindCallbacksTransform(false);
+      glfwSetCursorPosCallback(gWindow, CursorPosCallback_G_NonSelected);
     }
+    return;
+  }
+  if (key == GLFW_KEY_G) {
+    BindCallbacksTransform(true);
+    glfwSetCursorPosCallback(gWindow, CursorPosCallback_G);
+  } else if (key == GLFW_KEY_S) {
+    BindCallbacksTransform(true);
+    glfwSetCursorPosCallback(gWindow, CursorPosCallback_S);
+  } else if (key == GLFW_KEY_R) {
+    BindCallbacksTransform(true);
+    glfwSetCursorPosCallback(gWindow, CursorPosCallback_R);
+  }
+}
+
+void KeyCallback_Blocked(
+    GLFWwindow* window, int key, int scancode, int action, int mods) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  global_data->ui_renderer->Press(key, action);
+  if (action == GLFW_RELEASE) {
+    return;
+  } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_ESCAPE) {
+    BindCallbacksDefault();
   }
 }
 
@@ -396,8 +392,8 @@ void CursorPosCallback_Mmb(
   lastY = ypos;
 
   void* global_data = glfwGetWindowUserPointer(window);
-  CameraHandler* camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera;
-  camera->MoveRotateView(xoffset, yoffset);
+  Camera* camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera;
+  camera->MoveRotateViewOrigin(xoffset, yoffset);
 }
 
 void CursorPosCallback_MmbShift(
@@ -409,7 +405,7 @@ void CursorPosCallback_MmbShift(
   lastY = ypos;
 
   void* global_data = glfwGetWindowUserPointer(window);
-  CameraHandler* camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera;
+  Camera* camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera;
   camera->MovePanView(xoffset, yoffset);
 }
 
@@ -417,17 +413,9 @@ void CursorPosCallback_Lmb(
     GLFWwindow* window, double xpos, double ypos) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(window);
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
-  global_data->ui_renderer->UpdateSelection(global_data->cursor_pos_tex_norm_);
+  auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
+  terrain->ui_selection_.UpdateSelection(global_data->cursor_pos_tex_norm_);
 }
-
-void CursorPosCallback_LmbShift(
-    GLFWwindow* window, double xpos, double ypos) {}
-
-void CursorPosCallback_LmbCtrl(
-    GLFWwindow* window, double xpos, double ypos) {}
-
-void CursorPosCallback_LmbCtrlShift(
-    GLFWwindow* window, double xpos, double ypos) {}
 
 void CursorPosCallback_RmbShift(
     GLFWwindow* window, double xpos, double ypos) {
@@ -437,31 +425,27 @@ void CursorPosCallback_RmbShift(
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
   std::cout << "Pressed id: " << pressed_id << std::endl;
-  terrain->SetOriginPosition(pressed_id);
+  terrain->ui_edit_.SetPivotPosition(pressed_id);
 }
 
 /// ---
 
-void BindCallbacksTransform() {
+void BindCallbacksTransform(bool init_transform) {
   double xpos, ypos;
   glfwGetCursorPos(gWindow, &xpos, &ypos);
   lastX = xpos;
   lastY = ypos;
-  glfwSetScrollCallback(gWindow, ScrollCallbackTransform);
+  glfwSetScrollCallback(gWindow, nullptr);
   glfwSetMouseButtonCallback(gWindow, MouseButtonCallbackTransform);
   glfwSetKeyCallback(gWindow, KeyCallbackTransform);
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
   auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
-  terrain->transform_axis_ = glm::vec3(1.0f);
-  terrain->slots_.InitTranslateStart();
-  terrain->slots_.InitScaleStart();
-  terrain->slots_.InitRotateStart();
-}
-
-void ScrollCallbackTransform(
-    GLFWwindow* window, double xoffset, double yoffset) {
-  /// no functionality
+  if (init_transform) {
+    auto& data = terrain->ui_edit_.GetInstanceData();
+    terrain->mouse_transform_.InitTransform(
+        &data.translate, &data.rotate, &data.scale);
+  }
 }
 
 void MouseButtonCallbackTransform(
@@ -487,101 +471,67 @@ void KeyCallbackTransform(
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
   auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
   global_data->ui_renderer->Press(key, action);
-
-  /// #1
   if (action != GLFW_PRESS) {
     return;
   }
-
+  if (mods & GLFW_MOD_SHIFT) {
+    if (key == GLFW_KEY_X) {
+      terrain->mouse_transform_.SetAxis({0.0f, 1.0f, 1.0f});
+    } else if (key == GLFW_KEY_Y) {
+      terrain->mouse_transform_.SetAxis({1.0f, 0.0f, 1.0f});
+    } else if (key == GLFW_KEY_Z) {
+      terrain->mouse_transform_.SetAxis({1.0f, 1.0f, 0.0f});
+    }
+  } else {
+    if (key == GLFW_KEY_X) {
+      terrain->mouse_transform_.SetAxis({1.0f, 0.0f, 0.0f});
+    } else if (key == GLFW_KEY_Y) {
+      terrain->mouse_transform_.SetAxis({0.0f, 1.0f, 0.0f});
+    } else if (key == GLFW_KEY_Z) {
+      terrain->mouse_transform_.SetAxis({0.0f, 0.0f, 1.0f});
+    }
+  }
   if (key == GLFW_KEY_ESCAPE) {
     return terrain->CancelTransform();
   } else if (key == GLFW_KEY_ENTER) {
     return terrain->ApplyTransform();
-  } else if (key == GLFW_KEY_G) {
-    terrain->CancelTransform();
-    glfwSetCursorPosCallback(gWindow, CursorPosCallback_G);
-    return;
-  } else if (key == GLFW_KEY_S) {
-    terrain->CancelTransform();
-    glfwSetCursorPosCallback(gWindow, CursorPosCallback_S);
-    return;
-  } else if (key == GLFW_KEY_R) {
-    terrain->CancelTransform();
-    glfwSetCursorPosCallback(gWindow, CursorPosCallback_R);
+  }
+  if (terrain->ui_slots_.GetSlotId() == -1) {
+    if (key == GLFW_KEY_G) {
+      glfwSetCursorPosCallback(gWindow, CursorPosCallback_G_NonSelected);
+      return terrain->CancelTransform();
+    }
     return;
   }
-
-  if (mods & GLFW_MOD_SHIFT) {
-    if (key == GLFW_KEY_X) {
-      terrain->transform_axis_ = glm::vec3(0.0f, 1.0f, 1.0f);
-    } else if (key == GLFW_KEY_Y) {
-      terrain->transform_axis_ = glm::vec3(1.0f, 0.0f, 1.0f);
-    } else if (key == GLFW_KEY_Z) {
-      terrain->transform_axis_ = glm::vec3(1.0f, 1.0f, 0.0f);
-    }
-  } else {
-    if (key == GLFW_KEY_X) {
-      terrain->transform_axis_ = glm::vec3(1.0f, 0.0f, 0.0f);
-    } else if (key == GLFW_KEY_Y) {
-      terrain->transform_axis_ = glm::vec3(0.0f, 1.0f, 0.0f);
-    } else if (key == GLFW_KEY_Z) {
-      terrain->transform_axis_ = glm::vec3(0.0f, 0.0f, 1.0f);
-    }
+  if (key == GLFW_KEY_G) {
+    glfwSetCursorPosCallback(gWindow, CursorPosCallback_G);
+    return terrain->CancelTransform();
+  } else if (key == GLFW_KEY_R) {
+    glfwSetCursorPosCallback(gWindow, CursorPosCallback_R);
+    return terrain->CancelTransform();
+  } else if (key == GLFW_KEY_S) {
+    glfwSetCursorPosCallback(gWindow, CursorPosCallback_S);
+    return terrain->CancelTransform();
   }
 }
 
 void CursorPosCallback_G(
     GLFWwindow* window, double xpos, double ypos) {
-  float xoffset = (xpos - lastX) / 1.0f;
-  float yoffset = (lastY - ypos) / 1.0f;
-
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
   auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
-
-  float cursor_diff = glm::length(glm::vec2{xoffset, yoffset});
-  auto camera_dir_right = global_data->camera->GetDirectionRight();
-  auto camera_dir_top = global_data->camera->GetDirectionUp();
-  auto translate =
-      camera_dir_right * xoffset * cursor_diff / static_cast<float>(gWindowWidth)
-      + camera_dir_top * yoffset * cursor_diff / static_cast<float>(gWindowHeight);
-  terrain->slots_.TranslateSelected(translate * terrain->transform_axis_);
+  terrain->mouse_transform_.TranslateSelected(xpos, ypos);
 }
 
-glm::vec3 GetEulerAngles(const glm::quat& q) {
-  glm::vec3 euler;
-
-  // roll (X axis)
-  float sinr_cosp = 2.0f * (q.w * q.x + q.y * q.z);
-  float cosr_cosp = 1.0f - 2.0f * (q.x * q.x + q.y * q.y);
-  euler.x = std::atan2(sinr_cosp, cosr_cosp);
-
-  // pitch (Y axis)
-  float sinp = 2.0f * (q.w * q.y - q.z * q.x);
-  if (std::abs(sinp) >= 1)
-    euler.y = std::copysign(glm::half_pi<float>(), sinp); // clamp ±90°
-  else
-    euler.y = std::asin(sinp);
-
-  // yaw (Z axis)
-  float siny_cosp = 2.0f * (q.w * q.z + q.x * q.y);
-  float cosy_cosp = 1.0f - 2.0f * (q.y * q.y + q.z * q.z);
-  euler.z = std::atan2(siny_cosp, cosy_cosp);
-
-  return glm::degrees(euler); // у градусах
-}
-
-void PrintQuaternion(glm::quat quat) {
-  glm::mat4 m = glm::mat4_cast(quat);
-
-  // Extract angles manually (YXZ convention for example)
-  float pitch = std::asin(-m[2][0]); // rotation around X
-  float yaw   = std::atan2(m[1][0], m[0][0]); // rotation around Y
-  float roll  = std::atan2(m[2][1], m[2][2]); // rotation around Z
-
-  std::cout << "Pitch: " << glm::degrees(pitch)
-            << " Yaw: "   << glm::degrees(yaw)
-            << " Roll: "  << glm::degrees(roll) << '\n';
+// slot_id == -1 (non-selected)
+void CursorPosCallback_G_NonSelected(
+    GLFWwindow* window, double xpos, double ypos) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
+  terrain->mouse_transform_.TranslateSelectedVerticesUp(
+      xpos, ypos, terrain->ui_selection_.GetSelectionMask(),
+      terrain->sl_falloff_.GetProgress());
 }
 
 void CursorPosCallback_R(
@@ -589,17 +539,7 @@ void CursorPosCallback_R(
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
   auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
-
-  float map_scale = global_data->tile_renderer->cur_tile_.map_scale;
-
-  glm::vec3 axis = terrain->transform_axis_;
-  if (axis == glm::vec3(1.0f)) {
-    auto camera_pos = global_data->camera->GetPosition();
-    auto obj_pos = terrain->slots_.GetInstanceTransform() * map_scale;
-    axis = glm::normalize(obj_pos - camera_pos);
-  }
-  terrain->slots_.RotateSelected(
-      static_cast<float>(xpos), static_cast<float>(ypos), axis);
+  terrain->mouse_transform_.RotateSelected(xpos, ypos);
 }
 
 void CursorPosCallback_S(
@@ -607,27 +547,7 @@ void CursorPosCallback_S(
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
   auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
-
-  auto map_scale = global_data->tile_renderer->cur_tile_.map_scale;
-  auto pos_3d = terrain->slots_.GetInstanceTransform();
-  glm::vec4 object_centre_3d = glm::vec4(pos_3d.x, pos_3d.y, pos_3d.z, 1.0f);
-  auto model = glm::mat4(1.0f);
-  model = glm::scale(model, glm::vec3(map_scale));
-  auto view = global_data->camera->GetViewMatrix();
-  auto projection = global_data->camera->GetProjMatrix();
-  auto mvp = projection * view * model;
-  glm::vec4 clipPos = mvp * object_centre_3d;
-  glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
-
-  glm::vec2 delta((xpos / (gWindowWidth / 2.0f) - 1.0f) - ndc.x,
-                  ndc.y - ((gWindowHeight - ypos) / (gWindowHeight / 2.0f) - 1.0f));
-  float factor = static_cast<float>(gWindowWidth)
-                 / static_cast<float>(gWindowHeight);
-  glm::vec2 offset(delta.x, factor * delta.y);
-  std::cout << offset.x << ' ' << offset.y << std::endl;
-
-  float cursor_diff = glm::length(offset);
-  terrain->slots_.ScaleSelected(cursor_diff, terrain->transform_axis_);
+  terrain->mouse_transform_.ScaleSelected(xpos, ypos);
 }
 
 } // namespace terrain

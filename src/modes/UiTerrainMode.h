@@ -6,10 +6,12 @@
 
 #include "IUiMode.h"
 #include "../common/Vbos.h"
+#include "../common/MouseTransform.h"
 
 #include "../core/Tile.h"
 #include "../core/UiSlots.h"
 #include "../core/UiComplex.h"
+#include "../core/UiSelection.h"
 
 /// everything's public, otherwise need to make too much callback friends
 class UiTerrainMode final : public IUiMode {
@@ -24,44 +26,35 @@ class UiTerrainMode final : public IUiMode {
 
   void RenderPicking() override;
 
-  void BindCallbacks() override;
+  void Setup() override;
 
   int GetPrerenderTextIdStart() const noexcept override;
 
   int GetPrerenderTextIdEnd() const noexcept override;
 
-  UiStaticSprite btn_update_;
-  UiStaticSprite sprite_flatten_;
-  UiToggle4 toggle_flatten_;
+  void CancelTransform();
 
-  UiSliderV3 slider_size_;
-  UiSliderV3 slider_falloff_;
+  void ApplyTransform();
 
-  UiStaticSprite btn_bake_;
+  void Reset();
+
+  UiDynamicSprite btn_update_;
+  UiDynamicSprite btn_reset_;
+  UiDynamicSprite btn_bake_;
+  UiToggle4 tg_flatten_;
+  UiSliderV3 sl_falloff_;
+
   UiTerrainBake ui_bake_;
+  UiSlots ui_slots_;
+  UiEditTerrain ui_edit_; // ! after ui_slots
+  UiSelection ui_selection_;
 
-  UiSlotsTerrain slots_;
+  MouseTransform mouse_transform_;
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kTerrainSlotsCreate) -
       static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1
       > ui_event_handler_;
-
-  void Cancel();
-
-  void Apply();
-
-  void CancelTransform();
-
-  void ApplyTransform();
-
-  void SetOriginPosition(GLuint pressed_id);
-
-  glm::vec3 transform_axis_ = glm::vec3(1.0f);
-  bool mouse_process_ = false;
-  int pressed_mouse_key_ = 0;
-
-  glm::vec4 cursor_pos_ = glm::vec4{0.0f, 0.0f, 0.0f, 1.0f};
 };
 
 namespace terrain {
@@ -77,7 +70,7 @@ void MouseButtonCallback(
 void KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods);
 
-/*
+/**
 MMB - 3d rotation around camera lookAt_origin, snap with ALT
 MMB+Shift - move in set up-right plane
 
@@ -99,24 +92,11 @@ void CursorPosCallback_MmbShift(
 void CursorPosCallback_Lmb(
     GLFWwindow* window, double xpos, double ypos);
 
-void CursorPosCallback_LmbShift(
-    GLFWwindow* window, double xpos, double ypos);
-
-void CursorPosCallback_LmbCtrl(
-    GLFWwindow* window, double xpos, double ypos);
-
-void CursorPosCallback_LmbCtrlShift(
-    GLFWwindow* window, double xpos, double ypos);
-
 void CursorPosCallback_RmbShift(
     GLFWwindow* window, double xpos, double ypos);
 
 
-
-void BindCallbacksTransform();
-
-void ScrollCallbackTransform(
-    GLFWwindow* window, double xoffset, double yoffset);
+void BindCallbacksTransform(bool init_transform);
 
 void MouseButtonCallbackTransform(
     GLFWwindow* window, int button, int action, int mods);
@@ -127,11 +107,25 @@ void KeyCallbackTransform(
 void CursorPosCallback_G(
     GLFWwindow* window, double xpos, double ypos);
 
+void CursorPosCallback_G_NonSelected(
+    GLFWwindow* window, double xpos, double ypos);
+
 void CursorPosCallback_R(
     GLFWwindow* window, double xpos, double ypos);
 
 void CursorPosCallback_S(
     GLFWwindow* window, double xpos, double ypos);
+
+
+/// cancellation (if mouse already doing something we block * until finish)
+void MouseButtonCallback_Lmb(
+    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallback_RmbShift(
+    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallback_Mmb_MmbShift(
+    GLFWwindow* window, int button, int action, int mods);
+void KeyCallback_Blocked(
+    GLFWwindow* window, int key, int scancode, int action, int mods);
 
 } // namespace terrain
 

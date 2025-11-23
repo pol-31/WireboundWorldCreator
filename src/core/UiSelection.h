@@ -26,11 +26,11 @@ class UiSelection {
     DeInit();
   }
 
-  void RenderAreaLike(const Texture32F* surface);
+  void SetIdBounds(GLuint bound_min, GLuint bound_max);
 
-  void RenderCircleLike(const Texture32F* surface);
+  void RenderAreaLike();
 
-  void RenderSurfaceSelection(const Texture32F* surface);
+  void RenderCircleLike();
 
   void RenderSelectionCircle();
 
@@ -57,7 +57,7 @@ class UiSelection {
 
  void ClearSelection();
 
- const Texture* SelectPoints();
+ void SelectPoints();
 
  /// should matter only on the beginning
  void SetMods(bool mod_ctrl, bool mod_shift) {
@@ -67,7 +67,12 @@ class UiSelection {
 
  void SetSelectionMode(SelectionMode mode);
 
- void Render(const Texture32F* surface);
+ /// use at mode switches, no check selection_mode_ == mode
+ void SetSelectionModeForce(SelectionMode mode);
+
+ void Render();
+
+ void RenderSurfaceSelection(const Texture32F* surface);
 
  void UpdateSelection(glm::vec2 mouse_pos);
 
@@ -75,12 +80,22 @@ class UiSelection {
 
  void StartSelecting(glm::vec2 cursor_pos, bool mod_ctrl, bool mod_shift);
 
- const Texture* StopSelecting(glm::vec2 cursor_pos);
+ void StopSelecting(glm::vec2 cursor_pos);
+
+ void NextSelectionMode();
+
+ [[nodiscard]] const Texture& GetSelectionMask() const noexcept {
+   return selection_tex_surface_;
+ }
+
+ void SetSelectionMask(const Texture& mask);
 
  private:
   void Init();
 
   void InitSelectionFbo();
+
+  void InitCursors();
 
   void DeInit();
 
@@ -125,6 +140,14 @@ class UiSelection {
   std::vector<glm::vec2> lasso_data_;
   SelectionMode selection_mode_ = SelectionMode::kRectangle;
   bool selecting_ = false;
+
+  GLuint bound_min_ = 0;
+  GLuint bound_max_ = 0;
+
+  GLFWcursor* csr_rectangle_;
+  GLFWcursor* csr_circle_;
+  GLFWcursor* csr_lasso_;
+  GLFWcursor* csr_tweak_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UISELECTION_H_

@@ -4,6 +4,8 @@
 #include "../common/OpenGlUtility.h"
 #include "../io/Camera.h"
 
+#include "../renderers/UiRenderer.h"
+
 UiNoiseLayerConfig::UiNoiseLayerConfig(
     UiSharedResources& ui_shared_resources,
     UiDynamicSprite&& config,
@@ -92,12 +94,21 @@ void UiNoiseLayerConfig::AttachToHierarchy(UiHierarchy& hierarchy) {
       &toggle_tiling_, &slider_strength_, &hmap_);
 }
 
+UiEditObjects::UiEditObjects(
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue)
+    : Base({data::VboIdMain::kSpare6}, 1.0f,
+           {{data::VboIdMain::kSpare7, []() {}},
+            {data::VboIdMain::kSpare8}},
+           ui_shared_resources, window_queue) {}
+
 UiEditTerrain::UiEditTerrain(
     Tile& cur_tile,
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer,
-    const std::vector<TerrainInstanceData>& instances)
+    std::vector<BaseInstanceData>& base_instances,
+    const int& selected_id)
     : Base({data::VboIdMain::kTerrainEditDesk}, 1.0f,
            {{data::VboIdMain::kTerrainEditDeskPinBack, []() {}},
             {data::VboIdMain::kTerrainEditDeskPinPoint}},
@@ -176,9 +187,10 @@ UiEditTerrain::UiEditTerrain(
           &color_brightness_, &random_generate_
       }),
       ui_shared_resources_(ui_shared_resources),
-      instances_(instances),
       random_generator_(std::random_device{}()),
-      ui_terrain_noise_(ui_shared_resources, window_queue, text_renderer) {
+      ui_terrain_noise_(ui_shared_resources, window_queue, text_renderer),
+      base_instances_(base_instances),
+      selected_id_(selected_id) {
   Init();
   hierarchy_ = UiHierarchy(
       &sprite_, &pin_, &accept_, &name_,
@@ -233,7 +245,9 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
           &color_brightness_, &random_generate_
       }),
       ui_shared_resources_(other.ui_shared_resources_),
-      instances_(other.instances_),
+      instances_(std::move(other.instances_)),
+      base_instances_(other.base_instances_),
+      selected_id_(other.selected_id_),
       random_generator_(other.random_generator_),
       ui_terrain_noise_(std::move(other.ui_terrain_noise_)) {
   hierarchy_ = UiHierarchy(
@@ -242,6 +256,11 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
       &color_indicator_, &random_generate_, &text_noise_invert_,
       &text_noise_tiling_, &text_noise_strength_);
   noise_layer_config_.AttachToHierarchy(hierarchy_);
+}
+
+void UiEditTerrain::CreateInstance() {
+  instances_.push_back(TerrainInstanceData{});
+  instances_.back().data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
 }
 
 int UiEditTerrain::CalculateGradientId(const glm::vec3& rotation) {
@@ -274,7 +293,7 @@ int UiEditTerrain::CalculateGradientId(const glm::vec3& rotation) {
   return shader_id[id];
 }
 
-void UiEditTerrain::UpdateHmap() {
+void UiEditTerrain::UpdateConfig() {
   using namespace utility;
   Texture32F hmap(details::gTerrainSize, GL_R32F);
   int size = details::gTerrainSize;
@@ -285,9 +304,9 @@ void UiEditTerrain::UpdateHmap() {
   //TODO: skip selected layer, then show as a wireframe on top
 
   for (int i = 0; i < instances_.size(); ++i) {
-    if (!instances_[i].do_show) {
-      continue;
-    }
+//    if (!instances_[i].do_show) {
+//      continue;
+//    }
 //    if (terrain_data_->data.hmap.GetId() == instances_[i].data.hmap.GetId()) {
 //      continue;
 //    }
@@ -363,9 +382,9 @@ bool UiEditTerrain::Press(int id) {
     std::cout << "GENERATE TERRAIN" << std::endl;
     // can't be nullptr (not possible to get there -
     // - btn_settings is on slot_back)
-    terrain_data_->data = Generate();
+    instances_[selected_id_].data = Generate();
 //    UpdateHmap2();
-    UpdateHmap();
+    UpdateConfig();
     return true;
   }
   int pressed_line_id = GetSliderNoiseId(
@@ -451,7 +470,7 @@ glm::vec4 HSBtoRGB(float h, float s, float b) {
 void UiEditTerrain::RenderNoiseConfig() {
   //TODO: need pad (in case we removed the last, while pinned noise_layer_config)
   // ... or we don't need it... nat bad too
-  if (!terrain_data_) {
+  if (selected_id_ == -1) {
     return; // no necessary, basically we can't be here in such case
   }
   glm::vec2 next_offset = glm::vec2{0.0f};
@@ -468,7 +487,7 @@ void UiEditTerrain::RenderNoiseConfig() {
 void UiEditTerrain::RenderPickingNoiseConfig() {
   //TODO: need pad (in case we removed the last, while pinned noise_layer_config)
   // ... or we don't need it... nat bad too
-  if (!terrain_data_) {
+  if (selected_id_ == -1) {
     return; // no necessary, basically we can't be here in such case
   }
   glm::vec2 next_offset = glm::vec2{0.0f};
@@ -495,11 +514,12 @@ bool UiEditTerrain::Render() {
   color_palette_.Render(mouse_pos);
   color_brightness_.Render(mouse_pos);
 
+  auto& terrain_data = base_instances_[selected_id_];
 
-  terrain_data_->color = HSBtoRGB(
+  terrain_data.color = HSBtoRGB(
       color_palette_.GetProgressX() * 0.85f, color_palette_.GetProgressY(),
       color_brightness_.GetProgress());
-  glUniform4fv(7, 1, glm::value_ptr(terrain_data_->color));
+  glUniform4fv(7, 1, glm::value_ptr(terrain_data.color));
   color_indicator_.Render();
   auto color = glm::vec4{1.0f};
   glUniform4fv(7, 1, glm::value_ptr(color));
@@ -511,7 +531,7 @@ bool UiEditTerrain::Render() {
 
   // text section
 
-  terrain_data_->name = name_.GetText();
+  terrain_data.name = name_.GetText();
   name_.RenderText();
   text_noise_invert_.Render();
   text_noise_tiling_.Render();
@@ -520,17 +540,71 @@ bool UiEditTerrain::Render() {
   return false;
 }
 
-void UiEditTerrain::SetTerrainData(TerrainInstanceData* terrain_data) {
-  terrain_data_ = terrain_data;
-  NoiseTerrainData* noise_data = &(terrain_data_->data);
-  noise_perlin_.SetConfig(noise_data->perlin);
-  noise_cellular_.SetConfig(noise_data->cellular);
-  noise_metaballs_.SetConfig(noise_data->metaballs);
-  noise_fbm_grid_.SetConfig(noise_data->fbm_grid);
-  noise_fbm_multi_.SetConfig(noise_data->fbm_multi);
-  noise_fbmd_perlin_.SetConfig(noise_data->fbmd_perlin);
-  noise_fbm_warp_.SetConfig(noise_data->fbm_warp);
-  noise_fmb_perlin_warp_.SetConfig(noise_data->fbm_perlin_warp);
+
+void UiEditTerrain::RenderGraph() {
+  if (selected_id_ == -1) {
+    return;
+  }
+  /// selected layer wireframe
+  ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+      ->terrain.RenderWireframe(&instances_[selected_id_],
+                                &base_instances_[selected_id_]);
+  auto color_invert = glm::vec4(1.0f) - base_instances_[selected_id_].color;
+  color_invert.w = 1.0f;
+
+  glm::vec4 pivot_pos = GetLayerCentre() - pivot_offset_;
+  ui_shared_resources_.global_glfw_callback_data_.ui_renderer
+      ->RenderWorldOrigin(pivot_pos, color_invert);
+
+  /// wireframe left bottom
+  auto& ui_layer_wireframe =
+      ui_shared_resources_.global_glfw_callback_data_
+          .ui_renderer->GetUiLayerWireframe();
+  ui_layer_wireframe.RenderLayerWireframe(
+      &instances_[selected_id_], &base_instances_[selected_id_]);
+}
+
+glm::vec4 UiEditTerrain::GetLayerCentre() {
+  return {
+      instances_[selected_id_].translate.x,
+      instances_[selected_id_].translate.y,
+      instances_[selected_id_].translate.z,
+      1.0f};
+}
+
+void UiEditTerrain::SetPivotPosition(GLuint pressed_id) {
+  if (pressed_id >= details::kIdOffsetWater ||
+      selected_id_ == -1) {
+    return;
+  }
+  glm::vec4 position(1.0f);
+  glm::uvec2 pos(pressed_id >> 10, pressed_id & 1023);
+  position.x = pos.x / 16.0f - 32.0f;
+  position.z = pos.y / 16.0f - 32.0f;
+  position.y =
+      ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+          ->cur_tile_.terrain_heights_[pressed_id];
+  auto layer_centre = GetLayerCentre();
+  pivot_offset_ = layer_centre - position;
+  auto map_scale = ui_shared_resources_.global_glfw_callback_data_.
+                   tile_renderer->cur_tile_.map_scale;
+  pivot_offset_ = glm::vec4{
+      pivot_offset_.x * map_scale,
+      pivot_offset_.y * map_scale,
+      pivot_offset_.z * map_scale,
+      0.0f};
+}
+
+void UiEditTerrain::SetTerrainData(int id) {
+  const NoiseTerrainData& noise_data = instances_[id].data;
+  noise_perlin_.SetConfig(noise_data.perlin);
+  noise_cellular_.SetConfig(noise_data.cellular);
+  noise_metaballs_.SetConfig(noise_data.metaballs);
+  noise_fbm_grid_.SetConfig(noise_data.fbm_grid);
+  noise_fbm_multi_.SetConfig(noise_data.fbm_multi);
+  noise_fbmd_perlin_.SetConfig(noise_data.fbmd_perlin);
+  noise_fbm_warp_.SetConfig(noise_data.fbm_warp);
+  noise_fmb_perlin_warp_.SetConfig(noise_data.fbm_perlin_warp);
 }
 
 void UiEditTerrain::RenderPicking() {
@@ -715,8 +789,13 @@ void UiEditTerrain::RandomGenerate() {
   for (auto n : noises_) {
     n->Randomize(random_generator_, dist_float, dist_bool);
   }
-  terrain_data_->data = Generate();
+  instances_[selected_id_].data = Generate();
 }
+
+void UiEditTerrain::Reset() {
+  instances_.clear();
+}
+
 
 UiTerrainBake::UiTerrainBake(
     Tile& cur_tile,
