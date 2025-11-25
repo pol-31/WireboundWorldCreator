@@ -1,4 +1,4 @@
-#include "UiTerrainWIndows.h"
+#include "UiTerrainWindows.h"
 
 #include "../core/TileRenderer.h"
 #include "../common/OpenGlUtility.h"
@@ -97,9 +97,9 @@ void UiNoiseLayerConfig::AttachToHierarchy(UiHierarchy& hierarchy) {
 UiEditObjects::UiEditObjects(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue)
-    : Base({data::VboIdMain::kSpare6}, 1.0f,
-           {{data::VboIdMain::kSpare7, []() {}},
-            {data::VboIdMain::kSpare8}},
+    : Base({data::VboIdMain::kObjectsEditDesk}, 1.0f,
+           {{data::VboIdMain::kObjectsEditPinBack, []() {}},
+            {data::VboIdMain::kObjectsEditPinPoint}},
            ui_shared_resources, window_queue) {}
 
 UiEditTerrain::UiEditTerrain(
@@ -176,8 +176,8 @@ UiEditTerrain::UiEditTerrain(
       noise_fbm_warp_(),
       noise_fmb_perlin_warp_(),
       noises_({&noise_perlin_, &noise_cellular_, &noise_metaballs_,
-          &noise_fbm_grid_, &noise_fbm_multi_, &noise_fbmd_perlin_,
-          &noise_fbm_warp_, &noise_fmb_perlin_warp_}),
+               &noise_fbm_grid_, &noise_fbm_multi_, &noise_fbmd_perlin_,
+               &noise_fbm_warp_, &noise_fmb_perlin_warp_}),
 
       ui_event_handler_({
           &pin_,
@@ -304,12 +304,12 @@ void UiEditTerrain::UpdateConfig() {
   //TODO: skip selected layer, then show as a wireframe on top
 
   for (int i = 0; i < instances_.size(); ++i) {
-//    if (!instances_[i].do_show) {
-//      continue;
-//    }
-//    if (terrain_data_->data.hmap.GetId() == instances_[i].data.hmap.GetId()) {
-//      continue;
-//    }
+    //    if (!instances_[i].do_show) {
+    //      continue;
+    //    }
+    //    if (terrain_data_->data.hmap.GetId() == instances_[i].data.hmap.GetId()) {
+    //      continue;
+    //    }
     /// --- hmap to mesh section ---
     shader_flatten_prep_.Bind();
 
@@ -383,7 +383,7 @@ bool UiEditTerrain::Press(int id) {
     // can't be nullptr (not possible to get there -
     // - btn_settings is on slot_back)
     instances_[selected_id_].data = Generate();
-//    UpdateHmap2();
+    //    UpdateHmap2();
     UpdateConfig();
     return true;
   }
@@ -422,11 +422,11 @@ int UiEditTerrain::GetSliderNoiseId(glm::vec2 mouse_pos) {
   float cursor = noise_layer_config_.slider_strength_.GetTrackPtr()
                      ->GetTopBorder();
   // pretty heavy check on DBG, skip
-//  float top = sprite_.GetTopBorder();
-//  float bottom = sprite_.GetBottomBorder();
-//  if (mouse_pos.y > top || mouse_pos.y < bottom) {
-//    return -1;
-//  }
+  //  float top = sprite_.GetTopBorder();
+  //  float bottom = sprite_.GetBottomBorder();
+  //  if (mouse_pos.y > top || mouse_pos.y < bottom) {
+  //    return -1;
+  //  }
   for (int i = 0; i < noises_.size(); ++i) {
     cursor -= entry_height;
     if (cursor < mouse_pos.y) {
@@ -660,9 +660,9 @@ NoiseTerrainData UiEditTerrain::Generate() {
   terrain_data.hmap.Store("hmap_end_4.png", 1, GL_RED);
 
   terrain_data.fbm_multi = noise_fbm_multi_.Generate();
-//  MergeLayers(terrain_data.hmap, terrain_data.fbm_multi.hmap,
-//              static_cast<NoiseDataBase*>(&terrain_data.fbm_multi),
-//              &terrain_data.fbm_multi);
+  //  MergeLayers(terrain_data.hmap, terrain_data.fbm_multi.hmap,
+  //              static_cast<NoiseDataBase*>(&terrain_data.fbm_multi),
+  //              &terrain_data.fbm_multi);
   terrain_data.hmap.Store("hmap_end_5.png", 1, GL_RED);
 
   terrain_data.fbmd_perlin = noise_fbmd_perlin_.Generate();
@@ -672,9 +672,9 @@ NoiseTerrainData UiEditTerrain::Generate() {
   terrain_data.hmap.Store("hmap_end_6.png", 1, GL_RED);
 
   terrain_data.fbm_warp = noise_fbm_warp_.Generate();
-//  MergeLayers(terrain_data.hmap, terrain_data.fbm_warp.hmap,
-//              static_cast<NoiseDataBase*>(&terrain_data.fbm_warp),
-//              &terrain_data.fbm_warp);
+  //  MergeLayers(terrain_data.hmap, terrain_data.fbm_warp.hmap,
+  //              static_cast<NoiseDataBase*>(&terrain_data.fbm_warp),
+  //              &terrain_data.fbm_warp);
   terrain_data.hmap.Store("hmap_end_7.png", 1, GL_RED);
 
   terrain_data.fbm_perlin_warp = noise_fmb_perlin_warp_.Generate();
@@ -706,7 +706,7 @@ void UiEditTerrain::MergeLayers(
   shader_merge_noises_.Bind();
   glUniform1i(0, static_cast<int>(noise_data->do_invert));
   //TODO: as well as transform_matrix:
-//  glUniform1i(1, static_cast<int>(noise_data->do_tiling));
+  //  glUniform1i(1, static_cast<int>(noise_data->do_tiling));
   glUniform1f(2, noise_data->strength);
 
   glBindImageTexture(
@@ -852,8 +852,8 @@ UiTerrainBake::UiTerrainBake(
       &sprite_, &pin_, &accept_, &erosion_label_,
       &erosion_input_, &weathering_label_, &weathering_input_,
       &sprite_hmap_/*, &sprite_nmap_, &sprite_slopemap_,
-      &sprite_ao_, &sprite_splatmap_, &sprite_erosion_thermal_,
-      &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_*/);
+        &sprite_ao_, &sprite_splatmap_, &sprite_erosion_thermal_,
+        &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_*/);
   speed_ = 2.0f;
 }
 
@@ -900,8 +900,8 @@ UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
       &sprite_, &pin_, &accept_, &erosion_label_,
       &erosion_input_, &weathering_label_, &weathering_input_,
       &sprite_hmap_/*, &sprite_nmap_, &sprite_slopemap_,
-      &sprite_ao_, &sprite_splatmap_, &sprite_erosion_thermal_,
-      &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_*/);
+        &sprite_ao_, &sprite_splatmap_, &sprite_erosion_thermal_,
+        &sprite_erosion_hydraulic_, &sprite_water_accum_, &sprite_water_flow_*/);
 }
 
 bool UiTerrainBake::Press(int id) {
@@ -926,29 +926,29 @@ bool UiTerrainBake::Render() {
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_height.Bind();
   sprite_hmap_.Render();
 
-/*  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_normal.Bind();
-  sprite_nmap_.Render();
+  /*  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_normal.Bind();
+    sprite_nmap_.Render();
 
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_slope.Bind();
-  sprite_slopemap_.Render();
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_slope.Bind();
+    sprite_slopemap_.Render();
 
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_ao.Bind();
-  sprite_ao_.Render();
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_ao.Bind();
+    sprite_ao_.Render();
 
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_splat.Bind();
-  sprite_splatmap_.Render();
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_splat.Bind();
+    sprite_splatmap_.Render();
 
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_erosion_thermal.Bind();
-  sprite_erosion_thermal_.Render();
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_erosion_thermal.Bind();
+    sprite_erosion_thermal_.Render();
 
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_erosion_hydraulic.Bind();
-  sprite_erosion_hydraulic_.Render();
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_terrain_erosion_hydraulic.Bind();
+    sprite_erosion_hydraulic_.Render();
 
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_water_accum.Bind();
-  sprite_water_accum_.Render();
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_water_accum.Bind();
+    sprite_water_accum_.Render();
 
-  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_water_flow.Bind();
-  sprite_water_flow_.Render();*/
+    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_.map_water_flow.Bind();
+    sprite_water_flow_.Render();*/
 
   ui_shared_resources_.dynamic_sprite_shader_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
@@ -1172,7 +1172,7 @@ void UiTerrainBake::ProcessErosion(
     for (int j = 0; j < height; ++j) {
       float acc = -hmap_heights_[i * size + j] + start_height_map_data[i * size + j];
       hmap_heights_updated[i * width + j] = acc;
-//          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
+      //          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
 
@@ -1186,7 +1186,7 @@ void UiTerrainBake::ProcessErosion(
     for (int j = 0; j < height; ++j) {
       float acc = hmap_heights_[i * size + j];
       hmap_heights_updated[i * width + j] = acc;
-//          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
+      //          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
   tex_hmap_ = Texture32F(details::gTerrainSize, GL_R32F);
@@ -1214,7 +1214,7 @@ void UiTerrainBake::ProcessThermalWeathering(
     for (int j = 0; j < height; ++j) {
       float acc = hmap_heights_[i * size + j] - start_height_map_data[i * size + j];
       hmap_heights_updated[i * width + j] = acc;
-//          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
+      //          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
 
@@ -1228,7 +1228,7 @@ void UiTerrainBake::ProcessThermalWeathering(
     for (int j = 0; j < height; ++j) {
       float acc = hmap_heights_[i * size + j];
       hmap_heights_updated[i * width + j] = acc;
-//          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
+      //          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
   tex_hmap_ = Texture32F(details::gTerrainSize, GL_R32F);
@@ -1409,7 +1409,7 @@ void UiTerrainBake::UpdateCpuData() {
 
 void UiTerrainBake::Bake(
     int steps_thermal, int steps_weathering, float talus) {
-//  Perturbate();
+  //  Perturbate();
   std::cout << "CH1" << std::endl;
   UpdateCpuData();
 
@@ -1419,11 +1419,11 @@ void UiTerrainBake::Bake(
   std::cout << "CH4" << std::endl;
 
   /// erosion & thermal weathering
-//    ProcessErosion(flow_dir, flow_accum, steps_thermal);
+  //    ProcessErosion(flow_dir, flow_accum, steps_thermal);
   std::cout << "CH5" << std::endl;
   UpdateCpuData();
 
-//    ProcessThermalWeathering(steps_weathering, talus);
+  //    ProcessThermalWeathering(steps_weathering, talus);
   std::cout << "CH6" << std::endl;
   UpdateCpuData();
 

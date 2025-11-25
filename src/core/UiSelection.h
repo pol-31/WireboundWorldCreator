@@ -28,6 +28,56 @@ class UiSelection {
 
   void SetIdBounds(GLuint bound_min, GLuint bound_max);
 
+  void Render();
+
+  void RenderOnSurface(const Texture32F* surface);
+
+  void Start(glm::vec2 cursor_pos, bool mod_ctrl, bool mod_shift);
+
+  void Stop(glm::vec2 cursor_pos);
+
+  void Update(glm::vec2 mouse_pos);
+
+  bool Scroll(float yoffset);
+
+  /// should matter only on the beginning
+  void SetMods(bool mod_ctrl, bool mod_shift) {
+    mod_ctrl_ = mod_ctrl;
+    mod_shift_ = mod_shift;
+  }
+
+  void SetMode(SelectionMode mode);
+
+  /// use at menu mode switches, no check selection_mode_ == mode
+  void SetModeForce(SelectionMode mode);
+
+  void NextMode();
+
+  [[nodiscard]] const Texture& GetMask() const noexcept {
+    return selection_tex_surface_;
+  }
+
+  void SetMask(const Texture& mask);
+
+ private:
+  void Init();
+
+  void InitCursors();
+
+  void InitSelectionFbo();
+
+  void DeInit();
+
+  /// to update the buffer data (internal UpdateRenderData() call).
+  /// use normalized cursor pos (-1;1 scale)
+  void SelectRectangle(glm::vec2 end_pos);
+
+  void SelectCircle(glm::vec2 mouse_pos);
+
+  void SelectLasso(glm::vec2 mouse_pos);
+
+  void SelectTweak();
+
   void RenderAreaLike();
 
   void RenderCircleLike();
@@ -36,68 +86,11 @@ class UiSelection {
 
   void ResetBufferData();
 
-  // at mode switching (e.g. reset circle selection radius)
-  void ResetSelection();
+  void ResetConfig();
 
-  /// to update the buffer data (internal UpdateRenderData() call).
-  /// use normalized cursor pos (-1;1 scale)
-  void SetRectangleSelection(glm::vec2 end_pos);
+  void ClearMask();
 
-  void SetCircleSelection(glm::vec2 mouse_pos);
-
-  void SetLassoSelection(glm::vec2 mouse_pos);
-
-  void SetTweakSelection();
-
-  void SetCircleRadius(float radius);
-
-  void StepCircleRadius(float step);
-
- void Release();
-
- void ClearSelection();
-
- void SelectPoints();
-
- /// should matter only on the beginning
- void SetMods(bool mod_ctrl, bool mod_shift) {
-   mod_ctrl_ = mod_ctrl;
-   mod_shift_ = mod_shift;
- }
-
- void SetSelectionMode(SelectionMode mode);
-
- /// use at mode switches, no check selection_mode_ == mode
- void SetSelectionModeForce(SelectionMode mode);
-
- void Render();
-
- void RenderSurfaceSelection(const Texture32F* surface);
-
- void UpdateSelection(glm::vec2 mouse_pos);
-
- bool ScrollSelection(float yoffset);
-
- void StartSelecting(glm::vec2 cursor_pos, bool mod_ctrl, bool mod_shift);
-
- void StopSelecting(glm::vec2 cursor_pos);
-
- void NextSelectionMode();
-
- [[nodiscard]] const Texture& GetSelectionMask() const noexcept {
-   return selection_tex_surface_;
- }
-
- void SetSelectionMask(const Texture& mask);
-
- private:
-  void Init();
-
-  void InitSelectionFbo();
-
-  void InitCursors();
-
-  void DeInit();
+  void ClearSelectionFbo();
 
   void UpdateRenderData(
       const std::vector<glm::vec3>& polygon, float stipple_width);
@@ -106,7 +99,7 @@ class UiSelection {
 
   void ApplySelection();
 
-  void ClearSelectionFbo();
+  void SelectPoints();
 
   UiDynamicSprite sp_circle_;
   UiSharedResources& ui_shared_resources_;

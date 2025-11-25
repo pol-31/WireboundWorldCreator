@@ -5,7 +5,7 @@
 #include "../common/Details.h"
 #include "../common/GlobalGlfwCallbackData.h"
 #include "../modes/UiSharedResources.h"
-#include "Cameras.h"
+#include "Camera.h"
 #include "../common/PickingFramebuffer.h"
 #include "../common/UiDebugger.h"
 
@@ -38,44 +38,10 @@ void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
 
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(gWindow));
-  global_data->camera->UpdateProjectionMatrices();
+  global_data->camera->UpdateProjectionMatrix();
   global_data->ui_debugger->UpdateMoveSteps();
   global_data->picking_fbo->UpdateResolution();
   global_data->ui_shared_resources->UpdateResolution();
-}
-
-void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos) {}
-
-/// wasd movement (for debugging purposes)
-/// each IUiMode has its own set of callbacks (scroll, mouse / keyboard btn),
-/// so they are bind at mode switching (Menu.h)
-void WasdKeyCallback(GLFWwindow* window, int key,
-                     int scancode, int action, int mods) {
-  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
-  if (action == GLFW_PRESS) {
-    if (key == GLFW_KEY_W) {
-      global_data->camera->SetMoveForward();
-    } else if (key == GLFW_KEY_A) {
-      global_data->camera->SetMoveLeft();
-    } else if (key == GLFW_KEY_S) {
-      global_data->camera->SetMoveBackward();
-    } else if (key == GLFW_KEY_D) {
-      global_data->camera->SetMoveRight();
-    } else if (key == GLFW_KEY_ESCAPE) {
-      glfwSetWindowShouldClose(window, true);
-    }
-  } else if (action == GLFW_RELEASE) {
-    if (key == GLFW_KEY_W) {
-      global_data->camera->SetMoveForward(0.0f);
-    } else if (key == GLFW_KEY_A) {
-      global_data->camera->SetMoveLeft(0.0f);
-    } else if (key == GLFW_KEY_S) {
-      global_data->camera->SetMoveBackward(0.0f);
-    } else if (key == GLFW_KEY_D) {
-      global_data->camera->SetMoveRight(0.0f);
-    }
-  }
 }
 
 void APIENTRY glDebugOutput(

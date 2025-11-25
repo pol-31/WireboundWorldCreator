@@ -56,6 +56,7 @@ class UiEditBase : public UiWindowAppear {
   virtual void CreateInstance() = 0;
   virtual void Reset() = 0;
 };
+
 class UiEditObjects : public UiEditBase {
  public:
   using Base = UiEditBase;
@@ -75,6 +76,34 @@ class UiEditObjects : public UiEditBase {
   void RenderPicking() override {}
 
   void Reset() override {}
+};
+
+class UiEditBiomes : public UiEditBase {
+ public:
+  using Base = UiEditBase;
+  UiEditObjects(
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue);
+
+  void UpdateConfig() override {}
+  void SetInstanceId(int id) override {}
+  void HideAll() override {}
+  void CreateInstance() override {}
+
+  bool Press(int id) override {return false;}
+  void Release() override {}
+  bool Scroll(GLuint id, float yoffset) override {return false;}
+  bool Render() override {return false;}
+  void RenderPicking() override {}
+
+  void Reset() override {}
+
+  UiDynamicSprite btn_wind_;
+  UiDynamicSprite btn_sun_;
+  UiDynamicSprite btn_time_;
+  UiDynamicSprite btn_precipitations_;
+  UiDynamicSprite btn_temperature_;
+  UiDynamicSprite btn_clouds_;
 };
 
 class UiEditTerrain final : public UiEditBase {
@@ -129,13 +158,13 @@ class UiEditTerrain final : public UiEditBase {
 
   void SetPivotPosition(GLuint pressed_id);
 
- [[nodiscard]] TerrainInstanceData& GetInstanceData() noexcept {
-   return instances_[selected_id_];
- }
+  [[nodiscard]] TerrainInstanceData& GetInstanceData() noexcept {
+    return instances_[selected_id_];
+  }
 
- void RenderGraph();
+  void RenderGraph();
 
- void Reset() override;
+  void Reset() override;
 
  private:
   void Init();
@@ -177,8 +206,8 @@ class UiEditTerrain final : public UiEditBase {
 
   UiDynamicSprite accept_;
   UiTextInput name_;
-//  UiDynamicSprite name_;
-//  UiDynamicSprite name_back_;
+  //  UiDynamicSprite name_;
+  //  UiDynamicSprite name_back_;
 
   UiSlider2D color_palette_;
   UiSliderH2 color_brightness_;
@@ -216,7 +245,7 @@ class UiEditTerrain final : public UiEditBase {
 
   Texture32F tex_mesh_; /// temp for base hmap baking
 
-//  ITerrainNoise* selected_noise_ = nullptr;
+  //  ITerrainNoise* selected_noise_ = nullptr;
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kTerrainWindowNoiseSliderIcon) -
@@ -314,8 +343,8 @@ class UiTerrainBake final : public UiWindowAppear {
 
   UiDynamicSprite accept_;
 
-//  UiTextInput erosion_input_;
-//  UiTextInput weathering_input_;
+  //  UiTextInput erosion_input_;
+  //  UiTextInput weathering_input_;
   UiTextModeId erosion_label_;
   UiTextInput erosion_input_;
   UiTextModeId weathering_label_;

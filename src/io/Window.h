@@ -40,11 +40,6 @@ void SetupWindow();
 
 void CallbackFramebufferSize(GLFWwindow* window, int width, int height);
 
-void CallbackCursorPos(GLFWwindow* window, double xpos, double ypos);
-
-void WasdKeyCallback(GLFWwindow* window, int key,
-                     int scancode, int action, int mods);
-
 void APIENTRY glDebugOutput(
     GLenum source, GLenum type, GLuint id,
     GLenum severity, GLsizei length [[maybe_unused]],

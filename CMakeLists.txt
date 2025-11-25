@@ -27,10 +27,8 @@ add_executable(WireboundWorldCreator
         src/io/Cursor.cpp
         src/io/Window.cpp
         src/modes/UiBiomesMode.cpp
-        src/modes/UiFencesMode.cpp
         src/modes/UiObjectsMode.cpp
         src/modes/UiPlacementMode.cpp
-        src/modes/UiRoadsMode.cpp
         src/modes/UiTerrainMode.cpp
         src/modes/UiTilesMode.cpp
         src/modes/UiWaterMode.cpp
@@ -43,7 +41,6 @@ add_executable(WireboundWorldCreator
         src/renderers/water/Ocean.cpp
 
         # temp (need to remove)
-        src/common/ArbitraryGraph.cpp
         src/environment/Wind.cpp
         src/environment/Wind.h
         src/environment/Time.cpp
@@ -76,15 +73,12 @@ add_executable(WireboundWorldCreator
         src/core/UiComplex.h
         src/modes/UiTerrainConfig.cpp
         src/modes/UiTerrainConfig.h
-        src/common/TerrainGrid.cpp
-        src/common/TerrainGrid.h
-        src/common/IGraph.h
         src/core/WindowQueue.h
         src/core/WindowQueue.cpp
         src/core/UiText.cpp
         src/core/UiText.h
-        src/modes/UiTerrainWIndows.cpp
-        src/modes/UiTerrainWIndows.h
+        src/modes/UiTerrainWindows.cpp
+        src/modes/UiTerrainWindows.h
         src/core/Tile.cpp
         src/modes/TerrainNoiseData.h
         src/modes/TerrainInstanceData.h
@@ -114,6 +108,17 @@ add_executable(WireboundWorldCreator
         src/common/models/Obstacle.h
         src/common/models/ModelManager.cpp
         src/common/models/ModelManager.h
+        src/common/models/MappedObject.cpp
+        src/common/models/MappedObject.h
+        src/common/MouseTransform.cpp
+        src/common/MouseTransform.h
+        src/common/BaseInstanceData.h
+        src/core/UiCloning.cpp
+        src/core/UiCloning.h
+        src/modes/UiTerrainWindows.cpp
+        src/modes/UiTerrainWindows.h
+        src/common/Callbacks.cpp
+        src/common/Callbacks.h
 
 )
 
