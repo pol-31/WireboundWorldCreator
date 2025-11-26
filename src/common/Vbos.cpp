@@ -3,7 +3,6 @@
 namespace data {
 
 extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
-
     "kMenuTerrain",
     "kMenuTerrainOff",
     "kMenuTerrainOn1",
@@ -53,6 +52,11 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kMenuTilesOn3",
 
     "kMenuPlayer",
+    "kMenuPlayerOff",
+    "kMenuPlayerOn1",
+    "kMenuPlayerOn2",
+    "kMenuPlayerOn3",
+
 
     "kMenuShaderWirebound",
     "kMenuShadersOff",
@@ -89,8 +93,6 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kSettingsSensitivityArea",
     "kSettingsSensitivityHandle",
 
-    "kSettingsKeyboard",
-
     "kSettingsSoundArea",
     "kSettingsSoundHandle",
     "kSettingsSoundOff",
@@ -123,30 +125,12 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kTerrainFlattenOn2",
     "kTerrainFlattenOn3",
 
-    "kTerrainSizeFill",
-    "kTerrainSizeBack",
-    "kTerrainSizeIcon",
-
     "kTerrainFalloffFill",
     "kTerrainFalloffBack",
     "kTerrainFalloffIcon",
 
     "kTerrainBake",
-
-    "kTerrainSlotsName",
-    "kTerrainSlotsConfig",
-    "kTerrainVisibleOff",
-    "kTerrainVisibleOn1",
-    "kTerrainVisibleOn2",
-    "kTerrainVisibleOn3",
-    "kTerrainSlotsSlot",
-    "kTerrainSlotsSlotColor",
-    "kTerrainSlotsRemove",
-    "kTerrainSlotsSelected",
-    "kTerrainSlotsHandler",
-    "kTerrainSlotsSlider",
-    "kTerrainSlotsBack",
-    "kTerrainSlotsCreate",
+    "kTerrainReset",
 
     "kTerrainBakeDesk",
     "kTerrainBakeDeskPinBack",
@@ -175,6 +159,9 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kTerrainEditHeightmap",
     "kTerrainEditRandomGeneration",
 
+    "kTerrainEditLabelInvert",
+    "kTerrainEditLabelTiling",
+    "kTerrainEditLabelStrength",
 
     "kTerrainEditTranslateLabel",
     "kTerrainEditTranslateXText",
@@ -200,11 +187,6 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kTerrainEditRotateZText",
     "kTerrainEditRotateZTextSlot",
 
-
-    "kTerrainEditLabelInvert",
-    "kTerrainEditLabelTiling",
-    "kTerrainEditLabelStrength",
-
     "kTerrainEditNoiseConfig",
     "kTerrainEditNoiseName",
     "kTerrainEditNoiseInvertOff",
@@ -219,42 +201,12 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kTerrainEditNoiseStrengthIcon",
     "kTerrainEditNoiseHmap",
 
-    "kTerrainWindowNoiseName",
-    "kTerrainWindowNoiseDesk",
-    "kTerrainWindowNoisePinBack",
-    "kTerrainWindowNoisePinPoint",
-    "kTerrainWindowNoiseHandler",
-    "kTerrainWindowNoiseSlider",
-    "kTerrainWindowNoiseSave",
-    "kTerrainWindowNoiseSliderText",
-    "kTerrainWindowNoiseSliderArea",
-    "kTerrainWindowNoiseSliderIcon",
-
 
     "kWaterWaterMode",
     "kWaterUpdate",
-    "kWaterLake",
+    "kWaterOcean",
     "kWaterRiver",
-    "kWaterWaterfall",
-
-    "kWaterSlotsName",
-    "kWaterSlotsConfig",
-    "kWaterVisibleOff",
-    "kWaterVisibleOn1",
-    "kWaterVisibleOn2",
-    "kWaterVisibleOn3",
-    "kWaterSlotsSlot",
-    "kWaterSlotsSlotColor",
-    "kWaterSlotsRemove",
-    "kWaterSlotsSelected",
-    "kWaterSlotsHandler",
-    "kWaterSlotsSlider",
-    "kWaterSlotsBack",
-    "kWaterSlotsCreate",
-    "kWaterSlotsFlipPointEdgeFace_Back",
-    "kWaterSlotsFlipSelectEdit_Back",
-    "kWaterSlotsFlipPointEdgeFace",
-    "kWaterSlotsFlipSelectEdit",
+    "kWaterSelected",
 
     "kWaterEditDesk",
     "kWaterEditDeskPinBack",
@@ -267,246 +219,24 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kWaterColorIndicator",
     "kWaterColorBrightnessCursor",
     "kWaterColorColorCursor",
+    "kWaterEditRandomGeneration",
 
-    "kWaterTypeBack",
-    "kWaterTypeText",
-    "kWaterTypePrevious",
-    "kWaterTypeNext",
+    "kWaterEditRiverViscosityText",
+    "kWaterEditRiverViscosityArea",
+    "kWaterEditRiverViscosityIcon",
+    "kWaterEditRiverTransparencyText",
+    "kWaterEditRiverTransparencyArea",
+    "kWaterEditRiverTransparencyIcon",
 
-    "kWaterLayer1",
-    "kWaterLayer1Window",
-    "kWaterLayer1PinBack",
-    "kWaterLayer1PinPoint",
-    "kWaterLayer1Text",
-    "kWaterLayer1Off",
-    "kWaterLayer1On1",
-    "kWaterLayer1On2",
-    "kWaterLayer1On3",
-
-    "kWater1ScaleLabel",
-    "kWater1ScaleFill",
-    "kWater1ScaleBack",
-    "kWater1ScaleHandler",
-
-    "kWater1FetchLabel",
-    "kWater1FetchFill",
-    "kWater1FetchBack",
-    "kWater1FetchHandler",
-
-    "kWater1SpreadBlendLabel",
-    "kWater1SpreadBlendFill",
-    "kWater1SpreadBlendBack",
-    "kWater1SpreadBlendHandler",
-
-    "kWater1SwellLabel",
-    "kWater1SwellFill",
-    "kWater1SwellBack",
-    "kWater1SwellHandler",
-
-    "kWater1PeakEnhancementLabel",
-    "kWater1PeakEnhancementFill",
-    "kWater1PeakEnhancementBack",
-    "kWater1PeakEnhancementHandler",
-
-    "kWater1ShortWavesFadeLabel",
-    "kWater1ShortWavesFadeFill",
-    "kWater1ShortWavesFadeBack",
-    "kWater1ShortWavesFadeHandler",
-
-    "kWater1LambdaLabel",
-    "kWater1LambdaFill",
-    "kWater1LambdaBack",
-    "kWater1LambdaHandler",
-
-
-    "kWaterLayer2",
-    "kWaterLayer2Window",
-    "kWaterLayer2PinBack",
-    "kWaterLayer2PinPoint",
-    "kWaterLayer2Text",
-    "kWaterLayer2Off",
-    "kWaterLayer2On1",
-    "kWaterLayer2On2",
-    "kWaterLayer2On3",
-
-    "kWater2ScaleLabel",
-    "kWater2ScaleFill",
-    "kWater2ScaleBack",
-    "kWater2ScaleHandler",
-
-    "kWater2FetchLabel",
-    "kWater2FetchFill",
-    "kWater2FetchBack",
-    "kWater2FetchHandler",
-
-    "kWater2SpreadBlendLabel",
-    "kWater2SpreadBlendFill",
-    "kWater2SpreadBlendBack",
-    "kWater2SpreadBlendHandler",
-
-    "kWater2SwellLabel",
-    "kWater2SwellFill",
-    "kWater2SwellBack",
-    "kWater2SwellHandler",
-
-    "kWater2PeakEnhancementLabel",
-    "kWater2PeakEnhancementFill",
-    "kWater2PeakEnhancementBack",
-    "kWater2PeakEnhancementHandler",
-
-    "kWater2ShortWavesFadeLabel",
-    "kWater2ShortWavesFadeFill",
-    "kWater2ShortWavesFadeBack",
-    "kWater2ShortWavesFadeHandler",
-
-    "kWater2LambdaLabel",
-    "kWater2LambdaFill",
-    "kWater2LambdaBack",
-    "kWater2LambdaHandler",
-
-
-    "kWaterLayer3",
-    "kWaterLayer3Window",
-    "kWaterLayer3PinBack",
-    "kWaterLayer3PinPoint",
-    "kWaterLayer3Text",
-    "kWaterLayer3Off",
-    "kWaterLayer3On1",
-    "kWaterLayer3On2",
-    "kWaterLayer3On3",
-
-    "kWater3ScaleLabel",
-    "kWater3ScaleFill",
-    "kWater3ScaleBack",
-    "kWater3ScaleHandler",
-
-    "kWater3FetchLabel",
-    "kWater3FetchFill",
-    "kWater3FetchBack",
-    "kWater3FetchHandler",
-
-    "kWater3SpreadBlendLabel",
-    "kWater3SpreadBlendFill",
-    "kWater3SpreadBlendBack",
-    "kWater3SpreadBlendHandler",
-
-    "kWater3SwellLabel",
-    "kWater3SwellFill",
-    "kWater3SwellBack",
-    "kWater3SwellHandler",
-
-    "kWater3PeakEnhancementLabel",
-    "kWater3PeakEnhancementFill",
-    "kWater3PeakEnhancementBack",
-    "kWater3PeakEnhancementHandler",
-
-    "kWater3ShortWavesFadeLabel",
-    "kWater3ShortWavesFadeFill",
-    "kWater3ShortWavesFadeBack",
-    "kWater3ShortWavesFadeHandler",
-
-    "kWater3LambdaLabel",
-    "kWater3LambdaFill",
-    "kWater3LambdaBack",
-    "kWater3LambdaHandler",
-
-
-    "kRoadsRoadsMode",
-    "kRoadsAsphalt",
-    "kRoadsGravel",
-    "kRoadsSoil",
-
-    "kRoadsSlotsName",
-    "kRoadsSlotsConfig",
-    "kRoadsVisibleOff",
-    "kRoadsVisibleOn1",
-    "kRoadsVisibleOn2",
-    "kRoadsVisibleOn3",
-    "kRoadsSlotsSlot",
-    "kRoadsSlotsSlotColor",
-    "kRoadsSlotsRemove",
-    "kRoadsSlotsSelected",
-    "kRoadsSlotsHandler",
-    "kRoadsSlotsSlider",
-    "kRoadsSlotsBack",
-    "kRoadsSlotsCreate",
-    "kRoadsSlotsFlipPointEdgeFace_Back",
-    "kRoadsSlotsFlipSelectEdit_Back",
-    "kRoadsSlotsFlipPointEdgeFace",
-    "kRoadsSlotsFlipSelectEdit",
-
-    "kRoadsEditDesk",
-    "kRoadsEditPinBack",
-    "kRoadsEditPinPoint",
-    "kRoadsEditAccept",
-    "kRoadsEditName",
-    "kRoadsEditNameBack",
-    "kRoadsColorPaletteHS",
-    "kRoadsColorPaletteB",
-    "kRoadsColorIndicator",
-    "kRoadsColorBrightnessCursor",
-    "kRoadsColorColorCursor",
-
-    "kRoadsTypeBack",
-    "kRoadsTypeText",
-    "kRoadsTypePrevious",
-    "kRoadsTypeNext",
-
-
-    "kFencesFencesMode",
-    "kFencesPicket",
-    "kFencesChainLink",
-    "kFencesWooden",
-
-    "kFencesSlotsName",
-    "kFencesSlotsConfig",
-    "kFencesVisibleOff",
-    "kFencesVisibleOn1",
-    "kFencesVisibleOn2",
-    "kFencesVisibleOn3",
-    "kFencesSlotsSlot",
-    "kFencesSlotsSlotColor",
-    "kFencesSlotsRemove",
-    "kFencesSlotsSelected",
-    "kFencesSlotsHandler",
-    "kFencesSlotsSlider",
-    "kFencesSlotsBack",
-    "kFencesSlotsCreate",
-    "kFencesSlotsFlipPointEdgeFace_Back",
-    "kFencesSlotsFlipSelectEdit_Back",
-    "kFencesSlotsFlipPointEdgeFace",
-    "kFencesSlotsFlipSelectEdit",
-
-    "kFencesEditDesk",
-    "kFencesEditPinBack",
-    "kFencesEditPinPoint",
-    "kFencesEditAccept",
-    "kFencesEditName",
-    "kFencesEditNameBack",
-    "kFencesColorPaletteHS",
-    "kFencesColorPaletteB",
-    "kFencesColorIndicator",
-    "kFencesColorBrightnessCursor",
-    "kFencesColorColorCursor",
-
-    "kFencesTypeBack",
-    "kFencesTypeText",
-    "kFencesTypePrevious",
-    "kFencesTypeNext",
+    "kWaterEditOceanVisibleOff",
+    "kWaterEditOceanVisibleOn1",
+    "kWaterEditOceanVisibleOn2",
+    "kWaterEditOceanVisibleOn3",
+    "kWaterEditOceanConfig",
+    "kWaterEditOceanLayerName",
 
 
     "kPlacementPlacementMode",
-    "kPlacementColorFill",
-    "kPlacementColorBack",
-    "kPlacementColorIcon",
-
-    "kPlacementSizeFill",
-    "kPlacementSizeBack",
-    "kPlacementSizeIcon",
-
-    "kPlacementFalloffFill",
-    "kPlacementFalloffBack",
-    "kPlacementFalloffIcon",
 
     "kPlacementTrees",
     "kPlacementTreesOff",
@@ -532,8 +262,27 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kPlacementUndergrowthOn2",
     "kPlacementUndergrowthOn3",
 
-    "kPlacementChangeMode",
+    "kPlacementAsphalt",
+    "kPlacementAsphaltOff",
+    "kPlacementAsphaltOn1",
+    "kPlacementAsphaltOn2",
+    "kPlacementAsphaltOn3",
 
+    "kPlacemenGravel",
+    "kPlacementGravelOff",
+    "kPlacementGravelOn1",
+    "kPlacementGravelOn2",
+    "kPlacementGravelOn3",
+
+    "kPlacementSoil",
+    "kPlacementSoilOff",
+    "kPlacementSoilOn1",
+    "kPlacementSoilOn2",
+    "kPlacementSoilOn3",
+
+    "kPlacementSelected",
+
+    "kPlacementChangeMode",
     "kPlacementDrawOff",
     "kPlacementDrawOn1",
     "kPlacementDrawOn2",
@@ -541,50 +290,25 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
 
 
     "kObjectsObjectsMode",
-    "kObjectsMavka",
-    "kObjectsVodyaniy",
-    "kObjectsChugaister",
-    "kObjectsPedestal",
-    "kObjectsCampfire",
-    "kObjectsRoadSign",
-    "kObjectsHuman",
+    "kObjectsEditDesk",
+    "kObjectsEditDeskPinBack",
+    "kObjectsEditDeskPinPoint",
+    "kObjectsEditAccept",
+    "kObjectsEditName",
+    "kObjectsEditNameBack",
+    "kObjectsEditRandomGeneration",
+
+    "kObjectsEditModelName",
+    "kObjectsEditCharacteristicArea",
+    "kObjectsEditCharacteristicIcon",
+
 
     "kBiomesBiomesMode",
-
-    "kBiomesWindDirArea",
-    "kBiomesWindDirHandle",
-    "kBiomesWindDirIcon",
-
-    "kBiomesSunDirArea",
-    "kBiomesSunDirHandle",
-    "kBiomesSunDirIcon",
-
-    "kBiomesTimeArea",
-    "kBiomesTimeHandle",
-    "kBiomesTimeIcon",
-
-    "kBiomesSlotsName",
-    "kBiomesSlotsConfig",
-    "kBiomesVisibleOff",
-    "kBiomesVisibleOn1",
-    "kBiomesVisibleOn2",
-    "kBiomesVisibleOn3",
-    "kBiomesSlotsSlot",
-    "kBiomesSlotsSlotColor",
-    "kBiomesSlotsRemove",
-    "kBiomesSlotsSelected",
-    "kBiomesSlotsHandler",
-    "kBiomesSlotsSlider",
-    "kBiomesSlotsBack",
-    "kBiomesSlotsCreate",
-    "kBiomesSlotsFlipPointEdgeFace_Back",
-    "kBiomesSlotsFlipSelectEdit_Back",
-    "kBiomesSlotsFlipPointEdgeFace",
-    "kBiomesSlotsFlipSelectEdit",
+    "kBiomesBiomePoint",
 
     "kBiomesEditDesk",
-    "kBiomesEditPinBack",
-    "kBiomesEditPinPoint",
+    "kBiomesEditDeskPinBack",
+    "kBiomesEditDeskPinPoint",
     "kBiomesEditAccept",
     "kBiomesEditName",
     "kBiomesEditNameBack",
@@ -593,36 +317,11 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kBiomesColorIndicator",
     "kBiomesColorBrightnessCursor",
     "kBiomesColorColorCursor",
+    "kBiomesEditRandomGeneration",
 
-    "kBiomesEditWindFill",
-    "kBiomesEditWindBack",
-    "kBiomesEditWindHandler",
-    "kBiomesEditWindIcon",
-
-    "kBiomesEditSunFill",
-    "kBiomesEditSunBack",
-    "kBiomesEditSunHandler",
-    "kBiomesEditSunIcon",
-
-    "kBiomesEditTimeFill",
-    "kBiomesEditTimeBack",
-    "kBiomesEditTimeHandler",
-    "kBiomesEditTimeIcon",
-
-    "kBiomesEditPrecipitationFill",
-    "kBiomesEditPrecipitationBack",
-    "kBiomesEditPrecipitationHandler",
-    "kBiomesEditPrecipitationIcon",
-
-    "kBiomesEditTemperatureFill",
-    "kBiomesEditTemperatureBack",
-    "kBiomesEditTemperatureHandler",
-    "kBiomesEditTemperatureIcon",
-
-    "kBiomesEditCloudFill",
-    "kBiomesEditCloudBack",
-    "kBiomesEditCloudHandler",
-    "kBiomesEditCloudIcon",
+    "kBiomesEditNoiseName",
+    "kBiomesEditNoiseStrengthArea",
+    "kBiomesEditNoiseStrengthIcon",
 
 
     "kTilesTilesMode",
@@ -630,6 +329,59 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kTilesRight",
     "kTilesUp",
     "kTilesDown",
+    "kTilesCreate",
+    "kTilesRemove",
+
+
+    "kPlayerPlayerMode",
+    "kPlayerHealthPoint",
+    "kPlayerStaminaPoint",
+
+    "kPlayerGameObjInfoDesk",
+    "kPlayerGameObjInfoPinBack",
+    "kPlayerGameObjInfoPinPoint",
+    "kPlayerGameObjInfoEnemy",
+    "kPlayerGameObjInfoFriend",
+    "kPlayerGameObjInfoNeutal",
+    "kPlayerGameObjInfoObstacle",
+    "kPlayerGameObjInfoName",
+    "kPlayerGameObjInfoCharacteristic",
+    "kPlayerGameObjInfoValue",
+
+    "kPlayerPhone",
+    "kPlayerPhoneMap",
+    "kPlayerMapPlayer",
+    "kPlayerMapEnemy",
+    "kPlayerMapFriend",
+    "kPlayerMapNeutral",
+    "kPlayerMapObstacle",
+
+
+    "kConfigWindowName",
+    "kConfigWindowDesk",
+    "kConfigWindowPinBack",
+    "kConfigWindowPinPoint",
+    "kConfigWindowHandler",
+    "kConfigWindowSlider",
+    "kConfigWindowSave",
+    "kConfigWindowSliderText",
+    "kConfigWindowSliderArea",
+    "kConfigWindowSliderIcon",
+
+    "kSlotsName",
+    "kSlotsConfig",
+    "kSlotsVisibleOff",
+    "kSlotsVisibleOn1",
+    "kSlotsVisibleOn2",
+    "kSlotsVisibleOn3",
+    "kSlotsSlot",
+    "kSlotsSlotColor",
+    "kSlotsRemove",
+    "kSlotsSelected",
+    "kSlotsHandler",
+    "kSlotsSlider",
+    "kSlotsBack",
+    "kSlotsCreate",
 
     "kMapTomb",
     "kMapFlowerRed",
@@ -682,11 +434,6 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kTextRendererCursor",
     "kTextRendererPrerenderSlot",
 
-    "kHealthPoint",
-    "kStaminaPoint",
-
-    "kPhone",
-
     "kCursorRectangle",
     "kCursorCircle",
     "kCursorLasso",
@@ -714,6 +461,13 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kLogoMedium",
     "kLogoSmall",
 
+    "kButtonsTextKeys",
+    "kButtonsTextMods",
+
+    "kSelectionSprite",
+
+    "kSelectionCircle",
+
     "kSpare1",
     "kSpare2",
     "kSpare3",
@@ -724,6 +478,7 @@ extern const std::array<std::string_view, gVboIdSize> gVboIdMainText = {
     "kSpare8",
     "kSpare9",
     "kSpare10",
+
 };
 
 // 4x the same data... nothing bad at debug (3 kb),
@@ -2708,1314 +2463,309 @@ const std::array<float, gUiVboTransformSize> kUiVboDataTransform {
     0.0,0.0,1.0,
     0.0,0.0,1.0,
 
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
-    0.0,0.0,1.0,
 };
 
 // +4 test
 const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     // kMenuTerrain
-    0.100000,-0.100000,0.406250,0.640625,
-    0.100000,0.100000,0.406250,0.671875,
-    -0.100000,-0.100000,0.343750,0.640625,
-    -0.100000,0.100000,0.343750,0.671875,
+    0.100000,-0.100000,0.406250,0.625000,
+    0.100000,0.100000,0.406250,0.656250,
+    -0.100000,-0.100000,0.343750,0.625000,
+    -0.100000,0.100000,0.343750,0.656250,
 
     // kMenuTerrainOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kMenuTerrainOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kMenuTerrainOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kMenuTerrainOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kMenuWater
-    0.100000,-0.100000,0.562500,0.523438,
-    0.100000,0.100000,0.562500,0.554688,
-    -0.100000,-0.100000,0.500000,0.523438,
-    -0.100000,0.100000,0.500000,0.554688,
-
-    // kMenuWaterOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kMenuWaterOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kMenuWaterOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kMenuWaterOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kMenuRoads
-    0.100000,-0.100000,0.125000,0.562500,
-    0.100000,0.100000,0.125000,0.593750,
-    -0.100000,-0.100000,0.062500,0.562500,
-    -0.100000,0.100000,0.062500,0.593750,
-
-    // kMenuRoadsOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kMenuRoadsOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kMenuRoadsOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kMenuRoadsOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kMenuFences
-    0.100000,-0.100000,0.062500,0.625000,
-    0.100000,0.100000,0.062500,0.656250,
-    -0.100000,-0.100000,0.000000,0.625000,
-    -0.100000,0.100000,0.000000,0.656250,
-
-    // kMenuFencesOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kMenuFencesOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kMenuFencesOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kMenuFencesOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kMenuPlacement
-    0.100000,-0.100000,0.687500,0.531250,
-    0.100000,0.100000,0.687500,0.562500,
-    -0.100000,-0.100000,0.625000,0.531250,
-    -0.100000,0.100000,0.625000,0.562500,
-
-    // kMenuPlacementOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kMenuPlacementOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kMenuPlacementOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kMenuPlacementOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kMenuObjects
-    0.100000,-0.100000,0.781250,0.625000,
-    0.100000,0.100000,0.781250,0.656250,
-    -0.100000,-0.100000,0.718750,0.625000,
-    -0.100000,0.100000,0.718750,0.656250,
-
-    // kMenuObjectsOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kMenuObjectsOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kMenuObjectsOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kMenuObjectsOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kMenuBiomes
     0.100000,-0.100000,0.718750,0.656250,
     0.100000,0.100000,0.718750,0.687500,
     -0.100000,-0.100000,0.656250,0.656250,
     -0.100000,0.100000,0.656250,0.687500,
 
+    // kMenuTerrainOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kMenuTerrainOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kMenuTerrainOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kMenuWater
+    0.100000,-0.100000,0.812500,0.507812,
+    0.100000,0.100000,0.812500,0.539062,
+    -0.100000,-0.100000,0.750000,0.507812,
+    -0.100000,0.100000,0.750000,0.539062,
+
+    // kMenuWaterOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kMenuWaterOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kMenuWaterOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kMenuWaterOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kMenuRoads
+    0.100000,-0.100000,0.062500,0.554688,
+    0.100000,0.100000,0.062500,0.585938,
+    -0.100000,-0.100000,0.000000,0.554688,
+    -0.100000,0.100000,0.000000,0.585938,
+
+    // kMenuRoadsOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kMenuRoadsOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kMenuRoadsOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kMenuRoadsOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kMenuFences
+    0.100000,-0.100000,0.968750,0.605469,
+    0.100000,0.100000,0.968750,0.636719,
+    -0.100000,-0.100000,0.906250,0.605469,
+    -0.100000,0.100000,0.906250,0.636719,
+
+    // kMenuFencesOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kMenuFencesOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kMenuFencesOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kMenuFencesOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kMenuPlacement
+    0.100000,-0.100000,0.937500,0.511719,
+    0.100000,0.100000,0.937500,0.542969,
+    -0.100000,-0.100000,0.875000,0.511719,
+    -0.100000,0.100000,0.875000,0.542969,
+
+    // kMenuPlacementOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kMenuPlacementOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kMenuPlacementOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kMenuPlacementOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kMenuObjects
+    0.100000,-0.100000,0.375000,0.593750,
+    0.100000,0.100000,0.375000,0.625000,
+    -0.100000,-0.100000,0.312500,0.593750,
+    -0.100000,0.100000,0.312500,0.625000,
+
+    // kMenuObjectsOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kMenuObjectsOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kMenuObjectsOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kMenuObjectsOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kMenuBiomes
+    0.100000,-0.100000,0.281250,0.632812,
+    0.100000,0.100000,0.281250,0.664062,
+    -0.100000,-0.100000,0.218750,0.632812,
+    -0.100000,0.100000,0.218750,0.664062,
+
     // kMenuBiomesOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
     // kMenuBiomesOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
     // kMenuBiomesOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
     // kMenuBiomesOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
     // kMenuTiles
-    0.100000,-0.100000,0.062500,0.593750,
-    0.100000,0.100000,0.062500,0.625000,
-    -0.100000,-0.100000,0.000000,0.593750,
-    -0.100000,0.100000,0.000000,0.625000,
+    0.100000,-0.100000,0.750000,0.593750,
+    0.100000,0.100000,0.750000,0.625000,
+    -0.100000,-0.100000,0.687500,0.593750,
+    -0.100000,0.100000,0.687500,0.625000,
 
     // kMenuTilesOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
     // kMenuTilesOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
     // kMenuTilesOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
     // kMenuTilesOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
     // kMenuPlayer
-    0.100000,-0.100000,0.781250,0.625000,
-    0.100000,0.100000,0.781250,0.656250,
-    -0.100000,-0.100000,0.718750,0.625000,
-    -0.100000,0.100000,0.718750,0.656250,
+    0.100000,-0.100000,0.375000,0.593750,
+    0.100000,0.100000,0.375000,0.625000,
+    -0.100000,-0.100000,0.312500,0.593750,
+    -0.100000,0.100000,0.312500,0.625000,
+
+    // kMenuPlayerOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kMenuPlayerOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kMenuPlayerOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kMenuPlayerOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
     // kMenuShaderWirebound
-    0.100000,-0.100000,0.812500,0.515625,
-    0.100000,0.100000,0.812500,0.546875,
-    -0.100000,-0.100000,0.750000,0.515625,
-    -0.100000,0.100000,0.750000,0.546875,
+    0.100000,-0.100000,0.437500,0.500000,
+    0.100000,0.100000,0.437500,0.531250,
+    -0.100000,-0.100000,0.375000,0.500000,
+    -0.100000,0.100000,0.375000,0.531250,
 
     // kMenuShadersOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
     // kMenuShadersOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
     // kMenuShadersOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
     // kMenuShadersOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
     // kMenuDesk
     0.250000,-0.250000,0.406250,0.726562,
@@ -4024,40 +2774,40 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.250000,0.804688,
 
     // kMenuDeskPinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
 
     // kMenuDeskPinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
 
     // kMenuArrowSelect
-    0.037500,-0.225000,0.859375,0.453125,
-    0.037500,0.225000,0.859375,0.523438,
-    -0.037500,-0.225000,0.835938,0.453125,
-    -0.037500,0.225000,0.835938,0.523438,
+    0.037500,-0.225000,0.296875,0.429688,
+    0.037500,0.225000,0.296875,0.500000,
+    -0.037500,-0.225000,0.273438,0.429688,
+    -0.037500,0.225000,0.273438,0.500000,
 
     // kMenuArrowSelected
-    0.025000,-0.275000,0.312500,0.429688,
-    0.025000,0.275000,0.312500,0.515625,
-    -0.025000,-0.275000,0.296875,0.429688,
-    -0.025000,0.275000,0.296875,0.515625,
+    0.025000,-0.275000,0.414062,0.414062,
+    0.025000,0.275000,0.414062,0.500000,
+    -0.025000,-0.275000,0.398438,0.414062,
+    -0.025000,0.275000,0.398438,0.500000,
 
     // kMenuSave
-    0.100000,-0.100000,0.625000,0.562500,
-    0.100000,0.100000,0.625000,0.593750,
-    -0.100000,-0.100000,0.562500,0.562500,
-    -0.100000,0.100000,0.562500,0.593750,
+    0.100000,-0.100000,0.187500,0.539062,
+    0.100000,0.100000,0.187500,0.570312,
+    -0.100000,-0.100000,0.125000,0.539062,
+    -0.100000,0.100000,0.125000,0.570312,
 
     // kMenuLoad
-    0.100000,-0.100000,0.250000,0.601562,
-    0.100000,0.100000,0.250000,0.632812,
-    -0.100000,-0.100000,0.187500,0.601562,
-    -0.100000,0.100000,0.187500,0.632812,
+    0.100000,-0.100000,0.687500,0.593750,
+    0.100000,0.100000,0.687500,0.625000,
+    -0.100000,-0.100000,0.625000,0.593750,
+    -0.100000,0.100000,0.625000,0.625000,
 
     // kModeModeText
     0.250000,-0.250000,1.000000,0.000000,
@@ -4066,28 +2816,28 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kPressedKey
-    0.075000,-0.050000,0.468750,0.515625,
-    0.075000,0.050000,0.468750,0.531250,
-    -0.075000,-0.050000,0.421875,0.515625,
-    -0.075000,0.050000,0.421875,0.531250,
+    0.075000,-0.050000,0.859375,0.496094,
+    0.075000,0.050000,0.859375,0.511719,
+    -0.075000,-0.050000,0.812500,0.496094,
+    -0.075000,0.050000,0.812500,0.511719,
 
     // kSettingsDesk
-    0.150000,-0.150000,1.000000,0.699219,
-    0.150000,0.150000,1.000000,0.746094,
-    -0.150000,-0.150000,0.906250,0.699219,
-    -0.150000,0.150000,0.906250,0.746094,
+    0.200000,-0.200000,0.781250,0.687500,
+    0.200000,0.200000,0.781250,0.750000,
+    -0.200000,-0.200000,0.656250,0.687500,
+    -0.200000,0.200000,0.656250,0.750000,
 
     // kSettingsDeskPinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
 
     // kSettingsDeskPinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
 
     // kSettingsResolutionLabel
     0.250000,-0.250000,1.000000,0.000000,
@@ -4096,136 +2846,130 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kSettingsResolutionLeft
+    0.100000,-0.100000,0.781250,0.625000,
+    0.100000,0.100000,0.781250,0.656250,
+    -0.100000,-0.100000,0.718750,0.625000,
+    -0.100000,0.100000,0.718750,0.656250,
+
+    // kSettingsResolutionRight
+    0.100000,-0.100000,0.187500,0.507812,
+    0.100000,0.100000,0.187500,0.539062,
+    -0.100000,-0.100000,0.125000,0.507812,
+    -0.100000,0.100000,0.125000,0.539062,
+
+    // kSettingsResolution
+    0.100000,-0.100000,0.625000,0.562500,
+    0.100000,0.100000,0.625000,0.593750,
+    -0.100000,-0.100000,0.562500,0.562500,
+    -0.100000,0.100000,0.562500,0.593750,
+
+    // kSettingsFullScreenOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kSettingsFullScreenOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kSettingsFullScreenOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kSettingsFullScreenOn3
     0.100000,-0.100000,0.968750,0.636719,
     0.100000,0.100000,0.968750,0.667969,
     -0.100000,-0.100000,0.906250,0.636719,
     -0.100000,0.100000,0.906250,0.667969,
 
-    // kSettingsResolutionRight
-    0.100000,-0.100000,0.187500,0.523438,
-    0.100000,0.100000,0.187500,0.554688,
-    -0.100000,-0.100000,0.125000,0.523438,
-    -0.100000,0.100000,0.125000,0.554688,
+    // kSettingsSensitivityArea
+    0.200000,-0.050000,0.906250,0.718750,
+    0.200000,0.050000,0.906250,0.734375,
+    -0.200000,-0.050000,0.781250,0.718750,
+    -0.200000,0.050000,0.781250,0.734375,
 
-    // kSettingsResolution
+    // kSettingsSensitivityHandle
+    0.100000,-0.100000,0.968750,0.574219,
+    0.100000,0.100000,0.968750,0.605469,
+    -0.100000,-0.100000,0.906250,0.574219,
+    -0.100000,0.100000,0.906250,0.605469,
+
+    // kSettingsSoundArea
+    0.200000,-0.050000,0.906250,0.718750,
+    0.200000,0.050000,0.906250,0.734375,
+    -0.200000,-0.050000,0.781250,0.718750,
+    -0.200000,0.050000,0.781250,0.734375,
+
+    // kSettingsSoundHandle
+    0.100000,-0.100000,0.687500,0.531250,
+    0.100000,0.100000,0.687500,0.562500,
+    -0.100000,-0.100000,0.625000,0.531250,
+    -0.100000,0.100000,0.625000,0.562500,
+
+    // kSettingsSoundOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kSettingsSoundOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kSettingsSoundOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kSettingsSoundOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kSettingsMusicArea
+    0.200000,-0.050000,0.906250,0.718750,
+    0.200000,0.050000,0.906250,0.734375,
+    -0.200000,-0.050000,0.781250,0.718750,
+    -0.200000,0.050000,0.781250,0.734375,
+
+    // kSettingsMusicHandle
     0.100000,-0.100000,0.187500,0.570312,
     0.100000,0.100000,0.187500,0.601562,
     -0.100000,-0.100000,0.125000,0.570312,
     -0.100000,0.100000,0.125000,0.601562,
 
-    // kSettingsFullScreenOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kSettingsFullScreenOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kSettingsFullScreenOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kSettingsFullScreenOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kSettingsSensitivityArea
-    0.200000,-0.050000,0.906250,0.734375,
-    0.200000,0.050000,0.906250,0.750000,
-    -0.200000,-0.050000,0.781250,0.734375,
-    -0.200000,0.050000,0.781250,0.750000,
-
-    // kSettingsSensitivityHandle
-    0.100000,-0.100000,0.531250,0.593750,
-    0.100000,0.100000,0.531250,0.625000,
-    -0.100000,-0.100000,0.468750,0.593750,
-    -0.100000,0.100000,0.468750,0.625000,
-
-    // kSettingsKeyboard
-    0.100000,-0.100000,0.906250,0.617188,
-    0.100000,0.100000,0.906250,0.648438,
-    -0.100000,-0.100000,0.843750,0.617188,
-    -0.100000,0.100000,0.843750,0.648438,
-
-    // kSettingsSoundArea
-    0.200000,-0.050000,0.906250,0.734375,
-    0.200000,0.050000,0.906250,0.750000,
-    -0.200000,-0.050000,0.781250,0.734375,
-    -0.200000,0.050000,0.781250,0.750000,
-
-    // kSettingsSoundHandle
-    0.100000,-0.100000,0.062500,0.531250,
-    0.100000,0.100000,0.062500,0.562500,
-    -0.100000,-0.100000,0.000000,0.531250,
-    -0.100000,0.100000,0.000000,0.562500,
-
-    // kSettingsSoundOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kSettingsSoundOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kSettingsSoundOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kSettingsSoundOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kSettingsMusicArea
-    0.200000,-0.050000,0.906250,0.734375,
-    0.200000,0.050000,0.906250,0.750000,
-    -0.200000,-0.050000,0.781250,0.734375,
-    -0.200000,0.050000,0.781250,0.750000,
-
-    // kSettingsMusicHandle
-    0.100000,-0.100000,0.593750,0.593750,
-    0.100000,0.100000,0.593750,0.625000,
-    -0.100000,-0.100000,0.531250,0.593750,
-    -0.100000,0.100000,0.531250,0.625000,
-
     // kSettingsMusicOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
     // kSettingsMusicOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
     // kSettingsMusicOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
     // kSettingsMusicOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
     // kSettingsTipInfoLabel
     0.250000,-0.250000,1.000000,0.000000,
@@ -4234,40 +2978,40 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kSettingsTipInfo
-    0.100000,-0.100000,0.968750,0.574219,
-    0.100000,0.100000,0.968750,0.605469,
-    -0.100000,-0.100000,0.906250,0.574219,
-    -0.100000,0.100000,0.906250,0.605469,
+    0.100000,-0.100000,0.562500,0.562500,
+    0.100000,0.100000,0.562500,0.593750,
+    -0.100000,-0.100000,0.500000,0.562500,
+    -0.100000,0.100000,0.500000,0.593750,
 
     // kSettingsTipInfoOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
     // kSettingsTipInfoOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
     // kSettingsTipInfoOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
     // kSettingsTipInfoOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
     // kModeTextBack
-    0.125000,-0.050000,0.859375,0.710938,
-    0.125000,0.050000,0.859375,0.726562,
-    -0.125000,-0.050000,0.781250,0.710938,
-    -0.125000,0.050000,0.781250,0.726562,
+    0.125000,-0.050000,0.234375,0.695312,
+    0.125000,0.050000,0.234375,0.710938,
+    -0.125000,-0.050000,0.156250,0.695312,
+    -0.125000,0.050000,0.156250,0.710938,
 
     // kModeTextLabel
     0.250000,-0.250000,1.000000,0.000000,
@@ -4276,172 +3020,76 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kTerrainTerrainMode
-    0.100000,-0.100000,0.406250,0.640625,
-    0.100000,0.100000,0.406250,0.671875,
-    -0.100000,-0.100000,0.343750,0.640625,
-    -0.100000,0.100000,0.343750,0.671875,
+    0.100000,-0.100000,0.406250,0.625000,
+    0.100000,0.100000,0.406250,0.656250,
+    -0.100000,-0.100000,0.343750,0.625000,
+    -0.100000,0.100000,0.343750,0.656250,
 
     // kTerrainUpdate
-    0.100000,-0.100000,0.625000,0.562500,
-    0.100000,0.100000,0.625000,0.593750,
-    -0.100000,-0.100000,0.562500,0.562500,
-    -0.100000,0.100000,0.562500,0.593750,
+    0.100000,-0.100000,0.187500,0.539062,
+    0.100000,0.100000,0.187500,0.570312,
+    -0.100000,-0.100000,0.125000,0.539062,
+    -0.100000,0.100000,0.125000,0.570312,
 
     // kTerrainFlatten
-    0.100000,-0.100000,0.562500,0.562500,
-    0.100000,0.100000,0.562500,0.593750,
-    -0.100000,-0.100000,0.500000,0.562500,
-    -0.100000,0.100000,0.500000,0.593750,
+    0.100000,-0.100000,1.000000,0.542969,
+    0.100000,0.100000,1.000000,0.574219,
+    -0.100000,-0.100000,0.937500,0.542969,
+    -0.100000,0.100000,0.937500,0.574219,
 
     // kTerrainFlattenOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
     // kTerrainFlattenOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
     // kTerrainFlattenOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
     // kTerrainFlattenOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kTerrainSizeFill
-    0.050000,-0.200000,0.125000,0.468750,
-    0.050000,0.200000,0.125000,0.531250,
-    -0.050000,-0.200000,0.093750,0.468750,
-    -0.050000,0.200000,0.093750,0.531250,
-
-    // kTerrainSizeBack
-    0.050000,-0.200000,1.000000,0.494141,
-    0.050000,0.200000,1.000000,0.556641,
-    -0.050000,-0.200000,0.968750,0.494141,
-    -0.050000,0.200000,0.968750,0.556641,
-
-    // kTerrainSizeIcon
-    0.100000,-0.100000,0.750000,0.562500,
-    0.100000,0.100000,0.750000,0.593750,
-    -0.100000,-0.100000,0.687500,0.562500,
-    -0.100000,0.100000,0.687500,0.593750,
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
     // kTerrainFalloffFill
-    0.050000,-0.200000,0.125000,0.468750,
-    0.050000,0.200000,0.125000,0.531250,
-    -0.050000,-0.200000,0.093750,0.468750,
-    -0.050000,0.200000,0.093750,0.531250,
+    0.050000,-0.200000,0.468750,0.445312,
+    0.050000,0.200000,0.468750,0.507812,
+    -0.050000,-0.200000,0.437500,0.445312,
+    -0.050000,0.200000,0.437500,0.507812,
 
     // kTerrainFalloffBack
-    0.050000,-0.200000,1.000000,0.494141,
-    0.050000,0.200000,1.000000,0.556641,
-    -0.050000,-0.200000,0.968750,0.494141,
-    -0.050000,0.200000,0.968750,0.556641,
+    0.050000,-0.200000,0.250000,0.445312,
+    0.050000,0.200000,0.250000,0.507812,
+    -0.050000,-0.200000,0.218750,0.445312,
+    -0.050000,0.200000,0.218750,0.507812,
 
     // kTerrainFalloffIcon
-    0.100000,-0.100000,0.281250,0.632812,
-    0.100000,0.100000,0.281250,0.664062,
-    -0.100000,-0.100000,0.218750,0.632812,
-    -0.100000,0.100000,0.218750,0.664062,
+    0.100000,-0.100000,0.906250,0.605469,
+    0.100000,0.100000,0.906250,0.636719,
+    -0.100000,-0.100000,0.843750,0.605469,
+    -0.100000,0.100000,0.843750,0.636719,
 
     // kTerrainBake
-    0.100000,-0.100000,0.781250,0.687500,
-    0.100000,0.100000,0.781250,0.718750,
-    -0.100000,-0.100000,0.718750,0.687500,
-    -0.100000,0.100000,0.718750,0.718750,
+    0.100000,-0.100000,0.218750,0.664062,
+    0.100000,0.100000,0.218750,0.695312,
+    -0.100000,-0.100000,0.156250,0.664062,
+    -0.100000,0.100000,0.156250,0.695312,
 
-    // kTerrainSlotsName
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainSlotsConfig
-    0.100000,-0.100000,0.656250,0.625000,
-    0.100000,0.100000,0.656250,0.656250,
-    -0.100000,-0.100000,0.593750,0.625000,
-    -0.100000,0.100000,0.593750,0.656250,
-
-    // kTerrainVisibleOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kTerrainVisibleOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kTerrainVisibleOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kTerrainVisibleOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kTerrainSlotsSlot
-    0.175000,-0.075000,0.390625,0.703125,
-    0.175000,0.075000,0.390625,0.726562,
-    -0.175000,-0.075000,0.281250,0.703125,
-    -0.175000,0.075000,0.281250,0.726562,
-
-    // kTerrainSlotsSlotColor
-    0.150000,-0.012500,1.000000,0.746094,
-    0.150000,0.012500,1.000000,0.750000,
-    -0.150000,-0.012500,0.906250,0.746094,
-    -0.150000,0.012500,0.906250,0.750000,
-
-    // kTerrainSlotsRemove
-    0.037500,-0.037500,0.929688,0.507812,
-    0.037500,0.037500,0.929688,0.519531,
-    -0.037500,-0.037500,0.906250,0.507812,
-    -0.037500,0.037500,0.906250,0.519531,
-
-    // kTerrainSlotsSelected
-    0.025000,-0.025000,0.375000,0.507812,
-    0.025000,0.025000,0.375000,0.515625,
-    -0.025000,-0.025000,0.359375,0.507812,
-    -0.025000,0.025000,0.359375,0.515625,
-
-    // kTerrainSlotsHandler
-    0.025000,-0.050000,0.359375,0.500000,
-    0.025000,0.050000,0.359375,0.515625,
-    -0.025000,-0.050000,0.343750,0.500000,
-    -0.025000,0.050000,0.343750,0.515625,
-
-    // kTerrainSlotsSlider
-    0.050000,-0.400000,0.718750,0.406250,
-    0.050000,0.400000,0.718750,0.531250,
-    -0.050000,-0.400000,0.687500,0.406250,
-    -0.050000,0.400000,0.687500,0.531250,
-
-    // kTerrainSlotsBack
-    0.250000,-0.400000,0.156250,0.656250,
-    0.250000,0.400000,0.156250,0.781250,
-    -0.250000,-0.400000,0.000000,0.656250,
-    -0.250000,0.400000,0.000000,0.781250,
-
-    // kTerrainSlotsCreate
-    0.037500,-0.037500,0.882812,0.507812,
-    0.037500,0.037500,0.882812,0.519531,
-    -0.037500,-0.037500,0.859375,0.507812,
-    -0.037500,0.037500,0.859375,0.519531,
+    // kTerrainReset
+    0.075000,-0.125000,0.531250,0.476562,
+    0.075000,0.125000,0.531250,0.515625,
+    -0.075000,-0.125000,0.484375,0.476562,
+    -0.075000,0.125000,0.484375,0.515625,
 
     // kTerrainBakeDesk
     0.800000,-0.600000,0.500000,0.812500,
@@ -4450,22 +3098,22 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.800000,0.600000,0.000000,1.000000,
 
     // kTerrainBakeDeskPinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
 
     // kTerrainBakeDeskPinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
 
     // kTerrainBakeAccept
-    0.100000,-0.100000,0.718750,0.687500,
-    0.100000,0.100000,0.718750,0.718750,
-    -0.100000,-0.100000,0.656250,0.687500,
-    -0.100000,0.100000,0.656250,0.718750,
+    0.100000,-0.100000,0.953125,0.667969,
+    0.100000,0.100000,0.953125,0.699219,
+    -0.100000,-0.100000,0.890625,0.667969,
+    -0.100000,0.100000,0.890625,0.699219,
 
     // kTerrainBakeErosionStepLabel
     0.250000,-0.250000,1.000000,0.000000,
@@ -4480,10 +3128,10 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kTerrainBakeErosionStepInputBack
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
 
     // kTerrainBakeWeatheringStepLabel
     0.250000,-0.250000,1.000000,0.000000,
@@ -4498,10 +3146,10 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kTerrainBakeWeatheringStepInputBack
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
 
     // kTerrainBakeHmap
     0.250000,-0.250000,1.000000,0.000000,
@@ -4522,22 +3170,22 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.800000,0.600000,0.000000,1.000000,
 
     // kTerrainEditDeskPinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
 
     // kTerrainEditDeskPinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
 
     // kTerrainEditAccept
-    0.100000,-0.100000,0.718750,0.687500,
-    0.100000,0.100000,0.718750,0.718750,
-    -0.100000,-0.100000,0.656250,0.687500,
-    -0.100000,0.100000,0.656250,0.718750,
+    0.100000,-0.100000,0.953125,0.667969,
+    0.100000,0.100000,0.953125,0.699219,
+    -0.100000,-0.100000,0.890625,0.667969,
+    -0.100000,0.100000,0.890625,0.699219,
 
     // kTerrainEditName
     0.250000,-0.250000,1.000000,0.000000,
@@ -4546,22 +3194,22 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kTerrainEditNameBack
-    0.100000,-0.025000,0.562500,0.554688,
-    0.100000,0.025000,0.562500,0.562500,
-    -0.100000,-0.025000,0.500000,0.554688,
-    -0.100000,0.025000,0.500000,0.562500,
+    0.100000,-0.025000,0.625000,0.539062,
+    0.100000,0.025000,0.625000,0.546875,
+    -0.100000,-0.025000,0.562500,0.539062,
+    -0.100000,0.025000,0.562500,0.546875,
 
     // kTerrainColorPaletteHS
-    0.100000,-0.100000,0.906250,0.648438,
-    0.100000,0.100000,0.906250,0.679688,
-    -0.100000,-0.100000,0.843750,0.648438,
-    -0.100000,0.100000,0.843750,0.679688,
+    0.100000,-0.100000,0.125000,0.625000,
+    0.100000,0.100000,0.125000,0.656250,
+    -0.100000,-0.100000,0.062500,0.625000,
+    -0.100000,0.100000,0.062500,0.656250,
 
     // kTerrainColorPaletteB
-    0.100000,-0.025000,0.843750,0.671875,
-    0.100000,0.025000,0.843750,0.679688,
-    -0.100000,-0.025000,0.781250,0.671875,
-    -0.100000,0.025000,0.781250,0.679688,
+    0.100000,-0.025000,0.062500,0.648438,
+    0.100000,0.025000,0.062500,0.656250,
+    -0.100000,-0.025000,0.000000,0.648438,
+    -0.100000,0.025000,0.000000,0.656250,
 
     // kTerrainColorIndicator
     0.150000,-0.012500,1.000000,0.746094,
@@ -4570,16 +3218,16 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.150000,0.012500,0.906250,0.750000,
 
     // kTerrainColorBrightnessCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
+    0.012500,-0.012500,0.437500,0.496094,
+    0.012500,0.012500,0.437500,0.500000,
+    -0.012500,-0.012500,0.429688,0.496094,
+    -0.012500,0.012500,0.429688,0.500000,
 
     // kTerrainColorColorCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
+    0.012500,-0.012500,0.437500,0.496094,
+    0.012500,0.012500,0.437500,0.500000,
+    -0.012500,-0.012500,0.429688,0.496094,
+    -0.012500,0.012500,0.429688,0.500000,
 
     // kTerrainEditHeightmap
     0.250000,-0.250000,1.000000,0.000000,
@@ -4588,136 +3236,10 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kTerrainEditRandomGeneration
-    0.075000,-0.075000,0.921875,0.519531,
-    0.075000,0.075000,0.921875,0.542969,
-    -0.075000,-0.075000,0.875000,0.519531,
-    -0.075000,0.075000,0.875000,0.542969,
-
-    // kTerrainEditTranslateLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditTranslateXText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditTranslateXTextSlot
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
-
-    // kTerrainEditTranslateYText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditTranslateYTextSlot
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
-
-    // kTerrainEditTranslateZText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditTranslateZTextSlot
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
-
-    // kTerrainEditScaleLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditScaleXText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditScaleXTextSlot
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
-
-    // kTerrainEditScaleYText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditScaleYTextSlot
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
-
-    // kTerrainEditScaleZText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditScaleZTextSlot
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
-
-    // kTerrainEditRotateLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditRotateXText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditRotateXTextSlot
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
-
-    // kTerrainEditRotateYText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditRotateYTextSlot
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
-
-    // kTerrainEditRotateZText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainEditRotateZTextSlot
-    0.050000,-0.025000,0.500000,0.523438,
-    0.050000,0.025000,0.500000,0.531250,
-    -0.050000,-0.025000,0.468750,0.523438,
-    -0.050000,0.025000,0.468750,0.531250,
+    0.075000,-0.075000,0.484375,0.507812,
+    0.075000,0.075000,0.484375,0.531250,
+    -0.075000,-0.075000,0.437500,0.507812,
+    -0.075000,0.075000,0.437500,0.531250,
 
     // kTerrainEditLabelInvert
     0.250000,-0.250000,1.000000,0.000000,
@@ -4737,11 +3259,137 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,-0.250000,0.000000,0.000000,
     -0.250000,0.250000,0.000000,1.000000,
 
+    // kTerrainEditTranslateLabel
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditTranslateXText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditTranslateXTextSlot
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
+
+    // kTerrainEditTranslateYText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditTranslateYTextSlot
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
+
+    // kTerrainEditTranslateZText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditTranslateZTextSlot
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
+
+    // kTerrainEditScaleLabel
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditScaleXText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditScaleXTextSlot
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
+
+    // kTerrainEditScaleYText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditScaleYTextSlot
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
+
+    // kTerrainEditScaleZText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditScaleZTextSlot
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
+
+    // kTerrainEditRotateLabel
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditRotateXText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditRotateXTextSlot
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
+
+    // kTerrainEditRotateYText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditRotateYTextSlot
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
+
+    // kTerrainEditRotateZText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kTerrainEditRotateZTextSlot
+    0.050000,-0.025000,0.593750,0.500000,
+    0.050000,0.025000,0.593750,0.507812,
+    -0.050000,-0.025000,0.562500,0.500000,
+    -0.050000,0.025000,0.562500,0.507812,
+
     // kTerrainEditNoiseConfig
-    0.100000,-0.100000,0.656250,0.625000,
-    0.100000,0.100000,0.656250,0.656250,
-    -0.100000,-0.100000,0.593750,0.625000,
-    -0.100000,0.100000,0.593750,0.656250,
+    0.100000,-0.100000,0.843750,0.601562,
+    0.100000,0.100000,0.843750,0.632812,
+    -0.100000,-0.100000,0.781250,0.601562,
+    -0.100000,0.100000,0.781250,0.632812,
 
     // kTerrainEditNoiseName
     0.250000,-0.250000,1.000000,0.000000,
@@ -4750,64 +3398,64 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kTerrainEditNoiseInvertOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
     // kTerrainEditNoiseInvertOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
     // kTerrainEditNoiseInvertOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
     // kTerrainEditNoiseInvertOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
     // kTerrainEditNoiseTilingOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
     // kTerrainEditNoiseTilingOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
     // kTerrainEditNoiseTilingOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
     // kTerrainEditNoiseTilingOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
     // kTerrainEditNoiseStrengthArea
-    0.200000,-0.050000,0.906250,0.734375,
-    0.200000,0.050000,0.906250,0.750000,
-    -0.200000,-0.050000,0.781250,0.734375,
-    -0.200000,0.050000,0.781250,0.750000,
+    0.200000,-0.050000,0.906250,0.718750,
+    0.200000,0.050000,0.906250,0.734375,
+    -0.200000,-0.050000,0.781250,0.718750,
+    -0.200000,0.050000,0.781250,0.734375,
 
     // kTerrainEditNoiseStrengthIcon
-    0.050000,-0.050000,1.000000,0.556641,
-    0.050000,0.050000,1.000000,0.572266,
-    -0.050000,-0.050000,0.968750,0.556641,
-    -0.050000,0.050000,0.968750,0.572266,
+    0.050000,-0.050000,0.218750,0.492188,
+    0.050000,0.050000,0.218750,0.507812,
+    -0.050000,-0.050000,0.187500,0.492188,
+    -0.050000,0.050000,0.187500,0.507812,
 
     // kTerrainEditNoiseHmap
     0.250000,-0.250000,1.000000,0.000000,
@@ -4815,203 +3463,35 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,-0.250000,0.000000,0.000000,
     -0.250000,0.250000,0.000000,1.000000,
 
-    // kTerrainWindowNoiseName
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainWindowNoiseDesk
-    0.400000,-0.200000,0.750000,0.937500,
-    0.400000,0.200000,0.750000,1.000000,
-    -0.400000,-0.200000,0.500000,0.937500,
-    -0.400000,0.200000,0.500000,1.000000,
-
-    // kTerrainWindowNoisePinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
-
-    // kTerrainWindowNoisePinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
-
-    // kTerrainWindowNoiseHandler
-    0.025000,-0.050000,0.359375,0.500000,
-    0.025000,0.050000,0.359375,0.515625,
-    -0.025000,-0.050000,0.343750,0.500000,
-    -0.025000,0.050000,0.343750,0.515625,
-
-    // kTerrainWindowNoiseSlider
-    0.050000,-0.200000,0.750000,0.468750,
-    0.050000,0.200000,0.750000,0.531250,
-    -0.050000,-0.200000,0.718750,0.468750,
-    -0.050000,0.200000,0.718750,0.531250,
-
-    // kTerrainWindowNoiseSave
-    0.100000,-0.100000,0.625000,0.562500,
-    0.100000,0.100000,0.625000,0.593750,
-    -0.100000,-0.100000,0.562500,0.562500,
-    -0.100000,0.100000,0.562500,0.593750,
-
-    // kTerrainWindowNoiseSliderText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kTerrainWindowNoiseSliderArea
-    0.200000,-0.050000,0.906250,0.734375,
-    0.200000,0.050000,0.906250,0.750000,
-    -0.200000,-0.050000,0.781250,0.734375,
-    -0.200000,0.050000,0.781250,0.750000,
-
-    // kTerrainWindowNoiseSliderIcon
-    0.050000,-0.050000,1.000000,0.556641,
-    0.050000,0.050000,1.000000,0.572266,
-    -0.050000,-0.050000,0.968750,0.556641,
-    -0.050000,0.050000,0.968750,0.572266,
-
     // kWaterWaterMode
-    0.100000,-0.100000,0.562500,0.523438,
-    0.100000,0.100000,0.562500,0.554688,
-    -0.100000,-0.100000,0.500000,0.523438,
-    -0.100000,0.100000,0.500000,0.554688,
+    0.100000,-0.100000,0.812500,0.507812,
+    0.100000,0.100000,0.812500,0.539062,
+    -0.100000,-0.100000,0.750000,0.507812,
+    -0.100000,0.100000,0.750000,0.539062,
 
     // kWaterUpdate
-    0.100000,-0.100000,0.625000,0.562500,
-    0.100000,0.100000,0.625000,0.593750,
-    -0.100000,-0.100000,0.562500,0.562500,
-    -0.100000,0.100000,0.562500,0.593750,
+    0.100000,-0.100000,0.187500,0.539062,
+    0.100000,0.100000,0.187500,0.570312,
+    -0.100000,-0.100000,0.125000,0.539062,
+    -0.100000,0.100000,0.125000,0.570312,
 
-    // kWaterLake
-    0.100000,-0.100000,0.562500,0.523438,
-    0.100000,0.100000,0.562500,0.554688,
-    -0.100000,-0.100000,0.500000,0.523438,
-    -0.100000,0.100000,0.500000,0.554688,
+    // kWaterOcean
+    0.100000,-0.100000,0.812500,0.507812,
+    0.100000,0.100000,0.812500,0.539062,
+    -0.100000,-0.100000,0.750000,0.507812,
+    -0.100000,0.100000,0.750000,0.539062,
 
     // kWaterRiver
-    0.100000,-0.100000,0.875000,0.523438,
-    0.100000,0.100000,0.875000,0.554688,
-    -0.100000,-0.100000,0.812500,0.523438,
-    -0.100000,0.100000,0.812500,0.554688,
+    0.100000,-0.100000,0.125000,0.500000,
+    0.100000,0.100000,0.125000,0.531250,
+    -0.100000,-0.100000,0.062500,0.500000,
+    -0.100000,0.100000,0.062500,0.531250,
 
-    // kWaterWaterfall
-    0.100000,-0.100000,0.312500,0.515625,
-    0.100000,0.100000,0.312500,0.546875,
-    -0.100000,-0.100000,0.250000,0.515625,
-    -0.100000,0.100000,0.250000,0.546875,
-
-    // kWaterSlotsName
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWaterSlotsConfig
-    0.100000,-0.100000,0.656250,0.625000,
-    0.100000,0.100000,0.656250,0.656250,
-    -0.100000,-0.100000,0.593750,0.625000,
-    -0.100000,0.100000,0.593750,0.656250,
-
-    // kWaterVisibleOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kWaterVisibleOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kWaterVisibleOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kWaterVisibleOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kWaterSlotsSlot
-    0.175000,-0.075000,0.390625,0.703125,
-    0.175000,0.075000,0.390625,0.726562,
-    -0.175000,-0.075000,0.281250,0.703125,
-    -0.175000,0.075000,0.281250,0.726562,
-
-    // kWaterSlotsSlotColor
-    0.150000,-0.012500,1.000000,0.746094,
-    0.150000,0.012500,1.000000,0.750000,
-    -0.150000,-0.012500,0.906250,0.746094,
-    -0.150000,0.012500,0.906250,0.750000,
-
-    // kWaterSlotsRemove
-    0.037500,-0.037500,0.929688,0.507812,
-    0.037500,0.037500,0.929688,0.519531,
-    -0.037500,-0.037500,0.906250,0.507812,
-    -0.037500,0.037500,0.906250,0.519531,
-
-    // kWaterSlotsSelected
-    0.025000,-0.025000,0.375000,0.507812,
-    0.025000,0.025000,0.375000,0.515625,
-    -0.025000,-0.025000,0.359375,0.507812,
-    -0.025000,0.025000,0.359375,0.515625,
-
-    // kWaterSlotsHandler
-    0.025000,-0.050000,0.359375,0.500000,
-    0.025000,0.050000,0.359375,0.515625,
-    -0.025000,-0.050000,0.343750,0.500000,
-    -0.025000,0.050000,0.343750,0.515625,
-
-    // kWaterSlotsSlider
-    0.050000,-0.400000,0.718750,0.406250,
-    0.050000,0.400000,0.718750,0.531250,
-    -0.050000,-0.400000,0.687500,0.406250,
-    -0.050000,0.400000,0.687500,0.531250,
-
-    // kWaterSlotsBack
-    0.250000,-0.400000,0.156250,0.656250,
-    0.250000,0.400000,0.156250,0.781250,
-    -0.250000,-0.400000,0.000000,0.656250,
-    -0.250000,0.400000,0.000000,0.781250,
-
-    // kWaterSlotsCreate
-    0.037500,-0.037500,0.882812,0.507812,
-    0.037500,0.037500,0.882812,0.519531,
-    -0.037500,-0.037500,0.859375,0.507812,
-    -0.037500,0.037500,0.859375,0.519531,
-
-    // kWaterSlotsFlipPointEdgeFace_Back
-    0.037500,-0.037500,0.906250,0.507812,
-    0.037500,0.037500,0.906250,0.519531,
-    -0.037500,-0.037500,0.882812,0.507812,
-    -0.037500,0.037500,0.882812,0.519531,
-
-    // kWaterSlotsFlipSelectEdit_Back
-    0.037500,-0.037500,0.906250,0.507812,
-    0.037500,0.037500,0.906250,0.519531,
-    -0.037500,-0.037500,0.882812,0.507812,
-    -0.037500,0.037500,0.882812,0.519531,
-
-    // kWaterSlotsFlipPointEdgeFace
-    0.075000,-0.075000,0.656250,0.507812,
-    0.075000,0.075000,0.656250,0.531250,
-    -0.075000,-0.075000,0.609375,0.507812,
-    -0.075000,0.075000,0.609375,0.531250,
-
-    // kWaterSlotsFlipSelectEdit
-    0.025000,-0.100000,0.343750,0.484375,
-    0.025000,0.100000,0.343750,0.515625,
-    -0.025000,-0.100000,0.328125,0.484375,
-    -0.025000,0.100000,0.328125,0.515625,
+    // kWaterSelected
+    0.100000,-0.100000,0.125000,0.593750,
+    0.100000,0.100000,0.125000,0.625000,
+    -0.100000,-0.100000,0.062500,0.593750,
+    -0.100000,0.100000,0.062500,0.625000,
 
     // kWaterEditDesk
     0.800000,-0.600000,0.500000,0.812500,
@@ -5020,22 +3500,22 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.800000,0.600000,0.000000,1.000000,
 
     // kWaterEditDeskPinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
 
     // kWaterEditDeskPinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
 
     // kWaterEditAccept
-    0.100000,-0.100000,0.718750,0.687500,
-    0.100000,0.100000,0.718750,0.718750,
-    -0.100000,-0.100000,0.656250,0.687500,
-    -0.100000,0.100000,0.656250,0.718750,
+    0.100000,-0.100000,0.953125,0.667969,
+    0.100000,0.100000,0.953125,0.699219,
+    -0.100000,-0.100000,0.890625,0.667969,
+    -0.100000,0.100000,0.890625,0.699219,
 
     // kWaterEditName
     0.250000,-0.250000,1.000000,0.000000,
@@ -5044,22 +3524,22 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kWaterEditNameBack
-    0.100000,-0.025000,0.562500,0.554688,
-    0.100000,0.025000,0.562500,0.562500,
-    -0.100000,-0.025000,0.500000,0.554688,
-    -0.100000,0.025000,0.500000,0.562500,
+    0.100000,-0.025000,0.625000,0.539062,
+    0.100000,0.025000,0.625000,0.546875,
+    -0.100000,-0.025000,0.562500,0.539062,
+    -0.100000,0.025000,0.562500,0.546875,
 
     // kWaterColorPaletteHS
-    0.100000,-0.100000,0.906250,0.648438,
-    0.100000,0.100000,0.906250,0.679688,
-    -0.100000,-0.100000,0.843750,0.648438,
-    -0.100000,0.100000,0.843750,0.679688,
+    0.100000,-0.100000,0.125000,0.625000,
+    0.100000,0.100000,0.125000,0.656250,
+    -0.100000,-0.100000,0.062500,0.625000,
+    -0.100000,0.100000,0.062500,0.656250,
 
     // kWaterColorPaletteB
-    0.100000,-0.025000,0.843750,0.671875,
-    0.100000,0.025000,0.843750,0.679688,
-    -0.100000,-0.025000,0.781250,0.671875,
-    -0.100000,0.025000,0.781250,0.679688,
+    0.100000,-0.025000,0.062500,0.648438,
+    0.100000,0.025000,0.062500,0.656250,
+    -0.100000,-0.025000,0.000000,0.648438,
+    -0.100000,0.025000,0.000000,0.656250,
 
     // kWaterColorIndicator
     0.150000,-0.012500,1.000000,0.746094,
@@ -5068,1576 +3548,424 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.150000,0.012500,0.906250,0.750000,
 
     // kWaterColorBrightnessCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
+    0.012500,-0.012500,0.437500,0.496094,
+    0.012500,0.012500,0.437500,0.500000,
+    -0.012500,-0.012500,0.429688,0.496094,
+    -0.012500,0.012500,0.429688,0.500000,
 
     // kWaterColorColorCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
+    0.012500,-0.012500,0.437500,0.496094,
+    0.012500,0.012500,0.437500,0.500000,
+    -0.012500,-0.012500,0.429688,0.496094,
+    -0.012500,0.012500,0.429688,0.500000,
 
-    // kWaterTypeBack
-    0.100000,-0.025000,0.562500,0.554688,
-    0.100000,0.025000,0.562500,0.562500,
-    -0.100000,-0.025000,0.500000,0.554688,
-    -0.100000,0.025000,0.500000,0.562500,
+    // kWaterEditRandomGeneration
+    0.075000,-0.075000,0.484375,0.507812,
+    0.075000,0.075000,0.484375,0.531250,
+    -0.075000,-0.075000,0.437500,0.507812,
+    -0.075000,0.075000,0.437500,0.531250,
 
-    // kWaterTypeText
+    // kWaterEditRiverViscosityText
     0.250000,-0.250000,1.000000,0.000000,
     0.250000,0.250000,1.000000,1.000000,
     -0.250000,-0.250000,0.000000,0.000000,
     -0.250000,0.250000,0.000000,1.000000,
 
-    // kWaterTypePrevious
-    0.100000,-0.100000,0.187500,0.601562,
-    0.100000,0.100000,0.187500,0.632812,
-    -0.100000,-0.100000,0.125000,0.601562,
-    -0.100000,0.100000,0.125000,0.632812,
+    // kWaterEditRiverViscosityArea
+    0.200000,-0.050000,0.906250,0.718750,
+    0.200000,0.050000,0.906250,0.734375,
+    -0.200000,-0.050000,0.781250,0.718750,
+    -0.200000,0.050000,0.781250,0.734375,
 
-    // kWaterTypeNext
-    0.100000,-0.100000,0.250000,0.570312,
-    0.100000,0.100000,0.250000,0.601562,
-    -0.100000,-0.100000,0.187500,0.570312,
-    -0.100000,0.100000,0.187500,0.601562,
+    // kWaterEditRiverViscosityIcon
+    0.050000,-0.050000,0.218750,0.492188,
+    0.050000,0.050000,0.218750,0.507812,
+    -0.050000,-0.050000,0.187500,0.492188,
+    -0.050000,0.050000,0.187500,0.507812,
 
-    // kWaterLayer1
-    0.100000,-0.100000,0.406250,0.609375,
-    0.100000,0.100000,0.406250,0.640625,
-    -0.100000,-0.100000,0.343750,0.609375,
-    -0.100000,0.100000,0.343750,0.640625,
-
-    // kWaterLayer1Window
-    0.200000,-0.200000,0.656250,0.687500,
-    0.200000,0.200000,0.656250,0.750000,
-    -0.200000,-0.200000,0.531250,0.687500,
-    -0.200000,0.200000,0.531250,0.750000,
-
-    // kWaterLayer1PinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
-
-    // kWaterLayer1PinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
-
-    // kWaterLayer1Text
+    // kWaterEditRiverTransparencyText
     0.250000,-0.250000,1.000000,0.000000,
     0.250000,0.250000,1.000000,1.000000,
     -0.250000,-0.250000,0.000000,0.000000,
     -0.250000,0.250000,0.000000,1.000000,
 
-    // kWaterLayer1Off
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kWaterLayer1On1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kWaterLayer1On2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kWaterLayer1On3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kWater1ScaleLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater1ScaleFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater1ScaleBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater1ScaleHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater1FetchLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater1FetchFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater1FetchBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater1FetchHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater1SpreadBlendLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater1SpreadBlendFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater1SpreadBlendBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater1SpreadBlendHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater1SwellLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater1SwellFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater1SwellBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater1SwellHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater1PeakEnhancementLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater1PeakEnhancementFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater1PeakEnhancementBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater1PeakEnhancementHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater1ShortWavesFadeLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater1ShortWavesFadeFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater1ShortWavesFadeBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater1ShortWavesFadeHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater1LambdaLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater1LambdaFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater1LambdaBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater1LambdaHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWaterLayer2
-    0.100000,-0.100000,0.843750,0.609375,
-    0.100000,0.100000,0.843750,0.640625,
-    -0.100000,-0.100000,0.781250,0.609375,
-    -0.100000,0.100000,0.781250,0.640625,
-
-    // kWaterLayer2Window
-    0.200000,-0.200000,0.656250,0.687500,
-    0.200000,0.200000,0.656250,0.750000,
-    -0.200000,-0.200000,0.531250,0.687500,
-    -0.200000,0.200000,0.531250,0.750000,
-
-    // kWaterLayer2PinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
-
-    // kWaterLayer2PinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
-
-    // kWaterLayer2Text
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWaterLayer2Off
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kWaterLayer2On1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kWaterLayer2On2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kWaterLayer2On3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kWater2ScaleLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater2ScaleFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater2ScaleBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater2ScaleHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater2FetchLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater2FetchFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater2FetchBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater2FetchHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater2SpreadBlendLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater2SpreadBlendFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater2SpreadBlendBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater2SpreadBlendHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater2SwellLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater2SwellFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater2SwellBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater2SwellHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater2PeakEnhancementLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater2PeakEnhancementFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater2PeakEnhancementBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater2PeakEnhancementHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater2ShortWavesFadeLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater2ShortWavesFadeFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater2ShortWavesFadeBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater2ShortWavesFadeHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater2LambdaLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater2LambdaFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater2LambdaBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater2LambdaHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWaterLayer3
-    0.100000,-0.100000,0.968750,0.605469,
-    0.100000,0.100000,0.968750,0.636719,
-    -0.100000,-0.100000,0.906250,0.605469,
-    -0.100000,0.100000,0.906250,0.636719,
-
-    // kWaterLayer3Window
-    0.200000,-0.200000,0.656250,0.687500,
-    0.200000,0.200000,0.656250,0.750000,
-    -0.200000,-0.200000,0.531250,0.687500,
-    -0.200000,0.200000,0.531250,0.750000,
-
-    // kWaterLayer3PinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
-
-    // kWaterLayer3PinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
-
-    // kWaterLayer3Text
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWaterLayer3Off
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kWaterLayer3On1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kWaterLayer3On2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kWaterLayer3On3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kWater3ScaleLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater3ScaleFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater3ScaleBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater3ScaleHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater3FetchLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater3FetchFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater3FetchBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater3FetchHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater3SpreadBlendLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater3SpreadBlendFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater3SpreadBlendBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater3SpreadBlendHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater3SwellLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater3SwellFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater3SwellBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater3SwellHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater3PeakEnhancementLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater3PeakEnhancementFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater3PeakEnhancementBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater3PeakEnhancementHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater3ShortWavesFadeLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater3ShortWavesFadeFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater3ShortWavesFadeBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater3ShortWavesFadeHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kWater3LambdaLabel
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kWater3LambdaFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
-
-    // kWater3LambdaBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
-
-    // kWater3LambdaHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
-
-    // kRoadsRoadsMode
-    0.100000,-0.100000,0.125000,0.562500,
-    0.100000,0.100000,0.125000,0.593750,
-    -0.100000,-0.100000,0.062500,0.562500,
-    -0.100000,0.100000,0.062500,0.593750,
-
-    // kRoadsAsphalt
-    0.100000,-0.100000,0.125000,0.562500,
-    0.100000,0.100000,0.125000,0.593750,
-    -0.100000,-0.100000,0.062500,0.562500,
-    -0.100000,0.100000,0.062500,0.593750,
-
-    // kRoadsGravel
-    0.100000,-0.100000,0.437500,0.562500,
-    0.100000,0.100000,0.437500,0.593750,
-    -0.100000,-0.100000,0.375000,0.562500,
-    -0.100000,0.100000,0.375000,0.593750,
-
-    // kRoadsSoil
-    0.100000,-0.100000,0.500000,0.562500,
-    0.100000,0.100000,0.500000,0.593750,
-    -0.100000,-0.100000,0.437500,0.562500,
-    -0.100000,0.100000,0.437500,0.593750,
-
-    // kRoadsSlotsName
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kRoadsSlotsConfig
-    0.100000,-0.100000,0.656250,0.625000,
-    0.100000,0.100000,0.656250,0.656250,
-    -0.100000,-0.100000,0.593750,0.625000,
-    -0.100000,0.100000,0.593750,0.656250,
-
-    // kRoadsVisibleOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kRoadsVisibleOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kRoadsVisibleOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kRoadsVisibleOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kRoadsSlotsSlot
-    0.175000,-0.075000,0.390625,0.703125,
-    0.175000,0.075000,0.390625,0.726562,
-    -0.175000,-0.075000,0.281250,0.703125,
-    -0.175000,0.075000,0.281250,0.726562,
-
-    // kRoadsSlotsSlotColor
-    0.150000,-0.012500,1.000000,0.746094,
-    0.150000,0.012500,1.000000,0.750000,
-    -0.150000,-0.012500,0.906250,0.746094,
-    -0.150000,0.012500,0.906250,0.750000,
-
-    // kRoadsSlotsRemove
-    0.037500,-0.037500,0.929688,0.507812,
-    0.037500,0.037500,0.929688,0.519531,
-    -0.037500,-0.037500,0.906250,0.507812,
-    -0.037500,0.037500,0.906250,0.519531,
-
-    // kRoadsSlotsSelected
-    0.025000,-0.025000,0.375000,0.507812,
-    0.025000,0.025000,0.375000,0.515625,
-    -0.025000,-0.025000,0.359375,0.507812,
-    -0.025000,0.025000,0.359375,0.515625,
-
-    // kRoadsSlotsHandler
-    0.025000,-0.050000,0.359375,0.500000,
-    0.025000,0.050000,0.359375,0.515625,
-    -0.025000,-0.050000,0.343750,0.500000,
-    -0.025000,0.050000,0.343750,0.515625,
-
-    // kRoadsSlotsSlider
-    0.050000,-0.400000,0.718750,0.406250,
-    0.050000,0.400000,0.718750,0.531250,
-    -0.050000,-0.400000,0.687500,0.406250,
-    -0.050000,0.400000,0.687500,0.531250,
-
-    // kRoadsSlotsBack
-    0.250000,-0.400000,0.156250,0.656250,
-    0.250000,0.400000,0.156250,0.781250,
-    -0.250000,-0.400000,0.000000,0.656250,
-    -0.250000,0.400000,0.000000,0.781250,
-
-    // kRoadsSlotsCreate
-    0.037500,-0.037500,0.882812,0.507812,
-    0.037500,0.037500,0.882812,0.519531,
-    -0.037500,-0.037500,0.859375,0.507812,
-    -0.037500,0.037500,0.859375,0.519531,
-
-    // kRoadsSlotsFlipPointEdgeFace_Back
-    0.037500,-0.037500,0.906250,0.507812,
-    0.037500,0.037500,0.906250,0.519531,
-    -0.037500,-0.037500,0.882812,0.507812,
-    -0.037500,0.037500,0.882812,0.519531,
-
-    // kRoadsSlotsFlipSelectEdit_Back
-    0.037500,-0.037500,0.906250,0.507812,
-    0.037500,0.037500,0.906250,0.519531,
-    -0.037500,-0.037500,0.882812,0.507812,
-    -0.037500,0.037500,0.882812,0.519531,
-
-    // kRoadsSlotsFlipPointEdgeFace
-    0.075000,-0.075000,0.656250,0.507812,
-    0.075000,0.075000,0.656250,0.531250,
-    -0.075000,-0.075000,0.609375,0.507812,
-    -0.075000,0.075000,0.609375,0.531250,
-
-    // kRoadsSlotsFlipSelectEdit
-    0.025000,-0.100000,0.343750,0.484375,
-    0.025000,0.100000,0.343750,0.515625,
-    -0.025000,-0.100000,0.328125,0.484375,
-    -0.025000,0.100000,0.328125,0.515625,
-
-    // kRoadsEditDesk
-    0.800000,-0.600000,0.500000,0.812500,
-    0.800000,0.600000,0.500000,1.000000,
-    -0.800000,-0.600000,0.000000,0.812500,
-    -0.800000,0.600000,0.000000,1.000000,
-
-    // kRoadsEditPinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
-
-    // kRoadsEditPinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
-
-    // kRoadsEditAccept
-    0.100000,-0.100000,0.718750,0.687500,
-    0.100000,0.100000,0.718750,0.718750,
-    -0.100000,-0.100000,0.656250,0.687500,
-    -0.100000,0.100000,0.656250,0.718750,
-
-    // kRoadsEditName
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kRoadsEditNameBack
-    0.100000,-0.025000,0.562500,0.554688,
-    0.100000,0.025000,0.562500,0.562500,
-    -0.100000,-0.025000,0.500000,0.554688,
-    -0.100000,0.025000,0.500000,0.562500,
-
-    // kRoadsColorPaletteHS
-    0.100000,-0.100000,0.906250,0.648438,
-    0.100000,0.100000,0.906250,0.679688,
-    -0.100000,-0.100000,0.843750,0.648438,
-    -0.100000,0.100000,0.843750,0.679688,
-
-    // kRoadsColorPaletteB
-    0.100000,-0.025000,0.843750,0.671875,
-    0.100000,0.025000,0.843750,0.679688,
-    -0.100000,-0.025000,0.781250,0.671875,
-    -0.100000,0.025000,0.781250,0.679688,
-
-    // kRoadsColorIndicator
-    0.150000,-0.012500,1.000000,0.746094,
-    0.150000,0.012500,1.000000,0.750000,
-    -0.150000,-0.012500,0.906250,0.746094,
-    -0.150000,0.012500,0.906250,0.750000,
-
-    // kRoadsColorBrightnessCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
-
-    // kRoadsColorColorCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
-
-    // kRoadsTypeBack
-    0.100000,-0.025000,0.562500,0.554688,
-    0.100000,0.025000,0.562500,0.562500,
-    -0.100000,-0.025000,0.500000,0.554688,
-    -0.100000,0.025000,0.500000,0.562500,
-
-    // kRoadsTypeText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kRoadsTypePrevious
-    0.100000,-0.100000,0.187500,0.601562,
-    0.100000,0.100000,0.187500,0.632812,
-    -0.100000,-0.100000,0.125000,0.601562,
-    -0.100000,0.100000,0.125000,0.632812,
-
-    // kRoadsTypeNext
-    0.100000,-0.100000,0.250000,0.570312,
-    0.100000,0.100000,0.250000,0.601562,
-    -0.100000,-0.100000,0.187500,0.570312,
-    -0.100000,0.100000,0.187500,0.601562,
-
-    // kFencesFencesMode
-    0.100000,-0.100000,0.062500,0.625000,
-    0.100000,0.100000,0.062500,0.656250,
-    -0.100000,-0.100000,0.000000,0.625000,
-    -0.100000,0.100000,0.000000,0.656250,
-
-    // kFencesPicket
-    0.100000,-0.100000,0.062500,0.625000,
-    0.100000,0.100000,0.062500,0.656250,
-    -0.100000,-0.100000,0.000000,0.625000,
-    -0.100000,0.100000,0.000000,0.656250,
-
-    // kFencesChainLink
-    0.100000,-0.100000,0.125000,0.625000,
-    0.100000,0.100000,0.125000,0.656250,
-    -0.100000,-0.100000,0.062500,0.625000,
-    -0.100000,0.100000,0.062500,0.656250,
-
-    // kFencesWooden
-    0.100000,-0.100000,0.593750,0.625000,
-    0.100000,0.100000,0.593750,0.656250,
-    -0.100000,-0.100000,0.531250,0.625000,
-    -0.100000,0.100000,0.531250,0.656250,
-
-    // kFencesSlotsName
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kFencesSlotsConfig
-    0.100000,-0.100000,0.656250,0.625000,
-    0.100000,0.100000,0.656250,0.656250,
-    -0.100000,-0.100000,0.593750,0.625000,
-    -0.100000,0.100000,0.593750,0.656250,
-
-    // kFencesVisibleOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kFencesVisibleOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kFencesVisibleOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kFencesVisibleOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kFencesSlotsSlot
-    0.175000,-0.075000,0.390625,0.703125,
-    0.175000,0.075000,0.390625,0.726562,
-    -0.175000,-0.075000,0.281250,0.703125,
-    -0.175000,0.075000,0.281250,0.726562,
-
-    // kFencesSlotsSlotColor
-    0.150000,-0.012500,1.000000,0.746094,
-    0.150000,0.012500,1.000000,0.750000,
-    -0.150000,-0.012500,0.906250,0.746094,
-    -0.150000,0.012500,0.906250,0.750000,
-
-    // kFencesSlotsRemove
-    0.037500,-0.037500,0.929688,0.507812,
-    0.037500,0.037500,0.929688,0.519531,
-    -0.037500,-0.037500,0.906250,0.507812,
-    -0.037500,0.037500,0.906250,0.519531,
-
-    // kFencesSlotsSelected
-    0.025000,-0.025000,0.375000,0.507812,
-    0.025000,0.025000,0.375000,0.515625,
-    -0.025000,-0.025000,0.359375,0.507812,
-    -0.025000,0.025000,0.359375,0.515625,
-
-    // kFencesSlotsHandler
-    0.025000,-0.050000,0.359375,0.500000,
-    0.025000,0.050000,0.359375,0.515625,
-    -0.025000,-0.050000,0.343750,0.500000,
-    -0.025000,0.050000,0.343750,0.515625,
-
-    // kFencesSlotsSlider
-    0.050000,-0.400000,0.718750,0.406250,
-    0.050000,0.400000,0.718750,0.531250,
-    -0.050000,-0.400000,0.687500,0.406250,
-    -0.050000,0.400000,0.687500,0.531250,
-
-    // kFencesSlotsBack
-    0.250000,-0.400000,0.156250,0.656250,
-    0.250000,0.400000,0.156250,0.781250,
-    -0.250000,-0.400000,0.000000,0.656250,
-    -0.250000,0.400000,0.000000,0.781250,
-
-    // kFencesSlotsCreate
-    0.037500,-0.037500,0.882812,0.507812,
-    0.037500,0.037500,0.882812,0.519531,
-    -0.037500,-0.037500,0.859375,0.507812,
-    -0.037500,0.037500,0.859375,0.519531,
-
-    // kFencesSlotsFlipPointEdgeFace_Back
-    0.037500,-0.037500,0.906250,0.507812,
-    0.037500,0.037500,0.906250,0.519531,
-    -0.037500,-0.037500,0.882812,0.507812,
-    -0.037500,0.037500,0.882812,0.519531,
-
-    // kFencesSlotsFlipSelectEdit_Back
-    0.037500,-0.037500,0.906250,0.507812,
-    0.037500,0.037500,0.906250,0.519531,
-    -0.037500,-0.037500,0.882812,0.507812,
-    -0.037500,0.037500,0.882812,0.519531,
-
-    // kFencesSlotsFlipPointEdgeFace
-    0.075000,-0.075000,0.656250,0.507812,
-    0.075000,0.075000,0.656250,0.531250,
-    -0.075000,-0.075000,0.609375,0.507812,
-    -0.075000,0.075000,0.609375,0.531250,
-
-    // kFencesSlotsFlipSelectEdit
-    0.025000,-0.100000,0.343750,0.484375,
-    0.025000,0.100000,0.343750,0.515625,
-    -0.025000,-0.100000,0.328125,0.484375,
-    -0.025000,0.100000,0.328125,0.515625,
-
-    // kFencesEditDesk
-    0.800000,-0.600000,0.500000,0.812500,
-    0.800000,0.600000,0.500000,1.000000,
-    -0.800000,-0.600000,0.000000,0.812500,
-    -0.800000,0.600000,0.000000,1.000000,
-
-    // kFencesEditPinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
-
-    // kFencesEditPinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
-
-    // kFencesEditAccept
-    0.100000,-0.100000,0.718750,0.687500,
-    0.100000,0.100000,0.718750,0.718750,
-    -0.100000,-0.100000,0.656250,0.687500,
-    -0.100000,0.100000,0.656250,0.718750,
-
-    // kFencesEditName
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kFencesEditNameBack
-    0.100000,-0.025000,0.562500,0.554688,
-    0.100000,0.025000,0.562500,0.562500,
-    -0.100000,-0.025000,0.500000,0.554688,
-    -0.100000,0.025000,0.500000,0.562500,
-
-    // kFencesColorPaletteHS
-    0.100000,-0.100000,0.906250,0.648438,
-    0.100000,0.100000,0.906250,0.679688,
-    -0.100000,-0.100000,0.843750,0.648438,
-    -0.100000,0.100000,0.843750,0.679688,
-
-    // kFencesColorPaletteB
-    0.100000,-0.025000,0.843750,0.671875,
-    0.100000,0.025000,0.843750,0.679688,
-    -0.100000,-0.025000,0.781250,0.671875,
-    -0.100000,0.025000,0.781250,0.679688,
-
-    // kFencesColorIndicator
-    0.150000,-0.012500,1.000000,0.746094,
-    0.150000,0.012500,1.000000,0.750000,
-    -0.150000,-0.012500,0.906250,0.746094,
-    -0.150000,0.012500,0.906250,0.750000,
-
-    // kFencesColorBrightnessCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
-
-    // kFencesColorColorCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
-
-    // kFencesTypeBack
-    0.100000,-0.025000,0.562500,0.554688,
-    0.100000,0.025000,0.562500,0.562500,
-    -0.100000,-0.025000,0.500000,0.554688,
-    -0.100000,0.025000,0.500000,0.562500,
-
-    // kFencesTypeText
-    0.250000,-0.250000,1.000000,0.000000,
-    0.250000,0.250000,1.000000,1.000000,
-    -0.250000,-0.250000,0.000000,0.000000,
-    -0.250000,0.250000,0.000000,1.000000,
-
-    // kFencesTypePrevious
-    0.100000,-0.100000,0.187500,0.601562,
-    0.100000,0.100000,0.187500,0.632812,
-    -0.100000,-0.100000,0.125000,0.601562,
-    -0.100000,0.100000,0.125000,0.632812,
-
-    // kFencesTypeNext
-    0.100000,-0.100000,0.250000,0.570312,
-    0.100000,0.100000,0.250000,0.601562,
-    -0.100000,-0.100000,0.187500,0.570312,
-    -0.100000,0.100000,0.187500,0.601562,
-
-    // kPlacementPlacementMode
-    0.100000,-0.100000,0.687500,0.531250,
-    0.100000,0.100000,0.687500,0.562500,
-    -0.100000,-0.100000,0.625000,0.531250,
-    -0.100000,0.100000,0.625000,0.562500,
-
-    // kPlacementColorFill
-    0.050000,-0.200000,0.125000,0.468750,
-    0.050000,0.200000,0.125000,0.531250,
-    -0.050000,-0.200000,0.093750,0.468750,
-    -0.050000,0.200000,0.093750,0.531250,
-
-    // kPlacementColorBack
-    0.050000,-0.200000,1.000000,0.494141,
-    0.050000,0.200000,1.000000,0.556641,
-    -0.050000,-0.200000,0.968750,0.494141,
-    -0.050000,0.200000,0.968750,0.556641,
-
-    // kPlacementColorIcon
-    0.100000,-0.100000,0.781250,0.656250,
-    0.100000,0.100000,0.781250,0.687500,
-    -0.100000,-0.100000,0.718750,0.656250,
-    -0.100000,0.100000,0.718750,0.687500,
-
-    // kPlacementSizeFill
-    0.050000,-0.200000,0.125000,0.468750,
-    0.050000,0.200000,0.125000,0.531250,
-    -0.050000,-0.200000,0.093750,0.468750,
-    -0.050000,0.200000,0.093750,0.531250,
-
-    // kPlacementSizeBack
-    0.050000,-0.200000,1.000000,0.494141,
-    0.050000,0.200000,1.000000,0.556641,
-    -0.050000,-0.200000,0.968750,0.494141,
-    -0.050000,0.200000,0.968750,0.556641,
-
-    // kPlacementSizeIcon
-    0.100000,-0.100000,0.750000,0.562500,
-    0.100000,0.100000,0.750000,0.593750,
-    -0.100000,-0.100000,0.687500,0.562500,
-    -0.100000,0.100000,0.687500,0.593750,
-
-    // kPlacementFalloffFill
-    0.050000,-0.200000,0.125000,0.468750,
-    0.050000,0.200000,0.125000,0.531250,
-    -0.050000,-0.200000,0.093750,0.468750,
-    -0.050000,0.200000,0.093750,0.531250,
-
-    // kPlacementFalloffBack
-    0.050000,-0.200000,1.000000,0.494141,
-    0.050000,0.200000,1.000000,0.556641,
-    -0.050000,-0.200000,0.968750,0.494141,
-    -0.050000,0.200000,0.968750,0.556641,
-
-    // kPlacementFalloffIcon
-    0.100000,-0.100000,0.281250,0.632812,
-    0.100000,0.100000,0.281250,0.664062,
-    -0.100000,-0.100000,0.218750,0.632812,
-    -0.100000,0.100000,0.218750,0.664062,
-
-    // kPlacementTrees
-    0.100000,-0.100000,0.687500,0.531250,
-    0.100000,0.100000,0.687500,0.562500,
-    -0.100000,-0.100000,0.625000,0.531250,
-    -0.100000,0.100000,0.625000,0.562500,
-
-    // kPlacementTreesOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kPlacementTreesOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kPlacementTreesOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kPlacementTreesOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kPlacementBushes
-    0.100000,-0.100000,0.843750,0.679688,
-    0.100000,0.100000,0.843750,0.710938,
-    -0.100000,-0.100000,0.781250,0.679688,
-    -0.100000,0.100000,0.781250,0.710938,
-
-    // kPlacementBushesOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kPlacementBushesOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kPlacementBushesOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kPlacementBushesOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kPlacementTallGrass
-    0.100000,-0.100000,0.718750,0.625000,
-    0.100000,0.100000,0.718750,0.656250,
-    -0.100000,-0.100000,0.656250,0.625000,
-    -0.100000,0.100000,0.656250,0.656250,
-
-    // kPlacementTallGrassOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kPlacementTallGrassOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kPlacementTallGrassOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kPlacementTallGrassOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kPlacementUndergrowth
-    0.100000,-0.100000,0.750000,0.531250,
-    0.100000,0.100000,0.750000,0.562500,
-    -0.100000,-0.100000,0.687500,0.531250,
-    -0.100000,0.100000,0.687500,0.562500,
-
-    // kPlacementUndergrowthOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kPlacementUndergrowthOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kPlacementUndergrowthOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kPlacementUndergrowthOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kPlacementChangeMode
-    0.100000,-0.100000,0.625000,0.562500,
-    0.100000,0.100000,0.625000,0.593750,
-    -0.100000,-0.100000,0.562500,0.562500,
-    -0.100000,0.100000,0.562500,0.593750,
-
-    // kPlacementDrawOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
-
-    // kPlacementDrawOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
-
-    // kPlacementDrawOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
-
-    // kPlacementDrawOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
-
-    // kObjectsObjectsMode
-    0.100000,-0.100000,0.781250,0.625000,
-    0.100000,0.100000,0.781250,0.656250,
-    -0.100000,-0.100000,0.718750,0.625000,
-    -0.100000,0.100000,0.718750,0.656250,
-
-    // kObjectsMavka
-    0.100000,-0.100000,0.125000,0.593750,
-    0.100000,0.100000,0.125000,0.625000,
-    -0.100000,-0.100000,0.062500,0.593750,
-    -0.100000,0.100000,0.062500,0.625000,
-
-    // kObjectsVodyaniy
-    0.100000,-0.100000,0.250000,0.523438,
-    0.100000,0.100000,0.250000,0.554688,
-    -0.100000,-0.100000,0.187500,0.523438,
-    -0.100000,0.100000,0.187500,0.554688,
-
-    // kObjectsChugaister
-    0.100000,-0.100000,0.656250,0.656250,
-    0.100000,0.100000,0.656250,0.687500,
-    -0.100000,-0.100000,0.593750,0.656250,
-    -0.100000,0.100000,0.593750,0.687500,
-
-    // kObjectsPedestal
-    0.100000,-0.100000,0.718750,0.593750,
-    0.100000,0.100000,0.718750,0.625000,
-    -0.100000,-0.100000,0.656250,0.593750,
-    -0.100000,0.100000,0.656250,0.625000,
-
-    // kObjectsCampfire
-    0.100000,-0.100000,0.906250,0.679688,
-    0.100000,0.100000,0.906250,0.710938,
-    -0.100000,-0.100000,0.843750,0.679688,
-    -0.100000,0.100000,0.843750,0.710938,
-
-    // kObjectsRoadSign
-    0.100000,-0.100000,0.062500,0.562500,
-    0.100000,0.100000,0.062500,0.593750,
-    -0.100000,-0.100000,0.000000,0.562500,
-    -0.100000,0.100000,0.000000,0.593750,
-
-    // kObjectsHuman
-    0.100000,-0.100000,0.781250,0.625000,
-    0.100000,0.100000,0.781250,0.656250,
-    -0.100000,-0.100000,0.718750,0.625000,
-    -0.100000,0.100000,0.718750,0.656250,
-
-    // kBiomesBiomesMode
+    // kWaterEditRiverTransparencyArea
+    0.200000,-0.050000,0.906250,0.718750,
+    0.200000,0.050000,0.906250,0.734375,
+    -0.200000,-0.050000,0.781250,0.718750,
+    -0.200000,0.050000,0.781250,0.734375,
+
+    // kWaterEditRiverTransparencyIcon
+    0.050000,-0.050000,0.218750,0.492188,
+    0.050000,0.050000,0.218750,0.507812,
+    -0.050000,-0.050000,0.187500,0.492188,
+    -0.050000,0.050000,0.187500,0.507812,
+
+    // kWaterEditOceanVisibleOff
     0.100000,-0.100000,0.718750,0.656250,
     0.100000,0.100000,0.718750,0.687500,
     -0.100000,-0.100000,0.656250,0.656250,
     -0.100000,0.100000,0.656250,0.687500,
 
-    // kBiomesWindDirArea
-    0.100000,-0.100000,0.812500,0.546875,
-    0.100000,0.100000,0.812500,0.578125,
-    -0.100000,-0.100000,0.750000,0.546875,
-    -0.100000,0.100000,0.750000,0.578125,
+    // kWaterEditOceanVisibleOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
-    // kBiomesWindDirHandle
-    0.100000,-0.100000,0.968750,0.542969,
-    0.100000,0.100000,0.968750,0.574219,
-    -0.100000,-0.100000,0.906250,0.542969,
-    -0.100000,0.100000,0.906250,0.574219,
+    // kWaterEditOceanVisibleOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
-    // kBiomesWindDirIcon
-    0.100000,-0.100000,0.375000,0.515625,
-    0.100000,0.100000,0.375000,0.546875,
-    -0.100000,-0.100000,0.312500,0.515625,
-    -0.100000,0.100000,0.312500,0.546875,
+    // kWaterEditOceanVisibleOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
-    // kBiomesSunDirArea
-    0.100000,-0.100000,0.812500,0.546875,
-    0.100000,0.100000,0.812500,0.578125,
-    -0.100000,-0.100000,0.750000,0.546875,
-    -0.100000,0.100000,0.750000,0.578125,
+    // kWaterEditOceanConfig
+    0.100000,-0.100000,0.843750,0.601562,
+    0.100000,0.100000,0.843750,0.632812,
+    -0.100000,-0.100000,0.781250,0.601562,
+    -0.100000,0.100000,0.781250,0.632812,
 
-    // kBiomesSunDirHandle
-    0.100000,-0.100000,0.968750,0.542969,
-    0.100000,0.100000,0.968750,0.574219,
-    -0.100000,-0.100000,0.906250,0.542969,
-    -0.100000,0.100000,0.906250,0.574219,
-
-    // kBiomesSunDirIcon
-    0.100000,-0.100000,0.125000,0.531250,
-    0.100000,0.100000,0.125000,0.562500,
-    -0.100000,-0.100000,0.062500,0.531250,
-    -0.100000,0.100000,0.062500,0.562500,
-
-    // kBiomesTimeArea
-    0.100000,-0.100000,0.812500,0.546875,
-    0.100000,0.100000,0.812500,0.578125,
-    -0.100000,-0.100000,0.750000,0.546875,
-    -0.100000,0.100000,0.750000,0.578125,
-
-    // kBiomesTimeHandle
-    0.100000,-0.100000,0.968750,0.542969,
-    0.100000,0.100000,0.968750,0.574219,
-    -0.100000,-0.100000,0.906250,0.542969,
-    -0.100000,0.100000,0.906250,0.574219,
-
-    // kBiomesTimeIcon
-    0.100000,-0.100000,0.625000,0.531250,
-    0.100000,0.100000,0.625000,0.562500,
-    -0.100000,-0.100000,0.562500,0.531250,
-    -0.100000,0.100000,0.562500,0.562500,
-
-    // kBiomesSlotsName
+    // kWaterEditOceanLayerName
     0.250000,-0.250000,1.000000,0.000000,
     0.250000,0.250000,1.000000,1.000000,
     -0.250000,-0.250000,0.000000,0.000000,
     -0.250000,0.250000,0.000000,1.000000,
 
-    // kBiomesSlotsConfig
-    0.100000,-0.100000,0.656250,0.625000,
-    0.100000,0.100000,0.656250,0.656250,
-    -0.100000,-0.100000,0.593750,0.625000,
-    -0.100000,0.100000,0.593750,0.656250,
+    // kPlacementPlacementMode
+    0.100000,-0.100000,0.937500,0.511719,
+    0.100000,0.100000,0.937500,0.542969,
+    -0.100000,-0.100000,0.875000,0.511719,
+    -0.100000,0.100000,0.875000,0.542969,
 
-    // kBiomesVisibleOff
-    0.100000,-0.100000,0.343750,0.671875,
-    0.100000,0.100000,0.343750,0.703125,
-    -0.100000,-0.100000,0.281250,0.671875,
-    -0.100000,0.100000,0.281250,0.703125,
+    // kPlacementTrees
+    0.100000,-0.100000,0.937500,0.511719,
+    0.100000,0.100000,0.937500,0.542969,
+    -0.100000,-0.100000,0.875000,0.511719,
+    -0.100000,0.100000,0.875000,0.542969,
 
-    // kBiomesVisibleOn1
-    0.100000,-0.100000,0.406250,0.671875,
-    0.100000,0.100000,0.406250,0.703125,
-    -0.100000,-0.100000,0.343750,0.671875,
-    -0.100000,0.100000,0.343750,0.703125,
+    // kPlacementTreesOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
-    // kBiomesVisibleOn2
-    0.100000,-0.100000,0.968750,0.667969,
-    0.100000,0.100000,0.968750,0.699219,
-    -0.100000,-0.100000,0.906250,0.667969,
-    -0.100000,0.100000,0.906250,0.699219,
+    // kPlacementTreesOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
-    // kBiomesVisibleOn3
-    0.100000,-0.100000,0.593750,0.656250,
-    0.100000,0.100000,0.593750,0.687500,
-    -0.100000,-0.100000,0.531250,0.656250,
-    -0.100000,0.100000,0.531250,0.687500,
+    // kPlacementTreesOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
-    // kBiomesSlotsSlot
-    0.175000,-0.075000,0.390625,0.703125,
-    0.175000,0.075000,0.390625,0.726562,
-    -0.175000,-0.075000,0.281250,0.703125,
-    -0.175000,0.075000,0.281250,0.726562,
+    // kPlacementTreesOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
-    // kBiomesSlotsSlotColor
-    0.150000,-0.012500,1.000000,0.746094,
-    0.150000,0.012500,1.000000,0.750000,
-    -0.150000,-0.012500,0.906250,0.746094,
-    -0.150000,0.012500,0.906250,0.750000,
+    // kPlacementBushes
+    0.100000,-0.100000,0.281250,0.664062,
+    0.100000,0.100000,0.281250,0.695312,
+    -0.100000,-0.100000,0.218750,0.664062,
+    -0.100000,0.100000,0.218750,0.695312,
 
-    // kBiomesSlotsRemove
-    0.037500,-0.037500,0.929688,0.507812,
-    0.037500,0.037500,0.929688,0.519531,
-    -0.037500,-0.037500,0.906250,0.507812,
-    -0.037500,0.037500,0.906250,0.519531,
+    // kPlacementBushesOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
-    // kBiomesSlotsSelected
-    0.025000,-0.025000,0.375000,0.507812,
-    0.025000,0.025000,0.375000,0.515625,
-    -0.025000,-0.025000,0.359375,0.507812,
-    -0.025000,0.025000,0.359375,0.515625,
+    // kPlacementBushesOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
-    // kBiomesSlotsHandler
-    0.025000,-0.050000,0.359375,0.500000,
-    0.025000,0.050000,0.359375,0.515625,
-    -0.025000,-0.050000,0.343750,0.500000,
-    -0.025000,0.050000,0.343750,0.515625,
+    // kPlacementBushesOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
-    // kBiomesSlotsSlider
-    0.050000,-0.400000,0.718750,0.406250,
-    0.050000,0.400000,0.718750,0.531250,
-    -0.050000,-0.400000,0.687500,0.406250,
-    -0.050000,0.400000,0.687500,0.531250,
+    // kPlacementBushesOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
-    // kBiomesSlotsBack
-    0.250000,-0.400000,0.156250,0.656250,
-    0.250000,0.400000,0.156250,0.781250,
-    -0.250000,-0.400000,0.000000,0.656250,
-    -0.250000,0.400000,0.000000,0.781250,
+    // kPlacementTallGrass
+    0.100000,-0.100000,0.312500,0.593750,
+    0.100000,0.100000,0.312500,0.625000,
+    -0.100000,-0.100000,0.250000,0.593750,
+    -0.100000,0.100000,0.250000,0.625000,
 
-    // kBiomesSlotsCreate
-    0.037500,-0.037500,0.882812,0.507812,
-    0.037500,0.037500,0.882812,0.519531,
-    -0.037500,-0.037500,0.859375,0.507812,
-    -0.037500,0.037500,0.859375,0.519531,
+    // kPlacementTallGrassOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
 
-    // kBiomesSlotsFlipPointEdgeFace_Back
-    0.037500,-0.037500,0.906250,0.507812,
-    0.037500,0.037500,0.906250,0.519531,
-    -0.037500,-0.037500,0.882812,0.507812,
-    -0.037500,0.037500,0.882812,0.519531,
+    // kPlacementTallGrassOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
-    // kBiomesSlotsFlipSelectEdit_Back
-    0.037500,-0.037500,0.906250,0.507812,
-    0.037500,0.037500,0.906250,0.519531,
-    -0.037500,-0.037500,0.882812,0.507812,
-    -0.037500,0.037500,0.882812,0.519531,
+    // kPlacementTallGrassOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
-    // kBiomesSlotsFlipPointEdgeFace
-    0.075000,-0.075000,0.656250,0.507812,
-    0.075000,0.075000,0.656250,0.531250,
-    -0.075000,-0.075000,0.609375,0.507812,
-    -0.075000,0.075000,0.609375,0.531250,
+    // kPlacementTallGrassOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
 
-    // kBiomesSlotsFlipSelectEdit
-    0.025000,-0.100000,0.343750,0.484375,
-    0.025000,0.100000,0.343750,0.515625,
-    -0.025000,-0.100000,0.328125,0.484375,
-    -0.025000,0.100000,0.328125,0.515625,
+    // kPlacementUndergrowth
+    0.100000,-0.100000,1.000000,0.511719,
+    0.100000,0.100000,1.000000,0.542969,
+    -0.100000,-0.100000,0.937500,0.511719,
+    -0.100000,0.100000,0.937500,0.542969,
+
+    // kPlacementUndergrowthOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kPlacementUndergrowthOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kPlacementUndergrowthOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kPlacementUndergrowthOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kPlacementAsphalt
+    0.100000,-0.100000,0.062500,0.554688,
+    0.100000,0.100000,0.062500,0.585938,
+    -0.100000,-0.100000,0.000000,0.554688,
+    -0.100000,0.100000,0.000000,0.585938,
+
+    // kPlacementAsphaltOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kPlacementAsphaltOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kPlacementAsphaltOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kPlacementAsphaltOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kPlacemenGravel
+    0.100000,-0.100000,0.875000,0.542969,
+    0.100000,0.100000,0.875000,0.574219,
+    -0.100000,-0.100000,0.812500,0.542969,
+    -0.100000,0.100000,0.812500,0.574219,
+
+    // kPlacementGravelOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kPlacementGravelOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kPlacementGravelOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kPlacementGravelOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kPlacementSoil
+    0.100000,-0.100000,0.937500,0.542969,
+    0.100000,0.100000,0.937500,0.574219,
+    -0.100000,-0.100000,0.875000,0.542969,
+    -0.100000,0.100000,0.875000,0.574219,
+
+    // kPlacementSoilOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kPlacementSoilOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kPlacementSoilOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kPlacementSoilOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kPlacementSelected
+    0.100000,-0.100000,0.125000,0.593750,
+    0.100000,0.100000,0.125000,0.625000,
+    -0.100000,-0.100000,0.062500,0.593750,
+    -0.100000,0.100000,0.062500,0.625000,
+
+    // kPlacementChangeMode
+    0.100000,-0.100000,0.250000,0.507812,
+    0.100000,0.100000,0.250000,0.539062,
+    -0.100000,-0.100000,0.187500,0.507812,
+    -0.100000,0.100000,0.187500,0.539062,
+
+    // kPlacementDrawOff
+    0.100000,-0.100000,0.718750,0.656250,
+    0.100000,0.100000,0.718750,0.687500,
+    -0.100000,-0.100000,0.656250,0.656250,
+    -0.100000,0.100000,0.656250,0.687500,
+
+    // kPlacementDrawOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
+
+    // kPlacementDrawOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
+
+    // kPlacementDrawOn3
+    0.100000,-0.100000,0.968750,0.636719,
+    0.100000,0.100000,0.968750,0.667969,
+    -0.100000,-0.100000,0.906250,0.636719,
+    -0.100000,0.100000,0.906250,0.667969,
+
+    // kObjectsObjectsMode
+    0.100000,-0.100000,0.375000,0.593750,
+    0.100000,0.100000,0.375000,0.625000,
+    -0.100000,-0.100000,0.312500,0.593750,
+    -0.100000,0.100000,0.312500,0.625000,
+
+    // kObjectsEditDesk
+    0.800000,-0.600000,0.500000,0.812500,
+    0.800000,0.600000,0.500000,1.000000,
+    -0.800000,-0.600000,0.000000,0.812500,
+    -0.800000,0.600000,0.000000,1.000000,
+
+    // kObjectsEditDeskPinBack
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
+
+    // kObjectsEditDeskPinPoint
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
+
+    // kObjectsEditAccept
+    0.100000,-0.100000,0.953125,0.667969,
+    0.100000,0.100000,0.953125,0.699219,
+    -0.100000,-0.100000,0.890625,0.667969,
+    -0.100000,0.100000,0.890625,0.699219,
+
+    // kObjectsEditName
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kObjectsEditNameBack
+    0.100000,-0.025000,0.625000,0.539062,
+    0.100000,0.025000,0.625000,0.546875,
+    -0.100000,-0.025000,0.562500,0.539062,
+    -0.100000,0.025000,0.562500,0.546875,
+
+    // kObjectsEditRandomGeneration
+    0.075000,-0.075000,0.484375,0.507812,
+    0.075000,0.075000,0.484375,0.531250,
+    -0.075000,-0.075000,0.437500,0.507812,
+    -0.075000,0.075000,0.437500,0.531250,
+
+    // kObjectsEditModelName
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kObjectsEditCharacteristicArea
+    0.200000,-0.050000,0.906250,0.718750,
+    0.200000,0.050000,0.906250,0.734375,
+    -0.200000,-0.050000,0.781250,0.718750,
+    -0.200000,0.050000,0.781250,0.734375,
+
+    // kObjectsEditCharacteristicIcon
+    0.050000,-0.050000,0.218750,0.492188,
+    0.050000,0.050000,0.218750,0.507812,
+    -0.050000,-0.050000,0.187500,0.492188,
+    -0.050000,0.050000,0.187500,0.507812,
+
+    // kBiomesBiomesMode
+    0.100000,-0.100000,0.281250,0.632812,
+    0.100000,0.100000,0.281250,0.664062,
+    -0.100000,-0.100000,0.218750,0.632812,
+    -0.100000,0.100000,0.218750,0.664062,
+
+    // kBiomesBiomePoint
+    0.025000,-0.100000,0.484375,0.468750,
+    0.025000,0.100000,0.484375,0.500000,
+    -0.025000,-0.100000,0.468750,0.468750,
+    -0.025000,0.100000,0.468750,0.500000,
 
     // kBiomesEditDesk
     0.800000,-0.600000,0.500000,0.812500,
@@ -6645,23 +3973,23 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.800000,-0.600000,0.000000,0.812500,
     -0.800000,0.600000,0.000000,1.000000,
 
-    // kBiomesEditPinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
+    // kBiomesEditDeskPinBack
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
 
-    // kBiomesEditPinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
+    // kBiomesEditDeskPinPoint
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
 
     // kBiomesEditAccept
-    0.100000,-0.100000,0.718750,0.687500,
-    0.100000,0.100000,0.718750,0.718750,
-    -0.100000,-0.100000,0.656250,0.687500,
-    -0.100000,0.100000,0.656250,0.718750,
+    0.100000,-0.100000,0.953125,0.667969,
+    0.100000,0.100000,0.953125,0.699219,
+    -0.100000,-0.100000,0.890625,0.667969,
+    -0.100000,0.100000,0.890625,0.699219,
 
     // kBiomesEditName
     0.250000,-0.250000,1.000000,0.000000,
@@ -6670,22 +3998,22 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kBiomesEditNameBack
-    0.100000,-0.025000,0.562500,0.554688,
-    0.100000,0.025000,0.562500,0.562500,
-    -0.100000,-0.025000,0.500000,0.554688,
-    -0.100000,0.025000,0.500000,0.562500,
+    0.100000,-0.025000,0.625000,0.539062,
+    0.100000,0.025000,0.625000,0.546875,
+    -0.100000,-0.025000,0.562500,0.539062,
+    -0.100000,0.025000,0.562500,0.546875,
 
     // kBiomesColorPaletteHS
-    0.100000,-0.100000,0.906250,0.648438,
-    0.100000,0.100000,0.906250,0.679688,
-    -0.100000,-0.100000,0.843750,0.648438,
-    -0.100000,0.100000,0.843750,0.679688,
+    0.100000,-0.100000,0.125000,0.625000,
+    0.100000,0.100000,0.125000,0.656250,
+    -0.100000,-0.100000,0.062500,0.625000,
+    -0.100000,0.100000,0.062500,0.656250,
 
     // kBiomesColorPaletteB
-    0.100000,-0.025000,0.843750,0.671875,
-    0.100000,0.025000,0.843750,0.679688,
-    -0.100000,-0.025000,0.781250,0.671875,
-    -0.100000,0.025000,0.781250,0.679688,
+    0.100000,-0.025000,0.062500,0.648438,
+    0.100000,0.025000,0.062500,0.656250,
+    -0.100000,-0.025000,0.000000,0.648438,
+    -0.100000,0.025000,0.000000,0.656250,
 
     // kBiomesColorIndicator
     0.150000,-0.012500,1.000000,0.746094,
@@ -6694,256 +4022,412 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.150000,0.012500,0.906250,0.750000,
 
     // kBiomesColorBrightnessCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
+    0.012500,-0.012500,0.437500,0.496094,
+    0.012500,0.012500,0.437500,0.500000,
+    -0.012500,-0.012500,0.429688,0.496094,
+    -0.012500,0.012500,0.429688,0.500000,
 
     // kBiomesColorColorCursor
-    0.012500,-0.012500,0.968750,0.515625,
-    0.012500,0.012500,0.968750,0.519531,
-    -0.012500,-0.012500,0.960938,0.515625,
-    -0.012500,0.012500,0.960938,0.519531,
+    0.012500,-0.012500,0.437500,0.496094,
+    0.012500,0.012500,0.437500,0.500000,
+    -0.012500,-0.012500,0.429688,0.496094,
+    -0.012500,0.012500,0.429688,0.500000,
 
-    // kBiomesEditWindFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
+    // kBiomesEditRandomGeneration
+    0.075000,-0.075000,0.484375,0.507812,
+    0.075000,0.075000,0.484375,0.531250,
+    -0.075000,-0.075000,0.437500,0.507812,
+    -0.075000,0.075000,0.437500,0.531250,
 
-    // kBiomesEditWindBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
+    // kBiomesEditNoiseName
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
 
-    // kBiomesEditWindHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
+    // kBiomesEditNoiseStrengthArea
+    0.200000,-0.050000,0.906250,0.718750,
+    0.200000,0.050000,0.906250,0.734375,
+    -0.200000,-0.050000,0.781250,0.718750,
+    -0.200000,0.050000,0.781250,0.734375,
 
-    // kBiomesEditWindIcon
-    0.100000,-0.100000,0.375000,0.515625,
-    0.100000,0.100000,0.375000,0.546875,
-    -0.100000,-0.100000,0.312500,0.515625,
-    -0.100000,0.100000,0.312500,0.546875,
+    // kBiomesEditNoiseStrengthIcon
+    0.050000,-0.050000,0.218750,0.492188,
+    0.050000,0.050000,0.218750,0.507812,
+    -0.050000,-0.050000,0.187500,0.492188,
+    -0.050000,0.050000,0.187500,0.507812,
 
-    // kBiomesEditSunFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
+    // kTilesTilesMode
+    0.100000,-0.100000,0.750000,0.593750,
+    0.100000,0.100000,0.750000,0.625000,
+    -0.100000,-0.100000,0.687500,0.593750,
+    -0.100000,0.100000,0.687500,0.625000,
 
-    // kBiomesEditSunBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
+    // kTilesLeft
+    0.100000,-0.100000,0.625000,0.593750,
+    0.100000,0.100000,0.625000,0.625000,
+    -0.100000,-0.100000,0.562500,0.593750,
+    -0.100000,0.100000,0.562500,0.625000,
 
-    // kBiomesEditSunHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
+    // kTilesRight
+    0.100000,-0.100000,0.687500,0.562500,
+    0.100000,0.100000,0.687500,0.593750,
+    -0.100000,-0.100000,0.625000,0.562500,
+    -0.100000,0.100000,0.625000,0.593750,
 
-    // kBiomesEditSunIcon
-    0.100000,-0.100000,0.125000,0.531250,
-    0.100000,0.100000,0.125000,0.562500,
-    -0.100000,-0.100000,0.062500,0.531250,
-    -0.100000,0.100000,0.062500,0.562500,
+    // kTilesUp
+    0.100000,-0.100000,0.187500,0.507812,
+    0.100000,0.100000,0.187500,0.539062,
+    -0.100000,-0.100000,0.125000,0.507812,
+    -0.100000,0.100000,0.125000,0.539062,
 
-    // kBiomesEditTimeFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
+    // kTilesDown
+    0.100000,-0.100000,0.781250,0.625000,
+    0.100000,0.100000,0.781250,0.656250,
+    -0.100000,-0.100000,0.718750,0.625000,
+    -0.100000,0.100000,0.718750,0.656250,
 
-    // kBiomesEditTimeBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
+    // kTilesCreate
+    0.100000,-0.100000,0.437500,0.562500,
+    0.100000,0.100000,0.437500,0.593750,
+    -0.100000,-0.100000,0.375000,0.562500,
+    -0.100000,0.100000,0.375000,0.593750,
 
-    // kBiomesEditTimeHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
+    // kTilesRemove
+    0.100000,-0.100000,0.906250,0.574219,
+    0.100000,0.100000,0.906250,0.605469,
+    -0.100000,-0.100000,0.843750,0.574219,
+    -0.100000,0.100000,0.843750,0.605469,
 
-    // kBiomesEditTimeIcon
-    0.100000,-0.100000,0.625000,0.531250,
-    0.100000,0.100000,0.625000,0.562500,
-    -0.100000,-0.100000,0.562500,0.531250,
-    -0.100000,0.100000,0.562500,0.562500,
+    // kPlayerPlayerMode
+    0.100000,-0.100000,0.375000,0.593750,
+    0.100000,0.100000,0.375000,0.625000,
+    -0.100000,-0.100000,0.312500,0.593750,
+    -0.100000,0.100000,0.312500,0.625000,
 
-    // kBiomesEditPrecipitationFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
+    // kPlayerHealthPoint
+    0.012500,-0.025000,0.742188,0.492188,
+    0.012500,0.025000,0.742188,0.500000,
+    -0.012500,-0.025000,0.734375,0.492188,
+    -0.012500,0.025000,0.734375,0.500000,
 
-    // kBiomesEditPrecipitationBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
+    // kPlayerStaminaPoint
+    0.025000,-0.025000,0.429688,0.492188,
+    0.025000,0.025000,0.429688,0.500000,
+    -0.025000,-0.025000,0.414062,0.492188,
+    -0.025000,0.025000,0.414062,0.500000,
 
-    // kBiomesEditPrecipitationHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
+    // kPlayerGameObjInfoDesk
+    0.200000,-0.200000,0.781250,0.687500,
+    0.200000,0.200000,0.781250,0.750000,
+    -0.200000,-0.200000,0.656250,0.687500,
+    -0.200000,0.200000,0.656250,0.750000,
 
-    // kBiomesEditPrecipitationIcon
-    0.100000,-0.100000,0.843750,0.578125,
-    0.100000,0.100000,0.843750,0.609375,
-    -0.100000,-0.100000,0.781250,0.578125,
-    -0.100000,0.100000,0.781250,0.609375,
+    // kPlayerGameObjInfoPinBack
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
 
-    // kBiomesEditTemperatureFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
+    // kPlayerGameObjInfoPinPoint
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
 
-    // kBiomesEditTemperatureBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
+    // kPlayerGameObjInfoEnemy
+    0.075000,-0.075000,0.718750,0.507812,
+    0.075000,0.075000,0.718750,0.531250,
+    -0.075000,-0.075000,0.671875,0.507812,
+    -0.075000,0.075000,0.671875,0.531250,
 
-    // kBiomesEditTemperatureHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
+    // kPlayerGameObjInfoFriend
+    0.075000,-0.075000,0.671875,0.507812,
+    0.075000,0.075000,0.671875,0.531250,
+    -0.075000,-0.075000,0.625000,0.507812,
+    -0.075000,0.075000,0.625000,0.531250,
 
-    // kBiomesEditTemperatureIcon
-    0.100000,-0.100000,0.500000,0.531250,
-    0.100000,0.100000,0.500000,0.562500,
-    -0.100000,-0.100000,0.437500,0.531250,
-    -0.100000,0.100000,0.437500,0.562500,
+    // kPlayerGameObjInfoNeutal
+    0.075000,-0.075000,0.046875,0.500000,
+    0.075000,0.075000,0.046875,0.523438,
+    -0.075000,-0.075000,0.000000,0.500000,
+    -0.075000,0.075000,0.000000,0.523438,
 
-    // kBiomesEditCloudFill
-    0.100000,-0.050000,0.250000,0.554688,
-    0.100000,0.050000,0.250000,0.570312,
-    -0.100000,-0.050000,0.187500,0.554688,
-    -0.100000,0.050000,0.187500,0.570312,
+    // kPlayerGameObjInfoObstacle
+    0.050000,-0.050000,0.750000,0.500000,
+    0.050000,0.050000,0.750000,0.515625,
+    -0.050000,-0.050000,0.718750,0.500000,
+    -0.050000,0.050000,0.718750,0.515625,
 
-    // kBiomesEditCloudBack
-    0.100000,-0.050000,0.187500,0.554688,
-    0.100000,0.050000,0.187500,0.570312,
-    -0.100000,-0.050000,0.125000,0.554688,
-    -0.100000,0.050000,0.125000,0.570312,
+    // kPlayerGameObjInfoName
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
 
-    // kBiomesEditCloudHandler
-    0.100000,-0.100000,0.312500,0.546875,
-    0.100000,0.100000,0.312500,0.578125,
-    -0.100000,-0.100000,0.250000,0.546875,
-    -0.100000,0.100000,0.250000,0.578125,
+    // kPlayerGameObjInfoCharacteristic
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
 
-    // kBiomesEditCloudIcon
+    // kPlayerGameObjInfoValue
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kPlayerPhone
+    0.200000,-0.400000,0.531250,0.625000,
+    0.200000,0.400000,0.531250,0.750000,
+    -0.200000,-0.400000,0.406250,0.625000,
+    -0.200000,0.400000,0.406250,0.750000,
+
+    // kPlayerPhoneMap
+    0.200000,-0.400000,0.656250,0.625000,
+    0.200000,0.400000,0.656250,0.750000,
+    -0.200000,-0.400000,0.531250,0.625000,
+    -0.200000,0.400000,0.531250,0.750000,
+
+    // kPlayerMapPlayer
+    0.037500,-0.037500,0.273438,0.488281,
+    0.037500,0.037500,0.273438,0.500000,
+    -0.037500,-0.037500,0.250000,0.488281,
+    -0.037500,0.037500,0.250000,0.500000,
+
+    // kPlayerMapEnemy
+    0.075000,-0.075000,0.718750,0.507812,
+    0.075000,0.075000,0.718750,0.531250,
+    -0.075000,-0.075000,0.671875,0.507812,
+    -0.075000,0.075000,0.671875,0.531250,
+
+    // kPlayerMapFriend
+    0.075000,-0.075000,0.671875,0.507812,
+    0.075000,0.075000,0.671875,0.531250,
+    -0.075000,-0.075000,0.625000,0.507812,
+    -0.075000,0.075000,0.625000,0.531250,
+
+    // kPlayerMapNeutral
+    0.075000,-0.075000,0.046875,0.500000,
+    0.075000,0.075000,0.046875,0.523438,
+    -0.075000,-0.075000,0.000000,0.500000,
+    -0.075000,0.075000,0.000000,0.523438,
+
+    // kPlayerMapObstacle
+    0.050000,-0.050000,0.750000,0.500000,
+    0.050000,0.050000,0.750000,0.515625,
+    -0.050000,-0.050000,0.718750,0.500000,
+    -0.050000,0.050000,0.718750,0.515625,
+
+    // kConfigWindowName
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kConfigWindowDesk
+    0.400000,-0.200000,0.750000,0.937500,
+    0.400000,0.200000,0.750000,1.000000,
+    -0.400000,-0.200000,0.500000,0.937500,
+    -0.400000,0.200000,0.500000,1.000000,
+
+    // kConfigWindowPinBack
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
+
+    // kConfigWindowPinPoint
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
+
+    // kConfigWindowHandler
+    0.025000,-0.050000,0.578125,0.484375,
+    0.025000,0.050000,0.578125,0.500000,
+    -0.025000,-0.050000,0.562500,0.484375,
+    -0.025000,0.050000,0.562500,0.500000,
+
+    // kConfigWindowSlider
+    0.050000,-0.200000,0.687500,0.445312,
+    0.050000,0.200000,0.687500,0.507812,
+    -0.050000,-0.200000,0.656250,0.445312,
+    -0.050000,0.200000,0.656250,0.507812,
+
+    // kConfigWindowSave
+    0.100000,-0.100000,0.187500,0.539062,
+    0.100000,0.100000,0.187500,0.570312,
+    -0.100000,-0.100000,0.125000,0.539062,
+    -0.100000,0.100000,0.125000,0.570312,
+
+    // kConfigWindowSliderText
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kConfigWindowSliderArea
+    0.200000,-0.050000,0.906250,0.718750,
+    0.200000,0.050000,0.906250,0.734375,
+    -0.200000,-0.050000,0.781250,0.718750,
+    -0.200000,0.050000,0.781250,0.734375,
+
+    // kConfigWindowSliderIcon
+    0.050000,-0.050000,0.218750,0.492188,
+    0.050000,0.050000,0.218750,0.507812,
+    -0.050000,-0.050000,0.187500,0.492188,
+    -0.050000,0.050000,0.187500,0.507812,
+
+    // kSlotsName
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kSlotsConfig
+    0.100000,-0.100000,0.843750,0.601562,
+    0.100000,0.100000,0.843750,0.632812,
+    -0.100000,-0.100000,0.781250,0.601562,
+    -0.100000,0.100000,0.781250,0.632812,
+
+    // kSlotsVisibleOff
     0.100000,-0.100000,0.718750,0.656250,
     0.100000,0.100000,0.718750,0.687500,
     -0.100000,-0.100000,0.656250,0.656250,
     -0.100000,0.100000,0.656250,0.687500,
 
-    // kTilesTilesMode
-    0.100000,-0.100000,0.062500,0.593750,
-    0.100000,0.100000,0.062500,0.625000,
-    -0.100000,-0.100000,0.000000,0.593750,
-    -0.100000,0.100000,0.000000,0.625000,
+    // kSlotsVisibleOn1
+    0.100000,-0.100000,0.781250,0.656250,
+    0.100000,0.100000,0.781250,0.687500,
+    -0.100000,-0.100000,0.718750,0.656250,
+    -0.100000,0.100000,0.718750,0.687500,
 
-    // kTilesLeft
-    0.100000,-0.100000,0.187500,0.601562,
-    0.100000,0.100000,0.187500,0.632812,
-    -0.100000,-0.100000,0.125000,0.601562,
-    -0.100000,0.100000,0.125000,0.632812,
+    // kSlotsVisibleOn2
+    0.100000,-0.100000,0.906250,0.636719,
+    0.100000,0.100000,0.906250,0.667969,
+    -0.100000,-0.100000,0.843750,0.636719,
+    -0.100000,0.100000,0.843750,0.667969,
 
-    // kTilesRight
-    0.100000,-0.100000,0.250000,0.570312,
-    0.100000,0.100000,0.250000,0.601562,
-    -0.100000,-0.100000,0.187500,0.570312,
-    -0.100000,0.100000,0.187500,0.601562,
-
-    // kTilesUp
-    0.100000,-0.100000,0.187500,0.523438,
-    0.100000,0.100000,0.187500,0.554688,
-    -0.100000,-0.100000,0.125000,0.523438,
-    -0.100000,0.100000,0.125000,0.554688,
-
-    // kTilesDown
+    // kSlotsVisibleOn3
     0.100000,-0.100000,0.968750,0.636719,
     0.100000,0.100000,0.968750,0.667969,
     -0.100000,-0.100000,0.906250,0.636719,
     -0.100000,0.100000,0.906250,0.667969,
 
+    // kSlotsSlot
+    0.175000,-0.075000,0.890625,0.695312,
+    0.175000,0.075000,0.890625,0.718750,
+    -0.175000,-0.075000,0.781250,0.695312,
+    -0.175000,0.075000,0.781250,0.718750,
+
+    // kSlotsSlotColor
+    0.150000,-0.012500,1.000000,0.746094,
+    0.150000,0.012500,1.000000,0.750000,
+    -0.150000,-0.012500,0.906250,0.746094,
+    -0.150000,0.012500,0.906250,0.750000,
+
+    // kSlotsRemove
+    0.037500,-0.037500,0.367188,0.488281,
+    0.037500,0.037500,0.367188,0.500000,
+    -0.037500,-0.037500,0.343750,0.488281,
+    -0.037500,0.037500,0.343750,0.500000,
+
+    // kSlotsSelected
+    0.025000,-0.025000,0.593750,0.492188,
+    0.025000,0.025000,0.593750,0.500000,
+    -0.025000,-0.025000,0.578125,0.492188,
+    -0.025000,0.025000,0.578125,0.500000,
+
+    // kSlotsHandler
+    0.025000,-0.050000,0.578125,0.484375,
+    0.025000,0.050000,0.578125,0.500000,
+    -0.025000,-0.050000,0.562500,0.484375,
+    -0.025000,0.050000,0.562500,0.500000,
+
+    // kSlotsSlider
+    0.050000,-0.400000,0.656250,0.382812,
+    0.050000,0.400000,0.656250,0.507812,
+    -0.050000,-0.400000,0.625000,0.382812,
+    -0.050000,0.400000,0.625000,0.507812,
+
+    // kSlotsBack
+    0.250000,-0.400000,0.156250,0.656250,
+    0.250000,0.400000,0.156250,0.781250,
+    -0.250000,-0.400000,0.000000,0.656250,
+    -0.250000,0.400000,0.000000,0.781250,
+
+    // kSlotsCreate
+    0.037500,-0.037500,0.320312,0.488281,
+    0.037500,0.037500,0.320312,0.500000,
+    -0.037500,-0.037500,0.296875,0.488281,
+    -0.037500,0.037500,0.296875,0.500000,
+
     // kMapTomb
-    0.075000,-0.125000,0.421875,0.492188,
-    0.075000,0.125000,0.421875,0.531250,
-    -0.075000,-0.125000,0.375000,0.492188,
-    -0.075000,0.125000,0.375000,0.531250,
+    0.075000,-0.125000,0.531250,0.476562,
+    0.075000,0.125000,0.531250,0.515625,
+    -0.075000,-0.125000,0.484375,0.476562,
+    -0.075000,0.125000,0.484375,0.515625,
 
     // kMapFlowerRed
-    0.075000,-0.075000,0.046875,0.507812,
-    0.075000,0.075000,0.046875,0.531250,
-    -0.075000,-0.075000,0.000000,0.507812,
-    -0.075000,0.075000,0.000000,0.531250,
+    0.075000,-0.075000,0.718750,0.507812,
+    0.075000,0.075000,0.718750,0.531250,
+    -0.075000,-0.075000,0.671875,0.507812,
+    -0.075000,0.075000,0.671875,0.531250,
 
     // kMapFlowerWhite
-    0.075000,-0.075000,0.093750,0.507812,
-    0.075000,0.075000,0.093750,0.531250,
-    -0.075000,-0.075000,0.046875,0.507812,
-    -0.075000,0.075000,0.046875,0.531250,
+    0.075000,-0.075000,0.046875,0.500000,
+    0.075000,0.075000,0.046875,0.523438,
+    -0.075000,-0.075000,0.000000,0.500000,
+    -0.075000,0.075000,0.000000,0.523438,
 
     // kMapFlowerBlue
-    0.075000,-0.075000,0.968750,0.519531,
-    0.075000,0.075000,0.968750,0.542969,
-    -0.075000,-0.075000,0.921875,0.519531,
-    -0.075000,0.075000,0.921875,0.542969,
+    0.075000,-0.075000,0.671875,0.507812,
+    0.075000,0.075000,0.671875,0.531250,
+    -0.075000,-0.075000,0.625000,0.507812,
+    -0.075000,0.075000,0.625000,0.531250,
 
     // kMapKorn
-    0.050000,-0.150000,1.000000,0.636719,
-    0.050000,0.150000,1.000000,0.683594,
-    -0.050000,-0.150000,0.968750,0.636719,
-    -0.050000,0.150000,0.968750,0.683594,
+    0.050000,-0.150000,0.562500,0.468750,
+    0.050000,0.150000,0.562500,0.515625,
+    -0.050000,-0.150000,0.531250,0.468750,
+    -0.050000,0.150000,0.531250,0.515625,
 
     // kMapSeed
-    0.075000,-0.075000,0.609375,0.507812,
-    0.075000,0.075000,0.609375,0.531250,
-    -0.075000,-0.075000,0.562500,0.507812,
-    -0.075000,0.075000,0.562500,0.531250,
+    0.075000,-0.075000,0.906250,0.488281,
+    0.075000,0.075000,0.906250,0.511719,
+    -0.075000,-0.075000,0.859375,0.488281,
+    -0.075000,0.075000,0.859375,0.511719,
 
     // kMapLeaf
-    0.050000,-0.050000,1.000000,0.621094,
-    0.050000,0.050000,1.000000,0.636719,
-    -0.050000,-0.050000,0.968750,0.621094,
-    -0.050000,0.050000,0.968750,0.636719,
+    0.050000,-0.050000,0.750000,0.500000,
+    0.050000,0.050000,0.750000,0.515625,
+    -0.050000,-0.050000,0.718750,0.500000,
+    -0.050000,0.050000,0.718750,0.515625,
 
     // kMapSelected1
-    0.050000,-0.050000,1.000000,0.603516,
-    0.050000,0.050000,1.000000,0.619141,
-    -0.050000,-0.050000,0.968750,0.603516,
-    -0.050000,0.050000,0.968750,0.619141,
+    0.050000,-0.050000,0.984375,0.494141,
+    0.050000,0.050000,0.984375,0.509766,
+    -0.050000,-0.050000,0.953125,0.494141,
+    -0.050000,0.050000,0.953125,0.509766,
 
     // kMapSelected2
-    0.037500,-0.037500,0.835938,0.511719,
-    0.037500,0.037500,0.835938,0.523438,
-    -0.037500,-0.037500,0.812500,0.511719,
-    -0.037500,0.037500,0.812500,0.523438,
+    0.037500,-0.037500,0.273438,0.488281,
+    0.037500,0.037500,0.273438,0.500000,
+    -0.037500,-0.037500,0.250000,0.488281,
+    -0.037500,0.037500,0.250000,0.500000,
 
     // kMapSelected0
-    0.012500,-0.012500,0.453125,0.511719,
-    0.012500,0.012500,0.453125,0.515625,
-    -0.012500,-0.012500,0.445312,0.511719,
-    -0.012500,0.012500,0.445312,0.515625,
+    0.012500,-0.012500,0.750000,0.496094,
+    0.012500,0.012500,0.750000,0.500000,
+    -0.012500,-0.012500,0.742188,0.496094,
+    -0.012500,0.012500,0.742188,0.500000,
 
     // kMapEdge
-    0.050000,-0.006250,1.000000,0.619141,
-    0.050000,0.006250,1.000000,0.621094,
-    -0.050000,-0.006250,0.968750,0.619141,
-    -0.050000,0.006250,0.968750,0.621094,
+    0.050000,-0.006250,0.984375,0.509766,
+    0.050000,0.006250,0.984375,0.511719,
+    -0.050000,-0.006250,0.953125,0.509766,
+    -0.050000,0.006250,0.953125,0.511719,
 
     // kCautionDesk
     0.400000,-0.200000,0.750000,0.750000,
@@ -6970,16 +4454,16 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kConfirmationAccept
-    0.100000,-0.100000,0.718750,0.687500,
-    0.100000,0.100000,0.718750,0.718750,
-    -0.100000,-0.100000,0.656250,0.687500,
-    -0.100000,0.100000,0.656250,0.718750,
+    0.100000,-0.100000,0.953125,0.667969,
+    0.100000,0.100000,0.953125,0.699219,
+    -0.100000,-0.100000,0.890625,0.667969,
+    -0.100000,0.100000,0.890625,0.699219,
 
     // kConfirmationDecline
-    0.100000,-0.100000,0.843750,0.640625,
-    0.100000,0.100000,0.843750,0.671875,
-    -0.100000,-0.100000,0.781250,0.640625,
-    -0.100000,0.100000,0.781250,0.671875,
+    0.100000,-0.100000,0.718750,0.625000,
+    0.100000,0.100000,0.718750,0.656250,
+    -0.100000,-0.100000,0.656250,0.625000,
+    -0.100000,0.100000,0.656250,0.656250,
 
     // kFileDesk
     0.400000,-0.200000,0.750000,0.750000,
@@ -7000,40 +4484,40 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,0.250000,0.000000,1.000000,
 
     // kFileTextBack
-    0.200000,-0.025000,0.906250,0.726562,
-    0.200000,0.025000,0.906250,0.734375,
-    -0.200000,-0.025000,0.781250,0.726562,
-    -0.200000,0.025000,0.781250,0.734375,
+    0.200000,-0.025000,0.406250,0.718750,
+    0.200000,0.025000,0.406250,0.726562,
+    -0.200000,-0.025000,0.281250,0.718750,
+    -0.200000,0.025000,0.281250,0.726562,
 
     // kFileAccept
-    0.100000,-0.100000,0.718750,0.687500,
-    0.100000,0.100000,0.718750,0.718750,
-    -0.100000,-0.100000,0.656250,0.687500,
-    -0.100000,0.100000,0.656250,0.718750,
+    0.100000,-0.100000,0.953125,0.667969,
+    0.100000,0.100000,0.953125,0.699219,
+    -0.100000,-0.100000,0.890625,0.667969,
+    -0.100000,0.100000,0.890625,0.699219,
 
     // kFileDecline
-    0.100000,-0.100000,0.843750,0.640625,
-    0.100000,0.100000,0.843750,0.671875,
-    -0.100000,-0.100000,0.781250,0.640625,
-    -0.100000,0.100000,0.781250,0.671875,
+    0.100000,-0.100000,0.718750,0.625000,
+    0.100000,0.100000,0.718750,0.656250,
+    -0.100000,-0.100000,0.656250,0.625000,
+    -0.100000,0.100000,0.656250,0.656250,
 
     // kTipInfoDesk
-    0.200000,-0.200000,0.656250,0.687500,
-    0.200000,0.200000,0.656250,0.750000,
-    -0.200000,-0.200000,0.531250,0.687500,
-    -0.200000,0.200000,0.531250,0.750000,
+    0.200000,-0.200000,0.781250,0.687500,
+    0.200000,0.200000,0.781250,0.750000,
+    -0.200000,-0.200000,0.656250,0.687500,
+    -0.200000,0.200000,0.656250,0.750000,
 
     // kTipInfoDeskPinBack
-    0.100000,-0.100000,0.781250,0.593750,
-    0.100000,0.100000,0.781250,0.625000,
-    -0.100000,-0.100000,0.718750,0.593750,
-    -0.100000,0.100000,0.718750,0.625000,
+    0.100000,-0.100000,0.125000,0.562500,
+    0.100000,0.100000,0.125000,0.593750,
+    -0.100000,-0.100000,0.062500,0.562500,
+    -0.100000,0.100000,0.062500,0.593750,
 
     // kTipInfoDeskPinPoint
-    0.100000,-0.100000,0.906250,0.585938,
-    0.100000,0.100000,0.906250,0.617188,
-    -0.100000,-0.100000,0.843750,0.585938,
-    -0.100000,0.100000,0.843750,0.617188,
+    0.100000,-0.100000,0.312500,0.562500,
+    0.100000,0.100000,0.312500,0.593750,
+    -0.100000,-0.100000,0.250000,0.562500,
+    -0.100000,0.100000,0.250000,0.593750,
 
     // kTipInfoText
     0.250000,-0.250000,1.000000,0.000000,
@@ -7060,16 +4544,16 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.400000,0.025000,0.250000,0.812500,
 
     // kShadow
-    0.100000,-0.100000,0.687500,0.562500,
-    0.100000,0.100000,0.687500,0.593750,
-    -0.100000,-0.100000,0.625000,0.562500,
-    -0.100000,0.100000,0.625000,0.593750,
+    0.100000,-0.100000,0.250000,0.539062,
+    0.100000,0.100000,0.250000,0.570312,
+    -0.100000,-0.100000,0.187500,0.539062,
+    -0.100000,0.100000,0.187500,0.570312,
 
     // kPivot
-    0.100000,-0.100000,0.312500,0.578125,
-    0.100000,0.100000,0.312500,0.609375,
-    -0.100000,-0.100000,0.250000,0.578125,
-    -0.100000,0.100000,0.250000,0.609375,
+    0.100000,-0.100000,0.375000,0.562500,
+    0.100000,0.100000,0.375000,0.593750,
+    -0.100000,-0.100000,0.312500,0.562500,
+    -0.100000,0.100000,0.312500,0.593750,
 
     // kWireframeWindow
     0.250000,-0.250000,1.000000,0.000000,
@@ -7084,46 +4568,46 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.253125,0.200000,0.750000,0.812500,
 
     // kWireframeWindowXpos
-    0.050000,-0.050000,0.218750,0.507812,
-    0.050000,0.050000,0.218750,0.523438,
-    -0.050000,-0.050000,0.187500,0.507812,
-    -0.050000,0.050000,0.187500,0.523438,
+    0.050000,-0.050000,0.812500,0.492188,
+    0.050000,0.050000,0.812500,0.507812,
+    -0.050000,-0.050000,0.781250,0.492188,
+    -0.050000,0.050000,0.781250,0.507812,
 
     // kWireframeWindowXneg
-    0.050000,-0.050000,0.187500,0.507812,
-    0.050000,0.050000,0.187500,0.523438,
-    -0.050000,-0.050000,0.156250,0.507812,
-    -0.050000,0.050000,0.156250,0.523438,
+    0.050000,-0.050000,0.781250,0.492188,
+    0.050000,0.050000,0.781250,0.507812,
+    -0.050000,-0.050000,0.750000,0.492188,
+    -0.050000,0.050000,0.750000,0.507812,
 
     // kWireframeWindowYpos
-    0.050000,-0.050000,0.500000,0.507812,
-    0.050000,0.050000,0.500000,0.523438,
-    -0.050000,-0.050000,0.468750,0.507812,
-    -0.050000,0.050000,0.468750,0.523438,
+    0.050000,-0.050000,0.062500,0.484375,
+    0.050000,0.050000,0.062500,0.500000,
+    -0.050000,-0.050000,0.031250,0.484375,
+    -0.050000,0.050000,0.031250,0.500000,
 
     // kWireframeWindowYneg
-    0.050000,-0.050000,0.250000,0.507812,
-    0.050000,0.050000,0.250000,0.523438,
-    -0.050000,-0.050000,0.218750,0.507812,
-    -0.050000,0.050000,0.218750,0.523438,
+    0.050000,-0.050000,0.031250,0.484375,
+    0.050000,0.050000,0.031250,0.500000,
+    -0.050000,-0.050000,0.000000,0.484375,
+    -0.050000,0.050000,0.000000,0.500000,
 
     // kWireframeWindowZpos
-    0.050000,-0.050000,0.562500,0.507812,
-    0.050000,0.050000,0.562500,0.523438,
-    -0.050000,-0.050000,0.531250,0.507812,
-    -0.050000,0.050000,0.531250,0.523438,
+    0.050000,-0.050000,0.125000,0.484375,
+    0.050000,0.050000,0.125000,0.500000,
+    -0.050000,-0.050000,0.093750,0.484375,
+    -0.050000,0.050000,0.093750,0.500000,
 
     // kWireframeWindowZneg
-    0.050000,-0.050000,0.531250,0.507812,
-    0.050000,0.050000,0.531250,0.523438,
-    -0.050000,-0.050000,0.500000,0.507812,
-    -0.050000,0.050000,0.500000,0.523438,
+    0.050000,-0.050000,0.093750,0.484375,
+    0.050000,0.050000,0.093750,0.500000,
+    -0.050000,-0.050000,0.062500,0.484375,
+    -0.050000,0.050000,0.062500,0.500000,
 
     // kTextRendererCursor
-    0.050000,-0.050000,0.687500,0.515625,
-    0.050000,0.050000,0.687500,0.531250,
-    -0.050000,-0.050000,0.656250,0.515625,
-    -0.050000,0.050000,0.656250,0.531250,
+    0.050000,-0.050000,0.625000,0.492188,
+    0.050000,0.050000,0.625000,0.507812,
+    -0.050000,-0.050000,0.593750,0.492188,
+    -0.050000,0.050000,0.593750,0.507812,
 
     // kTextRendererPrerenderSlot
     0.250000,-0.250000,1.000000,0.000000,
@@ -7131,83 +4615,65 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.250000,-0.250000,0.000000,0.000000,
     -0.250000,0.250000,0.000000,1.000000,
 
-    // kHealthPoint
-    0.012500,-0.025000,0.445312,0.507812,
-    0.012500,0.025000,0.445312,0.515625,
-    -0.012500,-0.025000,0.437500,0.507812,
-    -0.012500,0.025000,0.437500,0.515625,
-
-    // kStaminaPoint
-    0.025000,-0.025000,0.328125,0.507812,
-    0.025000,0.025000,0.328125,0.515625,
-    -0.025000,-0.025000,0.312500,0.507812,
-    -0.025000,0.025000,0.312500,0.515625,
-
-    // kPhone
-    0.200000,-0.400000,0.531250,0.625000,
-    0.200000,0.400000,0.531250,0.750000,
-    -0.200000,-0.400000,0.406250,0.625000,
-    -0.200000,0.400000,0.406250,0.750000,
-
     // kCursorRectangle
-    0.025000,-0.025000,0.265625,0.507812,
-    0.025000,0.025000,0.265625,0.515625,
-    -0.025000,-0.025000,0.250000,0.507812,
-    -0.025000,0.025000,0.250000,0.515625,
+    0.025000,-0.025000,1.000000,0.496094,
+    0.025000,0.025000,1.000000,0.503906,
+    -0.025000,-0.025000,0.984375,0.496094,
+    -0.025000,0.025000,0.984375,0.503906,
 
     // kCursorCircle
-    0.025000,-0.025000,0.945312,0.511719,
-    0.025000,0.025000,0.945312,0.519531,
-    -0.025000,-0.025000,0.929688,0.511719,
-    -0.025000,0.025000,0.929688,0.519531,
+    0.025000,-0.025000,1.000000,0.503906,
+    0.025000,0.025000,1.000000,0.511719,
+    -0.025000,-0.025000,0.984375,0.503906,
+    -0.025000,0.025000,0.984375,0.511719,
 
     // kCursorLasso
-    0.025000,-0.025000,0.960938,0.511719,
-    0.025000,0.025000,0.960938,0.519531,
-    -0.025000,-0.025000,0.945312,0.511719,
-    -0.025000,0.025000,0.945312,0.519531,
+    0.025000,-0.025000,0.484375,0.500000,
+    0.025000,0.025000,0.484375,0.507812,
+    -0.025000,-0.025000,0.468750,0.500000,
+    -0.025000,0.025000,0.468750,0.507812,
 
     // kCursorTweak
-    0.025000,-0.025000,0.296875,0.507812,
-    0.025000,0.025000,0.296875,0.515625,
-    -0.025000,-0.025000,0.281250,0.507812,
-    -0.025000,0.025000,0.281250,0.515625,
+    0.025000,-0.025000,0.398438,0.492188,
+    0.025000,0.025000,0.398438,0.500000,
+    -0.025000,-0.025000,0.382812,0.492188,
+    -0.025000,0.025000,0.382812,0.500000,
 
     // kCompass
-    0.100000,-0.100000,0.343750,0.640625,
-    0.100000,0.100000,0.343750,0.671875,
-    -0.100000,-0.100000,0.281250,0.640625,
-    -0.100000,0.100000,0.281250,0.671875,
+    0.100000,-0.100000,0.343750,0.625000,
+    0.100000,0.100000,0.343750,0.656250,
+    -0.100000,-0.100000,0.281250,0.625000,
+    -0.100000,0.100000,0.281250,0.656250,
 
     // kCompassNorth
-    0.050000,-0.050000,1.000000,0.587891,
-    0.050000,0.050000,1.000000,0.603516,
-    -0.050000,-0.050000,0.968750,0.587891,
-    -0.050000,0.050000,0.968750,0.603516,
+    0.050000,-0.050000,0.156250,0.492188,
+    0.050000,0.050000,0.156250,0.507812,
+    -0.050000,-0.050000,0.125000,0.492188,
+    -0.050000,0.050000,0.125000,0.507812,
 
     // kCompassSouth
-    0.050000,-0.050000,1.000000,0.572266,
-    0.050000,0.050000,1.000000,0.587891,
-    -0.050000,-0.050000,0.968750,0.572266,
-    -0.050000,0.050000,0.968750,0.587891,
+    0.050000,-0.050000,0.187500,0.492188,
+    0.050000,0.050000,0.187500,0.507812,
+    -0.050000,-0.050000,0.156250,0.492188,
+    -0.050000,0.050000,0.156250,0.507812,
 
     // kCompassWest
-    0.050000,-0.050000,0.156250,0.507812,
-    0.050000,0.050000,0.156250,0.523438,
-    -0.050000,-0.050000,0.125000,0.507812,
-    -0.050000,0.050000,0.125000,0.523438,
+    0.050000,-0.050000,0.718750,0.492188,
+    0.050000,0.050000,0.718750,0.507812,
+    -0.050000,-0.050000,0.687500,0.492188,
+    -0.050000,0.050000,0.687500,0.507812,
 
     // kCompassEast
-    0.050000,-0.050000,1.000000,0.683594,
-    0.050000,0.050000,1.000000,0.699219,
-    -0.050000,-0.050000,0.968750,0.683594,
-    -0.050000,0.050000,0.968750,0.699219,
+    0.050000,-0.050000,0.750000,0.515625,
+    0.050000,0.050000,0.750000,0.531250,
+    -0.050000,-0.050000,0.718750,0.515625,
+    -0.050000,0.050000,0.718750,0.531250,
 
     // kCursorTree
-    0.025000,-0.025000,0.281250,0.507812,
-    0.025000,0.025000,0.281250,0.515625,
-    -0.025000,-0.025000,0.265625,0.507812,
-    -0.025000,0.025000,0.265625,0.515625,
+    0.025000,-0.025000,0.382812,0.492188,
+    0.025000,0.025000,0.382812,0.500000,
+    -0.025000,-0.025000,0.367188,0.492188,
+    -0.025000,0.025000,0.367188,0.500000,
 
     // kLoading0
     0.400000,-0.100000,1.000000,0.968750,
@@ -7276,22 +4742,46 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     -0.400000,0.100000,0.500000,0.937500,
 
     // kLogoBig
-    0.200000,-0.200000,0.281250,0.664062,
-    0.200000,0.200000,0.281250,0.726562,
-    -0.200000,-0.200000,0.156250,0.664062,
-    -0.200000,0.200000,0.156250,0.726562,
+    0.200000,-0.200000,0.406250,0.656250,
+    0.200000,0.200000,0.406250,0.718750,
+    -0.200000,-0.200000,0.281250,0.656250,
+    -0.200000,0.200000,0.281250,0.718750,
 
     // kLogoMedium
-    0.100000,-0.100000,0.812500,0.515625,
-    0.100000,0.100000,0.812500,0.546875,
-    -0.100000,-0.100000,0.750000,0.515625,
-    -0.100000,0.100000,0.750000,0.546875,
+    0.100000,-0.100000,0.437500,0.500000,
+    0.100000,0.100000,0.437500,0.531250,
+    -0.100000,-0.100000,0.375000,0.500000,
+    -0.100000,0.100000,0.375000,0.531250,
 
     // kLogoSmall
-    0.025000,-0.025000,0.437500,0.507812,
-    0.025000,0.025000,0.437500,0.515625,
-    -0.025000,-0.025000,0.421875,0.507812,
-    -0.025000,0.025000,0.421875,0.515625,
+    0.025000,-0.025000,0.734375,0.492188,
+    0.025000,0.025000,0.734375,0.500000,
+    -0.025000,-0.025000,0.718750,0.492188,
+    -0.025000,0.025000,0.718750,0.500000,
+
+    // kButtonsTextKeys
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kButtonsTextMods
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kSelectionSprite
+    0.250000,-0.250000,1.000000,0.000000,
+    0.250000,0.250000,1.000000,1.000000,
+    -0.250000,-0.250000,0.000000,0.000000,
+    -0.250000,0.250000,0.000000,1.000000,
+
+    // kSelectionCircle
+    0.100000,-0.100000,0.125000,0.593750,
+    0.100000,0.100000,0.125000,0.625000,
+    -0.100000,-0.100000,0.062500,0.593750,
+    -0.100000,0.100000,0.062500,0.625000,
 
     // kSpare1
     0.250000,-0.250000,1.000000,0.000000,
@@ -7352,6 +4842,8 @@ const std::array<float, gVboIdSize * 16> kUiVboDataMain = {
     0.250000,0.250000,1.000000,1.000000,
     -0.250000,-0.250000,0.000000,0.000000,
     -0.250000,0.250000,0.000000,1.000000,
+
+
 };
 
 } // namespace vbos
