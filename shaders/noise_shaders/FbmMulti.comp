@@ -6,7 +6,7 @@ layout(r32f, binding = 0) uniform writeonly image2D out_texture;
 layout (location = 0) uniform float scale_x;
 layout (location = 1) uniform float scale_y;
 layout (location = 2) uniform float lacunarity;
-layout (location = 3) uniform int octaves;
+layout (location = 3) uniform float octaves;
 layout (location = 4) uniform float seed;
 
 uint ihash1D(uint q)
@@ -229,7 +229,7 @@ void main() {
     ivec2 size = imageSize(out_texture);
     vec2 uv = vec2(coord) / vec2(size);
 
-//    float height = fbmMulti(uv, vec2(scale_x, scale_y), lacunarity, octaves, phase, seed).x;
-    float height = fbmMulti(uv, vec2(scale_x, scale_y), lacunarity, octaves, 0.0f, seed).x;
+//    float height = fbmMulti(uv, vec2(scale_x, scale_y), lacunarity, int(octaves), phase, seed).x;
+    float height = fbmMulti(uv, vec2(scale_x, scale_y), lacunarity, int(octaves), 0.0f, seed).x;
     imageStore(out_texture, coord, vec4(height));
 }

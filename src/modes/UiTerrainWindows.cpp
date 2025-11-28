@@ -6,109 +6,14 @@
 
 #include "../renderers/UiRenderer.h"
 
-UiNoiseLayerConfig::UiNoiseLayerConfig(
-    UiSharedResources& ui_shared_resources,
-    UiDynamicSprite&& config,
-    UiTextModeId&& text_name,
-    UiToggle4&& toggle_invert,
-    UiToggle4&& toggle_tiling,
-    UiSliderH2&& slider_strength,
-    UiDynamicSprite&& hmap)
-    : config_(std::move(config)),
-      text_name_(std::move(text_name)),
-      toggle_invert_(std::move(toggle_invert)),
-      toggle_tiling_(std::move(toggle_tiling)),
-      slider_strength_(std::move(slider_strength)),
-      ui_shared_resources_(ui_shared_resources),
-      hmap_(std::move(hmap)) {}
-
-void UiNoiseLayerConfig::ResetTransform() {
-  LocalTransform transform;
-  hmap_.SetParentTransform(transform);
-  config_.SetParentTransform(transform);
-  toggle_invert_.SetParentTransform(transform);
-  toggle_tiling_.SetParentTransform(transform);
-  slider_strength_.SetParentTransform(transform);
-  text_name_.SetParentTransform(transform);
-}
-void UiNoiseLayerConfig::Render(
-    NoiseDataBase* terrain_data, glm::vec2 translate,
-    bool update_strength, data::TextId text_id) {
-  LocalTransform transform;
-  transform.translate = translate;
-  hmap_.SetParentTransform(transform);
-  config_.SetParentTransform(transform);
-  toggle_invert_.SetParentTransform(transform);
-  toggle_tiling_.SetParentTransform(transform);
-  slider_strength_.SetParentTransform(transform);
-  text_name_.SetParentTransform(transform);
-
-  ui_shared_resources_.hmap_shader_.Bind();
-  glBindTexture(GL_TEXTURE_2D, terrain_data->hmap_id);
-  hmap_.Render();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
-  config_.Render();
-  toggle_invert_.Set(terrain_data->do_invert);
-  toggle_tiling_.Set(terrain_data->do_tiling);
-  toggle_invert_.Render();
-  toggle_tiling_.Render();
-  if (update_strength) {
-    auto mouse_pos =
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
-    slider_strength_.Render(mouse_pos);
-    terrain_data->strength = slider_strength_.GetProgress();
-  } else {
-    slider_strength_.SetValue(terrain_data->strength);
-    slider_strength_.Render();
-  }
-  // only after (due to internal shader & texture modification)
-  text_name_.SetText(text_id);
-  text_name_.Render();
-}
-
-void UiNoiseLayerConfig::RenderPicking(glm::vec2 translate) {
-  LocalTransform transform;
-  transform.translate = translate;
-  hmap_.SetParentTransform(transform);
-  config_.SetParentTransform(transform);
-  toggle_invert_.SetParentTransform(transform);
-  toggle_tiling_.SetParentTransform(transform);
-  slider_strength_.SetParentTransform(transform);
-  text_name_.SetParentTransform(transform);
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-  config_.RenderPicking();
-  toggle_invert_.RenderPicking();
-  toggle_tiling_.RenderPicking();
-  slider_strength_.RenderPicking();
-  hmap_.RenderPicking();
-  // only after (due to internal shader & texture modification)
-  if (debug::gUiAltMode) {
-    text_name_.RenderPicking();
-  }
-}
-
-void UiNoiseLayerConfig::AttachToHierarchy(UiHierarchy& hierarchy) {
-  hierarchy.AddNested(
-      &config_, &toggle_invert_, &text_name_,
-      &toggle_tiling_, &slider_strength_, &hmap_);
-}
-
-UiEditObjects::UiEditObjects(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue)
-    : Base({data::VboIdMain::kObjectsEditDesk}, 1.0f,
-           {{data::VboIdMain::kObjectsEditPinBack, []() {}},
-            {data::VboIdMain::kObjectsEditPinPoint}},
-           ui_shared_resources, window_queue) {}
-
 UiEditTerrain::UiEditTerrain(
     Tile& cur_tile,
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
     TextRenderer& text_renderer,
     std::vector<BaseInstanceData>& base_instances,
-    const int& selected_id)
+    const int& selected_id,
+    UiConfigWindow& ui_noise_config)
     : Base({data::VboIdMain::kTerrainEditDesk}, 1.0f,
            {{data::VboIdMain::kTerrainEditDeskPinBack, []() {}},
             {data::VboIdMain::kTerrainEditDeskPinPoint}},
@@ -149,48 +54,77 @@ UiEditTerrain::UiEditTerrain(
 
       tex_mesh_(details::gTerrainSize, GL_R32F),
 
-      noise_layer_config_(
-          ui_shared_resources,
-          {data::VboIdMain::kTerrainEditNoiseConfig},
-          {text_renderer,
-           {data::VboIdMain::kTerrainEditNoiseName},
-           data::TextId::kPerlin},
-          {{data::VboIdMain::kTerrainEditNoiseInvertOff},
-           {data::VboIdMain::kTerrainEditNoiseInvertOn1},
-           {data::VboIdMain::kTerrainEditNoiseInvertOn2},
-           {data::VboIdMain::kTerrainEditNoiseInvertOn3}},
-          {{data::VboIdMain::kTerrainEditNoiseTilingOff},
-           {data::VboIdMain::kTerrainEditNoiseTilingOn1},
-           {data::VboIdMain::kTerrainEditNoiseTilingOn2},
-           {data::VboIdMain::kTerrainEditNoiseTilingOn3}},
-          {{data::VboIdMain::kTerrainEditNoiseStrengthArea},
-           {data::VboIdMain::kTerrainEditNoiseStrengthIcon}},
-          {data::VboIdMain::kTerrainEditNoiseHmap}),
+      noise_layer_config_(ui_shared_resources, text_renderer),
 
-      noise_perlin_(),
-      noise_cellular_(),
-      noise_metaballs_(),
-      noise_fbm_grid_(),
-      noise_fbm_multi_(),
-      noise_fbmd_perlin_(),
-      noise_fbm_warp_(),
-      noise_fmb_perlin_warp_(),
+      noise_perlin_(
+          "../shaders/noise_shaders/Perlin.comp",
+          {{20.0f, 20.0f, 20.0f}},
+          {{data::TextId::kScaleX, data::TextId::kScaleY, data::TextId::kSeed}}),
+      noise_cellular_(
+          "../shaders/noise_shaders/Cellular.comp",
+          {{20.0f, 20.0f, 1.0f, 20.0f}},
+          {{data::TextId::kScaleX, data::TextId::kScaleY,
+            data::TextId::kJitter, data::TextId::kSeed}}),
+      noise_metaballs_(
+          "../shaders/noise_shaders/Metaballs.comp",
+          {{20.0f, 20.0f, 1.0f, 20.0f}},
+          {{data::TextId::kScaleX, data::TextId::kScaleY,
+            data::TextId::kJitter, data::TextId::kSeed}}),
+      noise_fbm_grid_(
+          "../shaders/noise_shaders/FbmGrid.comp",
+          {{20.0f, 20.0f, 3.0f, 20.0f, 2.0f, 32.0f, 10.0f, 1.0f, 20.0f}},
+          {{data::TextId::kScaleX, data::TextId::kScaleY,
+            data::TextId::kOctaves, data::TextId::kShift,
+            data::TextId::kGain, data::TextId::kLacunarity,
+            data::TextId::kWarpStrength, data::TextId::kOctaveFactor,
+            data::TextId::kSeed}}),
+      noise_fbm_multi_(
+          "../shaders/noise_shaders/FbmMulti.comp",
+          {{20.0f, 20.0f, 32.0f, 3.0f, 20.0f}},
+          {{data::TextId::kScaleX, data::TextId::kScaleY,
+            data::TextId::kLacunarity, data::TextId::kOctaves,
+            data::TextId::kSeed}}),
+      noise_fbmd_perlin_(
+          "../shaders/noise_shaders/FbmdPerlin.comp",
+          {{20.0f, 20.0f, 3.0f, 2.0f, 32.0f, 1.0f, 1.0f, 20.0f}},
+          {{data::TextId::kScaleX, data::TextId::kScaleY,
+            data::TextId::kOctaves, data::TextId::kGain,
+            data::TextId::kLacunarity, data::TextId::kSlopeness,
+            data::TextId::kOctaveFactor, data::TextId::kSeed}}),
+      noise_fbm_warp_(
+          "../shaders/noise_shaders/FbmWarp.comp",
+          {{20.0f, 20.0f, 3.0f, 2.0f, 32.0f,
+            1.0f, 1.0f, 20.0f, 5.0f, 5.0f}},
+          {{data::TextId::kScaleX, data::TextId::kScaleY,
+            data::TextId::kOctaves, data::TextId::kGain,
+            data::TextId::kLacunarity, data::TextId::kSlopeness,
+            data::TextId::kOctaveFactor, data::TextId::kSeed,
+            data::TextId::kQ, data::TextId::kR}}),
+      noise_fmb_perlin_warp_(
+          "../shaders/noise_shaders/FbmPerlinWarp.comp",
+          {{20.0f, 20.0f, 3.0f, 2.0f, 32.0f,
+            1.0f, 1.0f, 20.0f, 5.0f, 5.0f}},
+          {{data::TextId::kScaleX, data::TextId::kScaleY,
+            data::TextId::kOctaves, data::TextId::kGain,
+            data::TextId::kLacunarity, data::TextId::kSlopeness,
+            data::TextId::kOctaveFactor, data::TextId::kSeed,
+            data::TextId::kQ, data::TextId::kR}}),
       noises_({&noise_perlin_, &noise_cellular_, &noise_metaballs_,
                &noise_fbm_grid_, &noise_fbm_multi_, &noise_fbmd_perlin_,
                &noise_fbm_warp_, &noise_fmb_perlin_warp_}),
 
       ui_event_handler_({
           &pin_,
-          &noise_layer_config_.config_, &noise_layer_config_.toggle_invert_,
-          &noise_layer_config_.toggle_tiling_, &noise_layer_config_.slider_strength_,
+          &noise_layer_config_.btn_config_, &noise_layer_config_.tg_invert_,
+          &noise_layer_config_.tg_tiling_, &noise_layer_config_.sl_strength_,
           &accept_, &name_, &color_palette_,
           &color_brightness_, &random_generate_
       }),
       ui_shared_resources_(ui_shared_resources),
       random_generator_(std::random_device{}()),
-      ui_terrain_noise_(ui_shared_resources, window_queue, text_renderer),
       base_instances_(base_instances),
-      selected_id_(selected_id) {
+      selected_id_(selected_id),
+      ui_noise_config_(ui_noise_config) {
   Init();
   hierarchy_ = UiHierarchy(
       &sprite_, &pin_, &accept_, &name_,
@@ -239,8 +173,8 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
                &noise_fbm_warp_, &noise_fmb_perlin_warp_}),
       ui_event_handler_({
           &pin_,
-          &noise_layer_config_.config_, &noise_layer_config_.toggle_invert_,
-          &noise_layer_config_.toggle_tiling_, &noise_layer_config_.slider_strength_,
+          &noise_layer_config_.btn_config_, &noise_layer_config_.tg_invert_,
+          &noise_layer_config_.tg_tiling_, &noise_layer_config_.sl_strength_,
           &accept_, &name_, &color_palette_,
           &color_brightness_, &random_generate_
       }),
@@ -249,7 +183,7 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
       base_instances_(other.base_instances_),
       selected_id_(other.selected_id_),
       random_generator_(other.random_generator_),
-      ui_terrain_noise_(std::move(other.ui_terrain_noise_)) {
+      ui_noise_config_(other.ui_noise_config_) {
   hierarchy_ = UiHierarchy(
       &sprite_, &pin_, &accept_, &name_,
       &color_palette_, &color_brightness_,
@@ -322,11 +256,10 @@ void UiEditTerrain::UpdateConfig() {
 
     //test
     glm::mat4 inverseTransform = glm::inverse(model);
-    glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(inverseTransform));
-
-    glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
-    glUniform1i(1, static_cast<int>(instances_[i].do_invert));
-    glUniform1i(2, static_cast<int>(instances_[i].do_tiling));
+    glUniformMatrix4fv(4, 1, false, glm::value_ptr(inverseTransform));
+//    glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
+//    glUniform1i(1, static_cast<int>(instances_[i].do_invert));
+//    glUniform1i(2, static_cast<int>(instances_[i].do_tiling));
     BindImageTexture(0, instances_[i].data.hmap, GL_READ_ONLY);
     BindImageTexture(1, tex_mesh_, GL_WRITE_ONLY);
     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
@@ -357,7 +290,7 @@ void UiEditTerrain::UpdateConfig() {
 
     /// --- merge section ---
     shader_flatten_merge_.Bind();
-    glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(inverseTransform));
+//    glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(inverseTransform));
     BindImageTexture(0, hmap, GL_READ_WRITE);
     BindImageTexture(1, tex_mesh_, GL_READ_ONLY);
     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
@@ -380,25 +313,24 @@ bool UiEditTerrain::Press(int id) {
   }
   if (id == accept_.GetId()) {
     std::cout << "GENERATE TERRAIN" << std::endl;
-    // can't be nullptr (not possible to get there -
-    // - btn_settings is on slot_back)
     instances_[selected_id_].data = Generate();
-    //    UpdateHmap2();
     UpdateConfig();
     return true;
   }
   int pressed_line_id = GetSliderNoiseId(
       ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-  if (id == noise_layer_config_.config_.GetId()) {
-    ui_terrain_noise_.SetNoise(noises_[pressed_line_id]);
-    ui_terrain_noise_.Show();
+  if (id == noise_layer_config_.btn_config_.GetId()) {
+    ui_noise_config_.SetNoise(noises_[pressed_line_id]->GetValueSpan(),
+                               noises_[pressed_line_id]->GetTextIdSpan(),
+                               noises_[pressed_line_id]->GetTextId());
+    ui_noise_config_.Show();
     return true;
-  } else if (id == noise_layer_config_.slider_strength_.GetId()) {
+  } else if (id == noise_layer_config_.sl_strength_.GetId()) {
     pressed_strength_id_ = pressed_line_id;
-    noise_layer_config_.slider_strength_.Press();
-  } else if (id == noise_layer_config_.toggle_invert_.GetId()) {
+    noise_layer_config_.sl_strength_.Press();
+  } else if (id == noise_layer_config_.tg_invert_.GetId()) {
     noises_[pressed_line_id]->ToggleDoInvert();
-  } else if (id == noise_layer_config_.toggle_tiling_.GetId()) {
+  } else if (id == noise_layer_config_.tg_tiling_.GetId()) {
     noises_[pressed_line_id]->ToggleDoTiling();
   }
   return ui_event_handler_.Press(id);
@@ -406,7 +338,7 @@ bool UiEditTerrain::Press(int id) {
 
 void UiEditTerrain::Release() {
   pressed_strength_id_ = -1;
-  noise_layer_config_.slider_strength_.Release();
+  noise_layer_config_.sl_strength_.Release();
   ui_event_handler_.Release();
 }
 
@@ -419,7 +351,7 @@ float UiEditTerrain::GetEntryHeight() {
 int UiEditTerrain::GetSliderNoiseId(glm::vec2 mouse_pos) {
   noise_layer_config_.ResetTransform();
   float entry_height = GetEntryHeight();
-  float cursor = noise_layer_config_.slider_strength_.GetTrackPtr()
+  float cursor = noise_layer_config_.sl_strength_.GetTrackPtr()
                      ->GetTopBorder();
   // pretty heavy check on DBG, skip
   //  float top = sprite_.GetTopBorder();
@@ -477,8 +409,9 @@ void UiEditTerrain::RenderNoiseConfig() {
   // 4 for top+bottom border + top+bottom indent and all * 2 factor (because;)
   float entry_height = GetEntryHeight();
   for (int i = 0; i < noises_.size(); ++i) {
+    auto data = noises_[i]->GetBaseData();
     noise_layer_config_.Render(
-        noises_[i]->GetBaseConfigPtr(),
+        data->strength, data->do_invert, data->do_tiling,
         next_offset, pressed_strength_id_ == i, noises_[i]->GetTextId());
     next_offset.y -= entry_height;
   }
@@ -597,14 +530,38 @@ void UiEditTerrain::SetPivotPosition(GLuint pressed_id) {
 
 void UiEditTerrain::SetTerrainData(int id) {
   const NoiseTerrainData& noise_data = instances_[id].data;
-  noise_perlin_.SetConfig(noise_data.perlin);
-  noise_cellular_.SetConfig(noise_data.cellular);
-  noise_metaballs_.SetConfig(noise_data.metaballs);
-  noise_fbm_grid_.SetConfig(noise_data.fbm_grid);
-  noise_fbm_multi_.SetConfig(noise_data.fbm_multi);
-  noise_fbmd_perlin_.SetConfig(noise_data.fbmd_perlin);
-  noise_fbm_warp_.SetConfig(noise_data.fbm_warp);
-  noise_fmb_perlin_warp_.SetConfig(noise_data.fbm_perlin_warp);
+  noise_perlin_.SetConfig(
+      &noise_data.perlin,
+      reinterpret_cast<const float*>(
+          static_cast<const NoisePerlinData*>(&noise_data.perlin)));
+  noise_cellular_.SetConfig(
+      &noise_data.cellular,
+      reinterpret_cast<const float*>(
+          static_cast<const NoiseCellularData*>(&noise_data.cellular)));
+  noise_metaballs_.SetConfig(
+      &noise_data.metaballs,
+      reinterpret_cast<const float*>(
+          static_cast<const NoiseMetaballsData*>(&noise_data.metaballs)));
+  noise_fbm_grid_.SetConfig(
+      &noise_data.fbm_grid,
+      reinterpret_cast<const float*>(
+          static_cast<const NoiseFbmGridData*>(&noise_data.fbm_grid)));
+  noise_fbm_multi_.SetConfig(
+      &noise_data.fbm_multi,
+      reinterpret_cast<const float*>(
+          static_cast<const NoiseFbmMultiData*>(&noise_data.fbm_multi)));
+  noise_fbmd_perlin_.SetConfig(
+      &noise_data.fbmd_perlin,
+      reinterpret_cast<const float*>(
+          static_cast<const NoiseFbmdPerlinData*>(&noise_data.fbmd_perlin)));
+  noise_fbm_warp_.SetConfig(
+      &noise_data.fbm_warp,
+      reinterpret_cast<const float*>(
+          static_cast<const NoiseFbmWarpData*>(&noise_data.fbm_warp)));
+  noise_fmb_perlin_warp_.SetConfig(
+      &noise_data.fbm_perlin_warp,
+      reinterpret_cast<const float*>(
+          static_cast<const NoiseFbmPerlinWarpData*>(&noise_data.fbm_perlin_warp)));
 }
 
 void UiEditTerrain::RenderPicking() {
@@ -631,83 +588,73 @@ NoiseTerrainData UiEditTerrain::Generate() {
   glm::vec2 resolution = glm::vec2{details::gTerrainSize};
   NoiseTerrainData terrain_data;
   terrain_data.hmap = Texture32F(resolution.x, GL_R32F);
+  float color_black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+  glClearTexImage(terrain_data.hmap.GetId(), 0, GL_RED, GL_FLOAT, color_black);
 
-  terrain_data.hmap.Store("hmap_start.png", 1, GL_RED);
+  Texture32F tex_noise;
+  glClearTexImage(tex_noise.GetId(), 0, GL_RED, GL_FLOAT, color_black);
+  tex_noise = noise_perlin_.Generate(
+      reinterpret_cast<float*>(
+          static_cast<NoisePerlinData*>(&terrain_data.perlin)));
+  MergeLayers(terrain_data.hmap, tex_noise, &terrain_data.perlin);
 
+  tex_noise = noise_cellular_.Generate(
+      reinterpret_cast<float*>(
+          static_cast<NoiseCellularData*>(&terrain_data.cellular)));
+  MergeLayers(terrain_data.hmap, tex_noise, &terrain_data.cellular);
 
-  terrain_data.perlin = noise_perlin_.Generate();
-  MergeLayers(terrain_data.hmap, terrain_data.perlin.hmap,
-              static_cast<NoiseDataBase*>(&terrain_data.perlin),
-              &terrain_data.perlin);
-  terrain_data.hmap.Store("hmap_end_1.png", 1, GL_RED);
+  tex_noise = noise_metaballs_.Generate(
+      reinterpret_cast<float*>(
+          static_cast<NoiseMetaballsData*>(&terrain_data.metaballs)));
+  MergeLayers(terrain_data.hmap, tex_noise, &terrain_data.metaballs);
 
-  terrain_data.cellular = noise_cellular_.Generate();
-  MergeLayers(terrain_data.hmap, terrain_data.cellular.hmap,
-              static_cast<NoiseDataBase*>(&terrain_data.cellular),
-              &terrain_data.cellular);
-  terrain_data.hmap.Store("hmap_end_2.png", 1, GL_RED);
+  tex_noise = noise_fbm_grid_.Generate(
+      reinterpret_cast<float*>(
+          static_cast<NoiseFbmGridData*>(&terrain_data.fbm_grid)));
+  MergeLayers(terrain_data.hmap, tex_noise, &terrain_data.fbm_grid);
 
-  terrain_data.metaballs = noise_metaballs_.Generate();
-  MergeLayers(terrain_data.hmap, terrain_data.metaballs.hmap,
-              static_cast<NoiseDataBase*>(&terrain_data.metaballs),
-              &terrain_data.metaballs);
-  terrain_data.hmap.Store("hmap_end_3.png", 1, GL_RED);
+  tex_noise = noise_fbm_multi_.Generate(
+      reinterpret_cast<float*>(
+          static_cast<NoiseFbmMultiData*>(&terrain_data.fbm_multi)));
+  MergeLayers(terrain_data.hmap, tex_noise, &terrain_data.fbm_multi);
 
-  terrain_data.fbm_grid = noise_fbm_grid_.Generate();
-  MergeLayers(terrain_data.hmap, terrain_data.fbm_grid.hmap,
-              static_cast<NoiseDataBase*>(&terrain_data.fbm_grid),
-              &terrain_data.fbm_grid);
-  terrain_data.hmap.Store("hmap_end_4.png", 1, GL_RED);
+  tex_noise = noise_fbmd_perlin_.Generate(
+      reinterpret_cast<float*>(
+          static_cast<NoiseFbmdPerlinData*>(&terrain_data.fbmd_perlin)));
+  MergeLayers(terrain_data.hmap, tex_noise, &terrain_data.fbmd_perlin);
 
-  terrain_data.fbm_multi = noise_fbm_multi_.Generate();
-  //  MergeLayers(terrain_data.hmap, terrain_data.fbm_multi.hmap,
-  //              static_cast<NoiseDataBase*>(&terrain_data.fbm_multi),
-  //              &terrain_data.fbm_multi);
-  terrain_data.hmap.Store("hmap_end_5.png", 1, GL_RED);
+  tex_noise = noise_fbm_warp_.Generate(
+      reinterpret_cast<float*>(
+          static_cast<NoiseFbmWarpData*>(&terrain_data.fbm_warp)));
+  MergeLayers(terrain_data.hmap, tex_noise, &terrain_data.fbm_warp);
 
-  terrain_data.fbmd_perlin = noise_fbmd_perlin_.Generate();
-  MergeLayers(terrain_data.hmap, terrain_data.fbmd_perlin.hmap,
-              static_cast<NoiseDataBase*>(&terrain_data.fbmd_perlin),
-              &terrain_data.fbmd_perlin);
-  terrain_data.hmap.Store("hmap_end_6.png", 1, GL_RED);
+  tex_noise = noise_fmb_perlin_warp_.Generate(
+      reinterpret_cast<float*>(
+          static_cast<NoiseFbmPerlinWarpData*>(&terrain_data.fbm_perlin_warp)));
+  MergeLayers(terrain_data.hmap, tex_noise, &terrain_data.fbm_perlin_warp);
 
-  terrain_data.fbm_warp = noise_fbm_warp_.Generate();
-  //  MergeLayers(terrain_data.hmap, terrain_data.fbm_warp.hmap,
-  //              static_cast<NoiseDataBase*>(&terrain_data.fbm_warp),
-  //              &terrain_data.fbm_warp);
-  terrain_data.hmap.Store("hmap_end_7.png", 1, GL_RED);
-
-  terrain_data.fbm_perlin_warp = noise_fmb_perlin_warp_.Generate();
-  MergeLayers(terrain_data.hmap, terrain_data.fbm_perlin_warp.hmap,
-              static_cast<NoiseDataBase*>(&terrain_data.fbm_perlin_warp),
-              &terrain_data.fbm_perlin_warp);
-  terrain_data.hmap.Store("hmap_end_8.png", 1, GL_RED);
-
-  terrain_data.hmap.Store("hmap_generated.png", 1, GL_RED);
   std::cout << "Generation :: DONE" << std::endl;
   glCopyImageSubData(
       terrain_data.hmap.GetId(), GL_TEXTURE_2D, 0, 0, 0, 0,
       tex_hmap_.GetId(), GL_TEXTURE_2D, 0, 0, 0, 0,
       details::gTerrainSize, details::gTerrainSize, 1);
-  tex_hmap_.Store("hmap_generated_.png", 1, GL_RED);
 
   return terrain_data;
 }
 
 void UiEditTerrain::MergeLayers(
     Texture32F& bottom_layer, Texture32F& top_layer,
-    NoiseDataBase* noise_data, const NoiseDataBase* noise) {
-  noise_data->strength = noise->strength;
-  noise_data->do_invert = noise->do_invert;
-  noise_data->do_tiling = noise->do_tiling;
-  std::cout << "merged with " << noise->strength
-            << ' ' << std::boolalpha << noise_data->do_invert
-            << ' ' << noise_data->do_tiling << std::endl;
+    const NoiseDataBase* config) {
+  std::cout << "merged with " << config->strength
+            << ' ' << std::boolalpha << config->do_invert
+            << ' ' << config->do_tiling << std::endl;
   shader_merge_noises_.Bind();
-  glUniform1i(0, static_cast<int>(noise_data->do_invert));
+//  glUniform1i(0, static_cast<int>(config->do_invert));
   //TODO: as well as transform_matrix:
   //  glUniform1i(1, static_cast<int>(noise_data->do_tiling));
-  glUniform1f(2, noise_data->strength);
+//  glUniform1f(2, config->strength / 8.0f);
+  glUniform1f(2, config->strength);
+//  glUniform1f(2, .0f);
 
   glBindImageTexture(
       0, bottom_layer.GetId(), 0,
@@ -723,7 +670,7 @@ void UiEditTerrain::MergeLayers(
 
 void UiEditTerrain::HideAll() {
   ForceHide();
-  ui_terrain_noise_.ForceHide();
+  ui_noise_config_.ForceHide();
 }
 
 void UiEditTerrain::Init() {
@@ -790,6 +737,8 @@ void UiEditTerrain::RandomGenerate() {
     n->Randomize(random_generator_, dist_float, dist_bool);
   }
   instances_[selected_id_].data = Generate();
+  instances_[selected_id_].data.hmap.Store("randomized.png", 1, GL_RED);
+  UpdateConfig();
 }
 
 void UiEditTerrain::Reset() {

@@ -5,7 +5,7 @@ layout(r32f, binding = 0) uniform writeonly image2D out_texture;
 
 layout (location = 0) uniform float scale_x;
 layout (location = 1) uniform float scale_y;
-layout (location = 2) uniform int octaves;
+layout (location = 2) uniform float octaves;
 layout (location = 3) uniform float shift;
 layout (location = 4) uniform float gain;
 layout (location = 5) uniform float lacunarity;
@@ -233,7 +233,7 @@ void main() {
     vec2 uv = vec2(coord) / vec2(size);
 
 //    float height = fbmGrid(uv, vec2(4.0f, 4.0f), 4, 100.0f, time_shift, 0.5f, 5, translate, 0.5f, 0.0f, 0.0f);
-    float height = fbmGrid(uv, vec2(scale_x, scale_y), octaves, shift, 0.0f,
+    float height = fbmGrid(uv, vec2(scale_x, scale_y), int(octaves), shift, 0.0f,
                            gain, lacunarity, vec3(0.5, -0.25, 0.15),
                            warp_strength, octave_factor, seed);
     imageStore(out_texture, coord, vec4(height));

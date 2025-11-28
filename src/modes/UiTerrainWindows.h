@@ -8,107 +8,13 @@
 
 #include "UiTerrainConfig.h"
 #include "TerrainInstanceData.h"
+#include "IUiEdit.h"
+#include "UiEditShared.h"
+#include "../core/UiConfigWindow.h"
 
-// no parent-child rel; facade pattern
-class UiNoiseLayerConfig {
+class UiEditTerrain final : public IUiEdit {
  public:
-  UiNoiseLayerConfig(
-      UiSharedResources& ui_shared_resources,
-      UiDynamicSprite&& config, UiTextModeId&& text_name,
-      UiToggle4&& toggle_invert, UiToggle4&& toggle_tiling,
-      UiSliderH2&& slider_strength,
-      UiDynamicSprite&& hmap);
-
-  UiNoiseLayerConfig(UiNoiseLayerConfig&& other) noexcept = default;
-  UiNoiseLayerConfig(const UiNoiseLayerConfig& other) = delete;
-
-  UiNoiseLayerConfig& operator=(UiNoiseLayerConfig&& other) = delete;
-  UiNoiseLayerConfig& operator=(const UiNoiseLayerConfig& other) = delete;
-
-  /// so we could get GetTopBorder & GetBottomBorder and estimate position
-  void ResetTransform();
-
-  /// no Press(), Release() <- done in external ui_event_handler
-  void Render(NoiseDataBase* terrain_data, glm::vec2 translate,
-              bool update_strength, data::TextId text_id);
-
-  void RenderPicking(glm::vec2 translate);
-
-  void AttachToHierarchy(UiHierarchy& hierarchy);
-
-  // public, for simpler external ui_event_handler adding
-  UiDynamicSprite config_;
-  UiTextModeId text_name_;
-  UiToggle4 toggle_invert_;
-  UiToggle4 toggle_tiling_;
-  UiSliderH2 slider_strength_;
-  UiDynamicSprite hmap_;
-
-  UiSharedResources& ui_shared_resources_;
-};
-
-class UiEditBase : public UiWindowAppear {
- public:
-  using UiWindowAppear::UiWindowAppear;
-  virtual void UpdateConfig() = 0; // e.g. UpdateHmap()
-  virtual void SetInstanceId(int id) = 0; // insctances_[id]
-  virtual void HideAll() = 0;
-  virtual void CreateInstance() = 0;
-  virtual void Reset() = 0;
-};
-
-class UiEditObjects : public UiEditBase {
- public:
-  using Base = UiEditBase;
-  UiEditObjects(
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue);
-
-  void UpdateConfig() override {}
-  void SetInstanceId(int id) override {}
-  void HideAll() override {}
-  void CreateInstance() override {}
-
-  bool Press(int id) override {return false;}
-  void Release() override {}
-  bool Scroll(GLuint id, float yoffset) override {return false;}
-  bool Render() override {return false;}
-  void RenderPicking() override {}
-
-  void Reset() override {}
-};
-
-class UiEditBiomes : public UiEditBase {
- public:
-  using Base = UiEditBase;
-  UiEditObjects(
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue);
-
-  void UpdateConfig() override {}
-  void SetInstanceId(int id) override {}
-  void HideAll() override {}
-  void CreateInstance() override {}
-
-  bool Press(int id) override {return false;}
-  void Release() override {}
-  bool Scroll(GLuint id, float yoffset) override {return false;}
-  bool Render() override {return false;}
-  void RenderPicking() override {}
-
-  void Reset() override {}
-
-  UiDynamicSprite btn_wind_;
-  UiDynamicSprite btn_sun_;
-  UiDynamicSprite btn_time_;
-  UiDynamicSprite btn_precipitations_;
-  UiDynamicSprite btn_temperature_;
-  UiDynamicSprite btn_clouds_;
-};
-
-class UiEditTerrain final : public UiEditBase {
- public:
-  using Base = UiEditBase;
+  using Base = IUiEdit;
 
   UiEditTerrain(
       Tile& cur_tile,
@@ -116,7 +22,8 @@ class UiEditTerrain final : public UiEditBase {
       WindowQueue& window_queue, // w
       TextRenderer& text_renderer,
       std::vector<BaseInstanceData>& base_instances,
-      const int& selected_id);
+      const int& selected_id,
+      UiConfigWindow& ui_noise_config);
 
   ~UiEditTerrain() {
     DeInit();
@@ -172,15 +79,20 @@ class UiEditTerrain final : public UiEditBase {
   void DeInit();
 
   void MergeLayers(Texture32F& bottom_layer, Texture32F& top_layer,
-                   NoiseDataBase* noise_data, const NoiseDataBase* noise);
+                   const NoiseDataBase* noise);
 
   static int CalculateGradientId(const glm::vec3& rotation);
+
+
 
   void RenderNoiseConfig();
 
   void RenderPickingNoiseConfig();
 
   int GetSliderNoiseId(glm::vec2 mouse_pos);
+
+
+
 
   float GetEntryHeight();
 
@@ -206,8 +118,6 @@ class UiEditTerrain final : public UiEditBase {
 
   UiDynamicSprite accept_;
   UiTextInput name_;
-  //  UiDynamicSprite name_;
-  //  UiDynamicSprite name_back_;
 
   UiSlider2D color_palette_;
   UiSliderH2 color_brightness_;
@@ -219,7 +129,7 @@ class UiEditTerrain final : public UiEditBase {
   UiTextModeId text_noise_tiling_;
   UiTextModeId text_noise_strength_;
 
-  UiNoiseLayerConfig noise_layer_config_; // noise1-8
+  UiEditConfigTerrain noise_layer_config_; // noise1-8
   // all needed data stored in vector instances_[]
 
   TerrainNoisePerlin noise_perlin_;
@@ -232,7 +142,7 @@ class UiEditTerrain final : public UiEditBase {
   TerrainNoiseFbmPerlinWarp noise_fmb_perlin_warp_;
   std::array<ITerrainNoise*, 8> noises_;
 
-  UiTerrainNoise ui_terrain_noise_;
+  UiConfigWindow& ui_noise_config_;
 
   std::mt19937 random_generator_;
 
@@ -248,7 +158,7 @@ class UiEditTerrain final : public UiEditBase {
   //  ITerrainNoise* selected_noise_ = nullptr;
 
   UiEventHandler<
-      static_cast<int>(data::VboIdMain::kTerrainWindowNoiseSliderIcon) -
+      static_cast<int>(data::VboIdMain::kTerrainEditNoiseHmap) -
       static_cast<int>(data::VboIdMain::kTerrainEditDesk) + 1
       > ui_event_handler_;
 

@@ -3,24 +3,24 @@
 
 #include "../common/Texture.h"
 
+/// can't make NoiseDataBase as an actual base, have to keep Derived as a POD,
+/// what isn't possible with type Texture32F
+
 struct NoiseDataBase {
-//  Texture32F hmap; can't have it here; anyway need to store it in
-// NoisePerlinData (derived class) to serialize it; no benefits from it here
-  GLuint hmap_id = 0; // idk.. soryy
   float strength = 0.0f;
-  bool do_tiling = false;
   bool do_invert = false;
+  bool do_tiling = false;
 };
 
+/// it seems all of this for debug only - we use cast to float* and memcpy
+
 struct NoisePerlinData : public NoiseDataBase {
-  Texture32F hmap;
   float scale_x;
   float scale_y;
   float seed;
 };
 
 struct NoiseCellularData : public NoiseDataBase {
-  Texture32F hmap;
   float scale_x;
   float scale_y;
   float jitter;
@@ -28,7 +28,6 @@ struct NoiseCellularData : public NoiseDataBase {
 };
 
 struct NoiseMetaballsData : public NoiseDataBase {
-  Texture32F hmap;
   float scale_x;
   float scale_y;
   float jitter;
@@ -36,10 +35,9 @@ struct NoiseMetaballsData : public NoiseDataBase {
 };
 
 struct NoiseFbmGridData : public NoiseDataBase {
-  Texture32F hmap;
   float scale_x;
   float scale_y;
-  int octaves;
+  float octaves;
   float shift;
   float gain;
   float lacunarity;
@@ -49,19 +47,17 @@ struct NoiseFbmGridData : public NoiseDataBase {
 };
 
 struct NoiseFbmMultiData : public NoiseDataBase {
-  Texture32F hmap;
   float scale_x;
   float scale_y;
   float lacunarity;
-  int octaves;
+  float octaves;
   float seed;
 };
 
 struct NoiseFbmdPerlinData : public NoiseDataBase {
-  Texture32F hmap;
   float scale_x;
   float scale_y;
-  int octaves;
+  float octaves;
   float gain;
   float lacunarity;
   float slopeness;
@@ -70,10 +66,9 @@ struct NoiseFbmdPerlinData : public NoiseDataBase {
 };
 
 struct NoiseFbmWarpData : public NoiseDataBase {
-  Texture32F hmap;
   float scale_x;
   float scale_y;
-  int octaves;
+  float octaves;
   float gain;
   float lacunarity;
   float slopeness;
@@ -84,10 +79,9 @@ struct NoiseFbmWarpData : public NoiseDataBase {
 };
 
 struct NoiseFbmPerlinWarpData : public NoiseDataBase {
-  Texture32F hmap;
   float scale_x;
   float scale_y;
-  int octaves;
+  float octaves;
   float gain;
   float lacunarity;
   float slopeness;

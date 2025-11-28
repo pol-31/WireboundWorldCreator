@@ -2,15 +2,19 @@
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_
 
 #include <random>
+#include <string_view>
 #include <span>
 
 #include "../core/UiComplex.h"
 #include "TerrainNoiseData.h"
 
-Texture32F GenAndSave(std::string_view tex_name);
+Texture32F GenAndSave(data::TextId tex_id);
 
 class ITerrainNoise {
  public:
+  ITerrainNoise(std::string_view shader_path)
+      : shader_(shader_path) {}
+
   virtual std::span<float> GetValueSpan() noexcept = 0;
   virtual std::span<data::TextId> GetTextIdSpan() noexcept = 0;
   virtual data::TextId GetTextId() const noexcept = 0;
@@ -19,7 +23,7 @@ class ITerrainNoise {
       std::uniform_real_distribution<float>& dist_float,
       std::bernoulli_distribution& dist_bool) noexcept = 0;
 
-  NoiseDataBase* GetBaseConfigPtr() {
+  NoiseDataBase* GetBaseData() {
     return &base_data_;
   }
 
@@ -31,185 +35,80 @@ class ITerrainNoise {
     base_data_.do_tiling = !base_data_.do_tiling;
   }
 
- void SetBaseData(
-      bool do_invert, bool do_tiling,
-      float strength, GLuint hmap_id) {
-   base_data_.do_invert = do_invert;
-   base_data_.do_tiling = do_tiling;
-   base_data_.strength = strength;
-   base_data_.hmap_id = hmap_id;
- }
-
  protected:
   Shader shader_;
   NoiseDataBase base_data_;
 };
 
-template <size_t gParamNum>
+template <size_t gParamNum, data::TextId gTextId>
 class TerrainNoiseBase : public ITerrainNoise {
  public:
+  TerrainNoiseBase(
+      std::string_view shader_path,
+      std::array<float, gParamNum> scale,
+      std::array<data::TextId, gParamNum> text_id)
+      : ITerrainNoise(shader_path),
+        value_{{0.0f}},
+        scale_(scale),
+        text_id_(text_id) {}
+
   std::span<float> GetValueSpan() noexcept override {
     return value_;
   }
+
   std::span<data::TextId> GetTextIdSpan() noexcept override {
     return text_id_;
   }
-  /// no GetScaleSpan(), scale applied internally at glUniform
+  /// no GetScaleSpan(), scales used internally at Generate()
 
   void Randomize(
       std::mt19937& gen,
       std::uniform_real_distribution<float>& dist_float,
-      std::bernoulli_distribution& dist_bool) noexcept {
+      std::bernoulli_distribution& dist_bool) noexcept override {
     for (int i = 0; i < value_.size(); ++i) {
-      value_[i] = dist_float(gen)/* * scale_[i]*/;
+      value_[i] = dist_float(gen);
     }
     base_data_.strength = dist_float(gen);
     base_data_.do_tiling = dist_bool(gen);
     base_data_.do_invert = dist_bool(gen);
   }
 
- protected:
+  void SetConfig(const NoiseDataBase* base_data, const float* noise_data) {
+    std::copy(noise_data, noise_data + gParamNum, value_.begin());
+    base_data_.do_invert = base_data->do_invert;
+    base_data_.do_tiling = base_data->do_tiling;
+    base_data_.strength = base_data->strength;
+  }
+
+  Texture32F Generate(float* noise_data) {
+    std::copy(value_.begin(), value_.end(), noise_data);
+    shader_.Bind();
+    std::cout << "--- " << static_cast<int>(gTextId) << " ---" << std::endl;
+    for (int i = 0; i < value_.size(); ++i) {
+      std::cout << value_[i] << ' ';
+      glUniform1f(i, value_[i] * scale_[i]);
+    }
+    std::cout << std::endl;
+    return GenAndSave(gTextId);
+  }
+
+  [[nodiscard]] data::TextId GetTextId() const noexcept override {
+    return gTextId;
+  }
+
+ private:
   std::array<float, gParamNum> value_;
   std::array<float, gParamNum> scale_;
   std::array<data::TextId, gParamNum> text_id_;
 };
 
-class TerrainNoisePerlin final : public TerrainNoiseBase<3> {
- public:
-  TerrainNoisePerlin();
-
-  NoisePerlinData Generate();
-
-  void SetConfig(const NoisePerlinData& config);
-
-  data::TextId GetTextId() const noexcept override;
-};
-
-class TerrainNoiseCellular final : public TerrainNoiseBase<4> {
- public:
-  TerrainNoiseCellular();
-
-  NoiseCellularData Generate();
-
-  void SetConfig(const NoiseCellularData& config);
-
-  data::TextId GetTextId() const noexcept override;
-};
-
-class TerrainNoiseMetaballs final : public TerrainNoiseBase<4> {
- public:
-  TerrainNoiseMetaballs();
-
-  NoiseMetaballsData Generate();
-
-  void SetConfig(const NoiseMetaballsData& config);
-
-  data::TextId GetTextId() const noexcept override;
-};
-
-class TerrainNoiseFbmGrid final : public TerrainNoiseBase<9> {
- public:
-  TerrainNoiseFbmGrid();
-
-  NoiseFbmGridData Generate();
-
-  void SetConfig(const NoiseFbmGridData& config);
-
-  data::TextId GetTextId() const noexcept override;
-};
-
-class TerrainNoiseFbmMulti final : public TerrainNoiseBase<5> {
- public:
-  TerrainNoiseFbmMulti();
-
-  NoiseFbmMultiData Generate();
-
-  void SetConfig(const NoiseFbmMultiData& config);
-
-  data::TextId GetTextId() const noexcept override;
-};
-
-class TerrainNoiseFbmdPerlin final : public TerrainNoiseBase<8> {
- public:
-  TerrainNoiseFbmdPerlin();
-
-  NoiseFbmdPerlinData Generate();
-
-  void SetConfig(const NoiseFbmdPerlinData& config);
-
-  data::TextId GetTextId() const noexcept override;
-};
-
-class TerrainNoiseFbmWarp final : public TerrainNoiseBase<10> {
- public:
- TerrainNoiseFbmWarp();
-
-  NoiseFbmWarpData Generate();
-
-  void SetConfig(const NoiseFbmWarpData& config);
-
-  data::TextId GetTextId() const noexcept override;
-};
-
-class TerrainNoiseFbmPerlinWarp final : public TerrainNoiseBase<10> {
- public:
-  TerrainNoiseFbmPerlinWarp();
-
-  NoiseFbmPerlinWarpData Generate();
-
-  void SetConfig(const NoiseFbmPerlinWarpData& config);
-
-  data::TextId GetTextId() const noexcept override;
-};
-
-
-class UiTerrainNoise final : public UiWindowAppear {
- public:
-  UiTerrainNoise(
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue,
-      TextRenderer& text_renderer);
-
-  UiTerrainNoise(UiTerrainNoise&& other) noexcept;
-
-  bool Render() override;
-
-  void RenderPicking() override;
-
-  bool Scroll(GLuint id, float yoffset) override;
-
-  bool Press(int id) override;
-
-  void Release() override;
-
-  void SetNoise(ITerrainNoise* noise);
-
- private:
-  void RenderSlotsSprites(glm::vec2 mouse_pos);
-
-  void RenderSlotsText();
-
-  void RenderPickingSlotsSprites();
-
-  void RenderPickingSlotsText();
-
-  UiTextModeId name_;
-  UiDynamicSprite btn_save_;
-
-//  UiDynamicSprite sp_sl_track_;
-//  UiDynamicSprite sp_sl_handle_;
-  UiWindowSlider sl_data_;
-
-  UiSliderH2 config_slider_;
-  UiTextModeId config_text_;
-
-  //TODO: dublicating the size
-  std::span<float> value_;
-  std::span<data::TextId> text_id_;
-
-  int sl_pressed_config_ = -1;
-
-  //  UiEventHandler<gWidgetsNum> ui_event_handler_;
-};
+using TerrainNoisePerlin = TerrainNoiseBase<3, data::TextId::kPerlin>;
+using TerrainNoiseCellular = TerrainNoiseBase<4, data::TextId::kCellular>;
+using TerrainNoiseMetaballs = TerrainNoiseBase<4, data::TextId::kMetaballs>;
+using TerrainNoiseFbmGrid = TerrainNoiseBase<9, data::TextId::kFbmGrid>;
+using TerrainNoiseFbmMulti = TerrainNoiseBase<5, data::TextId::kFbmMulti>;
+using TerrainNoiseFbmdPerlin = TerrainNoiseBase<8, data::TextId::kFbmdPerlin>;
+using TerrainNoiseFbmWarp = TerrainNoiseBase<10, data::TextId::kFbmWarp>;
+using TerrainNoiseFbmPerlinWarp = TerrainNoiseBase<10, data::TextId::kFbmPerlinWarp>;
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_
