@@ -8,6 +8,7 @@ UiRenderer::UiRenderer(
     TileRenderer& tile_renderer,
     const Camera* camera)
     : ui_shared_resources_(paths, global_glfw_data_),
+      mdl_manager_(ui_shared_resources_),
       ui_debugger_(paths, ui_shared_resources_.vbo_ui_,
                    ui_shared_resources_.vbo_ui_transform_,
                    global_glfw_data_.cursor_pos_tex_norm_),
@@ -16,17 +17,22 @@ UiRenderer::UiRenderer(
           ui_shared_resources_,
           paths, {data::VboIdMain::kTextRendererPrerenderSlot},
           {data::VboIdMain::kTextRendererCursor}),
-      terrain_(ui_shared_resources_, windows_, text_renderer_, tile_renderer.cur_tile_),
-      water_(ui_shared_resources_, windows_, paths),
-      fences_(ui_shared_resources_, text_renderer_, windows_),
-      roads_(ui_shared_resources_, windows_),
-      biomes_(ui_shared_resources_, windows_),
-      objects_(ui_shared_resources_, windows_),
+      ui_slots_(ui_shared_resources_, text_renderer_),
+      ui_config_window_(ui_shared_resources_, windows_, text_renderer_),
+      terrain_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
+               tile_renderer.cur_tile_, ui_config_window_),
+      water_(ui_shared_resources_, ui_slots_, windows_,
+             text_renderer_, ui_config_window_),
+      biomes_(ui_shared_resources_, ui_slots_, windows_,
+              text_renderer_, ui_config_window_),
+      objects_(ui_shared_resources_, ui_slots_, windows_,
+               text_renderer_, mdl_manager_, ui_config_window_),
       placement_(ui_shared_resources_, windows_, paths),
       tiles_(ui_shared_resources_, windows_),
-      player_(ui_shared_resources_, windows_, text_renderer_, tile_renderer.cur_tile_),
+      player_(ui_shared_resources_, windows_, text_renderer_,
+              tile_renderer.cur_tile_, mdl_manager_),
       menu_(ui_shared_resources_, windows_, text_renderer_, &terrain_,
-            &water_, &roads_, &fences_, &placement_, &objects_, &biomes_,
+            &water_, &placement_, &objects_, &biomes_,
             &tiles_, &player_, cur_mode_),
       ui_settings_(
           {data::VboIdMain::kSettingsDesk},
@@ -144,7 +150,7 @@ void UiRenderer::Render() {
     ui_debugger_.ApplyAndReset();
     ui_debugger_.Update();
   } else if (debug_ui_prev_) {
-    cur_mode_->BindCallbacks();
+    cur_mode_->BindDefaultCallbacks();
     ui_debugger_.ApplyAndReset();
     ui_debugger_.Reset();
   }
@@ -173,7 +179,7 @@ void UiRenderer::Render() {
     } else {
       menu_.Hide();
       ui_settings_.Hide();
-      cur_mode_->BindCallbacks();
+      cur_mode_->Setup();
     }
   }
   if (text_renderer_.InputInProgress()) {
@@ -190,6 +196,13 @@ void UiRenderer::RenderPicking() {
   ui_compass_.RenderPicking();
 
   cur_mode_->RenderPicking();
+
+  // because mode changes vao (3d model render)
+  glActiveTexture(GL_TEXTURE0);
+  ui_shared_resources_.tex_ui_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  glBindVertexArray(ui_shared_resources_.vao_ui_);
+
   ui_buttons_.RenderPicking();
 }
 
@@ -201,8 +214,6 @@ void UiRenderer::Parse() {
   menu_.Parse();
   terrain_.Parse();
   water_.Parse();
-  fences_.Parse();
-  roads_.Parse();
   biomes_.Parse();
   objects_.Parse();
   placement_.Parse();
@@ -213,8 +224,6 @@ void UiRenderer::Serialize() {
   menu_.Serialize();
   terrain_.Serialize();
   water_.Serialize();
-  fences_.Serialize();
-  roads_.Serialize();
   biomes_.Serialize();
   objects_.Serialize();
   placement_.Serialize();

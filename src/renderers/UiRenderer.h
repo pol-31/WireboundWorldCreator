@@ -7,6 +7,8 @@
 
 #include "../common/Paths.h"
 #include "../core/Ui.h"
+#include "../core/UiSlots.h"
+#include "../core/UiConfigWindow.h"
 
 #include "../core/Menu.h"
 #include "../common/TextRenderer.h"
@@ -23,6 +25,8 @@
 #ifndef NDEBUG
 #include "../common/UiDebugger.h"
 #endif // NDEBUG
+
+#include "../common/models/ModelManager.h" // temp
 
 class Camera;
 
@@ -67,22 +71,24 @@ class UiRenderer {
   void Init();
 
   UiSharedResources ui_shared_resources_;
+  ModelManager mdl_manager_; // temp
 
   debug::UiDebugger ui_debugger_;
 
   WindowQueue windows_;
   TextRenderer text_renderer_;
 
+  UiSlots ui_slots_;
+  UiConfigWindow ui_config_window_;
+
   IUiMode* cur_mode_{nullptr};
-  UiTerrainMode terrain_;
-  UiWaterMode water_;
-  UiFencesMode fences_;
-  UiRoadsMode roads_;
-  UiBiomesMode biomes_;
-  UiObjectsMode objects_;
-  UiPlacementMode placement_;
-  UiTilesMode tiles_;
-  UiPlayerMode player_;
+  UiTerrainMode terrain_;     //
+  UiWaterMode water_;         //
+  UiBiomesMode biomes_;       //
+  UiObjectsMode objects_;     // mdl each with specified instances OR map_placement
+  UiPlacementMode placement_; // mdl with map_placement
+  UiTilesMode tiles_;         //
+  UiPlayerMode player_;       // play the game
 
   Menu menu_;
   UiSettings ui_settings_;
