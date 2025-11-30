@@ -16,20 +16,48 @@ UiPlayerMode::UiPlayerMode(
     : IUiMode(
           ui_shared_resources,
           {data::VboIdMain::kMenuPlayer}),
-      sp_hp_(data::VboIdMain::kHealthPoint),
+      sp_hp_(data::VboIdMain::kPlayerHealthPoint),
 //      sp_map_(data::VboIdMain::kTerrainUpdate2),
-      sp_phone_(data::VboIdMain::kPhone),
+      sp_phone_(data::VboIdMain::kPlayerPhoneMap),
+      ui_obj_info_(
+          {data::VboIdMain::kPlayerGameObjInfoDesk},
+          1.0f,
+          {{data::VboIdMain::kPlayerGameObjInfoPinBack, [](){}},
+           {data::VboIdMain::kPlayerGameObjInfoPinPoint}},
+          ui_shared_resources_,
+          window_queue,
+          {data::VboIdMain::kPlayerGameObjInfoEnemy},
+          {data::VboIdMain::kPlayerGameObjInfoFriend},
+          {data::VboIdMain::kPlayerGameObjInfoNeutal},
+          {data::VboIdMain::kPlayerGameObjInfoObstacle},
+          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoName}},
+          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoCharacteristic},
+           data::TextId::kNotYet},
+          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoValue},
+           data::TextId::kNotYet}),
       ui_selection_(ui_shared_resources),
       mdl_manager_(mdl_manager) {}
 
 void UiPlayerMode::Setup() {
-  player::BindCallbacksDefault();
+  BindDefaultCallbacks();
   ui_selection_.SetIdBounds(details::kIdOffsetWater, details::kIdOffsetFences);
-  ui_selection_.SetSelectionModeForce(SelectionMode::kRectangle);
+  ui_selection_.SetModeForce(SelectionMode::kRectangle);
   auto camera = ui_shared_resources_.global_glfw_callback_data_.camera;
   camera->SetPitch(45.0f);
   camera->SetOriginDist(10.0f);
 }
+
+void UiPlayerMode::BindDefaultCallbacks() {
+  double xpos, ypos;
+  glfwGetCursorPos(gWindow, &xpos, &ypos);
+  lastX = xpos;
+  lastY = ypos;
+  glfwSetScrollCallback(gWindow, player::ScrollCallback);
+  glfwSetMouseButtonCallback(gWindow, player::MouseButtonCallback);
+  glfwSetKeyCallback(gWindow, player::KeyCallback);
+  glfwSetCursorPosCallback(gWindow, nullptr);
+}
+
 
 int UiPlayerMode::GetPrerenderTextIdStart() const noexcept {
   return static_cast<int>(data::TextId::kScaleTerrain); //todo;
@@ -69,7 +97,7 @@ void UiPlayerMode::RenderPicking() {
 }
 
 void UiPlayerMode::HandleSelection() {
-  const auto& tex_selected = ui_selection_.GetSelectionMask();
+  const auto& tex_selected = ui_selection_.GetMask();
   std::vector<uint8_t> selected_pixels(
       tex_selected.GetHeight() * tex_selected.GetWidth());
   tex_selected.Bind();
@@ -77,46 +105,46 @@ void UiPlayerMode::HandleSelection() {
       GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, selected_pixels.data());
   glBindTexture(GL_TEXTURE_2D, 0);
   int selected_num = 0;
+
+  const ModelData* mdl_single_selected = nullptr;
+  bool enemy_selected = false;
+  bool friend_selected = false;
+  bool neutral_selected = false;
+  bool obstacle_selected = false;
+
   for (auto& m : mdl_manager_.creatures_) {
     auto position = m.GetPosition();
     int x = static_cast<int>(position.x * 16.0f + 512.0f);
     int y = static_cast<int>(position.z * 16.0f + 512.0f);
-    if (selected_pixels[x * 1024 + y] > 0) {
+    if (selected_pixels[y * 1024 + x] > 0) {
       m.Select();
-      ++selected_num;
+      const auto model = m.GetModelData();
+      if (++selected_num == 1) {
+        mdl_single_selected = model;
+      }
+      if (model->category == ModelData::Category::kEnemy) {
+        enemy_selected = true;
+      } else if (model->category == ModelData::Category::kFriend) {
+        friend_selected = true;
+      } else if (model->category == ModelData::Category::kNeutral) {
+        neutral_selected = true;
+      } else { // kObstacle
+        obstacle_selected = true;
+      }
     } else {
       m.DeSelect();
     }
   }
-//  if (selected_num == 0) {
-//    std::cout << "nothing selected" << std::endl;
-//    return;
-//  }
-//  std::set<Model::TraitsCategory> categories;
-//  std::set<Model::TraitsType> types;
-//  for (auto m : instances_) {
-//    if (!m->IsSelected()) {
-//      continue;
-//    }
-//    categories.insert(m->GetTraitsCategory());
-//    types.insert(m->GetTraitsType());
-//  }
-//  std::cout << "SELECTED: " << categories.size()
-//            << " categories and " << types.size() << " types" << std::endl;
+  if (selected_num == 1) {
+    ui_obj_info_.Show(enemy_selected, friend_selected, neutral_selected,
+                      obstacle_selected, mdl_single_selected);
+  } else if (selected_num != 0) {
+    ui_obj_info_.Show(enemy_selected, friend_selected, neutral_selected,
+                      obstacle_selected, selected_num);
+  }
 }
 
 namespace player {
-
-void BindCallbacksDefault() {
-  double xpos, ypos;
-  glfwGetCursorPos(gWindow, &xpos, &ypos);
-  lastX = xpos;
-  lastY = ypos;
-  glfwSetScrollCallback(gWindow, ScrollCallback);
-  glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
-  glfwSetKeyCallback(gWindow, KeyCallback);
-  glfwSetCursorPosCallback(gWindow, nullptr);
-}
 
 /// scroll -> scale map
 void ScrollCallback(
@@ -124,7 +152,7 @@ void ScrollCallback(
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
   auto player = dynamic_cast<UiPlayerMode*>(*global_data->cur_mode);
-  if (player->ui_selection_.ScrollSelection(yoffset)) {
+  if (player->ui_selection_.Scroll(yoffset)) {
     return;
   }
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
@@ -164,15 +192,14 @@ void MouseButtonCallback(
       }
       glfwSetCursorPosCallback(gWindow, player::CursorPosCallback_Lmb);
       glfwSetMouseButtonCallback(gWindow, player::MouseButtonCallback_Selection);
-      player->ui_selection_.StartSelecting(
-          global_data->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
+      player->ui_selection_.Start(global_data->cursor_pos_tex_norm_, mod_ctrl,
+                                  mod_shift);
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       glfwSetCursorPosCallback(gWindow, CursorPosCallback_Mmb);
     }
   } else { // GLFW_RELEASE
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
       global_data->windows->Release();
-      player->ui_selection_.Release();
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       glfwSetCursorPosCallback(gWindow, nullptr); /// restore
     }
@@ -187,11 +214,11 @@ void MouseButtonCallback_Selection(
   auto player = dynamic_cast<UiPlayerMode*>(*global_data->cur_mode);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
-    BindCallbacksDefault();
-    player->ui_selection_.StopSelecting(cursor_pos);
+    player->BindDefaultCallbacks();
+    player->ui_selection_.Stop(cursor_pos);
     player->HandleSelection();
   } else if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_RIGHT) {
-    player->ui_selection_.NextSelectionMode();
+    player->ui_selection_.NextMode();
   }
 }
 
@@ -250,7 +277,7 @@ void CursorPosCallback_Lmb(
   void* global_data_void_ptr = glfwGetWindowUserPointer(window);
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
   auto player = dynamic_cast<UiPlayerMode*>(*global_data->cur_mode);
-  player->ui_selection_.UpdateSelection(global_data->cursor_pos_tex_norm_);
+  player->ui_selection_.Update(global_data->cursor_pos_tex_norm_);
 }
 
 /// move the camera (not height, only pos around the Z axis)

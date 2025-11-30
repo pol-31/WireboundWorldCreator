@@ -6,6 +6,7 @@
 #include "WindowQueue.h"
 
 class Camera;
+struct ModelData;
 
 class UiWindowSlider final : public UiBase {
  public:
@@ -156,20 +157,20 @@ class UiHierarchy final : public UiBase {
   }
 };
 
-/// loading only on the bottom of the screen (so use UiStaticSprite)
+/// loading only on the bottom of the screen (so use UiDynamicSprite)
 class UiLoading {
  public:
-  UiLoading(UiStaticSprite&& sprite0,
-            UiStaticSprite&& sprite10,
-            UiStaticSprite&& sprite20,
-            UiStaticSprite&& sprite30,
-            UiStaticSprite&& sprite40,
-            UiStaticSprite&& sprite50,
-            UiStaticSprite&& sprite60,
-            UiStaticSprite&& sprite70,
-            UiStaticSprite&& sprite80,
-            UiStaticSprite&& sprite90,
-            UiStaticSprite&& sprite100);
+  UiLoading(UiDynamicSprite&& sprite0,
+            UiDynamicSprite&& sprite10,
+            UiDynamicSprite&& sprite20,
+            UiDynamicSprite&& sprite30,
+            UiDynamicSprite&& sprite40,
+            UiDynamicSprite&& sprite50,
+            UiDynamicSprite&& sprite60,
+            UiDynamicSprite&& sprite70,
+            UiDynamicSprite&& sprite80,
+            UiDynamicSprite&& sprite90,
+            UiDynamicSprite&& sprite100);
 
   UiLoading(UiLoading&& other) noexcept;
   UiLoading(const UiLoading& other) = delete;
@@ -182,11 +183,11 @@ class UiLoading {
   void RenderPicking() const;
 
  private:
-  std::array<UiStaticSprite, 11> sprites_;
+  std::array<UiDynamicSprite, 11> sprites_;
   UiHierarchy hierarchy_;
 };
 
-/// loading only on the bottom of the screen (so use UiStaticSprite)
+/// loading only on the bottom of the screen (so use UiDynamicSprite)
 class UiCompass {
  public:
   UiCompass(const Camera* camera,
@@ -482,22 +483,19 @@ class UiTabMenu final : public UiWindowAppear {
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
 
-      UiStaticSprite&& btn_mode_terrain,
-      UiStaticSprite&& btn_mode_water,
-      UiStaticSprite&& btn_mode_roads,
-      UiStaticSprite&& btn_mode_fences,
-      UiStaticSprite&& btn_mode_placement,
-      UiStaticSprite&& btn_mode_objects,
-      UiStaticSprite&& btn_mode_biomes,
-      UiStaticSprite&& btn_mode_tiles,
-      UiStaticSprite&& btn_mode_player,
+      UiDynamicSprite&& btn_mode_terrain,
+      UiDynamicSprite&& btn_mode_water,
+      UiDynamicSprite&& btn_mode_placement,
+      UiDynamicSprite&& btn_mode_objects,
+      UiDynamicSprite&& btn_mode_biomes,
+      UiDynamicSprite&& btn_mode_tiles,
+      UiDynamicSprite&& btn_mode_player,
 
             UiToggle4&& toggle_terrain, UiToggle4&& toggle_water,
-            UiToggle4&& toggle_roads, UiToggle4&& toggle_fences,
             UiToggle4&& toggle_placement, UiToggle4&& toggle_objects,
             UiToggle4&& toggle_biomes, UiToggle4&& toggle_tiles,
 
-      UiStaticSprite&& btn_shader_wirebound, UiToggle4&& toggle_shaders,
+      UiDynamicSprite&& btn_shader_wirebound, UiToggle4&& toggle_shaders,
 
       UiDynamicSprite&& arrow_select,
       UiDynamicSprite&& arrow_selected,
@@ -523,26 +521,22 @@ class UiTabMenu final : public UiWindowAppear {
   void SetSelectArrow(float angle);
 
  private:
-  UiStaticSprite btn_mode_terrain_;
-  UiStaticSprite btn_mode_water_;
-  UiStaticSprite btn_mode_roads_;
-  UiStaticSprite btn_mode_fences_;
-  UiStaticSprite btn_mode_placement_;
-  UiStaticSprite btn_mode_objects_;
-  UiStaticSprite btn_mode_biomes_;
-  UiStaticSprite btn_mode_tiles_;
-  UiStaticSprite btn_mode_player_;
+  UiDynamicSprite btn_mode_terrain_;
+  UiDynamicSprite btn_mode_water_;
+  UiDynamicSprite btn_mode_placement_;
+  UiDynamicSprite btn_mode_objects_;
+  UiDynamicSprite btn_mode_biomes_;
+  UiDynamicSprite btn_mode_tiles_;
+  UiDynamicSprite btn_mode_player_;
 
   UiToggle4 toggle_terrain_;
   UiToggle4 toggle_water_;
-  UiToggle4 toggle_roads_;
-  UiToggle4 toggle_fences_;
   UiToggle4 toggle_placement_;
   UiToggle4 toggle_objects_;
   UiToggle4 toggle_biomes_;
   UiToggle4 toggle_tiles_;
 
-  UiStaticSprite btn_shader_wirebound_;
+  UiDynamicSprite btn_shader_wirebound_;
   UiToggle4 toggle_shaders_;
 
   UiDynamicSprite arrow_select_;
@@ -557,6 +551,79 @@ class UiTabMenu final : public UiWindowAppear {
 
   float arrow_select_angle_ = 0;
   float arrow_selected_angle_ = 0;
+};
+
+class UiObjectInfo final : public UiWindowAppear {
+ public:
+  using Base = UiWindowAppear;
+  using Base::Show;
+
+  UiObjectInfo(
+      UiDynamicSprite&& sprite,
+      float size_scale,
+      UiToggle2&& pin,
+      UiSharedResources& ui_shared_resources,
+      WindowQueue& window_queue,
+
+      UiDynamicSprite&& sp_enemy,
+      UiDynamicSprite&& sp_friend,
+      UiDynamicSprite&& sp_neutral,
+      UiDynamicSprite&& sp_obstacle,
+      UiText&& txt_name,
+      UiTextModeId&& txt_characteristic,
+      UiTextModeId&& txt_value);
+
+  UiObjectInfo(UiObjectInfo&& other) noexcept;
+  UiObjectInfo(const UiObjectInfo& other) = delete;
+
+  UiObjectInfo& operator=(UiObjectInfo&& other) = delete;
+  UiObjectInfo& operator=(const UiObjectInfo& other) = delete;
+
+  bool Render() override;
+
+  void RenderPicking() override;
+
+  bool Press(int id) override;
+
+  void Release() override;
+
+  void Show(bool enemy_selected, bool friend_selected,
+            bool neutral_selected, bool obstacle_selected,
+            int selected_num);
+
+  // if selected_num == 1
+  void Show(bool enemy_selected, bool friend_selected,
+            bool neutral_selected, bool obstacle_selected,
+            const ModelData* mdl_data);
+
+ private:
+  void RenderParamsObjSingle();
+
+  void RenderPickingParamsObjSingle();
+
+  void RenderParamsObjGroup();
+
+  void RenderPickingParamsObjGroup();
+
+  UiDynamicSprite sp_enemy_;
+  UiDynamicSprite sp_friend_;
+  UiDynamicSprite sp_neutral_;
+  UiDynamicSprite sp_obstacle_;
+  UiText txt_name_;
+  UiTextModeId txt_characteristic_;
+  UiTextModeId txt_value_;
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kPlayerGameObjInfoValue) -
+      static_cast<int>(data::VboIdMain::kPlayerGameObjInfoDesk) + 1
+      > ui_event_handler_;
+
+  bool enemy_selected_ = false;
+  bool friend_selected_ = false;
+  bool neutral_selected_ = false;
+  bool obstacle_selected_ = false;
+
+  int selected_num_ = 0;
+  const ModelData* mdl_data_ = nullptr;
 };
 
 class UiTipWindow final : public UiWindowAppear {
@@ -702,7 +769,7 @@ class UiSettings final : public UiWindowPopUp {
       > ui_event_handler_;
 };
 
-class UiWaterLayerConfig final : public UiWindowPopUp {
+/*class UiWaterLayerConfig final : public UiWindowPopUp {
  public:
   using Base = UiWindowPopUp;
 
@@ -759,91 +826,8 @@ class UiWaterLayerConfig final : public UiWindowPopUp {
   UiDynamicSprite sprite_layer_;
   UiDynamicSprite text_layer_;
   UiToggle4 toggle_layer_;
-  UiSliderH3 scale_;
-  UiDynamicSprite scale_text_;
-  UiSliderH3 fetch_;
-  UiDynamicSprite fetch_text_;
-  UiSliderH3 spread_blend_;
-  UiDynamicSprite spread_blend_text_;
-  UiSliderH3 swell_;
-  UiDynamicSprite swell_text_;
-  UiSliderH3 peak_enhancement_;
-  UiDynamicSprite peak_enhancement_text_;
-  UiSliderH3 short_waves_fade_;
-  UiDynamicSprite short_waves_fade_text_;
-  UiSliderH3 lambda_;
-  UiDynamicSprite lambda_text_;
 
   bool modified_{false};
-
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kWater1LambdaHandler) -
-      static_cast<int>(data::VboIdMain::kWaterLayer1) + 1
-      > ui_event_handler_;
-};
-
-// ---
-
-//class IUiEdit : public UiBase {
-// public:
-//  IUiEdit();
-//};
-
-class UiEditFences final : public UiBase {
- public:
-  UiEditFences(
-      UiSharedResources& ui_shared_resources,
-      UiDynamicSprite&& desk,
-      UiDynamicSprite&& accept,
-      UiDynamicSprite&& name,
-      UiDynamicSprite&& name_back,
-      UiSlider2D&& color_palette,
-      UiSliderH2&& color_brightness,
-      UiDynamicSprite&& color_indicator,
-      UiDynamicSprite&& type_back,
-      UiDynamicSprite&& type_text,
-      UiDynamicSprite&& type_prev,
-      UiDynamicSprite&& type_next);
-
-  UiEditFences(UiEditFences&& other) noexcept;
-  UiEditFences(const UiEditFences& other) = delete;
-
-  UiEditFences& operator=(UiEditFences&& other) = delete;
-  UiEditFences& operator=(const UiEditFences& other) = delete;
-
-  bool Press(int id);
-
-  void Release() override;
-
-  bool Scroll(GLuint id, float yoffset);
-
-  void Render();
-
-  void RenderPicking();
-
-  void UpdateTransform() {}
-
- private:
-  UiDynamicSprite desk_;
-  UiDynamicSprite accept_;
-  UiDynamicSprite name_;
-  UiDynamicSprite name_back_;
-
-  UiSlider2D color_palette_;
-  UiSliderH2 color_brightness_;
-  UiDynamicSprite color_indicator_;
-
-  UiDynamicSprite type_back_;
-  UiDynamicSprite type_text_;
-  UiDynamicSprite type_prev_;
-  UiDynamicSprite type_next_;
-
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kFencesTypeNext) -
-      static_cast<int>(data::VboIdMain::kFencesEditDesk) + 1
-      > ui_event_handler_;
-
-  UiSharedResources& ui_shared_resources_;
-};
+};*/
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_

@@ -207,17 +207,17 @@ void UiWindowSlider::FocusOnSelected(int slot_id) {
 }
 
 UiLoading::UiLoading(
-    UiStaticSprite&& sprite0,
-    UiStaticSprite&& sprite10,
-    UiStaticSprite&& sprite20,
-    UiStaticSprite&& sprite30,
-    UiStaticSprite&& sprite40,
-    UiStaticSprite&& sprite50,
-    UiStaticSprite&& sprite60,
-    UiStaticSprite&& sprite70,
-    UiStaticSprite&& sprite80,
-    UiStaticSprite&& sprite90,
-    UiStaticSprite&& sprite100)
+    UiDynamicSprite&& sprite0,
+    UiDynamicSprite&& sprite10,
+    UiDynamicSprite&& sprite20,
+    UiDynamicSprite&& sprite30,
+    UiDynamicSprite&& sprite40,
+    UiDynamicSprite&& sprite50,
+    UiDynamicSprite&& sprite60,
+    UiDynamicSprite&& sprite70,
+    UiDynamicSprite&& sprite80,
+    UiDynamicSprite&& sprite90,
+    UiDynamicSprite&& sprite100)
     : sprites_{
           {std::move(sprite0), std::move(sprite10), std::move(sprite20),
            std::move(sprite30), std::move(sprite40), std::move(sprite50),
@@ -659,22 +659,19 @@ UiTabMenu::UiTabMenu(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
 
-    UiStaticSprite&& btn_mode_terrain,
-    UiStaticSprite&& btn_mode_water,
-    UiStaticSprite&& btn_mode_roads,
-    UiStaticSprite&& btn_mode_fences,
-    UiStaticSprite&& btn_mode_placement,
-    UiStaticSprite&& btn_mode_objects,
-    UiStaticSprite&& btn_mode_biomes,
-    UiStaticSprite&& btn_mode_tiles,
-    UiStaticSprite&& btn_mode_player,
+    UiDynamicSprite&& btn_mode_terrain,
+    UiDynamicSprite&& btn_mode_water,
+    UiDynamicSprite&& btn_mode_placement,
+    UiDynamicSprite&& btn_mode_objects,
+    UiDynamicSprite&& btn_mode_biomes,
+    UiDynamicSprite&& btn_mode_tiles,
+    UiDynamicSprite&& btn_mode_player,
 
     UiToggle4&& toggle_terrain, UiToggle4&& toggle_water,
-    UiToggle4&& toggle_roads, UiToggle4&& toggle_fences,
     UiToggle4&& toggle_placement, UiToggle4&& toggle_objects,
     UiToggle4&& toggle_biomes, UiToggle4&& toggle_tiles,
 
-    UiStaticSprite&& btn_shader_wirebound, UiToggle4&& toggle_shaders,
+    UiDynamicSprite&& btn_shader_wirebound, UiToggle4&& toggle_shaders,
 
     UiDynamicSprite&& arrow_select,
     UiDynamicSprite&& arrow_selected,
@@ -685,8 +682,6 @@ UiTabMenu::UiTabMenu(
                      window_queue),
       btn_mode_terrain_(std::move(btn_mode_terrain)),
       btn_mode_water_(std::move(btn_mode_water)),
-      btn_mode_roads_(std::move(btn_mode_roads)),
-      btn_mode_fences_(std::move(btn_mode_fences)),
       btn_mode_placement_(std::move(btn_mode_placement)),
       btn_mode_objects_(std::move(btn_mode_objects)),
       btn_mode_biomes_(std::move(btn_mode_biomes)),
@@ -695,8 +690,6 @@ UiTabMenu::UiTabMenu(
 
       toggle_terrain_(std::move(toggle_terrain)),
       toggle_water_(std::move(toggle_water)),
-      toggle_roads_(std::move(toggle_roads)),
-      toggle_fences_(std::move(toggle_fences)),
       toggle_placement_(std::move(toggle_placement)),
       toggle_objects_(std::move(toggle_objects)),
       toggle_biomes_(std::move(toggle_biomes)),
@@ -713,8 +706,6 @@ UiTabMenu::UiTabMenu(
           &pin_,
           &btn_mode_terrain_,
           &btn_mode_water_,
-          &btn_mode_roads_,
-          &btn_mode_fences_,
           &btn_mode_placement_,
           &btn_mode_objects_,
           &btn_mode_biomes_,
@@ -723,8 +714,6 @@ UiTabMenu::UiTabMenu(
 
           &toggle_terrain_,
           &toggle_water_,
-          &toggle_roads_,
-          &toggle_fences_,
           &toggle_placement_,
           &toggle_objects_,
           &toggle_biomes_,
@@ -737,10 +726,10 @@ UiTabMenu::UiTabMenu(
       }) {
   hierarchy_ = UiHierarchy(
       &sprite_, &pin_, &btn_mode_terrain_, &btn_mode_water_,
-      &btn_mode_roads_, &btn_mode_fences_, &btn_mode_placement_,
+      &btn_mode_placement_,
       &btn_mode_objects_, &btn_mode_biomes_, &btn_mode_tiles_,
       &btn_mode_player_,
-      &toggle_terrain_, &toggle_water_, &toggle_roads_, &toggle_fences_,
+      &toggle_terrain_, &toggle_water_,
       &toggle_placement_, &toggle_objects_, &toggle_biomes_, &toggle_tiles_,
       &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_, &arrow_selected_,
       &save_data_, &load_data_);
@@ -751,8 +740,6 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
     : Base(std::move(other)),
       btn_mode_terrain_(std::move(other.btn_mode_terrain_)),
       btn_mode_water_(std::move(other.btn_mode_water_)),
-      btn_mode_roads_(std::move(other.btn_mode_roads_)),
-      btn_mode_fences_(std::move(other.btn_mode_fences_)),
       btn_mode_placement_(std::move(other.btn_mode_placement_)),
       btn_mode_objects_(std::move(other.btn_mode_objects_)),
       btn_mode_biomes_(std::move(other.btn_mode_biomes_)),
@@ -761,8 +748,6 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
 
       toggle_terrain_(std::move(other.toggle_terrain_)),
       toggle_water_(std::move(other.toggle_water_)),
-      toggle_roads_(std::move(other.toggle_roads_)),
-      toggle_fences_(std::move(other.toggle_fences_)),
       toggle_placement_(std::move(other.toggle_placement_)),
       toggle_objects_(std::move(other.toggle_objects_)),
       toggle_biomes_(std::move(other.toggle_biomes_)),
@@ -780,8 +765,6 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
           &pin_,
           &btn_mode_terrain_,
           &btn_mode_water_,
-          &btn_mode_roads_,
-          &btn_mode_fences_,
           &btn_mode_placement_,
           &btn_mode_objects_,
           &btn_mode_biomes_,
@@ -790,8 +773,6 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
 
           &toggle_terrain_,
           &toggle_water_,
-          &toggle_roads_,
-          &toggle_fences_,
           &toggle_placement_,
           &toggle_objects_,
           &toggle_biomes_,
@@ -804,10 +785,10 @@ UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
       }) {
   hierarchy_ = UiHierarchy(
       &sprite_, &pin_, &btn_mode_terrain_, &btn_mode_water_,
-      &btn_mode_roads_, &btn_mode_fences_, &btn_mode_placement_,
+      &btn_mode_placement_,
       &btn_mode_objects_, &btn_mode_biomes_, &btn_mode_tiles_,
       &btn_mode_player_,
-      &toggle_terrain_, &toggle_water_, &toggle_roads_, &toggle_fences_,
+      &toggle_terrain_, &toggle_water_,
       &toggle_placement_, &toggle_objects_, &toggle_biomes_, &toggle_tiles_,
       &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_, &arrow_selected_,
       &save_data_, &load_data_);
@@ -821,12 +802,10 @@ bool UiTabMenu::Render() {
 //    return stop_show;
 //  }
 
-  ui_shared_resources_.static_sprite_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
   btn_mode_terrain_.Render();
   btn_mode_water_.Render();
-  btn_mode_roads_.Render();
-  btn_mode_fences_.Render();
   btn_mode_placement_.Render();
   btn_mode_objects_.Render();
   btn_mode_biomes_.Render();
@@ -835,8 +814,6 @@ bool UiTabMenu::Render() {
 
   toggle_terrain_.Render();
   toggle_water_.Render();
-  toggle_roads_.Render();
-  toggle_fences_.Render();
   toggle_placement_.Render();
   toggle_objects_.Render();
   toggle_biomes_.Render();
@@ -864,12 +841,10 @@ void UiTabMenu::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
 
   btn_mode_terrain_.RenderPicking();
   btn_mode_water_.RenderPicking();
-  btn_mode_roads_.RenderPicking();
-  btn_mode_fences_.RenderPicking();
   btn_mode_placement_.RenderPicking();
   btn_mode_objects_.RenderPicking();
   btn_mode_biomes_.RenderPicking();
@@ -878,8 +853,6 @@ void UiTabMenu::RenderPicking() {
 
   toggle_terrain_.RenderPicking();
   toggle_water_.RenderPicking();
-  toggle_roads_.RenderPicking();
-  toggle_fences_.RenderPicking();
   toggle_placement_.RenderPicking();
   toggle_objects_.RenderPicking();
   toggle_biomes_.RenderPicking();
@@ -918,6 +891,165 @@ void UiTabMenu::SetSelectedArrow(float angle) {
 
 void UiTabMenu::SetSelectArrow(float angle) {
   arrow_select_angle_ = angle;
+}
+
+UiObjectInfo::UiObjectInfo(
+    UiDynamicSprite&& sprite,
+    float size_scale,
+    UiToggle2&& pin,
+    UiSharedResources& ui_shared_resources,
+    WindowQueue& window_queue,
+
+    UiDynamicSprite&& sp_enemy,
+    UiDynamicSprite&& sp_friend,
+    UiDynamicSprite&& sp_neutral,
+    UiDynamicSprite&& sp_obstacle,
+    UiText&& txt_name,
+    UiTextModeId&& txt_characteristic,
+    UiTextModeId&& txt_value)
+    : UiWindowAppear(std::move(sprite), size_scale,
+                     std::move(pin), ui_shared_resources,
+                     window_queue),
+      sp_enemy_(std::move(sp_enemy)),
+      sp_friend_(std::move(sp_friend)),
+      sp_neutral_(std::move(sp_neutral)),
+      sp_obstacle_(std::move(sp_obstacle)),
+      txt_name_(std::move(txt_name)),
+      txt_characteristic_(std::move(txt_characteristic)),
+      txt_value_(std::move(txt_value)),
+      ui_event_handler_({&pin_}) {
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &sp_enemy_, &sp_friend_, &sp_neutral_,
+      &sp_obstacle_, &txt_name_, &txt_characteristic_, &txt_value_);
+  speed_ = 2.0f;
+}
+
+UiObjectInfo::UiObjectInfo(UiObjectInfo&& other) noexcept
+    : Base(std::move(other)),
+      sp_enemy_(std::move(other.sp_enemy_)),
+      sp_friend_(std::move(other.sp_friend_)),
+      sp_neutral_(std::move(other.sp_neutral_)),
+      sp_obstacle_(std::move(other.sp_obstacle_)),
+      txt_name_(std::move(other.txt_name_)),
+      txt_characteristic_(std::move(other.txt_characteristic_)),
+      txt_value_(std::move(other.txt_value_)),
+      ui_event_handler_({&pin_}) {
+  hierarchy_ = UiHierarchy(
+      &sprite_, &pin_, &sp_enemy_, &sp_friend_, &sp_neutral_,
+      &sp_obstacle_, &txt_name_, &txt_characteristic_, &txt_value_);
+}
+
+bool UiObjectInfo::Render() {
+  ui_shared_resources_.tex_ui_.Bind();
+  bool stop_show = Base::RenderBack(true);
+//  if (!Base::BackIsReady()) {
+//    return stop_show;
+//  }
+
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  glUniform1f(1, 0.4f); /// half-saturated color for non-selected
+  sp_enemy_.Render();
+  sp_friend_.Render();
+  sp_neutral_.Render();
+  sp_obstacle_.Render();
+  glUniform1f(1, 1.0f); /// full saturated color for selected
+  if (enemy_selected_) {
+    sp_enemy_.Render();
+  }
+  if (friend_selected_) {
+    sp_friend_.Render();
+  }
+  if (neutral_selected_) {
+    sp_neutral_.Render();
+  }
+  if (obstacle_selected_) {
+    sp_obstacle_.Render();
+  }
+  txt_name_.Render();
+  if (selected_num_ == 1) {
+    RenderParamsObjSingle();
+  } else {
+    RenderParamsObjGroup();
+  }
+//  txt_characteristic_.Render();
+//  txt_value_.Render();
+
+  return stop_show;
+}
+
+void UiObjectInfo::RenderParamsObjSingle() {
+  txt_characteristic_.SetText(data::TextId::kPerlin);
+  txt_characteristic_.Render();
+}
+
+void UiObjectInfo::RenderPickingParamsObjSingle() {
+  txt_characteristic_.RenderPicking();
+}
+
+void UiObjectInfo::RenderParamsObjGroup() {
+  txt_characteristic_.SetText(data::TextId::kMetaballs);
+  txt_characteristic_.Render();
+}
+
+void UiObjectInfo::RenderPickingParamsObjGroup() {
+  txt_characteristic_.RenderPicking();
+}
+
+void UiObjectInfo::RenderPicking() {
+  Base::RenderPickingBack();
+  if (!Base::BackIsReady()) {
+    return;
+  }
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  sp_enemy_.RenderPicking();
+  sp_friend_.RenderPicking();
+  sp_neutral_.RenderPicking();
+  sp_obstacle_.RenderPicking();
+  //  txt_name_.RenderPicking();
+  //  txt_characteristic_.RenderPicking();
+  //  txt_value_.RenderPicking();
+}
+
+bool UiObjectInfo::Press(int id) {
+  bool handled = ui_event_handler_.Press(id);
+  if (id != pin_.GetId()) {
+    return handled;
+  }
+  if (!do_show_) {
+    Hide();
+  }
+  return handled;
+}
+
+void UiObjectInfo::Release() {
+  ui_event_handler_.Release();
+}
+
+void UiObjectInfo::Show(
+    bool enemy_selected, bool friend_selected,
+    bool neutral_selected, bool obstacle_selected,
+    int selected_num) {
+  enemy_selected_ = enemy_selected;
+  friend_selected_ = friend_selected;
+  neutral_selected_ = neutral_selected;
+  obstacle_selected_ = obstacle_selected;
+  txt_name_.SetText("Pavlushas (a lot)");
+  selected_num_ = selected_num;
+  Show();
+}
+
+void UiObjectInfo::Show(
+    bool enemy_selected, bool friend_selected,
+    bool neutral_selected, bool obstacle_selected,
+    const ModelData* mdl_data) {
+  enemy_selected_ = enemy_selected;
+  friend_selected_ = friend_selected;
+  neutral_selected_ = neutral_selected;
+  obstacle_selected_ = obstacle_selected;
+  txt_name_.SetText("Pavlusha");
+  selected_num_ = 1;
+  mdl_data_ = mdl_data;
+  Show();
 }
 
 UiTipWindow::UiTipWindow(
@@ -1173,7 +1305,7 @@ void UiSettings::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
 
   resolution_left_.RenderPicking();
   resolution_right_.RenderPicking();
@@ -1219,6 +1351,7 @@ bool UiSettings::Scroll(GLuint id, float yoffset) {
          sound_.Scroll(id, yoffset) ||
          sensitivity_.Scroll(id, yoffset);
 }
+/*
 
 UiWaterLayerConfig::UiWaterLayerConfig(
     UiDynamicSprite&& sprite,
@@ -1448,142 +1581,4 @@ OceanLayerTraits UiWaterLayerConfig::GetOceanLayerTraits() const {
       lambda_.GetProgress()
   };
 }
-
-//TODO: deprecated
-UiEditFences::UiEditFences(
-    UiSharedResources& ui_shared_resources,
-    UiDynamicSprite&& desk,
-    UiDynamicSprite&& accept,
-    UiDynamicSprite&& name,
-    UiDynamicSprite&& name_back,
-    UiSlider2D&& color_palette,
-    UiSliderH2&& color_brightness,
-    UiDynamicSprite&& color_indicator,
-    UiDynamicSprite&& type_back,
-    UiDynamicSprite&& type_text,
-    UiDynamicSprite&& type_prev,
-    UiDynamicSprite&& type_next)
-    : UiBase(desk.GetId(), {}),
-      desk_(std::move(desk)),
-      accept_(std::move(accept)),
-      name_(std::move(name)),
-      name_back_(std::move(name_back)),
-      color_palette_(std::move(color_palette)),
-      color_brightness_(std::move(color_brightness)),
-      color_indicator_(std::move(color_indicator)),
-      type_back_(std::move(type_back)),
-      type_text_(std::move(type_text)),
-      type_prev_(std::move(type_prev)),
-      type_next_(std::move(type_next)),
-      ui_event_handler_({
-          &accept_, &name_back_, &color_palette_,
-          &color_brightness_, &type_prev_, &type_next_
-      }),
-      ui_shared_resources_(ui_shared_resources) {
-  gUiComponents[accept_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[name_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[name_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[color_palette_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[color_brightness_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[color_indicator_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[type_back_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[type_text_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[type_prev_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[type_next_.GetId() - details::kIdOffsetUi].parent_id_
-      = desk.GetId();
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
-  UpdateTransform();
-}
-
-UiEditFences::UiEditFences(UiEditFences&& other) noexcept
-    : UiBase(std::move(other)),
-      desk_(std::move(other.desk_)),
-      accept_(std::move(other.accept_)),
-      name_(std::move(other.name_)),
-      name_back_(std::move(other.name_back_)),
-      color_palette_(std::move(other.color_palette_)),
-      color_brightness_(std::move(other.color_brightness_)),
-      color_indicator_(std::move(other.color_indicator_)),
-      type_back_(std::move(other.type_back_)),
-      type_text_(std::move(other.type_text_)),
-      type_prev_(std::move(other.type_prev_)),
-      type_next_(std::move(other.type_next_)),
-      ui_event_handler_({
-          &accept_, &name_back_, &color_palette_,
-          &color_brightness_, &type_prev_, &type_next_
-      }),
-      ui_shared_resources_(other.ui_shared_resources_) {
-  gUiComponents[desk_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
-}
-
-bool UiEditFences::Press(int id) {
-  return ui_event_handler_.Press(id);
-}
-
-void UiEditFences::Release() {
-  ui_event_handler_.Release();
-}
-
-bool UiEditFences::Scroll(GLuint id, float yoffset) {
-  return color_palette_.Scroll(id, yoffset) ||
-         color_brightness_.Scroll(id, yoffset);
-}
-
-void UiEditFences::Render() {
-  ui_shared_resources_.static_sprite_shader_.Bind();
-
-  auto mouse_pos =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
-
-  desk_.Render();
-  accept_.Render();
-  name_back_.Render();
-  color_palette_.Render(mouse_pos);
-  color_brightness_.Render(mouse_pos);
-  //TODO: set indicator color
-  color_indicator_.Render();
-  type_back_.Render();
-  type_prev_.Render();
-  type_next_.Render();
-
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(name_, "name", 1.0f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(type_text_, "type", 1.0f, glm::vec2{0.0f});
-}
-
-void UiEditFences::RenderPicking() {
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
-
-  desk_.RenderPicking();
-  accept_.RenderPicking();
-  name_back_.RenderPicking();
-  color_palette_.RenderPicking();
-  color_brightness_.RenderPicking();
-  //TODO: set indicator color
-  color_indicator_.RenderPicking();
-  type_back_.RenderPicking();
-  type_prev_.RenderPicking();
-  type_next_.RenderPicking();
-
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(name_, "name", 1.0f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(type_text_, "type", 1.0f, glm::vec2{0.0f});
-
-}
+*/

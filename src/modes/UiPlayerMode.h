@@ -30,6 +30,8 @@ class UiPlayerMode final : public IUiMode {
 
   void Setup() override;
 
+  void BindDefaultCallbacks() override;
+
   int GetPrerenderTextIdStart() const noexcept override;
 
   int GetPrerenderTextIdEnd() const noexcept override;
@@ -39,6 +41,8 @@ class UiPlayerMode final : public IUiMode {
   UiDynamicSprite sp_hp_;
 //  UiMap ui_map_;
   // UiPhone ui_phone_;
+
+  UiObjectInfo ui_obj_info_;
 
   UiDynamicSprite sp_phone_;
   UiSelection ui_selection_;
