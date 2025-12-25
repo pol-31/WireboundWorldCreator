@@ -22,17 +22,15 @@ void Ifft::Init() {
   glGenBuffers(1, &ssbo_indices_);
   //TODO: 1 to header ShadersBindings
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo_indices_);
-}
-
-Ifft::~Ifft() {
-  DeInit();
+  float zeros4[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+  glClearTexImage(precomputed_data_.GetId(), 0, GL_RGBA, GL_FLOAT, zeros4);
 }
 
 void Ifft::DeInit() {
   glDeleteBuffers(1, &ssbo_indices_);
 }
 
-void Ifft::Compute(Texture& input, Texture& buffer) const {
+void Ifft::Compute(Texture32F& input, Texture32F& buffer) const {
   using namespace utility;
   auto log_size = static_cast<int>(std::log2(size_));
   bool ping_pong = false;

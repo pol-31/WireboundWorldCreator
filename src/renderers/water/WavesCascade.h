@@ -4,7 +4,7 @@
 #include "../../common/Shader.h"
 #include "../../common/Texture.h"
 #include "Ifft.h"
-#include "WaterBiome.h"
+#include "../../modes/UiWaterConfig.h"
 
 class WavesCascade {
  public:
@@ -41,18 +41,18 @@ class WavesCascade {
   int size_;
   float lambda_{1.0f};
 
-  Texture init_spectrum_tex_;
-  Texture precomputed_data_tex_;
+  Texture32F init_spectrum_tex_;
+  Texture32F precomputed_data_tex_;
 
-  Texture buffer_tex_;
-  Texture dxdz_tex_;
-  Texture dydxz_tex_;
-  Texture dyxdyz_tex_;
-  Texture dxxdzz_tex_;
+  Texture32F buffer_tex_;
+  Texture32F dxdz_tex_;
+  Texture32F dydxz_tex_;
+  Texture32F dyxdyz_tex_;
+  Texture32F dxxdzz_tex_;
 
-  Texture derivatives_tex_;
-  Texture displacement_tex_;
-  Texture turbulence_tex_;
+  Texture32F derivatives_tex_;
+  Texture32F displacement_tex_;
+  Texture32F turbulence_tex_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_WATER_WAVESCASCADE_H_

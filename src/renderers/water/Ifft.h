@@ -8,10 +8,14 @@
 class Ifft {
  public:
   Ifft(const Paths& paths, int size);
-  ~Ifft();
+
+  ~Ifft() {
+    DeInit();
+  }
 
   void SetSize(int size);
-  void Compute(Texture& input, Texture& buffer) const;
+
+  void Compute(Texture32F& input, Texture32F& buffer) const;
 
  private:
   void Init();
@@ -28,7 +32,7 @@ class Ifft {
   Shader ifft_shader_;
   Shader permute_shader_;
   Shader precompute_shader_;
-  Texture precomputed_data_;
+  Texture32F precomputed_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_WATER_IFFT_H_

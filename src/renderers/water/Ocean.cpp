@@ -71,9 +71,9 @@ void Ocean::Update() {
 
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   textures_merger_shader_.Bind();
-  cascade_near_.UnPackIfftData();
   cascade_mid_.UnPackIfftData();
   cascade_far_.UnPackIfftData();
+  cascade_near_.UnPackIfftData();
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 
@@ -100,8 +100,8 @@ void Ocean::Init(const OceanTraits& traits) {
   auto pi = std::numbers::pi_v<float>;
   float boundary_near = 2 * pi / length_scale_mid_ * 6.0f;
   float boundary_far = 2 * pi / length_scale_far_ * 6.0f;
-  float boundary_max = 9999.0f;
-//  noise_tex_.Store("noise_tex_.png", 2, GL_RG, GL_FLOAT);
+  float boundary_max = 10.0f;
+  // noise_tex_.Store("noise_tex_.png", 2, GL_RG);
   init_spectrum_shader_.Bind();
   glUniform1ui(shader::kOceanSize, size_);
   utility::BindImageTexture(shader::kOceanSpectrumNoise,
@@ -109,24 +109,24 @@ void Ocean::Init(const OceanTraits& traits) {
 
   glUniform1ui(shader::kOceanSpectrumCascadeId, 0);
   cascade_near_.CalculateInitials(
-      length_scale_near_, boundary_min, boundary_near);
+      length_scale_near_, boundary_min, boundary_max);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
   glUniform1ui(shader::kOceanSpectrumCascadeId, 1);
   cascade_mid_.CalculateInitials(
-      length_scale_mid_, boundary_near, boundary_far);
+      length_scale_mid_, boundary_min, boundary_max);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
   glUniform1ui(shader::kOceanSpectrumCascadeId, 2);
   cascade_far_.CalculateInitials(
-      length_scale_far_, boundary_far, boundary_max);
+      length_scale_far_, boundary_min, boundary_max);
 
 #ifndef NDEBUG
   utility::UnBindImageTexture(shader::kOceanSpectrumNoise,
                               noise_tex_, GL_READ_ONLY);
 #endif
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
+  Update();
 }
 
 float Ocean::GetWaterHeight(/*Vector3 position*/) {

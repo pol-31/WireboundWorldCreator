@@ -5,16 +5,29 @@
 
 WavesCascade::WavesCascade(int size)
     : size_(size),
-      init_spectrum_tex_(size_, size_, GL_RGBA32F, GL_LINEAR, GL_REPEAT),
-      precomputed_data_tex_(size_, size_, GL_RGBA32F, GL_LINEAR, GL_REPEAT),
-      displacement_tex_(size_, size_, GL_RGBA32F, GL_LINEAR, GL_REPEAT),
-      derivatives_tex_(size_, size_, GL_RGBA32F, GL_LINEAR, GL_REPEAT),
-      turbulence_tex_(size_, size_, GL_RGBA32F, GL_LINEAR, GL_REPEAT),
-      buffer_tex_(size_, size_, GL_RG32F, GL_LINEAR, GL_REPEAT),
-      dxdz_tex_(size_, size_, GL_RG32F, GL_LINEAR, GL_REPEAT),
-      dydxz_tex_(size_, size_, GL_RG32F, GL_LINEAR, GL_REPEAT),
-      dyxdyz_tex_(size_, size_, GL_RG32F, GL_LINEAR, GL_REPEAT),
-      dxxdzz_tex_(size_, size_, GL_RG32F, GL_LINEAR, GL_REPEAT) {}
+      init_spectrum_tex_(size_, GL_RGBA32F),
+      precomputed_data_tex_(size_, GL_RGBA32F),
+      displacement_tex_(size_, GL_RGBA32F),
+      derivatives_tex_(size_, GL_RGBA32F),
+      turbulence_tex_(size_, GL_RGBA32F),
+      buffer_tex_(size_, GL_RG32F),
+      dxdz_tex_(size_, GL_RG32F),
+      dydxz_tex_(size_, GL_RG32F),
+      dyxdyz_tex_(size_, GL_RG32F),
+      dxxdzz_tex_(size_, GL_RG32F) {
+  float zeros4[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+  glClearTexImage(init_spectrum_tex_.GetId(), 0, GL_RGBA, GL_FLOAT, zeros4);
+  glClearTexImage(precomputed_data_tex_.GetId(), 0, GL_RGBA, GL_FLOAT, zeros4);
+  glClearTexImage(displacement_tex_.GetId(), 0, GL_RGBA, GL_FLOAT, zeros4);
+  glClearTexImage(derivatives_tex_.GetId(), 0, GL_RGBA, GL_FLOAT, zeros4);
+  glClearTexImage(turbulence_tex_.GetId(), 0, GL_RGBA, GL_FLOAT, zeros4);
+  float zeros2[2] = {0.0f, 0.0f};
+  glClearTexImage(buffer_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
+  glClearTexImage(dxdz_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
+  glClearTexImage(dydxz_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
+  glClearTexImage(dyxdyz_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
+  glClearTexImage(dxxdzz_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
+}
 
 void WavesCascade::CalculateInitials(
     float length_scale, float cutoff_low, float cutoff_high) {
@@ -41,6 +54,9 @@ void WavesCascade::CalculateInitials(
   UnBindImageTexture(shader::kOceanSpectrumData,
                      init_spectrum_tex_, GL_WRITE_ONLY);
 #endif
+  // auto name = std::to_string(length_scale);
+  // name += "_cascade.png";
+  // buffer_tex_.Store(name, 2, GL_RG);
 }
 
 void WavesCascade::PackIfftData() {
@@ -106,6 +122,9 @@ void WavesCascade::UnPackIfftData() {
   UnBindImageTexture(shader::kOceanTurbulence,
                      turbulence_tex_, GL_READ_WRITE);
 #endif
+  // displacement_tex_.Store("displ.png", 4, GL_RGBA);
+  // derivatives_tex_.Store("deriv.png", 4, GL_RGBA);
+  // turbulence_tex_.Store("turb.png", 4, GL_RGBA);
 }
 
 void WavesCascade::SetLambda(float lambda) {

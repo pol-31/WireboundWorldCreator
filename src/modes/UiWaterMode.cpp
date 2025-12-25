@@ -2,24 +2,130 @@
 
 #include "../io/Window.h"
 #include "../core/Menu.h"
-#include "../io/Cameras.h"
+#include "../io/Camera.h"
 #include "../common/PickingFramebuffer.h"
 #include "../core/TileRenderer.h"
+#include "../renderers/UiRenderer.h"
 #include "../common/ShadersBinding.h"
-#include "../common/ArbitraryGraph.h"
+#include "../common/Callbacks.h"
 
-void UiWaterMode::ScrollCallback(
+UiWaterMode::UiWaterMode(
+    UiSharedResources& ui_shared_resources,
+    UiSlots& ui_slots,
+    WindowQueue& window_queue,
+    TextRenderer& text_renderer,
+    UiConfigWindow& ui_config_window)
+    : IUiMode(
+          ui_shared_resources,
+          {data::VboIdMain::kWaterWaterMode}),
+      btn_bake_ocean_(data::VboIdMain::kWaterOcean,
+                     [this]() {
+                     }),
+      btn_bake_river_(data::VboIdMain::kWaterRiver,
+                      [this]() {
+                      }),
+      btn_update_(data::VboIdMain::kWaterUpdate,
+                  [this]() {
+                  }),
+      sp_selected_mode_(data::VboIdMain::kWaterSelected),
+      ui_slots_(ui_slots),
+      ui_edit_(ui_shared_resources, window_queue, text_renderer,
+               instances_, ui_slots_.GetSelectedIdRef(), ui_config_window),
+      ui_selection_(ui_shared_resources) {}
+
+void UiWaterMode::Setup() {
+  ui_slots_.Setup(&instances_, &ui_edit_);
+  BindDefaultCallbacks();
+  auto camera = ui_shared_resources_.global_glfw_callback_data_.camera;
+  camera->SetPosition(glm::vec3{5.0f});
+  camera->SetPitch(45.0f);
+  camera->SetYaw(0.0f);
+  camera->SetOrigin(glm::vec3{0.0f});
+  camera->MoveRotateViewOrigin(0.0f, 0.0f); // to update camera vectors
+  ui_selection_.SetIdBounds(details::kIdOffsetTerrain, details::kIdOffsetWater);
+  ui_selection_.SetModeForce(SelectionMode::kRectangle);
+}
+
+void UiWaterMode::BindDefaultCallbacks() {
+  double xpos, ypos;
+  glfwGetCursorPos(gWindow, &xpos, &ypos);
+  lastX = xpos;
+  lastY = ypos;
+  glfwSetScrollCallback(gWindow, water::ScrollCallback);
+  glfwSetMouseButtonCallback(gWindow, water::MouseButtonCallback);
+  glfwSetKeyCallback(gWindow, water::KeyCallback);
+  glfwSetCursorPosCallback(gWindow, nullptr);
+}
+
+int UiWaterMode::GetPrerenderTextIdStart() const noexcept {
+  return static_cast<int>(data::TextId::kScaleTerrain);
+}
+
+int UiWaterMode::GetPrerenderTextIdEnd() const noexcept {
+  return static_cast<int>(data::TextId::kLayer3) + 1;
+}
+
+void UiWaterMode::Render() {
+//  ui_edit_.RenderGraph(); // should be first (terrain render before ui render)
+  ui_selection_.Render();
+  ui_selection_.RenderOnSurface(
+      &ui_shared_resources_.global_glfw_callback_data_.tile_renderer->cur_tile_
+           .map_terrain_height);
+  glActiveTexture(GL_TEXTURE0);
+  ui_shared_resources_.tex_ui_.Bind();
+  glBindVertexArray(ui_shared_resources_.vao_ui_);
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+
+  sp_mode_.Render();
+  btn_bake_ocean_.Render();
+  btn_bake_river_.Render();
+  btn_update_.Render();
+  sp_selected_mode_.Render();
+
+  auto mouse_pos
+      = ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+  ui_slots_.Render(mouse_pos);
+
+  ui_shared_resources_.global_glfw_callback_data_.windows->Render();
+  auto camera = ui_shared_resources_.global_glfw_callback_data_.camera;
+  camera->Update(1.0f); // const pos
+}
+
+void UiWaterMode::RenderPicking() {
+  glActiveTexture(GL_TEXTURE0);
+  ui_shared_resources_.tex_ui_.Bind();
+  glBindVertexArray(ui_shared_resources_.vao_ui_);
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+
+  sp_mode_.RenderPicking();
+  btn_bake_ocean_.RenderPicking();
+  btn_bake_river_.RenderPicking();
+  btn_update_.RenderPicking();
+  sp_selected_mode_.RenderPicking();
+
+  ui_slots_.RenderPicking();
+  auto& ui_layer_wireframe =
+      ui_shared_resources_.global_glfw_callback_data_
+          .ui_renderer->GetUiLayerWireframe();
+  ui_layer_wireframe.RenderPickingLayerWireframe();
+  ui_shared_resources_.global_glfw_callback_data_.windows->RenderPicking();
+}
+
+namespace water {
+
+void ScrollCallback(
     GLFWwindow* window, double xoffset, double yoffset) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
   auto water = dynamic_cast<UiWaterMode*>(*global_data->cur_mode);
+  if (water->ui_selection_.Scroll(yoffset)) {
+    return;
+  }
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
   auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
   if (pressed_id >= details::kIdOffsetUi &&
       pressed_id != static_cast<GLuint>(-1)) {
-    water->ocean_layer_config_1_.Scroll(pressed_id, yoffset);
-    water->ocean_layer_config_2_.Scroll(pressed_id, yoffset);
-    water->ocean_layer_config_3_.Scroll(pressed_id, yoffset);
+    water->ui_slots_.Scroll(pressed_id, yoffset);
     global_data->windows->Scroll(pressed_id, yoffset);
     return;
   }
@@ -28,354 +134,113 @@ void UiWaterMode::ScrollCallback(
   } else {
     global_data->tile_renderer->cur_tile_.UpScale();
   }
+  //  water->slots_.UpdateTransformUniform();
 }
 
-void UiWaterMode::MouseButtonCallback(
+void MouseButtonCallback(
     GLFWwindow* window, int button, int action, int mods) {
   auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
       glfwGetWindowUserPointer(window));
   auto water = dynamic_cast<UiWaterMode*>(*global_data->cur_mode);
   glm::dvec2 cursor_pos = global_data->cursor_pos_;
-  //TODO: refactor to "if(!cond) return"
-  //TODO: change order (based on usage frequency)
-  global_data->camera->ProcessMouseKey(button, action, mods);
-  if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
-    auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
-    //TODO: bvh?
-    if (false) {//pressed_id < details::kIdOffsetUi && water->do_add_points_) {
-      //TODO; make it more explicit
-      /// because water offset id goes after terrain ids
-      //          if (pressed_id < details::kIdOffsetWater) {
-      //            water->AddNewPoint(pressed_id);
-      //          }
-    } else if (pressed_id == water->btn_bake_lake_.GetId()) {
-      water->BakeLake();
-    } else if (pressed_id == water->btn_bake_river_.GetId()) {
-      water->BakeRiver();
-    } else if (pressed_id == water->btn_bake_waterfall_.GetId()) {
-      water->BakeWaterfall();
-      //        } else if (pressed_id == water->btn_create_.GetId()) {
-      //          water->Create(pressed_id);
-      //        } else if (pressed_id == water->btn_remove_.GetId()) {
-      //          water->Remove();
-    } else if (pressed_id == water->btn_update_.GetId()) {
-      water->UpdateOcean(); // TODO: update ocean (only ocean by now
+  auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+  //  global_data->camera->ProcessMouseKey(button, action, mods);
+
+  bool mod_ctrl = mods & GLFW_MOD_CONTROL;
+  bool mod_shift = mods & GLFW_MOD_SHIFT;
+  if (action == GLFW_PRESS) {
+    double xpos, ypos;
+    glfwGetCursorPos(gWindow, &xpos, &ypos);
+    lastX = xpos;
+    lastY = ypos;
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+      auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+      std::cout << "Pressed id: " << pressed_id << std::endl;
+      bool ui_handled = global_data->windows->Press(pressed_id) ||
+                        water->ui_slots_.Press(pressed_id);
+      if (ui_handled) {
+        return;
+      }
+      water->ui_selection_.Start(global_data->cursor_pos_tex_norm_, mod_ctrl,
+                                   mod_shift);
+      glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
+      glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
+      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+    } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+      if (mod_shift) {
+        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_MmbShift);
+      } else {
+        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_Mmb);
+      }
+      glfwSetMouseButtonCallback(gWindow, callbacks::MouseButtonCallback_Mmb_MmbShift);
+      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
     }
-    // have no effect if pressed_id doesn't match
-    water->ocean_layer_config_1_.Press(pressed_id);
-    water->ocean_layer_config_2_.Press(pressed_id);
-    water->ocean_layer_config_3_.Press(pressed_id);
-    global_data->windows->Press(pressed_id);
-  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
-    //Release
-    water->ocean_layer_config_1_.Release();
-    water->ocean_layer_config_2_.Release();
-    water->ocean_layer_config_3_.Release();
-    global_data->windows->Release();
+  } else { // GLFW_RELEASE
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+      water->ui_slots_.Release();
+      global_data->windows->Release();
+    }
+    // if GLFW_RELEASE... if not process... we haven't done anything...
   }
 }
 
-//TODO: multiple water areas. GLFW_KEY_0-9 to switch (chosen highlighted in shader)
-void UiWaterMode::KeyCallback(
+void MouseButtonCallback_Lmb(
+    GLFWwindow* window, int button, int action, int mods) {
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
+      glfwGetWindowUserPointer(window));
+  auto water = dynamic_cast<UiWaterMode*>(*global_data->cur_mode);
+  glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  if (action == GLFW_PRESS) {
+    water->BindDefaultCallbacks();
+  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
+    water->ui_selection_.Stop(cursor_pos);
+    water->BindDefaultCallbacks();
+  }
+}
+
+void KeyCallback(
     GLFWwindow* window, int key, int scancode, int action, int mods) {
-  /*  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-        glfwGetWindowUserPointer(window));
-    auto terrain = dynamic_cast<UiTerrainMode*>(*global_data->cur_mode);
-    if (action == GLFW_PRESS) {
-      if (key == GLFW_KEY_ESCAPE) {
-        glfwSetWindowShouldClose(window, true);
-      } else if (key == GLFW_KEY_LEFT_SHIFT) {
-        global_data->camera->SpeedUp();
-      } else if (key == GLFW_KEY_BACKSPACE) {
-        global_data->terrain_.ClearPoints();
-      } else if (key == GLFW_KEY_ENTER) {
-        global_data->terrain_.Bake();
-      } else if (key == GLFW_KEY_TAB) {
-        global_data->tab_pressed_ = true;
-      }
-    } else if (action == GLFW_RELEASE) {
-      if (key == GLFW_KEY_LEFT_SHIFT) {
-        global_data->camera->SlowDown();
-      } else if (key == GLFW_KEY_TAB) {
-        global_data->tab_pressed_ = false;
-      }
-    }*/
-}
+  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  auto water = dynamic_cast<UiWaterMode*>(*global_data->cur_mode);
+  global_data->ui_renderer->Press(key, action);
 
-UiWaterMode::UiWaterMode(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    const Paths& paths)
-    : IUiMode(
-          ui_shared_resources,
-          window_queue,
-          {data::VboIdMain::kWaterWaterMode}),
-      btn_bake_lake_(data::VboIdMain::kWaterLake,
-                     [this]() {
-                       this->BakeLake();
-                     }),
-      btn_bake_river_(data::VboIdMain::kWaterRiver,
-                      [this]() {
-                        this->BakeRiver();
-                      }),
-      btn_bake_waterfall_(data::VboIdMain::kWaterWaterfall,
-                          [this]() {
-                            this->BakeWaterfall();
-                          }),
-      btn_update_(data::VboIdMain::kWaterUpdate,
-                  [this]() {
-                    this->UpdateOcean();
-                  }),
-      ocean_layer_config_1_(
-          {data::VboIdMain::kWaterLayer1Window, [](){}},
-          1.4f,
-          {{data::VboIdMain::kWaterLayer1PinBack, [](){}},
-           {data::VboIdMain::kWaterLayer1PinPoint}},
-          ui_shared_resources,
-          window_queue,
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
-          {data::VboIdMain::kWaterLayer1, [](){}},
-          {data::VboIdMain::kWaterLayer1Text, [](){}},
-          {{data::VboIdMain::kWaterLayer1Off},
-          {data::VboIdMain::kWaterLayer1On1},
-          {data::VboIdMain::kWaterLayer1On2},
-          {data::VboIdMain::kWaterLayer1On3}},
-          {data::VboIdMain::kWater1ScaleLabel},
-          {{data::VboIdMain::kWater1ScaleFill},
-           {data::VboIdMain::kWater1ScaleBack},
-           {data::VboIdMain::kWater1ScaleHandler},
-           1000.0f},
-          {data::VboIdMain::kWater1FetchLabel},
-          {{data::VboIdMain::kWater1FetchFill},
-           {data::VboIdMain::kWater1FetchBack},
-           {data::VboIdMain::kWater1FetchHandler},
-           100000.0f},
-          {data::VboIdMain::kWater1SpreadBlendLabel},
-          {{data::VboIdMain::kWater1SpreadBlendFill},
-           {data::VboIdMain::kWater1SpreadBlendBack},
-           {data::VboIdMain::kWater1SpreadBlendHandler},
-           1.0f},
-          {data::VboIdMain::kWater1SwellLabel},
-          {{data::VboIdMain::kWater1SwellFill},
-           {data::VboIdMain::kWater1SwellBack},
-           {data::VboIdMain::kWater1SwellHandler},
-           1.0f},
-          {data::VboIdMain::kWater1PeakEnhancementLabel},
-          {{data::VboIdMain::kWater1PeakEnhancementFill},
-           {data::VboIdMain::kWater1PeakEnhancementBack},
-           {data::VboIdMain::kWater1PeakEnhancementHandler},
-           1.0f},
-          {data::VboIdMain::kWater1ShortWavesFadeLabel},
-          {{data::VboIdMain::kWater1ShortWavesFadeFill},
-           {data::VboIdMain::kWater1ShortWavesFadeBack},
-           {data::VboIdMain::kWater1ShortWavesFadeHandler},
-           1.0f},
-          {data::VboIdMain::kWater1LambdaLabel},
-          {{data::VboIdMain::kWater1LambdaFill},
-           {data::VboIdMain::kWater1LambdaBack},
-           {data::VboIdMain::kWater1LambdaHandler},
-           1.0f}),
-      ocean_layer_config_2_(
-          {data::VboIdMain::kWaterLayer2Window, [](){}},
-          1.4f,
-          {{data::VboIdMain::kWaterLayer2PinBack, [](){}},
-           {data::VboIdMain::kWaterLayer2PinPoint}},
-          ui_shared_resources,
-          window_queue,
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
-          {data::VboIdMain::kWaterLayer2, [](){}},
-          {data::VboIdMain::kWaterLayer2Text, [](){}},
-          {{data::VboIdMain::kWaterLayer2Off},
-           {data::VboIdMain::kWaterLayer2On1},
-           {data::VboIdMain::kWaterLayer2On2},
-           {data::VboIdMain::kWaterLayer2On3}},
-          {data::VboIdMain::kWater2ScaleLabel},
-          {{data::VboIdMain::kWater2ScaleFill},
-           {data::VboIdMain::kWater2ScaleBack},
-           {data::VboIdMain::kWater2ScaleHandler},
-           1000.0f},
-          {data::VboIdMain::kWater2FetchLabel},
-          {{data::VboIdMain::kWater2FetchFill},
-           {data::VboIdMain::kWater2FetchBack},
-           {data::VboIdMain::kWater2FetchHandler},
-           100000.0f},
-          {data::VboIdMain::kWater2SpreadBlendLabel},
-          {{data::VboIdMain::kWater2SpreadBlendFill},
-           {data::VboIdMain::kWater2SpreadBlendBack},
-           {data::VboIdMain::kWater2SpreadBlendHandler},
-           1.0f},
-          {data::VboIdMain::kWater2SwellLabel},
-          {{data::VboIdMain::kWater2SwellFill},
-           {data::VboIdMain::kWater2SwellBack},
-           {data::VboIdMain::kWater2SwellHandler},
-           1.0f},
-          {data::VboIdMain::kWater2PeakEnhancementLabel},
-          {{data::VboIdMain::kWater2PeakEnhancementFill},
-           {data::VboIdMain::kWater2PeakEnhancementBack},
-           {data::VboIdMain::kWater2PeakEnhancementHandler},
-           1.0f},
-          {data::VboIdMain::kWater2ShortWavesFadeLabel},
-          {{data::VboIdMain::kWater2ShortWavesFadeFill},
-           {data::VboIdMain::kWater2ShortWavesFadeBack},
-           {data::VboIdMain::kWater2ShortWavesFadeHandler},
-           1.0f},
-          {data::VboIdMain::kWater2LambdaLabel},
-          {{data::VboIdMain::kWater2LambdaFill},
-           {data::VboIdMain::kWater2LambdaBack},
-           {data::VboIdMain::kWater2LambdaHandler},
-           1.0f}),
-      ocean_layer_config_3_(
-          {data::VboIdMain::kWaterLayer3Window, [](){}},
-          1.4f,
-          {{data::VboIdMain::kWaterLayer3PinBack, [](){}},
-           {data::VboIdMain::kWaterLayer3PinPoint}},
-          ui_shared_resources,
-          window_queue,
-          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
-          LocalTransform{glm::vec2{0.0f, 0.2f}, 1.0f, 0.0f},
-          {data::VboIdMain::kWaterLayer3, [](){}},
-          {data::VboIdMain::kWaterLayer3Text, [](){}},
-          {{data::VboIdMain::kWaterLayer3Off},
-           {data::VboIdMain::kWaterLayer3On1},
-           {data::VboIdMain::kWaterLayer3On2},
-           {data::VboIdMain::kWaterLayer3On3}},
-          {data::VboIdMain::kWater3ScaleLabel},
-          {{data::VboIdMain::kWater3ScaleFill},
-           {data::VboIdMain::kWater3ScaleBack},
-           {data::VboIdMain::kWater3ScaleHandler},
-           1000.0f},
-          {data::VboIdMain::kWater3FetchLabel},
-          {{data::VboIdMain::kWater3FetchFill},
-           {data::VboIdMain::kWater3FetchBack},
-           {data::VboIdMain::kWater3FetchHandler},
-           100000.0f},
-          {data::VboIdMain::kWater3SpreadBlendLabel},
-          {{data::VboIdMain::kWater3SpreadBlendFill},
-           {data::VboIdMain::kWater3SpreadBlendBack},
-           {data::VboIdMain::kWater3SpreadBlendHandler},
-           1.0f},
-          {data::VboIdMain::kWater3SwellLabel},
-          {{data::VboIdMain::kWater3SwellFill},
-           {data::VboIdMain::kWater3SwellBack},
-           {data::VboIdMain::kWater3SwellHandler},
-           1.0f},
-          {data::VboIdMain::kWater3PeakEnhancementLabel},
-          {{data::VboIdMain::kWater3PeakEnhancementFill},
-           {data::VboIdMain::kWater3PeakEnhancementBack},
-           {data::VboIdMain::kWater3PeakEnhancementHandler},
-           1.0f},
-          {data::VboIdMain::kWater3ShortWavesFadeLabel},
-          {{data::VboIdMain::kWater3ShortWavesFadeFill},
-           {data::VboIdMain::kWater3ShortWavesFadeBack},
-           {data::VboIdMain::kWater3ShortWavesFadeHandler},
-           1.0f},
-          {data::VboIdMain::kWater3LambdaLabel},
-          {{data::VboIdMain::kWater3LambdaFill},
-           {data::VboIdMain::kWater3LambdaBack},
-           {data::VboIdMain::kWater3LambdaHandler},
-           1.0f}) {}
-
-void UiWaterMode::Render() {
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-
-  ui_shared_resources_.static_sprite_shader_.Bind();
-
-  sprite_mode_.Render();
-  btn_bake_lake_.Render();
-  btn_bake_river_.Render();
-  btn_bake_waterfall_.Render();
-  btn_update_.Render();
-
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.static_sprite_shader_.Bind();
-  ocean_layer_config_1_.Render();
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.static_sprite_shader_.Bind();
-  ocean_layer_config_2_.Render();
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.static_sprite_shader_.Bind();
-  ocean_layer_config_3_.Render();
-
-  ui_shared_resources_.tex_ui_.Bind();
-  window_queue_.Render();
-}
-
-bool UiWaterMode::ConfigModified() {
-  return !ocean_layer_config_1_.Modified() &&
-         !ocean_layer_config_2_.Modified() &&
-         !ocean_layer_config_3_.Modified();
-}
-
-void UiWaterMode::UpdateOcean() {
-  if (ConfigModified()) {
+  bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
+  bool mod_shift = (mods & GLFW_MOD_SHIFT);
+  if (action != GLFW_PRESS) {
     return;
   }
-  OceanTraits traits = {
-      ocean_layer_config_1_.GetOceanLayerTraits(),
-      ocean_layer_config_2_.GetOceanLayerTraits(),
-      ocean_layer_config_3_.GetOceanLayerTraits()
-  };
-  TileRenderer* tile_renderer =
-      ui_shared_resources_.global_glfw_callback_data_.tile_renderer;
-  tile_renderer->water.UpdateOcean(traits);
+  if (key == GLFW_KEY_ESCAPE) {
+    if (mod_shift) {
+      glfwSetWindowShouldClose(window, true);
+    } else if (!global_data->windows->GetTopWindow() &&
+               global_data->windows->GetSize() == 0) {
+      global_data->ui_renderer->AskForConfirmation(
+          data::TextId::kConfirmationExit, []() {
+            glfwSetWindowShouldClose(gWindow, true);
+          });
+    } else {
+      global_data->windows->BtnEscape();
+    }
+  } else if (key == GLFW_KEY_ENTER) {
+    global_data->windows->BtnEnter();
+  } else if (key == GLFW_KEY_1) {
+    water->ui_selection_.SetMode(SelectionMode::kRectangle);
+  } else if (key == GLFW_KEY_2) {
+    water->ui_selection_.SetMode(SelectionMode::kCircle);
+  } else if (key == GLFW_KEY_3) {
+    water->ui_selection_.SetMode(SelectionMode::kLasso);
+  } else if (key == GLFW_KEY_4) {
+    water->ui_selection_.SetMode(SelectionMode::kTweak);
+  }
 }
 
-void UiWaterMode::RenderPicking() {
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
-
-  sprite_mode_.RenderPicking();
-  btn_bake_lake_.RenderPicking();
-  btn_bake_river_.RenderPicking();
-  btn_bake_waterfall_.RenderPicking();
-  btn_update_.RenderPicking();
-
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
-  ocean_layer_config_1_.RenderPicking();
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
-  ocean_layer_config_2_.RenderPicking();
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
-  ocean_layer_config_3_.RenderPicking();
-
-  window_queue_.RenderPicking();
+void CursorPosCallback_Lmb(
+    GLFWwindow* window, double xpos, double ypos) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  auto water = dynamic_cast<UiWaterMode*>(*global_data->cur_mode);
+  water->ui_selection_.Update(global_data->cursor_pos_tex_norm_);
 }
 
-void UiWaterMode::ReBake() {
-  //TODO: for each ui_slots instance update heights
-}
-
-void UiWaterMode::BakeLake() {
-  std::cout << "bake as a lake" << std::endl;
-  //TODO: find convex areas, bare edges, bare vertices
-}
-
-void UiWaterMode::BakeRiver() {
-  std::cout << "bake as a river" << std::endl;
-  //TODO:
-}
-
-void UiWaterMode::BakeWaterfall() {
-  std::cout << "bake as a waterfall" << std::endl;
-  //TODO:
-}
-
-void UiWaterMode::BindCallbacks() {
-  glfwSetScrollCallback(gWindow, ScrollCallback);
-  glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
-  //  glfwSetKeyCallback(gWindow, KeyCallback);
-  glfwSetKeyCallback(gWindow, WasdKeyCallback);
-
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(gWindow));
-  global_data->camera->SetInspectCamera();
-}
+} // namespace water

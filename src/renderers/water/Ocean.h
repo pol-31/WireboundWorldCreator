@@ -7,7 +7,7 @@
 #include "../../common/Paths.h"
 #include "../../environment/Environment.h"
 #include "WavesCascade.h"
-#include "WaterBiome.h"
+#include "../../modes/UiWaterConfig.h"
 
 #include "../../io/Window.h"
 
@@ -61,7 +61,7 @@ class Ocean {
   Shader time_spectrum_shader_; // time-dependent
   Shader textures_merger_shader_;
 
-  Texture noise_tex_;
+  Texture32F noise_tex_;
   Ifft fft_;
 
   // for OceanTraitsToGpu()

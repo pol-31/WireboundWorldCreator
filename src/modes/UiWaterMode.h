@@ -5,71 +5,64 @@
 
 #include "IUiMode.h"
 #include "../common/Vbos.h"
-#include "../core/UiComplex.h"
 #include "../core/UiSlots.h"
-#include "../common/Paths.h"
+#include "../core/UiSelection.h"
+#include "UiEditWater.h"
 
+/// two modes: ocean (Ifft), river (Swelbm)
 class UiWaterMode final : public IUiMode {
  public:
-  explicit UiWaterMode(
+  UiWaterMode(
       UiSharedResources& ui_shared_resources,
+      UiSlots& ui_slots,
       WindowQueue& window_queue,
-      const Paths& paths);
+      TextRenderer& text_renderer,
+      UiConfigWindow& ui_config_window);
 
   void Render() override;
+
   void RenderPicking() override;
 
-  /**
-   * Lake: fill everything with height = max_height_ inside the polygon nd
-   *   beyond if height allows
-   * River: inside the polygon all heights = max_height_, while outside
-   *   we bake wrt terrain height;
-   * Waterfall: always bake wrt terrain height
-   */
-  void BakeLake();
-  void BakeRiver();
-  void BakeWaterfall();
+  void Setup() override;
 
-  void BindCallbacks() override;
+  void BindDefaultCallbacks() override;
 
- protected:
-  enum class WaterType {
-    kLake,
-    kRiver,
-    kWaterfall,
-  };
+  int GetPrerenderTextIdStart() const noexcept override;
 
-  static void ScrollCallback(
-      GLFWwindow* window, double xoffset, double yoffset);
+  int GetPrerenderTextIdEnd() const noexcept override;
 
-  static void MouseButtonCallback(
-      GLFWwindow* window, int button, int action, int mods);
+//  void UpdateOcean();
+//
+//  bool ConfigModified();
 
-  static void KeyCallback(
-      GLFWwindow* window, int key, int scancode, int action, int mods);
+  UiDynamicSprite btn_bake_ocean_;
+  UiDynamicSprite btn_bake_river_;
+  UiDynamicSprite btn_update_;
+  UiDynamicSprite sp_selected_mode_;
 
-  OceanTraits CollectOceanTraits() {
-    return {ocean_layer_config_1_.GetOceanLayerTraits(),
-            ocean_layer_config_2_.GetOceanLayerTraits(),
-            ocean_layer_config_3_.GetOceanLayerTraits()
-    };
-  }
-
-  void ReBake();
-
-  void UpdateOcean();
-
-  bool ConfigModified();
-
-  UiStaticSprite btn_bake_lake_;
-  UiStaticSprite btn_bake_river_;
-  UiStaticSprite btn_bake_waterfall_;
-  UiStaticSprite btn_update_;
-  //UiSlots slots_;
-
-  UiWaterLayerConfig ocean_layer_config_1_;
-  UiWaterLayerConfig ocean_layer_config_2_;
-  UiWaterLayerConfig ocean_layer_config_3_;
+  std::vector<BaseInstanceData> instances_;
+  UiSlots& ui_slots_;
+  UiEditOcean ui_edit_;
+  UiSelection ui_selection_;
 };
+
+namespace water {
+
+void ScrollCallback(
+    GLFWwindow* window, double xoffset, double yoffset);
+
+void MouseButtonCallback(
+    GLFWwindow* window, int button, int action, int mods);
+
+void KeyCallback(
+    GLFWwindow* window, int key, int scancode, int action, int mods);
+
+void CursorPosCallback_Lmb(
+    GLFWwindow* window, double xpos, double ypos);
+
+void MouseButtonCallback_Lmb(
+    GLFWwindow* window, int button, int action, int mods);
+
+} // namespace water
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIWATERMODE_H_
