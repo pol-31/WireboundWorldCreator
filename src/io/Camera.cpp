@@ -27,12 +27,14 @@ void Camera::Init() {
   UpdateCameraVectors();
   UpdateViewMatrix(1.0f);
   UpdateProjectionMatrix();
+  UpdateUboPos();
 }
 
 void Camera::InitUbo() {
   glGenBuffers(1, &ubo_);
   glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
-  glBufferData(GL_UNIFORM_BUFFER, 128, nullptr, GL_DYNAMIC_DRAW);
+  // mat4 + mat4 + vec3
+  glBufferData(GL_UNIFORM_BUFFER, 140, nullptr, GL_DYNAMIC_DRAW);
   glBindBufferBase(GL_UNIFORM_BUFFER, shader::kUboCameraBind, ubo_);
 }
 
@@ -55,6 +57,7 @@ glm::mat4 Camera::GetProjMatrix() const noexcept {
 
 void Camera::Update(float map_scale) {
   UpdateViewMatrix(map_scale);
+  UpdateUboPos();
   direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
 }
 
@@ -71,6 +74,10 @@ void Camera::UpdateProjectionMatrix() const {
                                / static_cast<float>(gWindowHeight),
       0.01f, 1000.0f);
   utility::UpdateUbo(ubo_, 64, 64, glm::value_ptr(proj_mat));
+}
+
+void Camera::UpdateUboPos() const {
+  utility::UpdateUbo(ubo_, 128, 12, glm::value_ptr(origin_));
 }
 
 void Camera::UpdateCameraVectors(float radius) {

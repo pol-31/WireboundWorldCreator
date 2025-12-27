@@ -34,6 +34,8 @@ class Camera {
 
   void UpdateProjectionMatrix() const;
 
+  void UpdateUboPos() const;
+
   void UpdateCameraVectors(float radius = 1.0f);
 
   //UiTerrainMode, other similar

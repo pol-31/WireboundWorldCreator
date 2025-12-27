@@ -5,6 +5,7 @@ layout(location = 0) in vec3 in_position;
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;
+    vec3 pos;
 } camera;
 
 out vec3 world_pos;

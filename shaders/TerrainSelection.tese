@@ -9,6 +9,7 @@ layout(location = 7) uniform mat4 transform;
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;
+    vec3 pos;
 } camera;
 
 in TCS_OUT {

@@ -4,57 +4,22 @@ layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(r32f, binding = 0) uniform readonly image2D hmap;
 layout(r32f, binding = 1) uniform writeonly image2D mesh;
-//layout(rgba32f, binding = 1) uniform writeonly image2D mesh;
 
-layout(location = 0) uniform mat4 transform;
-layout(location = 1) uniform bool invert;
-layout(location = 2) uniform bool tiling;
-
-//test
 layout(location = 4) uniform mat4 inverse_transform;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    float height = imageLoad(hmap, coord).r;
-    ivec2 size = imageSize(hmap); // power of two
-    // transform to -32;32 range
-
-    // Transofrm to -32;32 is uniform - skip it
-    // -512 to bring the pivot to the centre
-    // (comp shader coords start with left bottom corner)
-/**    vec4 value = transform * vec4(
-      coord.x - 512.0f,
-      height * 16.0f, // idk why, maybe because in .cpp we translate*=16.0f
-      coord.y - 512.0f,
-      1.0f);
-    ///16.0f idk why again, otherwise wrong height
-    imageStore(mesh, ivec2(value.x + 512, value.z + 512), vec4(value.y / 16.0f));*/
-
-    // --- MY BAD
-/**    vec4 local = inverse_transform * vec4(
-    coord.x - 512.0f,
-    0.0,
-    coord.y - 512.0f,
-    1.0
-    );*/
-
-    // 1. Get destination pixel coordinate (in mesh/output space)
     ivec2 outCoord = ivec2(gl_GlobalInvocationID.xy);
 
-    // 2. Convert to centered world coordinates (-512..512)
     vec2 worldPos = vec2(outCoord) - vec2(512.0);
-
-    // 3. Use inverse transform to find original local position
     vec4 local = inverse_transform * vec4(worldPos.x, 0.0, worldPos.y, 1.0);
 
-    // 4. Convert local x,z into input (hmap) coordinates
     ivec2 inCoord = ivec2(local.x + 512.0, local.z + 512.0);
+    ivec2 size = imageSize(hmap);
+    float inside =
+      float(inCoord.x >= 0) * float(inCoord.y >= 0) *
+      float(inCoord.x < size.x) * float(inCoord.y < size.y);
 
-    // 5. Sample the heightmap using *source coordinate*
-    float heightt = imageLoad(hmap, clamp(inCoord, ivec2(0), imageSize(hmap)-1)).r;
-
-    // 6. Store the height (or whatever data) in output
-    imageStore(mesh, outCoord, vec4(heightt));
-//    imageStore(mesh, ivec2(coord.x + 512, coord.y + 512), vec4(local.y / 16.0f));
-    // gpt > gemini
+    float height = imageLoad(hmap, inCoord).r;
+    imageStore(mesh, outCoord, vec4(height - inside * local.y / 32.0f));
 }

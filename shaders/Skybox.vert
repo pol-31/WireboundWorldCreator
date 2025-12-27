@@ -6,6 +6,7 @@ out vec3 frag_texcoord;
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;
+    vec3 pos;
 } camera;
 
 void main() {

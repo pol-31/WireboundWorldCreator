@@ -7,6 +7,7 @@ layout(location = 0) uniform mat4 model_mat;
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;
+    vec3 pos;
 } camera;
 
 out vec2 TexCoord;

@@ -7,12 +7,12 @@ layout(r32f, binding = 0) uniform image2D hmap_sum;
 //layout(rgba32f, binding = 1) uniform readonly image2D mesh;
 layout(r32f, binding = 1) uniform readonly image2D mesh;
 
-layout(location = 4) uniform mat4 inverse_transform;
+//layout(location = 4) uniform mat4 inverse_transform;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
     float mesh_value = imageLoad(mesh, coord).r;
-    float hmap_value = imageLoad(mesh, coord).r;
+    float hmap_value = imageLoad(hmap_sum, coord).r;
     float new_height = mesh_value + hmap_value;
     imageStore(hmap_sum, coord, vec4(mesh_value)); // clip to border
 }

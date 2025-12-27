@@ -13,53 +13,68 @@ out TCS_OUT {
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;
+    vec3 pos;
 } camera;
+
 layout(location = 7) uniform mat4 transform;
 
-void main(void) {
-    if (gl_InvocationID == 0) {
-        // Step 1: transform the vertex to view space
-        vec4 ViewSpacePos00 = camera.view * transform * gl_in[0].gl_Position;
-        vec4 ViewSpacePos01 = camera.view * transform * gl_in[1].gl_Position;
-        vec4 ViewSpacePos10 = camera.view * transform * gl_in[2].gl_Position;
-        vec4 ViewSpacePos11 = camera.view * transform * gl_in[3].gl_Position;
+float computeQuantTess(float dist) {
+    float uTessStartDist = 1.0f;
+    float uTessEndDist = 16.0f;
+    float uQuantLevels = 8.0f;
+    float n = clamp((dist - uTessStartDist) / max(0.0001, (uTessEndDist - uTessStartDist)), 0.0, 1.0);
+    float smooth_ = smoothstep(0.0, 1.0, n);
+    float t = mix(16.0f, 1.0f, smooth_);
+    float q = max(1.0, floor(t * uQuantLevels + 0.5) / uQuantLevels);
+    return q;
+}
 
-        // Step 2: calculate the length of the view space vector to get the distance
-        float Len00 = length(ViewSpacePos00.xyz);
-        float Len01 = length(ViewSpacePos01.xyz);
-        float Len10 = length(ViewSpacePos10.xyz);
-        float Len11 = length(ViewSpacePos11.xyz);
+vec2 edgeMidpointWorld(vec2 patch_xy, vec2 a, vec2 b) {
+    vec2 midLocal = 0.5 * (a + b);
+    return patch_xy + midLocal;
+}
 
-        const float MIN_DISTANCE = 1.0f;
-        const float MAX_DISTANCE = 16.0f;
-
-        // Step 3: map the distance to [0,1]
-        float Distance00 = clamp((Len00 - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE), 0.0, 1.0);
-        float Distance01 = clamp((Len01 - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE), 0.0, 1.0);
-        float Distance10 = clamp((Len10 - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE), 0.0, 1.0);
-        float Distance11 = clamp((Len11 - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE), 0.0, 1.0);
-
-        const int MIN_TESS_LEVEL = 1;
-        const int MAX_TESS_LEVEL = 7;
-
-        // Step 4: interpolate edge tessellation level based on the closest vertex
-        //         on each edge
-        float TessLevel0 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, min(Distance10, Distance00) );
-        float TessLevel1 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, min(Distance00, Distance01) );
-        float TessLevel2 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, min(Distance01, Distance11) );
-        float TessLevel3 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, min(Distance11, Distance10) );
-
-        // Step 5: set the outer edge tessellation levels
-        gl_TessLevelOuter[0] = TessLevel0;
-        gl_TessLevelOuter[3] = TessLevel1; // TODO: fixed here
-        gl_TessLevelOuter[2] = TessLevel2;
-        gl_TessLevelOuter[1] = TessLevel3; // TODO: fixed here
-
-        // Step 6: set the inner tessellation levels
-        gl_TessLevelInner[0] = max(TessLevel1, TessLevel3);
-        gl_TessLevelInner[1] = max(TessLevel0, TessLevel2);
-    }
-
-    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+void main() {
     tcs_out[gl_InvocationID].tc = tcs_in[gl_InvocationID].tc;
+    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+    float map_scale = transform[0].x;
+    vec2 uCameraXY = camera.pos.xz / map_scale;
+
+    if (gl_InvocationID == 0) {
+        vec2 p = gl_in[gl_InvocationID].gl_Position.xz;
+
+        vec2 v0 = vec2(-0.5, -0.5);
+        vec2 v1 = vec2(0.5, -0.5);
+        vec2 v2 = vec2(0.5, 0.5);
+        vec2 v3 = vec2(-0.5, 0.5);
+
+        vec2 mEdge0 = edgeMidpointWorld(p, v0, v1); // edge 0: v0-v1 (u outer 0)
+        vec2 mEdge1 = edgeMidpointWorld(p, v1, v2); // edge 1: v1-v2 (outer 1)
+        vec2 mEdge2 = edgeMidpointWorld(p, v2, v3); // edge 2: v2-v3 (outer 2)
+        vec2 mEdge3 = edgeMidpointWorld(p, v3, v0); // edge 3: v3-v0 (outer 3)
+
+        float d0 = distance(mEdge0, uCameraXY);
+        float d1 = distance(mEdge1, uCameraXY);
+        float d2 = distance(mEdge2, uCameraXY);
+        float d3 = distance(mEdge3, uCameraXY);
+
+        float e0 = computeQuantTess(d0);
+        float e1 = computeQuantTess(d1);
+        float e2 = computeQuantTess(d2);
+        float e3 = computeQuantTess(d3);
+
+        vec2 patchCenter = (vec2(p) + vec2(0.5,0.5));
+        float dc = distance(patchCenter, uCameraXY);
+        float inner = computeQuantTess(dc);
+        inner = max(1.0, inner);
+
+        gl_TessLevelOuter[0] = max(1.0, e0);
+        gl_TessLevelOuter[1] = max(1.0, e1);
+        gl_TessLevelOuter[2] = max(1.0, e2);
+        gl_TessLevelOuter[3] = max(1.0, e3);
+
+        gl_TessLevelInner[0] = inner;
+        gl_TessLevelInner[1] = inner;
+    }
+    barrier();
 }
