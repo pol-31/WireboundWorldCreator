@@ -3,51 +3,90 @@
 
 #include "IUiMode.h"
 #include "../common/Vbos.h"
+#include "../core/UiSelection.h"
+#include "../core/UiSlots.h"
+#include "../common/MouseTransform.h"
+#include "UiEditBiomes.h"
 
 class UiBiomesMode final : public IUiMode {
  public:
-  explicit UiBiomesMode(
+  UiBiomesMode(
       UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue);
+      UiSlots& ui_slots,
+      WindowQueue& window_queue,
+      TextRenderer& text_renderer);
 
   void Render() override;
+
   void RenderPicking() override;
 
-  void BindCallbacks() override;
+  void Setup() override;
 
-  void BtnWind();
+  void BindDefaultCallbacks() override;
 
-  void BtnSun();
+  int GetPrerenderTextIdStart() const noexcept override;
 
-  void BtnTime();
+  int GetPrerenderTextIdEnd() const noexcept override;
 
-  void BtnPrecipitations();
+  void RenderWorld() override;
 
-  void BtnTemperature();
+  void RenderPickingWorld() override;
 
-  void BtnClouds();
+  void HandleSelection();
 
- protected:
-  static void ScrollCallback(
-      GLFWwindow* window, double xoffset, double yoffset);
+  void CancelTransform();
 
-  static void MouseButtonCallback(
-      GLFWwindow* window, int button, int action, int mods);
+  void ApplyTransform();
 
-  static void KeyCallback(
-      GLFWwindow* window, int key, int scancode, int action, int mods);
+  void ResetTransform();
 
-  UiStaticSprite btn_wind_;
-  UiStaticSprite btn_sun_;
-  UiStaticSprite btn_time_;
-  UiStaticSprite btn_precipitations_;
-  UiStaticSprite btn_temperature_;
-  UiStaticSprite btn_clouds_;
+  void SpawnObject(GLuint pressed_id);
 
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kBiomesEditCloudIcon) -
-      static_cast<int>(data::VboIdMain::kBiomesBiomesMode) + 1
-      > ui_event_handler_;
+  void UpdateTranslateForSelected();
+
+  UiDynamicSprite sp_biome_;
+
+  std::vector<BaseInstanceData> biomes_;
+  UiSlots& ui_slots_;
+  UiEditBiomes ui_edit_;
+  UiSelection ui_selection_;
+  MouseTransform mouse_transform_;
+
+  bool anything_selected_ = false;
+  glm::vec3 prev_translate_ = glm::vec3(0.0f);
+  glm::vec3 cur_translate_ = glm::vec3(0.0f);
 };
+
+namespace biomes {
+
+void ScrollCallback(
+    GLFWwindow* window, double xoffset, double yoffset);
+
+void MouseButtonCallback(
+    GLFWwindow* window, int button, int action, int mods);
+
+void KeyCallback(
+    GLFWwindow* window, int key, int scancode, int action, int mods);
+
+/// selection
+void MouseButtonCallback_Lmb(
+    GLFWwindow* window, int button, int action, int mods);
+
+void CursorPosCallback_Lmb(
+    GLFWwindow* window, double xpos, double ypos);
+
+/// transform (no rotation and scale - only translation)
+void BindCallbacksTransform();
+
+void MouseButtonCallbackTransform(
+    GLFWwindow* window, int button, int action, int mods);
+
+void KeyCallbackTransform(
+    GLFWwindow* window, int key, int scancode, int action, int mods);
+
+void CursorPosCallback_G(
+    GLFWwindow* window, double xpos, double ypos);
+
+} // namespace biomes
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIBIOMESMODE_H_
