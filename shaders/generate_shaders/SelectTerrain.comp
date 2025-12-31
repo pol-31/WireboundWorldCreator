@@ -1,3 +1,10 @@
+// bugs, removed shader
+
+
+/*
+// --- GETTING SOME GARGABE OUTSIDE THE SELECTION,
+// (probably due to data race, BUT maybe not)
+
 #version 460 core
 layout (local_size_x = 16, local_size_y = 16) in;
 
@@ -14,7 +21,6 @@ layout (location = 1) uniform uint bound_max;
 layout (location = 2) uniform float mask_value;
 
 ivec2 IdToSurfacePos(uint id) {
-    // terrain grid is 1024 by 1024
     int y = int(id & 1023u);
     int x = int(id >> 10);
     return ivec2(x, y);
@@ -22,12 +28,78 @@ ivec2 IdToSurfacePos(uint id) {
 
 void main() {
     ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+
+    ivec2 size = imageSize(picking);
+    if (coords.x >= size.x || coords.y >= size.y) {
+        return;
+    }
+
     uint id = imageLoad(picking, coords).r;
     float sel = imageLoad(selection, coords).r;
 
-    //TODO: clamp (-1; kIdOffsetWater) > ... idk, need smt like that
     if (sel > 0.0 && id > bound_min && id < bound_max) {
-        ivec2 pos = IdToSurfacePos(id - bound_min);
-        imageStore(surface, pos, vec4(mask_value));
+            ivec2 pos = IdToSurfacePos(id);
+            ivec2 surfSize = imageSize(surface);
+            if (pos.x < 0 || pos.y < 0 ||
+            pos.x >= surfSize.x || pos.y >= surfSize.y) {
+                return;
+            }
+            imageStore(surface, pos, vec4(mask_value));
     }
 }
+*/
+
+// --- --- ---
+
+/**
+// --- TOO SLOW, NEED TO ACCUMULATE SELECTEED IN ONE SHADER,
+// THEM PUSH TO SSBO, THEN HERE... COMPLICATED BUT REAL
+// (not for today)
+
+#version 460 core
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout (r32ui, binding = 0) uniform readonly uimage2D picking;
+layout (r8,    binding = 1) uniform readonly image2D  selection;
+layout (r8,    binding = 2) uniform writeonly image2D surface;
+
+layout (location = 0) uniform uint bound_min;
+layout (location = 1) uniform uint bound_max;
+layout (location = 2) uniform ivec2 screenSize;
+
+uint SurfacePosToId(ivec2 pos) {
+    return (uint(pos.x) << 10) | uint(pos.y);
+}
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 surfSize = imageSize(surface);
+
+    if (pos.x >= surfSize.x || pos.y >= surfSize.y)
+    return;
+
+    uint myId = SurfacePosToId(pos);
+
+    if (myId <= bound_min || myId >= bound_max) {
+        imageStore(surface, pos, vec4(0.0));
+        return;
+    }
+
+    // brute-force scan screen (can be optimized later)
+    for (int y = 0; y < screenSize.y; ++y) {
+        for (int x = 0; x < screenSize.x; ++x) {
+            ivec2 sc = ivec2(x, y);
+
+            if (imageLoad(selection, sc).r == 0.0)
+            continue;
+
+            if (imageLoad(picking, sc).r == myId) {
+                imageStore(surface, pos, vec4(1.0));
+                return;
+            }
+        }
+    }
+
+    imageStore(surface, pos, vec4(0.0));
+}
+*/

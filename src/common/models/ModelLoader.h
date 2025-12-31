@@ -2,6 +2,7 @@
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_
 
 #include <map>
+#include <memory>
 #include <vector>
 #include <iostream>
 
@@ -9,6 +10,7 @@
 #include <tiny_gltf.h>
 
 #include "../Texture.h"
+#include "../Material.h"
 #include "../../modes/UiSharedResources.h"
 
 // local space (rel to 0;0;0 centre)
@@ -23,41 +25,18 @@ bool LoadImageData(
     const unsigned char *bytes, int size, void *user_data);
 
 struct ModelData {
-  enum class TraitsCategory {
+  enum class Category {
     kPlayer,
-    kObstacle,
-    kCreature,
-  }; // 7 (early Faithful/Wirebound)
-
-  enum class TraitsType {
-    kPlayer,
-    kFly,
-    kTree
-  }; // all models (I guess...)
-
-  struct Material {
-    /**
-   * Because of astc encoding format we always have RGBA; so to store
-   * rough_metal or normal map we do (official astc-enc recommendations):
-   * """
-   * To encode this we need to store only two input components
-   * in the compressed data, and therefore use the rrrg coding swizzle
-   * to align the data with the ASTC luminance+alpha endpoint.
-   * """
-   * So we decided to represent material as:
-   * . albedo - rgba;
-   * . metallic & roughness - as rrrg coding swizzle;
-   * . normal - as rrrg coding swizzle;
-   * - occlusion - rrrr
-   * . emission - rgba
-   * TODO: occlusion & emission can be stored in the same RGBA texture
-     */
-    Texture albedo;
-    Texture emission;
-    Texture metal_rough;
-    Texture normal;
-    Texture occlusion;
+    kEnemy,
+    kFriend,
+    kNeutral,
+    kObstacle
   };
+  Category category = Category::kEnemy;
+  float hp = 100.0f;
+  float speed = 1.0f;
+  float attack = 1.0f;
+  float attack_speed = 1.0f;
 
   tinygltf::Model model;
   GLuint vao = 0;
@@ -74,6 +53,15 @@ struct ModelData {
   void RenderModelNode(const tinygltf::Node& node) const;
 
   void RenderMesh(const tinygltf::Mesh& mesh) const;
+
+  /// instanced
+  void RenderModelNodesInstanced(int instances_num) const;
+
+  void RenderModelNodeInstanced(
+    const tinygltf::Node& node, int instances_num) const;
+
+  void RenderMeshInstanced(
+    const tinygltf::Mesh& mesh, int instances_num) const;
 };
 
 class ModelLoader {
@@ -83,6 +71,10 @@ class ModelLoader {
   ~ModelLoader();
 
   const ModelData* Load(std::string_view path, int id);
+
+  const std::vector<std::unique_ptr<ModelData>>& GetLoadedModels() {
+    return models_;
+  }
 
  private:
   void BindMesh(
@@ -97,13 +89,15 @@ class ModelLoader {
       tinygltf::Model& model, GLuint& vao,
       std::map<int, GLuint>& ebos);
 
-  void LoadTextures(ModelData& model_data);
+  // ptr (store uniq ptrs)
+  void LoadTextures(std::string_view path, ModelData* model_data);
 
-  Texture&& LoadTexture(const tinygltf::Model& model, int tex_id);
+  Texture LoadTexture(
+    std::string_view path, const tinygltf::Model& model, int tex_id);
 
   Aabb3D GetAabb(const tinygltf::Model& model);
 
-  std::vector<ModelData> models_;
+  std::vector<std::unique_ptr<ModelData>> models_;
   UiSharedResources& ui_shared_resources_;
   tinygltf::TinyGLTF loader_;
 };

@@ -9,86 +9,91 @@
 #include "../common/Paths.h"
 #include "../common/Shader.h"
 #include "../common/Texture.h"
+#include "../core/UiSelection.h"
+#include "../common/models/ModelManager.h"
 
 class UiPlacementMode final : public IUiMode {
  public:
-  explicit UiPlacementMode(
+  UiPlacementMode(
       UiSharedResources& ui_shared_resources,
       WindowQueue& window_queue,
-      const Paths& paths);
+      const Paths& paths,
+      ModelManager& mdl_manager);
 
   void Render() override;
+
   void RenderPicking() override;
 
-  void BindCallbacks() override;
+  void Setup() override;
 
-  /// draw or preview
-  void BtnChangeMode();
+  void BindDefaultCallbacks() override;
 
-  void BtnTrees();
+  int GetPrerenderTextIdStart() const noexcept override;
 
-  void BtnBushes();
+  int GetPrerenderTextIdEnd() const noexcept override;
 
-  void BtnTallGrass();
+  void RenderWorld() override;
 
-  void BtnUndergrowth();
+  void RenderPickingWorld() override;
 
- protected:
-  static void ScrollCallback(
-      GLFWwindow* window, double xoffset, double yoffset);
+  void SetPlacementMode(Texture* tex_placement);
 
-  static void MouseButtonCallback(
-      GLFWwindow* window, int button, int action, int mods);
+  [[nodiscard]] bool IsPreviewMode() const noexcept {
+    return preview_mode_;
+  }
 
-  static void KeyCallback(
-      GLFWwindow* window, int key, int scancode, int action, int mods);
+  UiDynamicSprite btn_trees_;
+  UiDynamicSprite btn_bushes_;
+  UiDynamicSprite btn_tall_grass;
+  UiDynamicSprite btn_undergrowth_;
+  UiDynamicSprite btn_asphalt_;
+  UiDynamicSprite btn_gravel_;
+  UiDynamicSprite btn_soil_;
+  UiDynamicSprite btn_change_mode_; /// toggle/swap
+  UiDynamicSprite sp_selected_mode_;
 
-  void DrawPixels(std::uint32_t prev_id, std::uint32_t last_id);
-
-  void PlaceLastModified() const;
-
-  // for serializing
-  static void InitHeightMap(std::string_view path, Texture& texture);
-
-  UiStaticSprite btn_trees_;
-  UiStaticSprite btn_bushes_;
-  UiStaticSprite btn_tall_grass;
-  UiStaticSprite btn_undergrowth_;
-  UiStaticSprite btn_change_mode_;
-
-  UiSliderV slider_color_;
-  UiSliderV slider_size_;
-  UiSliderV slider_falloff_;
+  UiSelection ui_selection_;
+  ModelManager& mdl_manager_;
 
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kPlacementChangeMode) -
       static_cast<int>(data::VboIdMain::kPlacementPlacementMode) + 1
       > ui_event_handler_;
 
+  Texture tex_placement_trees_;
+  Texture tex_placement_bushes_;
+  Texture tex_placement_tall_grass_;
+  Texture tex_placement_undergrowth_;
+  Texture tex_placement_asphalt_;
+  Texture tex_placement_gravel_;
+  Texture tex_placement_soil_;
 
-  // --- REFACTOR? idk about everything below ---
-  Texture new_draw_layer_; // TODO: copy explanation from shader to here
+  Texture* tex_cur_placement_ = nullptr;
+  bool preview_mode_ = false;
 
-  Shader shader_draw_;
+ private:
+  void SetDrawTexture(Texture* tex_placement);
 
-  /// rendered with shaders - not black/white height map
-  bool preview_mode_{false};
-
-  /// to hold mouse button and draw
-  bool draw_{false};
-
-  /// prevents an accumulation for falloff effect, so holding mouse on the same
-  /// position won't affect it
-  std::uint32_t last_modified_point_{static_cast<std::uint32_t>(-1.0f)};
-
-  GLuint last_modified_placement_;
-
-  Texture map_placement_trees_;
-  Texture map_placement_bushes_;
-  Texture map_placement_tall_grass_;
-  Texture map_placement_undergrowth_;
-
-  Texture* cur_placement_mode_tex_ = nullptr;
+  void TogglePlacement();
 };
+
+namespace placement {
+
+void ScrollCallback(
+    GLFWwindow* window, double xoffset, double yoffset);
+
+void MouseButtonCallback(
+    GLFWwindow* window, int button, int action, int mods);
+
+void KeyCallback(
+    GLFWwindow* window, int key, int scancode, int action, int mods);
+
+void MouseButtonCallback_Lmb(
+    GLFWwindow* window, int button, int action, int mods);
+
+void CursorPosCallback_Lmb(
+    GLFWwindow* window, double xpos, double ypos);
+
+} // namespace placement
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIPLACEMENTMODE_H_

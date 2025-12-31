@@ -1,6 +1,8 @@
 #include "PlacementRenderer.h"
 
 #define GLFW_INCLUDE_NONE
+#include "../common/OpenGLUtility.h"
+
 #include <GLFW/glfw3.h>
 
 #include "../io/Window.h"
@@ -12,7 +14,7 @@ PlacementRenderer::PlacementRenderer(
       shader_(paths.shader_placement_vert, paths.shader_terrain_tesc,
               paths.shader_terrain_tese, paths.shader_placement_frag),
       grass_(paths),
-      poisson_shader_(paths.shader_poisson_points),
+      poisson_shader_("../shaders/PoissonPoints.comp"),
       density_low_(paths.placement_density_low, GL_RGBA8),
       density_medium_low_(paths.placement_density_medium_low, GL_RGBA8),
       density_medium_(paths.placement_density_medium, GL_RGBA8),
@@ -50,15 +52,13 @@ void PlacementRenderer::Init() {
   glUniform1i(shader::kPlacementHeightMap, 0);
   glUniform1i(shader::kPlacementTexture, 1);
 
-  InitPlacementPipeline();
-  UpdatePipeline();
-}
-
-void PlacementRenderer::InitPlacementPipeline() {
-  Shader poisson_shader("../shaders/PoissonPoints.comp");
-  poisson_shader.Bind();
-//  glUniform1i(shader::kPoissonAreaSize, 2);
+  // poisson_shader_.Bind();
+  // glUniform1i(shader::kPoissonAreaSize, 2);
   placement_temp_ = Texture(1024, 1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
+  GLuint black = 0;
+  glClearTexImage(placement_temp_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE, &black);
+
+  //UpdatePipeline();
 }
 
 void PlacementRenderer::Render() {
@@ -66,7 +66,7 @@ void PlacementRenderer::Render() {
   if(glfwGetKey(gWindow, GLFW_KEY_7)) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
-  grass_.Render();
+  // grass_.Render();
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 }
@@ -95,42 +95,43 @@ void PlacementRenderer::RenderDraw() const {
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void PlacementRenderer::UpdatePipeline() {
-  /*TODO:
-   * here we have placement heightmaps (e.g. trees, bushes, tall grass,
-   * undergrowth); we need to generate __placement_points__
-   * according to priority: trees->bushes->...->grass, so we can generate
-   * them in the same way (using different Poisson points textures) and
-   * after collecting them to std::vector<id> we discard overlapping points
-   * at lower priorities.
-   * Then we should call UpdatePlacement() for each affected placement type
-   * */
-  /*poisson_shader_.Bind();
-  glBindImageTexture(0, density_extreme_.GetId(),
-                     0, GL_FALSE, 0, GL_READ_ONLY, density_extreme_.GetFormat());
-  glBindImageTexture(1, tile_.map_placement_undergrowth.GetId(),
-                     0, GL_FALSE, 0, GL_READ_ONLY, tile_.map_placement_undergrowth.GetFormat());
-  glBindImageTexture(2, placement_temp_.GetId(),
-                     0, GL_FALSE, 0, GL_WRITE_ONLY, placement_temp_.GetFormat());
-  glDispatchCompute(1024 / 16, 1024 / 16, 1); // TODO:
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+std::vector<GLuint> PlacementRenderer::UpdatePipeline(
+    Texture& placement, int density_level) {
+  poisson_shader_.Bind();
+  Texture* tex_density = nullptr;
+  switch (density_level) {
+    case 0:
+      tex_density = &density_medium_;
+      break;
+    case 1:
+      tex_density = &density_medium_high_;
+      break;
+    case 2:
+      tex_density = &density_high_;
+      break;
+    default:
+      tex_density = &density_extreme_;
+      break;
+  }
+  utility::BindImageTexture(0, *tex_density, GL_READ_ONLY);
+  utility::BindImageTexture(1, placement, GL_READ_ONLY);
+  utility::BindImageTexture(2, placement_temp_, GL_WRITE_ONLY);
+  glDispatchCompute(1024 / 16, 1024 / 16, 1);
+  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+  utility::UnBindImageTexture(0, *tex_density, GL_READ_ONLY);
+  utility::UnBindImageTexture(1, placement, GL_READ_ONLY);
+  utility::UnBindImageTexture(2, placement_temp_, GL_WRITE_ONLY);
 
   std::vector<unsigned char> data(1024 * 1024);
-//  tile_.map_placement_undergrowth.Store("t.png", 1, GL_UNSIGNED_BYTE);
   placement_temp_.Bind();
   glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, data.data());
 
-  tile_.undergrowth_.clear();
+  std::vector<GLuint> positions;
   for (int i = 0; i < 1024 * 1024; ++i) {
-    if (data[i] > 100) {
-      std::cout << static_cast<int>(data[i]) << '\n';
-      tile_.undergrowth_.push_back(i);
+    if (data[i] != 0) {
+      positions.push_back(i);
     }
   }
-  std::cout << "grass blades to draw: "
-            << tile_.undergrowth_.size() << std::endl;
-
-
-  // need map_terrain_height to init blades heights
-  grass_.UpdatePlacement(tile_.undergrowth_, tile_.terrain_heights_);*/
+  std::cout << "Placement generated: " << positions.size() << std::endl;
+  return positions;
 }

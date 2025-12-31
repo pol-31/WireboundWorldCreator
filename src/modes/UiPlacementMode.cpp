@@ -2,244 +2,308 @@
 
 #include "../io/Window.h"
 #include "../core/Menu.h"
-#include "../io/Cameras.h"
+#include "../io/Camera.h"
 #include "../common/PickingFramebuffer.h"
+#include "../common/Callbacks.h"
 #include "../core/TileRenderer.h"
-#include "../common/ShadersBinding.h"
-
-void UiPlacementMode::ScrollCallback(
-    GLFWwindow* window, double xoffset, double yoffset) {
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
-  glm::dvec2 cursor_pos = global_data->cursor_pos_;
-  if (yoffset < 0.0f) {
-    global_data->tile_renderer->cur_tile_.DownScale();
-  } else {
-    global_data->tile_renderer->cur_tile_.UpScale();
-  }
-}
-
-void UiPlacementMode::MouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods) {
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
-  auto placement = dynamic_cast<UiPlacementMode*>(*global_data->cur_mode);
-  glm::dvec2 cursor_pos = global_data->cursor_pos_;
-  global_data->camera->ProcessMouseKey(button, action, mods);
-  if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
-    auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
-    if (global_data->menu->Press(pressed_id)) {
-      return;
-    }
-    if (pressed_id < details::kIdOffsetWater) {
-      placement->draw_ = true;
-      placement->last_modified_point_ = -1;
-    }
-    placement->ui_event_handler_.Press(pressed_id);
-  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
-    if (placement->draw_) {
-      placement->draw_ = false;
-      GLuint black = 0;
-      glClearTexImage(placement->new_draw_layer_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE, &black);
-    }
-    placement->ui_event_handler_.Release();
-  }
-}
-
-void UiPlacementMode::KeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods) {}
+#include "../renderers/UiRenderer.h"
 
 UiPlacementMode::UiPlacementMode(
     UiSharedResources& ui_shared_resources,
     WindowQueue& window_queue,
-    const Paths& paths)
+    const Paths& paths,
+    ModelManager& mdl_manager)
     : IUiMode(
           ui_shared_resources,
-          window_queue,
           {data::VboIdMain::kPlacementPlacementMode}),
-      btn_trees_(data::VboIdMain::kPlacementTrees),
-      btn_bushes_(data::VboIdMain::kPlacementBushes),
-      btn_tall_grass(data::VboIdMain::kPlacementTallGrass),
-      btn_undergrowth_(data::VboIdMain::kPlacementUndergrowth),
-      btn_change_mode_(data::VboIdMain::kPlacementChangeMode),
-      slider_color_(
-          {data::VboIdMain::kPlacementColorFill},
-          {data::VboIdMain::kPlacementColorBack},
-          {data::VboIdMain::kPlacementColorIcon}),
-      slider_size_(
-          {data::VboIdMain::kPlacementSizeFill},
-          {data::VboIdMain::kPlacementSizeBack},
-          {data::VboIdMain::kPlacementSizeIcon}),
-      slider_falloff_(
-          {data::VboIdMain::kPlacementFalloffFill},
-          {data::VboIdMain::kPlacementFalloffBack},
-          {data::VboIdMain::kPlacementFalloffIcon}),
+      btn_trees_(data::VboIdMain::kPlacementTrees, [this]() {
+        SetPlacementMode(&tex_placement_trees_);
+      }),
+      btn_bushes_(data::VboIdMain::kPlacementBushes, [this]() {
+        SetPlacementMode(&tex_placement_bushes_);
+      }),
+      btn_tall_grass(data::VboIdMain::kPlacementTallGrass, [this]() {
+        SetPlacementMode(&tex_placement_tall_grass_);
+      }),
+      btn_undergrowth_(data::VboIdMain::kPlacementUndergrowth, [this]() {
+        SetPlacementMode(&tex_placement_undergrowth_);
+      }),
+      btn_asphalt_(data::VboIdMain::kPlacementAsphalt, [this]() {
+        SetPlacementMode(&tex_placement_asphalt_);
+      }),
+      btn_gravel_(data::VboIdMain::kPlacemenGravel, [this]() {
+        SetPlacementMode(&tex_placement_gravel_);
+      }),
+      btn_soil_(data::VboIdMain::kPlacementSoil, [this]() {
+        SetPlacementMode(&tex_placement_soil_);
+      }),
+      btn_change_mode_(data::VboIdMain::kPlacementChangeMode, [this]() {
+        TogglePlacement();
+      }),
+      ui_selection_(ui_shared_resources),
       ui_event_handler_({
-          &btn_trees_, &btn_bushes_, &btn_tall_grass, &btn_undergrowth_,
-          &btn_change_mode_, &slider_color_, &slider_size_, &slider_falloff_}),
-      shader_draw_(paths.shader_placement_draw_comp),
-      new_draw_layer_(1024, 1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE) {
-  shader_draw_.Bind();
-  //TODO: not sure it represents actual starting values on UiSlider
-  unsigned int radius = 100;
-  float falloff = 1.0f;
-  float color = 1.0f;
-  glUniform1ui(shader::kPlacementRadius, radius);
-  glUniform1f(shader::kPlacementFalloff, falloff);
-  glUniform1f(shader::kPlacementColor, color);
-  BtnTrees();
+          &btn_trees_, &btn_bushes_, &btn_tall_grass,
+          &btn_undergrowth_, &btn_asphalt_, &btn_gravel_, &btn_soil_,
+          &btn_change_mode_}),
+      tex_placement_trees_(details::gTerrainSize, details::gTerrainSize, GL_R8),
+      tex_placement_bushes_(details::gTerrainSize, details::gTerrainSize, GL_R8),
+      tex_placement_tall_grass_(details::gTerrainSize, details::gTerrainSize, GL_R8),
+      tex_placement_undergrowth_(details::gTerrainSize, details::gTerrainSize, GL_R8),
+      tex_placement_asphalt_(details::gTerrainSize, details::gTerrainSize, GL_R8),
+      tex_placement_gravel_(details::gTerrainSize, details::gTerrainSize, GL_R8),
+      tex_placement_soil_(details::gTerrainSize, details::gTerrainSize, GL_R8),
+      sp_selected_mode_(data::VboIdMain::kPlacementSelected),
+      mdl_manager_(mdl_manager) {}
+
+void UiPlacementMode::SetPlacementMode(Texture* tex_placement) {
+  if (IsPreviewMode()) {
+    TogglePlacement();
+  }
+  SetDrawTexture(tex_placement);
 }
 
-//TODO: Ctrl+Z, Ctrl+Shift+Z
-//TODO: Ctrl+Z, Ctrl+Shift+Z
-//TODO: Ctrl+Z, Ctrl+Shift+Z
-/**
-for implementing of undo/redo - (let's keep it simple) we store 8 full canvas
-snaps and then when switch mode, we can compress to png each time like 2 rgba textures
-to reduce size, so total it's 8 mb for each mode, which we can compress...
+void UiPlacementMode::SetDrawTexture(Texture* tex_placement) {
+  tex_cur_placement_ = tex_placement;
+  ui_selection_.SetMask(*tex_cur_placement_);
+}
 
-
- ... or 10 opengl textures, so we store aabb for each draw and blit onto new texture
- */
-
-//TODO; GRASS placement !
-
-void UiPlacementMode::BtnChangeMode() {
-  if (!preview_mode_) {
-    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->placement.UpdatePipeline();
-    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_terrain_ = true;
+void UiPlacementMode::TogglePlacement() {
+  auto tile_renderer =
+      ui_shared_resources_.global_glfw_callback_data_.tile_renderer;
+  if (IsPreviewMode()) {
+    tile_renderer->show_terrain_ = false;
   } else {
-    PlaceLastModified();
-    ui_shared_resources_.global_glfw_callback_data_.tile_renderer->show_terrain_ = false;
+    if (tex_cur_placement_->GetId() == tex_placement_trees_.GetId()) {
+      auto positions = tile_renderer->placement.UpdatePipeline(
+        *tex_cur_placement_, 0);
+      mdl_manager_.tree_.SetPlacement(ui_shared_resources_, positions);
+    } else if (tex_cur_placement_->GetId() == tex_placement_bushes_.GetId()) {
+      auto positions = tile_renderer->placement.UpdatePipeline(
+        *tex_cur_placement_, 1);
+      mdl_manager_.bush_.SetPlacement(ui_shared_resources_, positions);
+    } else if (tex_cur_placement_->GetId() == tex_placement_tall_grass_.GetId()) {
+      auto positions = tile_renderer->placement.UpdatePipeline(
+        *tex_cur_placement_, 2);
+      mdl_manager_.tall_grass_.SetPlacement(ui_shared_resources_, positions);
+    } else if (tex_cur_placement_->GetId() == tex_placement_undergrowth_.GetId()) {
+      auto positions = tile_renderer->placement.UpdatePipeline(
+        *tex_cur_placement_, 3);
+      mdl_manager_.undergrowth_.SetPlacement(ui_shared_resources_, positions);
+    }
+    tile_renderer->show_terrain_ = true;
   }
   preview_mode_ = !preview_mode_;
 }
 
-void UiPlacementMode::PlaceLastModified() const {
-  GLuint black = 0;
-  glClearTexImage(new_draw_layer_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE, &black);
-  glBindImageTexture(
-      shader::kDrawPlacementHeightMap, last_modified_placement_, 0,
-      GL_FALSE, 0, GL_READ_WRITE, GL_R8);
-  glBindImageTexture(
-      shader::kDrawPlacementDrawLayer, new_draw_layer_.GetId(), 0,
-      GL_FALSE, 0, GL_READ_WRITE, GL_R8);
+void UiPlacementMode::Setup() {
+  BindDefaultCallbacks();
+  SetPlacementMode(&tex_placement_trees_);
+  ui_selection_.SetIdBounds(details::kIdOffsetWater, details::kIdOffsetFences);
+  ui_selection_.SetModeForce(SelectionMode::kRectangle);
+  auto camera = ui_shared_resources_.global_glfw_callback_data_.camera;
+  camera->SetPosition(glm::vec3{5.0f});
+  camera->SetPitch(45.0f);
+  camera->SetYaw(0.0f);
+  camera->SetOrigin(glm::vec3{0.0f});
+  camera->MoveRotateViewOrigin(0.0f, 0.0f); // to update camera vectors
+}
+
+void UiPlacementMode::BindDefaultCallbacks() {
+  glfwSetScrollCallback(gWindow, placement::ScrollCallback);
+  glfwSetMouseButtonCallback(gWindow, placement::MouseButtonCallback);
+  glfwSetKeyCallback(gWindow, placement::KeyCallback);
+  glfwSetCursorPosCallback(gWindow, nullptr);
+}
+
+int UiPlacementMode::GetPrerenderTextIdStart() const noexcept {
+  return static_cast<int>(data::TextId::kScaleTerrain);
+}
+
+int UiPlacementMode::GetPrerenderTextIdEnd() const noexcept {
+  return static_cast<int>(data::TextId::kStrength) + 1;
+}
+
+void UiPlacementMode::RenderWorld() {
+  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->Render();
+}
+
+void UiPlacementMode::RenderPickingWorld() {
+  ui_shared_resources_.global_glfw_callback_data_.tile_renderer->RenderPicking();
 }
 
 void UiPlacementMode::Render() {
-  if (!preview_mode_ && draw_) {
-    auto prev_modified_point = last_modified_point_;
-    last_modified_point_ =
-        ui_shared_resources_.global_glfw_callback_data_
-            .picking_fbo->GetIdByMousePos(
-            ui_shared_resources_.global_glfw_callback_data_.cursor_pos_);
-    DrawPixels(prev_modified_point, last_modified_point_);
+  if (!IsPreviewMode()) {
+    ui_selection_.Render();
+    ui_selection_.RenderOnSurface(
+        &ui_shared_resources_.global_glfw_callback_data_.tile_renderer
+             ->cur_tile_.map_terrain_height);
   }
 
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
+  ui_shared_resources_.dynamic_sprite_shader_.Bind();
 
-  ui_shared_resources_.static_sprite_shader_.Bind();
-
-  sprite_mode_.Render();
+  sp_mode_.Render();
   btn_trees_.Render();
   btn_bushes_.Render();
   btn_tall_grass.Render();
   btn_undergrowth_.Render();
+  btn_asphalt_.Render();
+  btn_gravel_.Render();
+  btn_soil_.Render();
   btn_change_mode_.Render();
+  sp_selected_mode_.Render();
 
-  slider_color_.Render(
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-  slider_size_.Render(
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-  slider_falloff_.Render(
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
+  ui_shared_resources_.global_glfw_callback_data_.windows->Render();
 
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  slider_color_.RenderIcon();
-  slider_size_.RenderIcon();
-  slider_falloff_.RenderIcon();
+  auto camera = ui_shared_resources_.global_glfw_callback_data_.camera;
+  camera->Update(1.0f); // const pos
 }
 
 void UiPlacementMode::RenderPicking() {
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
+  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
 
-  ui_shared_resources_.static_sprite_picking_shader_.Bind();
-
-  sprite_mode_.RenderPicking();
+  sp_mode_.RenderPicking();
   btn_trees_.RenderPicking();
   btn_bushes_.RenderPicking();
   btn_tall_grass.RenderPicking();
   btn_undergrowth_.RenderPicking();
+  btn_asphalt_.RenderPicking();
+  btn_gravel_.RenderPicking();
+  btn_soil_.RenderPicking();
   btn_change_mode_.RenderPicking();
+  sp_selected_mode_.RenderPicking();
 
-  slider_color_.RenderPicking();
-  slider_size_.RenderPicking();
-  slider_falloff_.RenderPicking();
-}
-
-void UiPlacementMode::BtnTrees() {
-  std::cout << "place trees" << std::endl;
-  //TODO: we can merge this two calls
-  cur_placement_mode_tex_ = &map_placement_trees_;
-  last_modified_placement_ = cur_placement_mode_tex_->GetId();
-  PlaceLastModified();
-}
-void UiPlacementMode::BtnBushes() {
-  std::cout << "place bushes" << std::endl;
-  cur_placement_mode_tex_ = &map_placement_bushes_;
-  last_modified_placement_ = cur_placement_mode_tex_->GetId();
-  PlaceLastModified();
-}
-void UiPlacementMode::BtnTallGrass() {
-  std::cout << "place tall grass" << std::endl;
-  cur_placement_mode_tex_ = &map_placement_tall_grass_;
-  last_modified_placement_ = cur_placement_mode_tex_->GetId();
-  PlaceLastModified();
-}
-void UiPlacementMode::BtnUndergrowth() {
-  std::cout << "place undergrowth" << std::endl;
-  cur_placement_mode_tex_ = &map_placement_undergrowth_;
-  last_modified_placement_ = cur_placement_mode_tex_->GetId();
-  PlaceLastModified();
+  ui_shared_resources_.global_glfw_callback_data_.windows->RenderPicking();
 }
 
-// prev approach - by point
-// cur(new) approach - by line - we check point collision with line, so
-// in case when speed of mouse >> framerate, we won't skip any points
-void UiPlacementMode::DrawPixels(std::uint32_t prev_id, std::uint32_t last_id) {
-  if (prev_id == -1 || last_id == -1 || prev_id == last_id) {
+namespace placement {
+
+void ScrollCallback(
+    GLFWwindow* window, double xoffset, double yoffset) {
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
+      glfwGetWindowUserPointer(window));
+  auto placement = dynamic_cast<UiPlacementMode*>(*global_data->cur_mode);
+  if (placement->ui_selection_.Scroll(yoffset)) {
     return;
   }
-  shader_draw_.Bind();
-  glm::uvec2 point{};
-  glUniform2uiv(shader::kPlacementPointA, 1,
-                glm::value_ptr(glm::uvec2(prev_id & 1023, prev_id >> 10)));
-  glUniform2uiv(shader::kPlacementPointB, 1,
-                glm::value_ptr(glm::uvec2(last_id & 1023, last_id >> 10)));
-  GLuint workGroupSizeX = (1024 + 15) / 16;
-  GLuint workGroupSizeY = (1024 + 15) / 16;
-  glDispatchCompute(workGroupSizeX, workGroupSizeY, 1);
-  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+  glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+  if (pressed_id >= details::kIdOffsetUi &&
+      pressed_id != static_cast<GLuint>(-1)) {
+    global_data->windows->Scroll(pressed_id, yoffset);
+    return;
+  }
+  global_data->tile_renderer->cur_tile_.OnScroll(yoffset);
 }
 
-//TODO: we also bind trees mode here - so then rename to SetUp()?
-void UiPlacementMode::BindCallbacks() {
-  glfwSetScrollCallback(gWindow, ScrollCallback);
-  glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
-  //  glfwSetKeyCallback(gWindow, KeyCallback);
-  glfwSetKeyCallback(gWindow, WasdKeyCallback);
-  BtnTrees();
-}
+void MouseButtonCallback(
+    GLFWwindow* window, int button, int action, int mods) {
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
+      glfwGetWindowUserPointer(window));
+  auto placement = dynamic_cast<UiPlacementMode*>(*global_data->cur_mode);
+  glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  //  global_data->camera->ProcessMouseKey(button, action, mods);
 
-void UiPlacementMode::InitHeightMap(std::string_view path, Texture& texture) {
-  if (!path.empty()) {
-    // if float it will ignore GL_RED internally
-    texture = Texture(path, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
-  } else {
-    texture = Texture(1024, 1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
+  bool mod_ctrl = mods & GLFW_MOD_CONTROL;
+  bool mod_shift = mods & GLFW_MOD_SHIFT;
+  if (action == GLFW_PRESS) {
+    double xpos, ypos;
+    glfwGetCursorPos(gWindow, &xpos, &ypos);
+    lastX = xpos;
+    lastY = ypos;
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+      auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+      std::cout << "Pressed id: " << pressed_id << std::endl;
+      bool ui_handled = global_data->windows->Press(pressed_id) ||
+                        placement->ui_event_handler_.Press(pressed_id);
+      if (ui_handled) {
+        return;
+      }
+      placement->ui_selection_.Start(global_data->cursor_pos_tex_norm_,
+                                     mod_ctrl, mod_shift);
+      glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
+      glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
+      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+    } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+      if (mod_shift) {
+        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_Mmb);
+      } else {
+        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_MmbShift);
+      }
+      glfwSetMouseButtonCallback(gWindow, callbacks::MouseButtonCallback_Mmb_MmbShift);
+      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+    }
+  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
+    global_data->windows->Release();
+    placement->ui_event_handler_.Release();
   }
 }
+
+void KeyCallback(
+    GLFWwindow* window, int key, int scancode, int action, int mods) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  auto placement = dynamic_cast<UiPlacementMode*>(*global_data->cur_mode);
+  global_data->ui_renderer->Press(key, action);
+
+  bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
+  bool mod_shift = (mods & GLFW_MOD_SHIFT);
+  if (action != GLFW_PRESS) {
+    return;
+  }
+  if (key == GLFW_KEY_ESCAPE) {
+    if (mod_shift) {
+      glfwSetWindowShouldClose(window, true);
+    } else if (!global_data->windows->GetTopWindow() &&
+               global_data->windows->GetSize() == 0) {
+      global_data->ui_renderer->AskForConfirmation(
+          data::TextId::kConfirmationExit, []() {
+            glfwSetWindowShouldClose(gWindow, true);
+          });
+    } else {
+      global_data->windows->BtnEscape();
+    }
+  } else if (key == GLFW_KEY_ENTER) {
+    global_data->windows->BtnEnter();
+  } else if (key == GLFW_KEY_1) {
+    placement->ui_selection_.SetMode(SelectionMode::kRectangle);
+  } else if (key == GLFW_KEY_2) {
+    placement->ui_selection_.SetMode(SelectionMode::kCircle);
+  } else if (key == GLFW_KEY_3) {
+    placement->ui_selection_.SetMode(SelectionMode::kLasso);
+  } else if (key == GLFW_KEY_4) {
+    placement->ui_selection_.SetMode(SelectionMode::kTweak);
+  }
+}
+
+void MouseButtonCallback_Lmb(
+    GLFWwindow* window, int button, int action, int mods) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  auto placement = dynamic_cast<UiPlacementMode*>(*global_data->cur_mode);
+  glm::dvec2 cursor_pos = global_data->cursor_pos_;
+  if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
+    placement->BindDefaultCallbacks();
+    placement->ui_selection_.Stop(cursor_pos);
+    const auto& selection_mask = placement->ui_selection_.GetMask();
+    glCopyImageSubData(
+        selection_mask.GetId(), GL_TEXTURE_2D, 0, 0, 0, 0,
+        placement->tex_cur_placement_->GetId(), GL_TEXTURE_2D, 0, 0, 0, 0,
+        details::gTerrainSize, details::gTerrainSize, 1);
+  }
+}
+
+void CursorPosCallback_Lmb(
+    GLFWwindow* window, double xpos, double ypos) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
+  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
+  auto placement = dynamic_cast<UiPlacementMode*>(*global_data->cur_mode);
+  placement->ui_selection_.Update(global_data->cursor_pos_tex_norm_);
+}
+
+} // namespace placement

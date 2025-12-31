@@ -11,67 +11,70 @@ int UiSelection::gMaxPoints = 1000;
 
 UiSelection::UiSelection(
     UiSharedResources& ui_shared_resources)
-    : sp_circle_(data::VboIdMain::kBiomesTimeArea),
+    : sp_circle_(data::VboIdMain::kSelectionCircle),
       ui_shared_resources_(ui_shared_resources),
       shader_("../shaders/Stipple.vert",
               "../shaders/Stipple.frag"),
       shader_area_("../shaders/SelectionArea.vert",
                    "../shaders/SelectionArea.frag"),
-      shader_select_("../shaders/generate_shaders/SelectTerrain.comp"),
       sp_selection_(data::VboIdMain::kSelectionSprite),
-      selection_tex_(gWindowWidth, gWindowHeight, GL_R8),
-      selection_tex_surface_(details::gTerrainSize, details::gTerrainSize, GL_R8),
+      selection_tex_(gWindowWidth, gWindowHeight, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE),
+      selection_tex_surface_(details::gTerrainSize, details::gTerrainSize, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE),
       mouse_check_point_(gWindowWidth / 2.0f, gWindowHeight / 2.0f) {
   Init();
 }
 
-void UiSelection::SetIdBounds(GLuint bound_min, GLuint bound_max) {
-  bound_min_ = bound_min;
-  bound_max_ = bound_max;
-}
-
 void UiSelection::Render() {
-  switch (selection_mode_) {
-    case SelectionMode::kCircle:
-      RenderCircleLike();
-      RenderSelectionCircle();
-      break;
-    case SelectionMode::kTweak:
-      break;
-    default:
-      RenderAreaLike();
+  if (selection_mode_ == SelectionMode::kCircle) {
+    RenderCircleLike();
+    RenderSelectionCircle();
+  } else if (selection_mode_ == SelectionMode::kRectangle ||
+             selection_mode_ == SelectionMode::kLasso) {
+    RenderAreaLike();
   }
 }
 
 void UiSelection::RenderOnSurface(const Texture32F* surface) {
   glm::vec3 color = glm::vec3(0.8f, 0.8f, 0.1f);
-  color = glm::vec3(0.2f, 0.9f, 0.8f);
   ui_shared_resources_.global_glfw_callback_data_.tile_renderer
       ->terrain.RenderSelection(surface, selection_tex_surface_, color);
 }
 
 void UiSelection::Start(
-    glm::vec2 cursor_pos, bool mod_ctrl, bool mod_shift) {
+glm::vec2 cursor_pos, bool mod_ctrl, bool mod_shift) {
   SetMods(mod_ctrl, mod_shift);
   lasso_data_.clear();
   rectangle_start_pos_ = cursor_pos;
-  pressed_ = true;
   start_is_end_ = true;
-  if (!mod_ctrl_ && mod_shift_) {
+  if (!mod_ctrl_) {
+    if (mod_shift_) {
     start_is_end_ = false;
-  } else if (!mod_ctrl_ && !mod_shift_) { // mod_ctrl_ or no mods at all
-    ResetBufferData();
-    ClearMask();
-    //    ClearSelectionFbo();
+    } else { // no modifiers
+      vertex_num_ = 0;
+      ClearMask();
+    }
   }
   selecting_ = true;
 }
 
 void UiSelection::Stop(glm::vec2 cursor_pos) {
-  pressed_ = false;
   Update(cursor_pos);
+  if (selection_mode_ == SelectionMode::kRectangle ||
+    selection_mode_ == SelectionMode::kLasso) {
+    shader_area_.Bind();
+    glBindVertexArray(vao_);
+    glUniform2fv(0, 1, glm::value_ptr(render_offset_));
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, selection_fbo_);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, vertex_num_ - 1);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  }
   selecting_ = false;
-  SelectPoints();
+  ApplySelection();
+  ClearSelectionFbo();
+  vertex_num_ = 0;
+  mouse_check_point_ =
+      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_;
+  mouse_check_point_.y = gWindowHeight - mouse_check_point_.y;
 }
 
 void UiSelection::Update(glm::vec2 mouse_pos) {
@@ -104,22 +107,7 @@ void UiSelection::SetMode(SelectionMode mode) {
   if (selecting_ || selection_mode_ == mode) {
     return;
   }
-  ResetConfig();
-  selection_mode_ = mode;
-  switch (selection_mode_) {
-    case SelectionMode::kRectangle:
-      glfwSetCursor(gWindow, csr_rectangle_);
-      break;
-    case SelectionMode::kCircle:
-      glfwSetCursor(gWindow, csr_circle_);
-      break;
-    case SelectionMode::kLasso:
-      glfwSetCursor(gWindow, csr_lasso_);
-      break;
-    case SelectionMode::kTweak:
-      glfwSetCursor(gWindow, csr_tweak_);
-      break;
-  }
+  SetModeForce(mode);
 }
 
 void UiSelection::SetModeForce(SelectionMode mode) {
@@ -159,7 +147,6 @@ void UiSelection::NextMode() {
     default:
       next_mode = SelectionMode::kRectangle;
   }
-  // force, so ignore current selection
   SetModeForce(next_mode);
 }
 
@@ -169,8 +156,6 @@ void UiSelection::SetMask(const Texture& mask) {
       selection_tex_surface_.GetId(), GL_TEXTURE_2D, 0, 0, 0, 0,
       details::gTerrainSize, details::gTerrainSize, 1);
 }
-
-/// private
 
 void UiSelection::Init() {
   glGenVertexArrays(1, &vao_);
@@ -200,7 +185,6 @@ void UiSelection::Init() {
   sp_selection_.SetScale(scale_diff);
 
   ClearMask();
-
   InitCursors();
 }
 
@@ -240,7 +224,8 @@ void UiSelection::InitSelectionFbo() {
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     throw std::runtime_error("framebuffer is not complete");
   }
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  GLenum bufs[] = { GL_COLOR_ATTACHMENT0 };
+  glDrawBuffers(1, bufs);
   ClearSelectionFbo();
 }
 
@@ -256,7 +241,7 @@ void UiSelection::DeInit() {
 
 void UiSelection::SelectRectangle(glm::vec2 end_pos) {
   if (glm::length(rectangle_start_pos_ - end_pos) < 0.01f) {
-    ResetBufferData();
+    vertex_num_ = 0;
     return;
   }
   float width = std::abs(end_pos.x - rectangle_start_pos_.x);
@@ -295,12 +280,9 @@ void UiSelection::SelectCircle(glm::vec2 mouse_pos) {
 
 void UiSelection::SelectLasso(glm::vec2 mouse_pos) {
   lasso_data_.push_back(mouse_pos);
-  if (lasso_data_.size() + 1 > gMaxPoints) { // +1 to loop first/last
-    ResetBufferData();
-    throw "unable to draw polygon, gMaxPoints exceeded";
-  }
-  if (lasso_data_.size() < 3) {
-    ResetBufferData(); // waiting for more points
+  if (lasso_data_.size() + 1 > gMaxPoints ||
+    lasso_data_.size() < 3) {
+    vertex_num_ = 0;
     return;
   }
   auto polygon_copy = lasso_data_;
@@ -334,17 +316,17 @@ void UiSelection::SelectTweak() {
 }
 
 void UiSelection::RenderAreaLike() {
+  if (vertex_num_ == 0) {
+    return;
+  }
   glBindVertexArray(vao_);
   shader_.Bind();
   glUniform2fv(0, 1, glm::value_ptr(render_offset_));
   glDrawArrays(GL_LINE_STRIP, 0, vertex_num_);
+
   shader_area_.Bind();
   glUniform2fv(0, 1, glm::value_ptr(render_offset_));
-  glDrawArrays(GL_TRIANGLE_FAN, 0, vertex_num_);
-
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, selection_fbo_);
-  glDrawArrays(GL_TRIANGLE_FAN, 0, vertex_num_);
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glDrawArrays(GL_TRIANGLE_FAN, 0, vertex_num_ - 1);
 }
 
 void UiSelection::RenderCircleLike() {
@@ -365,50 +347,39 @@ void UiSelection::RenderSelectionCircle() {
   sp_circle_.Render();
 }
 
-void UiSelection::ResetBufferData() {
-  std::cout << "reset buffer data" << std::endl;
-  vertex_num_ = 0;
-}
-
 void UiSelection::ResetConfig() {
-  std::cout << "reset selection" << std::endl;
   circle_radius_ = 0.05f;
   render_offset_ = glm::vec2(0.0f);
 }
 
 void UiSelection::ClearMask() {
-  std::cout << "clear selection" << std::endl;
   GLuint black = 0;
-  glClearTexImage(selection_tex_surface_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE, &black);
+  glClearTexImage(
+    selection_tex_surface_.GetId(), 0, GL_RED,
+    GL_UNSIGNED_BYTE, &black);
 }
 
 void UiSelection::ClearSelectionFbo() {
-  std::cout << "clear selection fbo" << std::endl;
-  glBindFramebuffer(GL_FRAMEBUFFER, selection_fbo_);
-  GLuint clear_id = 0;
-  glClearTexImage(selection_tex_.GetId(), 0, GL_RED,
-                  GL_UNSIGNED_BYTE, &clear_id);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  GLuint black = 0;
+  glClearTexImage(
+    selection_tex_.GetId(), 0, GL_RED,
+    GL_UNSIGNED_BYTE, &black
+);
 }
 
 void UiSelection::UpdateRenderData(
     const std::vector<glm::vec3>& polygon, float stipple_width) {
   vertex_num_ = polygon.size();
-//  std::cout << polygon[2].x << ' ' << vertex_num_ << std::endl;
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
   glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_num_ * sizeof(glm::vec3),
                   polygon.data());
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   shader_.Bind();
   glUniform1f(1, stipple_width);
-  glUseProgram(0); // unbind shader
 }
 
 // only for tweak and circle
 void UiSelection::UpdateSurfaceSelection(float radius) {
-  if (!pressed_) {
-    return;
-  }
   glm::vec2 mouse_pos = ui_shared_resources_.global_glfw_callback_data_.cursor_pos_;
   mouse_pos.y = gWindowHeight - mouse_pos.y;
   ui_shared_resources_.shader_terrain_selection_.Bind();
@@ -416,7 +387,6 @@ void UiSelection::UpdateSurfaceSelection(float radius) {
                             .picking_fbo->GetTex();
   utility::BindImageTexture(0, selection_tex_, GL_WRITE_ONLY);
   utility::BindImageTexture(1, fbo_tex, GL_READ_ONLY);
-  glm::uvec2 point{};
   glUniform1f(2, radius);
   if (start_is_end_) {
     glUniform2fv(0, 1, glm::value_ptr(mouse_pos));
@@ -435,36 +405,59 @@ void UiSelection::UpdateSurfaceSelection(float radius) {
   utility::UnBindImageTexture(1, fbo_tex, GL_READ_ONLY);
 }
 
+/**
+ * GPU version invalid, need shader to accumulate selection to ssbo,
+ * then another. otherwise race-cond (or not, but have some garbage
+ * outside the selection - idk how to fix) see shaders/SelectTerrain.comp
+ */
 void UiSelection::ApplySelection() {
-  shader_select_.Bind();
-  const auto& fbo_tex = ui_shared_resources_.global_glfw_callback_data_.picking_fbo->GetTex();
-  utility::BindImageTexture(0, fbo_tex, GL_READ_ONLY);
-  utility::BindImageTexture(1, selection_tex_, GL_READ_ONLY);
-  utility::BindImageTexture(2, selection_tex_surface_, GL_WRITE_ONLY);
-  glUniform1ui(0, bound_min_);
-  glUniform1ui(1, bound_max_);
-  // 1: add (shift) connect last to new,
-  // 1: add (ctrl) no connect last to new,
-  // 0: erase (ctrl + shift)
-  float mask_factor = 1.0f;
-  if (mod_ctrl_ && mod_shift_) {
-    mask_factor = 0.0f;
+  double prev_time_ = last_update_time_;
+  double cur_time = glfwGetTime();
+  auto time_diff = cur_time - prev_time_;
+  if (time_diff < 0.1f) {
+    return;
   }
-  glUniform1f(2, mask_factor);
-  GLuint workGroupSizeX = (gWindowWidth  + 15) / 16;
-  GLuint workGroupSizeY = (gWindowHeight + 15) / 16;
-  glDispatchCompute(workGroupSizeX, workGroupSizeY, 1);
-  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  utility::UnBindImageTexture(0, fbo_tex, GL_READ_ONLY);
-  utility::UnBindImageTexture(1, selection_tex_, GL_READ_ONLY);
-  utility::UnBindImageTexture(2, selection_tex_surface_, GL_WRITE_ONLY);
-}
+    last_update_time_ = cur_time;
+  const auto& fbo_tex = ui_shared_resources_
+    .global_glfw_callback_data_.picking_fbo->GetTex();
+  int buffer_size = gWindowWidth * gWindowHeight;
 
-void UiSelection::SelectPoints() {
-  ApplySelection();
-  ClearSelectionFbo();
-  ResetBufferData();
-  mouse_check_point_ =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_;
-  mouse_check_point_.y = gWindowHeight - mouse_check_point_.y;
+  std::vector<uint8_t> selection_data(buffer_size);
+  glGetTextureImage(
+    selection_tex_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
+    buffer_size * sizeof(uint8_t), selection_data.data());
+
+  std::vector<GLuint> id_data(buffer_size);
+  glGetTextureImage(
+    fbo_tex.GetId(), 0, GL_RED_INTEGER, GL_UNSIGNED_INT,
+    buffer_size * sizeof(GLuint), id_data.data());
+
+  int surface_size = details::gTerrainSize * details::gTerrainSize;
+  std::vector<uint8_t> result(surface_size);
+  glGetTextureImage(
+    selection_tex_surface_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
+    surface_size * sizeof(uint8_t), result.data());
+
+  for (int i = 0; i < buffer_size; ++i) {
+    if (!selection_data[i]) {
+      continue;
+    }
+    GLuint id = id_data[i];
+    if (id < bound_min_ || id > bound_max_) {
+      continue;
+    }
+    id -= bound_min_;
+    // 1: add (shift) connect last to new,
+    // 1: add (ctrl) no connect last to new,
+    // 0: erase (ctrl + shift)
+    float mask_factor = 1.0f;
+    if (mod_ctrl_ && mod_shift_) {
+      mask_factor = 0.0f;
+    }
+    auto y = static_cast<int>(id & 1023);
+    auto x = static_cast<int>(id >> 10);
+    result[y * 1024 + x] = 255 * mask_factor;
+  }
+  glTextureSubImage2D(selection_tex_surface_.GetId(), 0, 0, 0, details::gTerrainSize,
+    details::gTerrainSize, GL_RED, GL_UNSIGNED_BYTE, result.data());
 }

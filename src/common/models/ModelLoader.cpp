@@ -1,5 +1,9 @@
 #include "ModelLoader.h"
 
+#include "stb_image.h"
+
+#include <filesystem>
+
 bool LoadImageData(
     tinygltf::Image *image, const int image_idx, std::string *err,
     std::string *warn, int req_width, int req_height,
@@ -56,6 +60,35 @@ void ModelData::RenderMesh(const tinygltf::Mesh& mesh) const {
   }
 }
 
+void ModelData::RenderModelNodesInstanced(int instances_num) const {
+  const tinygltf::Scene &scene = model.scenes[model.defaultScene];
+  for (size_t i = 0; i < scene.nodes.size(); ++i) {
+    RenderModelNodeInstanced(model.nodes[scene.nodes[i]], instances_num);
+  }
+}
+
+void ModelData::RenderModelNodeInstanced(
+    const tinygltf::Node& node, int instances_num) const {
+  if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
+    RenderMeshInstanced(model.meshes[node.mesh], instances_num);
+  }
+  for (size_t i = 0; i < node.children.size(); i++) {
+    RenderModelNodeInstanced(model.nodes[node.children[i]], instances_num);
+  }
+}
+
+void ModelData::RenderMeshInstanced(
+  const tinygltf::Mesh& mesh, int instances_num) const {
+  for (const auto& primitive : mesh.primitives) {
+    const auto& indexAccessor = model.accessors[primitive.indices];
+    glBindBuffer(
+      GL_ELEMENT_ARRAY_BUFFER, ebos.at(indexAccessor.bufferView));
+    glDrawElementsInstanced(
+      primitive.mode, indexAccessor.count, indexAccessor.componentType,
+      (void*)indexAccessor.byteOffset, instances_num);
+  }
+}
+
 ModelLoader::ModelLoader(UiSharedResources& ui_shared_resources)
     : ui_shared_resources_(ui_shared_resources) {
   loader_.SetImageLoader(LoadImageData, nullptr);
@@ -64,19 +97,19 @@ ModelLoader::ModelLoader(UiSharedResources& ui_shared_resources)
 ModelLoader::~ModelLoader() {
   //todo; reserve vaos
   for (auto& m : models_) {
-    glDeleteVertexArrays(1, &m.vao);
+    glDeleteVertexArrays(1, &m->vao);
   }
 }
 
 const ModelData* ModelLoader::Load(std::string_view path, int id) {
-  ModelData model_data;
+  auto model_data = std::make_unique<ModelData>();
   ui_shared_resources_.shader_model_.Bind();
   glUniform1i(1, 0);
   glActiveTexture(GL_TEXTURE0);
   std::string err;
   std::string warn;
   bool res = loader_.LoadASCIIFromFile(
-      &model_data.model, &err, &warn, path.data());
+      &model_data->model, &err, &warn, path.data());
   if (!warn.empty()) {
     std::cout << "WARN: " << warn << std::endl;
   }
@@ -88,11 +121,14 @@ const ModelData* ModelLoader::Load(std::string_view path, int id) {
   } else {
     std::cout << "Loaded glTF: " << path << std::endl;
   }
-  BindModel(model_data.model, model_data.vao, model_data.ebos);
-  model_data.aabb = GetAabb(model_data.model);
-  model_data.id = id;
+  BindModel(model_data->model, model_data->vao, model_data->ebos);
+  model_data->aabb = GetAabb(model_data->model);
+  model_data->id = id;
   models_.push_back(std::move(model_data));
-  return &models_.back();
+  stbi_set_flip_vertically_on_load(false);
+  LoadTextures(path, models_.back().get());
+  stbi_set_flip_vertically_on_load(true);
+  return models_.back().get();
 }
 
 
@@ -199,11 +235,12 @@ void ModelLoader::BindModel(
   } // TODO: check that pretty interesting move with vbo removing
 }
 
-void ModelLoader::LoadTextures(ModelData& model_data) {
-  tinygltf::Model& model = model_data.model;
+void ModelLoader::LoadTextures(
+    std::string_view path, ModelData* model_data) {
+  tinygltf::Model& model = model_data->model;
   auto albedo_tex_id =
       model.materials[0].pbrMetallicRoughness.baseColorTexture.index;
-  model_data.material.albedo = LoadTexture(model, albedo_tex_id);
+  model_data->material.albedo = LoadTexture(path, model, albedo_tex_id);
 //  auto emission_tex_id =
 //      model.materials[0].emissiveTexture.index;
 //  model_data.material.emission = LoadTexture(model, emission_tex_id);
@@ -218,8 +255,8 @@ void ModelLoader::LoadTextures(ModelData& model_data) {
 //  model_data.material.occlusion = LoadTexture(model, occlusion_tex_id);
 }
 
-Texture&& ModelLoader::LoadTexture(
-    const tinygltf::Model& model, int tex_id) {
+Texture ModelLoader::LoadTexture(
+    std::string_view path, const tinygltf::Model& model, int tex_id) {
   if (tex_id == -1) {
     throw "model textures load failed 1";
   }
@@ -228,8 +265,12 @@ Texture&& ModelLoader::LoadTexture(
   if (image_index == -1) {
     throw "model textures load failed";
   }
-  auto& image_uri = model.images[image_index].uri;
-  return Texture(image_uri, GL_RGBA);
+  namespace fs = std::filesystem;
+  fs::path tex_path{path};
+  tex_path = tex_path.parent_path();
+  fs::path image_uri{model.images[image_index].uri};
+  tex_path /= image_uri.make_preferred();
+  return Texture(tex_path.string(), GL_RGBA);
 }
 
 Aabb3D ModelLoader::GetAabb(const tinygltf::Model& model) {

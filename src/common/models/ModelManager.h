@@ -9,11 +9,20 @@
 #include "Obstacle.h"
 #include "Player.h"
 
+class UiDynamicSprite;
+
 class ModelManager {
  public:
   ModelManager(UiSharedResources& ui_shared_resources);
 
   void Render();
+
+  void RenderOnMap(
+      UiDynamicSprite* sp_player,
+      UiDynamicSprite* sp_enemy,
+      UiDynamicSprite* sp_friend,
+      UiDynamicSprite* sp_neutral,
+      UiDynamicSprite* sp_obstacle);
 
   void RenderPicking();
 
@@ -21,16 +30,23 @@ class ModelManager {
 
   /// Creature management
 
-  void Spawn(const ModelData& model_data, size_t num = 1);
+  void Spawn(GLuint vao_id, glm::vec2 position);
 
   void Kill(int id);
 
-  // public is easier, but we could make 1000s of foo(){creature->foo()}
+  const std::vector<std::unique_ptr<ModelData>>& GetLoadedModels() {
+    return mdl_loader_.GetLoadedModels();
+  }
+
   std::vector<Creature> creatures_;
-  /// What is obstacle?
   //// N set of models randomely sparsed on Terrain (non even ID...)... let's...
-  /// ---> PLACEMENT! Let's do placement!
-  std::vector<Obstacle> obstacles_;
+  Obstacle tree_;
+  Obstacle bush_;
+  Obstacle tall_grass_;
+  Obstacle undergrowth_;
+
+  Obstacle map_point_;
+
   Player player_;
 
  private:

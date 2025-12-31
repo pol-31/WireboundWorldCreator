@@ -15,18 +15,13 @@ class PlacementRenderer {
 
   void RenderPicking() const {}
 
-  /// for placement we have pipeline, where some placement modes (like trees)
-  /// have priority over other (like grass), so firstly we place trees and
-  /// then grass placed where trees wasn't placed is their placement areas
-  /// intersects.
-  /// It used everytime we switch tiles or edit existing placement heightmaps
-  void UpdatePipeline();
+  std::vector<GLuint> UpdatePipeline(
+    Texture& placement, int density_level = 0);
 
   void RenderDraw() const;
 
  private:
   void Init();
-  void InitPlacementPipeline();
 
   Tile& tile_;
   GLuint vao_{0};

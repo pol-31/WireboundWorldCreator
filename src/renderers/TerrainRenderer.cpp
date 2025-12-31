@@ -1,5 +1,7 @@
 #include "TerrainRenderer.h"
 
+#include <stb_image.h>
+
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
@@ -17,6 +19,9 @@ TerrainRenderer::TerrainRenderer(Tile& tile, const Paths& paths)
       shader_(
           paths.shader_terrain_vert, paths.shader_terrain_tesc,
           paths.shader_terrain_tese, paths.shader_terrain_frag),
+      shader_subtract_(
+          paths.shader_terrain_vert, paths.shader_terrain_tesc,
+          "../shaders/TerrainSubtract.tese", paths.shader_terrain_frag),
       shader_picking_(
           paths.shader_terrain_vert, paths.shader_terrain_tesc,
           paths.shader_terrain_tese, paths.shader_terrain_picking_frag),
@@ -49,6 +54,10 @@ void TerrainRenderer::Render() {
     glUniform1i(1, 1); // material (temp)
     glUniform1i(2, 2); // normal
     glUniform1i(3, 3); // ao
+    glUniform1i(8, 8);
+    glUniform1i(9, 9);
+    glUniform1i(12, 12);
+    glUniform1i(13, 13); // splat
     shader_picking_.Bind();
     glUniform1i(shader::kTerrainHeightMap, 0);
   }
@@ -57,11 +66,10 @@ void TerrainRenderer::Render() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
   shader_.Bind();
-  glm::mat4 transform = glm::scale(glm::mat4{1.0f}, glm::vec3{tile_.map_scale});
-  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
+  glm::mat4 model = glm::scale(glm::mat4{1.0f}, glm::vec3{tile_.map_scale});
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
 
   glActiveTexture(GL_TEXTURE0);
-
   tile_.map_terrain_height.Bind();
   glActiveTexture(GL_TEXTURE1);
   tile_.map_terrain_ao.Bind();
@@ -71,29 +79,75 @@ void TerrainRenderer::Render() {
   glActiveTexture(GL_TEXTURE3);
   tile_.map_terrain_erosion_thermal.Bind();
 
+  glActiveTexture(GL_TEXTURE8);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.albedo);
+  glActiveTexture(GL_TEXTURE9);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.normal);
+  glActiveTexture(GL_TEXTURE12);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.occlusion);
+  glActiveTexture(GL_TEXTURE13);
+  tile_.map_terrain_splat.Bind();
+
   glBindVertexArray(vao_);
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
 
-  //  glDrawArrays(GL_PATCHES, 0, patch_vertices.size());
   glBindVertexArray(0);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
 
-  /// render SUM-layer borders
-  border_shader_.Bind();
-  glBindVertexArray(border_vao_);
+void TerrainRenderer::RenderSubtract(const Texture& tex_subtract) {
+#ifndef NDEBUG
+  if (shader_subtract_.Update()) {
+    shader_subtract_.Bind();
+    glUniform1i(shader::kTerrainHeightMap, 0);
+    glUniform1i(1, 1); // material (temp)
+    glUniform1i(2, 2); // normal
+    glUniform1i(3, 3); // ao
+    glUniform1i(8, 8);
+    glUniform1i(6, 6);
+    glUniform1i(9, 9);
+    glUniform1i(12, 12);
+    glUniform1i(13, 13); // splat
+    shader_picking_.Bind();
+    glUniform1i(shader::kTerrainHeightMap, 0);
+  }
+#endif
+  if(glfwGetKey(gWindow, GLFW_KEY_1)) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  }
+  shader_subtract_.Bind();
+  glm::mat4 model = glm::scale(glm::mat4{1.0f}, glm::vec3{tile_.map_scale});
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
+
   glActiveTexture(GL_TEXTURE0);
-  glUniform1i(1, 0);
-  border_tex_.Bind();
+  tile_.map_terrain_height.Bind();
+  glActiveTexture(GL_TEXTURE1);
+  tile_.map_terrain_ao.Bind();
 
-  glm::mat4 model_mat = glm::scale(glm::mat4(1.0f), glm::vec3(tile_.map_scale * 64.0f));
-  glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(model_mat));
-  glUniform1f(2, glfwGetTime());
-  glUniform1i(3, static_cast<int>(true)); // green
-  glEnable(GL_CULL_FACE);
-  glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-//  glDrawArrays(GL_TRIANGLES, 0, 36);
-  glDisable(GL_CULL_FACE);
+  glActiveTexture(GL_TEXTURE2);
+  tile_.map_terrain_normal.Bind();
+  glActiveTexture(GL_TEXTURE3);
+  tile_.map_terrain_erosion_thermal.Bind();
+
+  glActiveTexture(GL_TEXTURE6);
+  tex_subtract.Bind();
+
+  glActiveTexture(GL_TEXTURE8);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.albedo);
+  glActiveTexture(GL_TEXTURE9);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.normal);
+  glActiveTexture(GL_TEXTURE12);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.occlusion);
+  glActiveTexture(GL_TEXTURE13);
+  tile_.map_terrain_splat.Bind();
+
+  glBindVertexArray(vao_);
+  glPatchParameteri(GL_PATCH_VERTICES, 4);
+  glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
+
+  glBindVertexArray(0);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 //TODO: remove?
@@ -101,20 +155,23 @@ void TerrainRenderer::Render(TerrainInstanceData* terrain) {
   std::cerr << "TerrainRenderer::Render(terrain) unimplemented" << std::endl;
 }
 
-void TerrainRenderer::RenderWireframe(TerrainInstanceData* terrain) {
+void TerrainRenderer::RenderWireframe(
+    TerrainInstanceData* terrain, BaseInstanceData* data) {
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   shader_wireframe_.Bind();
   glActiveTexture(GL_TEXTURE0);
 //  terrain->hmap.Bind();
   terrain->data.hmap.Bind();
-  glm::mat4 transform = glm::mat4{1.0f};
-  transform = glm::scale(transform, glm::vec3(tile_.map_scale));
-  transform = glm::translate(transform, terrain->translate);
-  transform *= glm::mat4_cast(terrain->rotate);
-  transform = glm::scale(transform, terrain->scale);
-  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
 
-  glUniform3fv(1, 1, glm::value_ptr(terrain->color));
+  glm::mat4 object_model = glm::mat4{1.0f};
+  object_model = glm::translate(object_model, terrain->translate);
+  object_model *= glm::mat4_cast(terrain->rotate);
+  object_model = glm::scale(object_model, terrain->scale);
+  glm::mat4 map_model = glm::scale(glm::mat4(1.0f), glm::vec3(tile_.map_scale));
+  glm::mat4 model = map_model * object_model;
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
+
+  glUniform3fv(1, 1, glm::value_ptr(data->color));
 
   glBindVertexArray(vao_);
   glPatchParameteri(GL_PATCH_VERTICES, 4);
@@ -132,9 +189,8 @@ void TerrainRenderer::RenderSelection(
   shader_selection_.Bind();
   glActiveTexture(GL_TEXTURE0);
   surface->Bind();
-  glm::mat4 transform = glm::mat4{1.0f};
-  transform = glm::scale(transform, glm::vec3(tile_.map_scale));
-  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
+  glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(tile_.map_scale));
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
   // NOT terrain->hmap.Bind();
   glActiveTexture(GL_TEXTURE1);
   selection_mask.Bind();
@@ -152,8 +208,8 @@ void TerrainRenderer::RenderSelection(
 //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
 void TerrainRenderer::RenderPicking() const {
   shader_picking_.Bind();
-  glm::mat4 transform = glm::scale(glm::mat4{1.0f}, glm::vec3{tile_.map_scale});
-  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
+  glm::mat4 model = glm::scale(glm::mat4{1.0f}, glm::vec3{tile_.map_scale});
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
   glActiveTexture(GL_TEXTURE0);
   tile_.map_terrain_height.Bind();
   glBindVertexArray(vao_);
@@ -163,16 +219,19 @@ void TerrainRenderer::RenderPicking() const {
 }
 
 void TerrainRenderer::RenderPicking(TerrainInstanceData* terrain) const {
+  return;
   shader_picking_.Bind();
   glActiveTexture(GL_TEXTURE0);
   terrain->data.hmap.Bind();
-  glm::mat4 transform = glm::mat4{1.0f};
-  transform = glm::scale(transform, terrain->scale * tile_.map_scale);
-  transform *= glm::mat4_cast(terrain->rotate);
-//  transform = glm::rotate(
-//      transform, glm::length(terrain->rotate) - 1, glm::normalize(terrain->rotate));
-  transform = glm::translate(transform, terrain->translate);
-  glUniformMatrix4fv(7, 1, false, glm::value_ptr(transform));
+
+  glm::mat4 object_model = glm::mat4{1.0f};
+  object_model = glm::translate(object_model, terrain->translate);
+  object_model *= glm::mat4_cast(terrain->rotate);
+  object_model = glm::scale(object_model, terrain->scale);
+  glm::mat4 map_model = glm::scale(glm::mat4(1.0f), glm::vec3(tile_.map_scale));
+  glm::mat4 model = map_model * object_model;
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
+
   glBindVertexArray(vao_);
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
@@ -191,12 +250,17 @@ glm::vec3 TerrainRenderer::GetYPosition(int vertex_id) const {
   return {};
 }
 
-void TerrainRenderer::UpdateTransformUniform(glm::mat4 mat) {
+void TerrainRenderer::UpdateTransformUniform(glm::mat4 model) {
   shader_.Bind();
-  glUniformMatrix4fv(7, 1, false, glm::value_ptr(mat));
-//  shader_picking_;
-//  shader_selection_;
-//  shader_wireframe_;
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
+  shader_subtract_.Bind();
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
+  shader_picking_.Bind();
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
+  shader_selection_.Bind();
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
+  shader_wireframe_.Bind();
+  glUniformMatrix4fv(7, 1, false, glm::value_ptr(model));
 }
 
 void TerrainRenderer::Init() {
@@ -305,6 +369,20 @@ void TerrainRenderer::Init() {
   glUniform1i(1, 1); // material (temp)
   glUniform1i(2, 2); // normal
   glUniform1i(3, 3); // ao
+  glUniform1i(8, 8);
+  glUniform1i(9, 9);
+  glUniform1i(12, 12);
+  glUniform1i(13, 13); // splat
+  shader_subtract_.Bind();
+  glUniform1i(shader::kTerrainHeightMap, 0);
+  glUniform1i(1, 1); // material (temp)
+  glUniform1i(2, 2); // normal
+  glUniform1i(3, 3); // ao
+    glUniform1i(6, 6);
+  glUniform1i(8, 8);
+  glUniform1i(9, 9);
+  glUniform1i(12, 12);
+  glUniform1i(13, 13); // splat
   shader_selection_.Bind();
   glUniform1i(shader::kTerrainHeightMap, 0);
   glUniform1i(1, 1); // selection mask
@@ -312,4 +390,107 @@ void TerrainRenderer::Init() {
   glUniform1i(shader::kTerrainHeightMap, 0);
   shader_picking_.Bind();
   glUniform1i(shader::kHeightMapPickingHeightMap, 0);
+
+  InitAlbedo();
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.albedo);
+  LoadMaterialTexture(0, "../assets/materials/grass/grass_albedo.png");
+  LoadMaterialTexture(1, "../assets/materials/mud/mud_albedo.png");
+  LoadMaterialTexture(2, "../assets/materials/rock/rock_albedo.png");
+  LoadMaterialTexture(3, "../assets/materials/sand/sand_albedo.png");
+  glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+
+  InitNormal();
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.normal);
+  LoadMaterialTexture(0, "../assets/materials/grass/grass_normal.png");
+  LoadMaterialTexture(1, "../assets/materials/mud/mud_normal.png");
+  LoadMaterialTexture(2, "../assets/materials/rock/rock_normal.png");
+  LoadMaterialTexture(3, "../assets/materials/sand/sand_normal.png");
+  glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+
+  InitAo();
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.occlusion);
+  LoadMaterialTexture(0, "../assets/materials/grass/grass_ao.png");
+  LoadMaterialTexture(1, "../assets/materials/mud/mud_ao.png");
+  LoadMaterialTexture(2, "../assets/materials/rock/rock_ao.png");
+  LoadMaterialTexture(3, "../assets/materials/sand/sand_ao.png");
+  glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+}
+
+void TerrainRenderer::InitAlbedo() {
+  glGenTextures(1, &material_.albedo);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.albedo);
+  int width = 2048;
+  int height = 2048;
+  int layers = 4;
+  int mipLevels = 1 + floor(log2(std::max(width, height)));
+  glTexStorage3D(
+      GL_TEXTURE_2D_ARRAY,
+      mipLevels,
+      GL_SRGB8_ALPHA8,
+      width,
+      height,
+      layers
+  );
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+}
+
+void TerrainRenderer::InitNormal() {
+  glGenTextures(1, &material_.normal);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.normal);
+  int width = 2048;
+  int height = 2048;
+  int layers = 4;
+  int mipLevels = 1 + floor(log2(std::max(width, height)));
+  glTexStorage3D(
+      GL_TEXTURE_2D_ARRAY,
+      mipLevels,
+      GL_SRGB8_ALPHA8,
+      width,
+      height,
+      layers
+  );
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+}
+
+void TerrainRenderer::InitAo() {
+  glGenTextures(1, &material_.occlusion);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, material_.occlusion);
+  int width = 2048;
+  int height = 2048;
+  int layers = 4;
+  int mipLevels = 1 + floor(log2(std::max(width, height)));
+  glTexStorage3D(
+      GL_TEXTURE_2D_ARRAY,
+      mipLevels,
+      GL_SRGB8_ALPHA8,
+      width,
+      height,
+      layers
+  );
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+}
+
+
+void TerrainRenderer::LoadMaterialTexture(int layer, std::string_view path) {
+  GLint channels;
+  int width, height;
+  unsigned char* pixels = stbi_load(path.data(), &width, &height, &channels, 4);
+  glTexSubImage3D(
+        GL_TEXTURE_2D_ARRAY,
+        0,
+        0, 0, layer,
+        width, height, 1,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        pixels);
+  stbi_image_free(pixels);
 }

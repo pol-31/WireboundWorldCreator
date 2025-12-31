@@ -6,7 +6,9 @@
 #include "../core/Tile.h"
 #include "../common/Paths.h"
 #include "../common/Shader.h"
+#include "../common/Material.h"
 
+struct BaseInstanceData;
 struct TerrainInstanceData;
 
 class TerrainRenderer {
@@ -19,7 +21,8 @@ class TerrainRenderer {
 
   void Render();
 
-  //TODO: fbo shoudl be bind at Interface::Draw() or somewhere else
+  void RenderSubtract(const Texture& tex_subtract);
+
   void RenderPicking() const;
 
   void RenderSelection(
@@ -28,7 +31,8 @@ class TerrainRenderer {
 
   void Render(TerrainInstanceData* terrain);
 
-  void RenderWireframe(TerrainInstanceData* terrain);
+  void RenderWireframe(
+      TerrainInstanceData* terrain, BaseInstanceData* data);
 
   void RenderPicking(TerrainInstanceData* terrain) const;
 
@@ -37,6 +41,14 @@ class TerrainRenderer {
  void UpdateTransformUniform(glm::mat4 mat);
 
  private:
+  static void LoadMaterialTexture(int layer, std::string_view path);
+
+  void InitAlbedo();
+
+  void InitNormal();
+
+  void InitAo();
+
   void Init();
 
   void DeInit();
@@ -49,6 +61,7 @@ class TerrainRenderer {
   GLuint vbo_quad_{0};
   GLuint vbo_ids_{0};
   Shader shader_;
+  Shader shader_subtract_;
   Shader shader_selection_;
   Shader shader_wireframe_;
   Shader shader_picking_;
@@ -59,6 +72,13 @@ class TerrainRenderer {
   GLuint border_ebo_ = 0;
   Shader border_shader_;
   Texture border_tex_;
+
+  Material mat_grass_;
+  Material mat_mud_;
+  Material mat_rock_;
+  Material mat_sand_;
+
+  TerrainMaterial material_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_TERRAINRENDERER_H_

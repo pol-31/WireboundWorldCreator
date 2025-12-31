@@ -26,7 +26,10 @@ class UiSelection {
     DeInit();
   }
 
-  void SetIdBounds(GLuint bound_min, GLuint bound_max);
+  void SetIdBounds(GLuint bound_min, GLuint bound_max) {
+    bound_min_ = bound_min;
+    bound_max_ = bound_max;
+  }
 
   void Render();
 
@@ -84,8 +87,6 @@ class UiSelection {
 
   void RenderSelectionCircle();
 
-  void ResetBufferData();
-
   void ResetConfig();
 
   void ClearMask();
@@ -98,8 +99,6 @@ class UiSelection {
   void UpdateSurfaceSelection(float radius);
 
   void ApplySelection();
-
-  void SelectPoints();
 
   UiDynamicSprite sp_circle_;
   UiSharedResources& ui_shared_resources_;
@@ -114,17 +113,17 @@ class UiSelection {
   UiDynamicSprite sp_selection_;
 
   Texture selection_tex_surface_;
-  Shader shader_select_;
 
-  glm::vec2 mouse_check_point_;
+  glm::vec2 mouse_check_point_ = glm::vec2(0.0f);
   bool start_is_end_ = true;
-  bool pressed_ = false;
 
   GLuint vertex_num_ = 0;
   float circle_radius_ = 0.05f;
 
   bool mod_ctrl_ = false;
   bool mod_shift_ = false;
+
+  double last_update_time_ = 0.0f;
 
   // parallel and we could merge it... and slightly destroy the readability
   glm::vec2 rectangle_start_pos_ = glm::vec2(0.0f);
@@ -137,10 +136,10 @@ class UiSelection {
   GLuint bound_min_ = 0;
   GLuint bound_max_ = 0;
 
-  GLFWcursor* csr_rectangle_;
-  GLFWcursor* csr_circle_;
-  GLFWcursor* csr_lasso_;
-  GLFWcursor* csr_tweak_;
+  GLFWcursor* csr_rectangle_ = nullptr;
+  GLFWcursor* csr_circle_ = nullptr;
+  GLFWcursor* csr_lasso_ = nullptr;
+  GLFWcursor* csr_tweak_ = nullptr;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UISELECTION_H_
