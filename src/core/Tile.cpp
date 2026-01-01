@@ -51,8 +51,24 @@ void Tile::UpScale() {
 
 void Tile::DownScale() {
   float new_map_scale = map_scale / details::kMapScaleFactor;
-  map_scale = std::max(new_map_scale, 0.01f);
-  std::cout << map_scale << std::endl;
+  map_scale = std::max(new_map_scale, 0.05f);
+}
+
+void Tile::OnScroll(float yoffset) {
+  if (yoffset > 0.0f)
+    target_map_scale *= details::kMapScaleFactor;
+  else
+    target_map_scale /= details::kMapScaleFactor;
+
+  target_map_scale = std::clamp(target_map_scale, 0.05f, 100.0f);
+}
+
+void Tile::UpdateMapScale(float delta_time) {
+  float response = glm::mix(6.0f, 14.0f,
+    glm::clamp(glm::log(map_scale) / glm::log(100.0f), 0.0f, 1.0f));
+  // const float response = 12.0f; // feel parameter
+  map_scale += (target_map_scale - map_scale) *
+               (1.0f - std::exp(-response * delta_time));
 }
 
 void Tile::UpdateTerrainHmap(Texture32F&& hmap) {

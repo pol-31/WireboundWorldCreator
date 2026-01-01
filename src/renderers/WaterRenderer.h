@@ -6,8 +6,6 @@
 #include "../core/Tile.h"
 #include "../common/Paths.h"
 #include "water/Ocean.h"
-#include "../environment/Environment.h"
-#include "../environment/Wind.h"
 
 class WaterRenderer {
  public:
@@ -20,8 +18,6 @@ class WaterRenderer {
   void Render();
 
   void RenderPicking() const;
-
-  [[nodiscard]] glm::vec3 GetYPosition(int vertex_id) const;
 
   void UpdateOcean(OceanTraits traits);
 
@@ -45,7 +41,7 @@ class WaterRenderer {
   GLuint vbo_quad_{0};
   GLuint vbo_ids_{0};
 
-  Environment environment_;
+  Texture tex_foam_;
 
   std::unique_ptr<Ocean> ocean_; // TODO: try to stack, not heap
 };

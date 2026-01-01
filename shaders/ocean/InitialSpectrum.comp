@@ -1,4 +1,4 @@
-#version 450 core
+#version 460 core
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -18,7 +18,7 @@ layout (location = 8) uniform float CutoffLow;
 layout (location = 9) uniform uint CascadeId;
 
 const float GravityAcceleration = 9.81f;
-const float Depth = 10000.0f;
+const float Depth = 100.0f;
 
 struct SpectrumParameters {
     float scale;
@@ -125,7 +125,10 @@ void CalculateInitialSpectrum(uvec3 id) {
 
     SpectrumParameters init_spectrum = spectrums.Spectrum[CascadeId];
 
-    if (kLength <= CutoffHigh && kLength >= CutoffLow) {
+    float cutoff_h = 2.0f;
+    float cutoff_l = 0.01f;
+
+    if (kLength >= cutoff_l && kLength <= cutoff_h) {
         float kAngle = atan(k.y, k.x);
         float omega = Frequency(kLength, GravityAcceleration, Depth);
         imageStore(WavesData, ivec2(id.xy), vec4(k.x, 1.0 / kLength, k.y, omega));

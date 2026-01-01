@@ -1,4 +1,4 @@
-#version 450 core
+#version 460 core
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -11,9 +11,13 @@ layout (binding = 12, rgba32f) readonly uniform image2D WavesData;
 layout (binding = 14, rgba32f) readonly uniform image2D H0;
 
 layout(std140, binding = 2) uniform Environment {
+    vec3 sun_color;
+    float _pad1;
+    vec3 sun_direction;
+    float wind_speed;
+    vec2 wind_velocity;
     float time;
     float delta_time;
-    vec2 wind_velocity;
 } environment;
 
 vec2 ComplexMult(vec2 a, vec2 b) {

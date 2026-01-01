@@ -23,27 +23,33 @@ WireboundWorldCreator::~WireboundWorldCreator() {
 void WireboundWorldCreator::RunRenderLoop() {
   CheckGlobalData();
 //  camera_.UpdateProjectionMatrix();
+  glEnable(GL_STENCIL_TEST);
+  glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
   while (!glfwWindowShouldClose(gWindow)) {
     /// internal fbos could modify it
+    glStencilFunc(GL_ALWAYS, 0, 0xFF);
+    glStencilMask(0xFF);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     auto current_frame = static_cast<float>(glfwGetTime());
     gDeltaTime = current_frame - last_frame;
     last_frame = current_frame;
-    camera_.Update();
+    tile_renderer_.cur_tile_.UpdateMapScale(gDeltaTime);
     cubemap_.Render();
+
+    /// no camera update, each mode do (requires map scale, what may differ)
 
     global_data_.UpdateCursorPos();
     global_data_.UpdateHoveredId();
 
 //    global_data_.event_queue.Process();
 
-    tile_renderer_.Render();
+    // tile_renderer_.Render();
     ui_renderer_.Render();
 
     picking_fbo_.Bind();
-    tile_renderer_.RenderPicking();
+    // tile_renderer_.RenderPicking();
     ui_renderer_.RenderPicking();
 
     glfwPollEvents();

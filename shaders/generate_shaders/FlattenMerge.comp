@@ -14,5 +14,5 @@ void main() {
     float mesh_value = imageLoad(mesh, coord).r;
     float hmap_value = imageLoad(hmap_sum, coord).r;
     float new_height = mesh_value + hmap_value;
-    imageStore(hmap_sum, coord, vec4(mesh_value)); // clip to border
+    imageStore(hmap_sum, coord, vec4(new_height)); // clip to border
 }

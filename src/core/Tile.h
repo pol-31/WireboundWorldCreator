@@ -70,6 +70,7 @@ struct TileInfo {
 struct Tile {
   /// shared for tiles
   float map_scale = 64.0f;
+  float target_map_scale = 64.0f;
 
   /// unique for each tile
   int pos_x;
@@ -101,6 +102,10 @@ struct Tile {
   std::vector<uint8_t> water_heights_init_;
 
   explicit Tile(const TileInfo& tile_info);
+
+  void OnScroll(float yoffset);
+
+  void UpdateMapScale(float delta_time);
 
   void UpScale();
 

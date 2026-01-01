@@ -11,6 +11,7 @@
 #include "../common/Paths.h"
 
 #include "../renderers/AllRenderers.h"
+#include "Environment.h"
 
 class TileRenderer {
  public:
@@ -26,12 +27,16 @@ class TileRenderer {
 
   void Render();
 
+  void RenderUiTerrain(const Texture& tex_subtract);
+
   void RenderPicking();
 
   glm::vec3 GetPosition(int vertex_id);
 
   std::vector<TileInfo> map_;
   Tile cur_tile_;
+
+  Environment environment_;
 
   TerrainRenderer terrain;
   WaterRenderer water;

@@ -42,9 +42,7 @@ class UiEditTerrain final : public IUiEdit {
   /// update base hmap (after modifying)
   void UpdateConfig() override;
 
-  void SetInstanceId(int id) override {
-    SetTerrainData(id);
-  }
+  void SetInstanceId(int id) override;
 
   bool Press(int id) override;
 
@@ -54,10 +52,9 @@ class UiEditTerrain final : public IUiEdit {
 
   bool Render() override;
 
-  // can't use Render(terrain_data) because of must-have virtual-ness
-  void SetTerrainData(int id);
-
   void RenderPicking() override;
+
+  void RemoveInstance(GLuint id) override;
 
   NoiseTerrainData Generate();
 
@@ -83,54 +80,39 @@ class UiEditTerrain final : public IUiEdit {
 
   static int CalculateGradientId(const glm::vec3& rotation);
 
-
-
   void RenderNoiseConfig();
 
   void RenderPickingNoiseConfig();
 
-  int GetSliderNoiseId(glm::vec2 mouse_pos);
-
-
-
-
-  float GetEntryHeight();
-
   glm::vec4 GetLayerCentre();
 
-  //TODO: integrate with UiSlotsTerrain::instances_
-  std::vector<TerrainInstanceData> instances_;
+  [[nodiscard]] bool IsHmapNan() const noexcept;
 
+  std::vector<TerrainInstanceData> instances_;
   const int& selected_id_;
   std::vector<BaseInstanceData>& base_instances_;
 
-
-  Texture32F& tex_hmap_;
-  std::vector<GLfloat>& hmap_heights_;
-
-  GLuint vao_id_;
-  GLuint vbo_id_;
-  GLuint ebo_id_;
-  GLuint fbo_id_;
-  GLuint fbo_tex_id_;
+  std::mt19937 random_generator_;
 
   GLuint ssbo_atomic_modified_;
+  glm::vec4 pivot_offset_ = glm::vec4(0.0f);
+  Shader shader_merge_noises_;
+  Shader shader_flatten_prep_;
+  Shader shader_flatten_step_;
+  Shader shader_flatten_merge_;
 
   UiDynamicSprite accept_;
   UiTextInput name_;
-
   UiSlider2D color_palette_;
   UiSliderH2 color_brightness_;
   UiDynamicSprite color_indicator_;
-
   UiDynamicSprite random_generate_;
-
   UiTextModeId text_noise_invert_;
   UiTextModeId text_noise_tiling_;
   UiTextModeId text_noise_strength_;
 
-  UiEditConfigTerrain noise_layer_config_; // noise1-8
-  // all needed data stored in vector instances_[]
+  UiEditConfigTerrain noise_layer_config_;
+  UiConfigWindow& ui_noise_config_;
 
   TerrainNoisePerlin noise_perlin_;
   TerrainNoiseCellular noise_cellular_;
@@ -142,31 +124,12 @@ class UiEditTerrain final : public IUiEdit {
   TerrainNoiseFbmPerlinWarp noise_fmb_perlin_warp_;
   std::array<ITerrainNoise*, 8> noises_;
 
-  UiConfigWindow& ui_noise_config_;
-
-  std::mt19937 random_generator_;
-
-  Shader shader_merge_noises_; /// 7 times merging (8 noises)
-
-  /// generate hmap from transformed layers
-  Shader shader_flatten_prep_;
-  Shader shader_flatten_step_;
-  Shader shader_flatten_merge_;
-
-  Texture32F tex_mesh_; /// temp for base hmap baking
-
-  //  ITerrainNoise* selected_noise_ = nullptr;
-
   UiEventHandler<
       static_cast<int>(data::VboIdMain::kTerrainEditNoiseHmap) -
       static_cast<int>(data::VboIdMain::kTerrainEditDesk) + 1
       > ui_event_handler_;
 
   UiSharedResources& ui_shared_resources_;
-
-  int pressed_strength_id_ = -1.0f;
-
-  glm::vec4 pivot_offset_ = glm::vec4(0.0f);
 };
 
 class UiTerrainBake final : public UiWindowAppear {
@@ -273,6 +236,7 @@ class UiTerrainBake final : public UiWindowAppear {
 
   Shader shader_gen_nmap_;
   Shader shader_gen_slope_map_;
+  Shader shader_gen_splat_map_;
   Shader shader_gen_ao_map_;
   Shader shader_perturbate_;
 

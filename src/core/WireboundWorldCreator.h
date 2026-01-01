@@ -2,8 +2,8 @@
 #define WIREBOUNDWORLDCREATOR_SRC_WIREBOUNDWORLDCREATOR_H_
 
 #include "../common/Paths.h"
-#include "../io/Cameras.h"
-#include "../environment/Cubemap.h"
+#include "../io/Camera.h"
+#include "Cubemap.h"
 #include "../common/GlobalGlfwCallbackData.h"
 #include "../common/PickingFramebuffer.h"
 #include "TileRenderer.h"
@@ -25,7 +25,7 @@ class WireboundWorldCreator {
   /// throw an exception in case of uninitialized global_data_ members
   void CheckGlobalData();
 
-  CameraHandler camera_;
+  Camera camera_;
   Cubemap cubemap_;
 
   GlobalGlfwCallbackData global_data_;

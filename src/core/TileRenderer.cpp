@@ -14,6 +14,7 @@
 TileRenderer::TileRenderer(const Paths& paths)
     : map_(LoadMap(paths.world_map)),
       cur_tile_(map_[0]),
+      environment_(paths),
       terrain(cur_tile_, paths),
       water(cur_tile_, paths),
       fences(cur_tile_, paths),
@@ -43,8 +44,31 @@ void TileRenderer::DownScale() {
 }*/
 
 void TileRenderer::Render() {
+  environment_.Update();
   if (show_terrain_) {
     terrain.Render();
+  }
+  if (show_water_) {
+    water.Render();
+  }
+  if (show_fences_) {
+    fences.Render();
+  }
+  if (show_roads_) {
+    roads.Render();
+  }
+  if (show_objects_) {
+    objects.Render();
+  }
+  if (show_placement_) {
+    placement.Render();
+  }
+}
+
+void TileRenderer::RenderUiTerrain(const Texture& tex_subtract) {
+  environment_.Update();
+  if (show_terrain_) {
+    terrain.RenderSubtract(tex_subtract);
   }
   if (show_water_) {
     water.Render();
@@ -85,15 +109,16 @@ void TileRenderer::RenderPicking() {
 }
 
 glm::vec3 TileRenderer::GetPosition(int vertex_id) {
-  if (vertex_id < 1024 * 1024) {
-    return terrain.GetYPosition(vertex_id);
-  } else if (vertex_id < 2 * 1024 * 1024) {
-    return water.GetYPosition(vertex_id);
-  } else if (vertex_id < 3 * 1024 * 1024) {
-    return fences.GetYPosition(vertex_id);
-  } else {
-    return objects.GetYPosition(vertex_id);
-  }
+  return glm::vec3(0.0f);
+  // if (vertex_id < 1024 * 1024) {
+  //   return terrain.GetYPosition(vertex_id);
+  // } else if (vertex_id < 2 * 1024 * 1024) {
+  //   return water.GetYPosition(vertex_id);
+  // } else if (vertex_id < 3 * 1024 * 1024) {
+  //   return fences.GetYPosition(vertex_id);
+  // } else {
+  //   return objects.GetYPosition(vertex_id);
+  // }
 }
 
 std::vector<TileInfo> TileRenderer::LoadMap(std::string_view world_map) {

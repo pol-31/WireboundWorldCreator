@@ -26,7 +26,11 @@ UiEditOcean::UiEditOcean(
                          this->RandomGenerate();
                        }),
       ocean_layer_config_(ui_shared_resources, text_renderer),
-      ocean_layers_({{data::TextId::kLayer1}, {data::TextId::kLayer1}, {data::TextId::kLayer1}}),
+      ocean_layers_({
+        {data::TextId::kLayer1, {100.0f, 20'000.0f, 1'0000, 0.6f, 0.7f, 5.0f, 0.7f, 1.1f}},
+        {data::TextId::kLayer2, {100.0f, 20'000.0f, 1'0000, 0.6f, 0.7f, 5.0f, 0.7f, 1.1f}},
+        {data::TextId::kLayer3, {100.0f, 20'000.0f, 1'0000, 0.6f, 0.7f, 5.0f, 0.7f, 1.1f}}
+      }),
 
       ui_event_handler_({
           &pin_,
@@ -195,24 +199,14 @@ void UiEditOcean::RenderPicking() {
 void UiEditOcean::Generate() {
   OceanTraits traits {
       0.0f,
+    {},
       ocean_layers_[0].GetConfig(),
       ocean_layers_[1].GetConfig(),
       ocean_layers_[2].GetConfig(),
   };
-  // traits.near.scale = 100.0f;
-  // traits.near.fetch = 10000.0f;
-  // traits.near = OceanLayerTraits{100.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f};
-  // traits.mid = OceanLayerTraits{20.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f};
-  // traits.far = OceanLayerTraits{10.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f};
-  // traits = {
-  //     0.0f,
-  //   OceanLayerTraits{100.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f},
-  //       OceanLayerTraits{20.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f},
-  //       OceanLayerTraits{10.0f, 10000.0f, 1.0f, 0.2f, 3.3f, 0.1f, 1.0f}
-  // };
-  instances_[selected_id_].near = traits.near;
-  instances_[selected_id_].mid = traits.mid;
-  instances_[selected_id_].far = traits.far;
+  instances_[selected_id_].near = ocean_layers_[0].GetConfigUnscaled();
+  instances_[selected_id_].mid = ocean_layers_[1].GetConfigUnscaled();
+  instances_[selected_id_].far = ocean_layers_[2].GetConfigUnscaled();
   TileRenderer* tile_renderer =
       ui_shared_resources_.global_glfw_callback_data_.tile_renderer;
   tile_renderer->water.UpdateOcean(traits);

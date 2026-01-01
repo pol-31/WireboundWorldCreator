@@ -66,7 +66,7 @@ class TerrainNoiseBase : public ITerrainNoise {
       std::uniform_real_distribution<float>& dist_float,
       std::bernoulli_distribution& dist_bool) noexcept override {
     for (int i = 0; i < value_.size(); ++i) {
-      value_[i] = dist_float(gen);
+      value_[i] = dist_float(gen) * 0.8f + 0.2f; // to avoid small values
     }
     base_data_.strength = dist_float(gen);
     base_data_.do_tiling = dist_bool(gen);

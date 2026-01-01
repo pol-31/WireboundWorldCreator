@@ -17,11 +17,14 @@ class UiWaterMode final : public IUiMode {
       UiSlots& ui_slots,
       WindowQueue& window_queue,
       TextRenderer& text_renderer,
-      UiConfigWindow& ui_config_window);
+      UiConfigWindow& ui_config_window,
+      ModelManager& mdl_manager);
 
   void Render() override;
 
   void RenderPicking() override;
+
+  void RenderMapPoints();
 
   void Setup() override;
 
@@ -30,6 +33,14 @@ class UiWaterMode final : public IUiMode {
   int GetPrerenderTextIdStart() const noexcept override;
 
   int GetPrerenderTextIdEnd() const noexcept override;
+
+  void RenderWorld() override;
+
+  void RenderPickingWorld() override;
+
+  void AddPlacementPoint(GLuint pressed_id);
+
+  void HandleSelection();
 
 //  void UpdateOcean();
 //
@@ -40,10 +51,23 @@ class UiWaterMode final : public IUiMode {
   UiDynamicSprite btn_update_;
   UiDynamicSprite sp_selected_mode_;
 
-  std::vector<BaseInstanceData> instances_;
   UiSlots& ui_slots_;
-  UiEditOcean ui_edit_;
+
+  std::vector<BaseInstanceData> instances_ocean_;
+  std::vector<BaseInstanceData> instances_river_;
+  UiEditOcean ui_edit_ocean_;
+  UiEditRiver ui_edit_river_;
+
+  bool ocean_ = true; // otherwise river
+
   UiSelection ui_selection_;
+
+  ModelManager& mdl_manager_;
+
+  UiEventHandler<
+      static_cast<int>(data::VboIdMain::kWaterRiver) -
+      static_cast<int>(data::VboIdMain::kWaterUpdate) + 1
+      > ui_event_handler_;
 };
 
 namespace water {

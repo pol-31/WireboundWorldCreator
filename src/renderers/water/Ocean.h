@@ -5,24 +5,23 @@
 
 #include "../../common/GaussianNoise.h"
 #include "../../common/Paths.h"
-#include "../../environment/Environment.h"
-#include "WavesCascade.h"
+#include "../../core/Environment.h"
 #include "../../modes/UiWaterConfig.h"
+#include "Ifft.h"
 
 #include "../../io/Window.h"
 
 class Ocean {
  public:
-  Ocean(const Paths& paths, const Environment& environment,
-        const OceanTraits& traits);
-  ~Ocean();
+  Ocean(const Paths& paths, const OceanTraits& traits);
+
+  ~Ocean() {
+    DeInit();
+  }
 
   void BindRenderData();
 
   void Update();
-  void UpdateSpectrum(const OceanTraits& traits);
-
-  float GetWaterHeight(/*Vector3 position*/);
 
  private:
   struct SpectrumSettings {
@@ -36,37 +35,56 @@ class Ocean {
     float shortWavesFade;
   };
 
-  /// using ocean_traits_ubo_id_
-  void OceanTraitsToGpu() const;
-  static SpectrumSettings GenSpectrumSettings(
-      const OceanLayerTraits& traits, const Wind& wind);
+  static SpectrumSettings GenSpectrumSettings(const OceanLayerTraits& traits);
 
-  void Init(const OceanTraits& traits);
+  static float JonswapAlpha(float fetch, float windSpeed);
+
+  static float JonswapPeakFrequency(float fetch, float windSpeed);
+
+  void Init();
+
   void DeInit();
 
-  int size_{64};
+  void CalculateInitials(int cascade_id, float length_scale,
+                         float cutoff_low, float cutoff_high);
+  void PackIfftData(int cascade_id);
+  void UnPackIfftData(int cascade_id, float lambda);
 
-  WavesCascade cascade_near_;
-  WavesCascade cascade_mid_;
-  WavesCascade cascade_far_;
 
-  //TODO: replace by data from tile_
+  void UpdateCascade(int cascade_id, float lambda);
+
+  void InitTexArray(GLuint* id);
+
+  /// using ocean_traits_ubo_id_
+  void OceanTraitsToGpu() const;
+
+  int size_ = 64;
+
   OceanTraits traits_;
 
-  float length_scale_near_;
-  float length_scale_mid_;
-  float length_scale_far_;
+  glm::vec3 layers_scales_ = glm::vec3(1.0f); /// near, mid, far
 
   Shader init_spectrum_shader_;
-  Shader time_spectrum_shader_; // time-dependent
+  Shader time_spectrum_shader_;
   Shader textures_merger_shader_;
 
   Texture32F noise_tex_;
   Ifft fft_;
 
-  // for OceanTraitsToGpu()
   GLuint ocean_traits_ubo_id_{0};
-  const Environment& environment_;
+
+  GLuint tex_init_spectrum_ = 0;
+  GLuint tex_precomputed_data_ = 0;
+  GLuint tex_displacement_ = 0;
+  GLuint tex_derivatives_ = 0;
+  GLuint tex_turbulence_ = 0;
+
+  /// buffers
+  Texture32F buffer_tex_;
+  Texture32F dxdz_tex_;
+  Texture32F dydxz_tex_;
+  Texture32F dyxdyz_tex_;
+  Texture32F dxxdzz_tex_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_WATER_OCEAN_H_

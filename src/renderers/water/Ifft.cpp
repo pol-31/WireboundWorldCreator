@@ -35,6 +35,8 @@ void Ifft::Compute(Texture32F& input, Texture32F& buffer) const {
   auto log_size = static_cast<int>(std::log2(size_));
   bool ping_pong = false;
 
+  float zeros2[2] = {0.0f, 0.0f};
+  glClearTexImage(buffer.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
   ifft_shader_.Bind();
   BindImageTexture(shader::kOceanPrecomputeData,
                    precomputed_data_, GL_READ_ONLY);

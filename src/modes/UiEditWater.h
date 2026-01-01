@@ -12,6 +12,7 @@
 #include "UiEditShared.h"
 #include "UiWaterConfig.h"
 #include "../common/BaseInstanceData.h"
+#include "../common/MapPoint.h"
 
 //TODO:
 // ocean instance: 1 instance as 1 layer.... let's refactor.....
@@ -94,6 +95,7 @@ class UiEditOcean : public IUiEdit {
 };
 
 struct RiverTraits {
+  std::vector<MapPoint> map_points;
   float transparency;
   float viscosity;
 };

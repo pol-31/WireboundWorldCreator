@@ -1,0 +1,33 @@
+#version 460 core
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+layout (binding = 0, r8) uniform writeonly image2D splat_map;
+layout (binding = 1, r8) uniform readonly image2D slope_map;
+layout (binding = 2, r32f) uniform readonly image2D height_map;
+
+void main() {
+    ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+
+    float slope = imageLoad(slope_map, id).r;
+    float h     = imageLoad(height_map, id).r;
+
+    // --- slope → RGB ---
+    float wX = 1.0 - smoothstep(0.15, 0.25, slope);
+    float wZ = smoothstep(0.55, 0.75, slope);
+    float wY = clamp(1.0 - wX - wZ, 0.0, 1.0);
+
+    vec3 rgb = vec3(wX, wY, wZ);
+    rgb /= max(dot(rgb, vec3(1.0)), 1e-5);
+
+    // --- water ---
+    float shore = 0.0;
+    float water = 1.0 - smoothstep(0.5 - shore, 0.5 + shore, h);
+    if (h < 0.1f) {
+//        rgb = vec3(0.0f);
+        water = 1.0f;
+    }
+
+    uvec4 packed = uvec4(clamp(vec4(rgb, water) * 255.0, 0.0, 255.0));
+    imageStore(splat_map, id, packed);
+}
