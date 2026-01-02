@@ -3,17 +3,14 @@
 
 #include <glm/glm.hpp>
 
-#include "Ui.h"
 #include "../common/TextRenderer.h"
 #include "../common/UiDebugger.h"
+#include "Ui.h"
 
 class UiTextInput final : public UiBase {
  public:
-  UiTextInput(
-      TextRenderer& text_renderer,
-      UiDynamicSprite&& back,
-      UiDynamicSprite&& text,
-      float extra_width = 0.0f);
+  UiTextInput(TextRenderer& text_renderer, UiDynamicSprite&& back,
+              UiDynamicSprite&& text, float extra_width = 0.0f);
 
   UiTextInput(UiTextInput&& other) noexcept;
   UiTextInput(const UiTextInput& other) = delete;
@@ -47,9 +44,7 @@ class UiTextInput final : public UiBase {
 
   void SetScissorArea();
 
-  void SetTextTranslate(glm::vec2 translate) {
-    translate_ = translate;
-  }
+  void SetTextTranslate(glm::vec2 translate) { translate_ = translate; }
 
   [[nodiscard]] glm::vec2 GetTextTranslate() const noexcept {
     return translate_;
@@ -57,13 +52,13 @@ class UiTextInput final : public UiBase {
 
  private:
   friend class TextRenderer;
-  UiDynamicSprite sp_back_; // clickable area
-  UiDynamicSprite sp_text_; // print text
+  UiDynamicSprite sp_back_;  // clickable area
+  UiDynamicSprite sp_text_;  // print text
 
   std::string text_input_;
   TextRenderer& text_renderer_;
 
-  glm::vec2 translate_;
+  glm::vec2 translate_ = glm::vec2(0.0f);
 
   /// extra_width_ extends/shrinks showing text area, can be negative
   /// (clickable area still belongs to back_)
@@ -72,9 +67,7 @@ class UiTextInput final : public UiBase {
 
 class UiTextLabelBase : public UiBase {
  public:
-  UiTextLabelBase(
-      TextRenderer& text_renderer,
-      UiDynamicSprite&& text);
+  UiTextLabelBase(TextRenderer& text_renderer, UiDynamicSprite&& text);
 
   UiTextLabelBase(UiTextLabelBase&& other) noexcept;
   UiTextLabelBase(const UiTextLabelBase& other) = delete;
@@ -83,10 +76,10 @@ class UiTextLabelBase : public UiBase {
   UiTextLabelBase& operator=(const UiTextLabelBase& other) = delete;
 
   // implemented by Derived
-//  void Render();
+  //  void Render();
 
   // implemented by Derived
-//  void RenderPicking();
+  //  void RenderPicking();
 
   void Press() override;
 
@@ -105,9 +98,7 @@ class UiTextLabelBase : public UiBase {
 class UiText final : public UiTextLabelBase {
  public:
   /// no text arg; text in the class supposed to change from time to time
-  UiText(
-      TextRenderer& text_renderer,
-      UiDynamicSprite&& text);
+  UiText(TextRenderer& text_renderer, UiDynamicSprite&& text);
 
   UiText(UiText&& other) noexcept = default;
   UiText(const UiText& other) = delete;
@@ -119,17 +110,17 @@ class UiText final : public UiTextLabelBase {
 
   void RenderPicking();
 
-  void Render(std::string_view text, float scale, glm::vec2 translate);
+  void Render(
+      std::string_view text, float scale, glm::vec2 translate,
+      TextRenderer::Alignment alignment = TextRenderer::Alignment::kLeft);
 
-  void RenderPicking(std::string_view text, float scale, glm::vec2 translate);
+  void RenderPicking(
+      std::string_view text, float scale, glm::vec2 translate,
+      TextRenderer::Alignment alignment = TextRenderer::Alignment::kLeft);
 
-  void SetText(std::string_view label) {
-    text_ = label;
-  }
+  void SetText(std::string_view label) { text_ = label; }
 
-  [[nodiscard]] std::string_view GetText() const noexcept {
-    return text_;
-  }
+  [[nodiscard]] std::string_view GetText() const noexcept { return text_; }
 
  private:
   std::string text_;
@@ -138,10 +129,8 @@ class UiText final : public UiTextLabelBase {
 /// prerendered menu text
 class UiTextMenuId final : public UiTextLabelBase {
  public:
-  UiTextMenuId(
-      TextRenderer& text_renderer,
-      UiDynamicSprite&& text,
-      data::TextId text_id = data::TextId::kLoading);
+  UiTextMenuId(TextRenderer& text_renderer, UiDynamicSprite&& text,
+               data::TextId text_id = data::TextId::kLoading);
 
   UiTextMenuId(UiTextMenuId&& other) noexcept = default;
   UiTextMenuId(const UiTextMenuId& other) = delete;
@@ -153,9 +142,7 @@ class UiTextMenuId final : public UiTextLabelBase {
 
   void RenderPicking();
 
-  void SetText(data::TextId text_id) {
-    text_id_ = text_id;
-  }
+  void SetText(data::TextId text_id) { text_id_ = text_id; }
 
   [[nodiscard]] std::string_view GetText() const noexcept {
     return data::gText[static_cast<int>(text_id_)];
@@ -168,10 +155,8 @@ class UiTextMenuId final : public UiTextLabelBase {
 /// prerendered menu text
 class UiTextModeId final : public UiTextLabelBase {
  public:
-  UiTextModeId(
-      TextRenderer& text_renderer,
-      UiDynamicSprite&& text,
-      data::TextId text_id);
+  UiTextModeId(TextRenderer& text_renderer, UiDynamicSprite&& text,
+               data::TextId text_id);
 
   UiTextModeId(UiTextModeId&& other) noexcept = default;
   UiTextModeId(const UiTextModeId& other) = delete;
@@ -183,9 +168,7 @@ class UiTextModeId final : public UiTextLabelBase {
 
   void RenderPicking();
 
-  void SetText(data::TextId text_id) {
-    text_id_ = text_id;
-  }
+  void SetText(data::TextId text_id) { text_id_ = text_id; }
 
  private:
   data::TextId text_id_;

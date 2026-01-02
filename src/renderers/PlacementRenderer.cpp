@@ -1,102 +1,45 @@
 #include "PlacementRenderer.h"
 
-#define GLFW_INCLUDE_NONE
-#include "../common/OpenGLUtility.h"
+#include <iostream>
 
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+#include "../common/OpenGLUtility.h"
 #include "../io/Window.h"
-#include "../common/ShadersBinding.h"
 
-PlacementRenderer::PlacementRenderer(
-    Tile& tile, const Paths& paths)
-    : tile_(tile),
-      shader_(paths.shader_placement_vert, paths.shader_terrain_tesc,
-              paths.shader_terrain_tese, paths.shader_placement_frag),
-      grass_(paths),
-      poisson_shader_("../shaders/PoissonPoints.comp"),
-      density_low_(paths.placement_density_low, GL_RGBA8),
-      density_medium_low_(paths.placement_density_medium_low, GL_RGBA8),
-      density_medium_(paths.placement_density_medium, GL_RGBA8),
-      density_medium_high_(paths.placement_density_medium_high, GL_RGBA8),
-      density_high_(paths.placement_density_high, GL_RGBA8),
-      density_very_high_(paths.placement_density_very_high, GL_RGBA8),
-      density_ultra_high_(paths.placement_density_ultra_high, GL_RGBA8),
-      density_extreme_(paths.placement_density_extreme, GL_RGBA8) {
+PlacementRenderer::PlacementRenderer()
+    : poisson_shader_("../shaders/PoissonPoints.comp"),
+      density_low_("../assets/poisson/500.png", GL_RGBA8),
+      density_medium_low_("../assets/poisson/1000.png", GL_RGBA8),
+      density_medium_("../assets/poisson/2000.png", GL_RGBA8),
+      density_medium_high_("../assets/poisson/5000.png", GL_RGBA8),
+      density_high_("../assets/poisson/10000.png", GL_RGBA8),
+      density_very_high_("../assets/poisson/20000.png", GL_RGBA8),
+      density_ultra_high_("../assets/poisson/40000.png", GL_RGBA8),
+      density_extreme_("../assets/poisson/80000.png", GL_RGBA8) {
   Init();
 }
 
 void PlacementRenderer::Init() {
-  //    return; //TODO: we use not "empty" but fill with tex_coords and pos !!!
-  // Define the vertices (not actually used, but required for the draw call)
-  GLfloat vertices[] = {
-      -0.5f, 0.0f, -0.5f, 1.0f,
-      0.5f, 0.0f, -0.5f, 1.0f,
-      -0.5f, 0.0f,  0.5f, 1.0f,
-      0.5f, 0.0f,  0.5f, 1.0f
-  }; // TODO: its useless
-
-  glGenVertexArrays(1, &vao_);
-  glBindVertexArray(vao_);
-
-  glGenBuffers(1, &vbo_);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-  // Enable the vertex attribute array
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0,
-                        reinterpret_cast<void*>(0));
-
-  shader_.Bind();
-  glUniform1i(shader::kPlacementHeightMap, 0);
-  glUniform1i(shader::kPlacementTexture, 1);
-
-  // poisson_shader_.Bind();
-  // glUniform1i(shader::kPoissonAreaSize, 2);
   placement_temp_ = Texture(1024, 1024, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
-  GLuint black = 0;
-  glClearTexImage(placement_temp_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE, &black);
-
-  //UpdatePipeline();
+  glClearTexImage(placement_temp_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
+                  nullptr);
 }
 
 void PlacementRenderer::Render() {
   grass_.UpdateAnimation(gDeltaTime);
-  if(glfwGetKey(gWindow, GLFW_KEY_7)) {
+  if (glfwGetKey(gWindow, GLFW_KEY_7)) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
   // grass_.Render();
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
 }
 
-void PlacementRenderer::RenderDraw() const {
-  if(glfwGetKey(gWindow, GLFW_KEY_7)) {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  }
-  //TODO; we still need tessellation - we want to see how it should be in game
-  //TODO: render terrain here
+void PlacementRenderer::RenderPicking() {}
 
-  shader_.Bind();
-  glBindVertexArray(vao_);
-
-  glActiveTexture(GL_TEXTURE0);
-  tile_.map_terrain_height.Bind();
-
-  glActiveTexture(GL_TEXTURE1);
-  tile_.map_terrain_slope.Bind();
-//  tile_.cur_placement_mode_tex_->Bind();
-
-  glPatchParameteri(GL_PATCH_VERTICES, 4);
-  glDrawArraysInstanced(GL_PATCHES, 0, 4, 64 * 64);
-
-  glBindVertexArray(0);
-  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-}
-
-std::vector<GLuint> PlacementRenderer::UpdatePipeline(
-    Texture& placement, int density_level) {
+std::vector<GLuint> PlacementRenderer::UpdatePipeline(Texture& placement,
+                                                      int density_level) {
   poisson_shader_.Bind();
   Texture* tex_density = nullptr;
   switch (density_level) {

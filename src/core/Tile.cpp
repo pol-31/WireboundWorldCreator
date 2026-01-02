@@ -2,23 +2,19 @@
 
 #include <iostream>
 
-Tile::Tile(const TileInfo& tile_info)
-    : map_scale(0.1f) {
-  // TODO; use placeholders (full black / full white texture)
+#include "../common/Details.h"
 
-  // position data already valid
-  // (we've thrown at TileRenderer::Init()) in case of missing
-  pos_x = tile_info.pos_x;
-  pos_y = tile_info.pos_y;
-  /// --- --- --- no LOAD --- --- ---
-//  map_terrain_height = Texture32F(tile_info.map_terrain_height, GL_R32F);
-
+Tile::Tile() : map_scale(0.1f) {
   map_terrain_height = Texture32F(1024, GL_R32F);
 
   map_terrain_normal = Texture(1024, 1024, GL_RG8, GL_LINEAR, GL_CLAMP_TO_EDGE);
   map_terrain_slope = Texture(1024, 1024, GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
   map_terrain_ao = Texture(1024, 1024, GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
-  map_terrain_splat = Texture(1024, 1024, GL_RGBA8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+  map_terrain_splat =
+      Texture(1024, 1024, GL_RGBA8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+
+  map_river_mask = Texture(1024, 1024, GL_R8);
+  glClearTexImage(map_river_mask.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
 
   map_terrain_erosion_thermal = Texture32F(1024, GL_R32F);
   map_terrain_erosion_hydraulic = Texture32F(1024, GL_R32F);
@@ -64,8 +60,9 @@ void Tile::OnScroll(float yoffset) {
 }
 
 void Tile::UpdateMapScale(float delta_time) {
-  float response = glm::mix(6.0f, 14.0f,
-    glm::clamp(glm::log(map_scale) / glm::log(100.0f), 0.0f, 1.0f));
+  float response =
+      glm::mix(6.0f, 14.0f,
+               glm::clamp(glm::log(map_scale) / glm::log(100.0f), 0.0f, 1.0f));
   // const float response = 12.0f; // feel parameter
   map_scale += (target_map_scale - map_scale) *
                (1.0f - std::exp(-response * delta_time));
@@ -84,27 +81,24 @@ void Tile::ResetTerrain() {
   GLubyte clear_rgba[4] = {0, 0, 0, 0};
   float clear_r32f = 0.0f;
 
-  glClearTexImage(map_terrain_slope.GetId(),
-                  0, GL_RED, GL_UNSIGNED_BYTE, &clear_r);
-  glClearTexImage(map_terrain_ao.GetId(),
-                  0, GL_RED, GL_UNSIGNED_BYTE, &clear_r);
-  glClearTexImage(map_terrain_splat.GetId(),
-                  0, GL_RGBA, GL_UNSIGNED_BYTE, clear_rgba);
-  glClearTexImage(map_terrain_normal.GetId(),
-                  0, GL_RG, GL_UNSIGNED_BYTE, clear_rg);
-  glClearTexImage(map_water_flow.GetId(),
-                  0, GL_RG, GL_UNSIGNED_BYTE, clear_rg);
-  glClearTexImage(map_water_height.GetId(),
-                  0, GL_RG, GL_UNSIGNED_BYTE, clear_rg);
+  glClearTexImage(map_terrain_slope.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
+                  &clear_r);
+  glClearTexImage(map_terrain_ao.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
+                  &clear_r);
+  glClearTexImage(map_terrain_splat.GetId(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                  clear_rgba);
+  glClearTexImage(map_terrain_normal.GetId(), 0, GL_RG, GL_UNSIGNED_BYTE,
+                  clear_rg);
+  glClearTexImage(map_water_flow.GetId(), 0, GL_RG, GL_UNSIGNED_BYTE, clear_rg);
+  glClearTexImage(map_water_height.GetId(), 0, GL_RG, GL_UNSIGNED_BYTE,
+                  clear_rg);
 
-  glClearTexImage(map_terrain_height.GetId(),
-                  0, GL_RED, GL_FLOAT, &clear_r32f);
-  glClearTexImage(map_terrain_erosion_thermal.GetId(),
-                  0, GL_RED, GL_FLOAT, &clear_r32f);
-  glClearTexImage(map_terrain_erosion_hydraulic.GetId(),
-                  0, GL_RED, GL_FLOAT, &clear_r32f);
-  glClearTexImage(map_water_accum.GetId(),
-                  0, GL_RED, GL_FLOAT, &clear_r32f);
+  glClearTexImage(map_terrain_height.GetId(), 0, GL_RED, GL_FLOAT, &clear_r32f);
+  glClearTexImage(map_terrain_erosion_thermal.GetId(), 0, GL_RED, GL_FLOAT,
+                  &clear_r32f);
+  glClearTexImage(map_terrain_erosion_hydraulic.GetId(), 0, GL_RED, GL_FLOAT,
+                  &clear_r32f);
+  glClearTexImage(map_water_accum.GetId(), 0, GL_RED, GL_FLOAT, &clear_r32f);
 
   std::fill(terrain_heights_.begin(), terrain_heights_.end(), 0.0f);
   std::fill(water_heights_.begin(), water_heights_.end(), 0);

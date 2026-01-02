@@ -1,23 +1,21 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_CORE_UICONFIGWINDOW_H_
 #define WIREBOUNDWORLDCREATOR_SRC_CORE_UICONFIGWINDOW_H_
 
+#include <glad/glad.h>
+
+#include <glm/glm.hpp>
 #include <span>
 
-#include <glad/glad.h>
-#include <glm/glm.hpp>
-
-#include "WindowQueue.h"
-#include "UiComplex.h"
-#include "../modes/UiSharedResources.h"
-#include "../common/TextRenderer.h"
 #include "../common/Text.h"
+#include "../common/TextRenderer.h"
+#include "../modes/UiSharedResources.h"
+#include "UiComplex.h"
+#include "WindowQueue.h"
 
 class UiConfigWindow final : public UiWindowAppear {
  public:
-  UiConfigWindow(
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue,
-      TextRenderer& text_renderer);
+  UiConfigWindow(UiSharedResources& ui_shared_resources,
+                 WindowQueue& window_queue, TextRenderer& text_renderer);
 
   UiConfigWindow(UiConfigWindow&& other) noexcept;
 
@@ -31,8 +29,7 @@ class UiConfigWindow final : public UiWindowAppear {
 
   void Release() override;
 
-  void SetNoise(std::span<float> value,
-                std::span<data::TextId> text_id,
+  void SetNoise(std::span<float> value, std::span<data::TextId> text_id,
                 data::TextId name_id);
 
  private:
@@ -44,6 +41,8 @@ class UiConfigWindow final : public UiWindowAppear {
 
   void RenderPickingSlotsText();
 
+  void SetupUiHierarchy();
+
   UiTextModeId name_;
   UiDynamicSprite btn_save_;
 
@@ -54,7 +53,7 @@ class UiConfigWindow final : public UiWindowAppear {
   UiSliderH2 config_slider_;
   UiTextModeId config_text_;
 
-  //TODO: dublicating the size
+  // TODO: dublicating the size
   std::span<float> value_;
   std::span<data::TextId> text_id_;
 

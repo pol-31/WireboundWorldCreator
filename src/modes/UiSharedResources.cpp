@@ -2,134 +2,54 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../io/Window.h"
 #include "../common/Vbos.h"
-#include "../common/ShadersBinding.h"
+#include "../io/Window.h"
 
-UiSharedResources::UiSharedResources(
-    const Paths& paths,
-    GlobalGlfwCallbackData& global_glfw_callback_data)
-    : tex_ui_(paths.texture_ui, GL_RGBA),
-      tex_ui_mask_(paths.texture_ui_mask, GL_RGBA),
-      static_sprite_shader_(paths.shader_sprite_static_vert,
-                            paths.shader_sprite_frag),
-      menu_icon_shader_(paths.shader_sprite_static_vert,
-                        paths.menu_icon_shader),
-      static_sprite_picking_shader_(paths.shader_sprite_static_vert,
-                                    paths.shader_sprite_picking_frag),
-      mask_sprite_shader_(paths.shader_sprite_static_vert,
-                          paths.shader_sprite_mask_frag),
-      dynamic_sprite_shader_(paths.shader_sprite_dynamic_vert,
-                             paths.shader_sprite_frag),
-      dynamic_sprite_picking_shader_(paths.shader_sprite_dynamic_vert,
-                                     paths.shader_sprite_picking_frag),
-      static_sprite_progress_shader_(paths.shader_sprite_progress_vert,
-                                     paths.shader_sprite_frag),
-      arbitrary_graph_shader_(paths.shader_graph_vert,
-                              paths.shader_graph_frag/*,
-                              paths.shader_graph_geom*/),
-      select_square_shader_("../shaders/SelectSquare.vert",
-                            "../shaders/SelectSquare.frag"),
-      hmap_shader_(paths.shader_sprite_dynamic_vert,
-                   "../shaders/SpriteHmap.frag"),
-      shader_terrain_selection_("../shaders/DrawSelection.comp"),
-      global_glfw_callback_data_(global_glfw_callback_data),
-      shader_model_("../shaders/Model.vert", "../shaders/Model.frag"),
-      shader_model_picking_("../shaders/Model.vert",
-                            "../shaders/ModelPicking.frag"),
-      shader_model_selected_("../shaders/Model.vert",
-                             "../shaders/ModelSelected.frag") {
+UiSharedResources::UiSharedResources(GlfwContext& global_glfw_callback_data)
+    : tex_ui_("../assets/TexAtlas.png", GL_RGBA),
+      tex_ui_mask_("../assets/1.png", GL_RGBA),
+      shader_sp_mask_("../shaders/Sprite.vert", "../shaders/SpriteMask.frag"),
+      shader_sp_("../shaders/Sprite.vert", "../shaders/Sprite.frag"),
+      shader_sp_picking_("../shaders/Sprite.vert",
+                         "../shaders/SpritePicking.frag"),
+      shader_sp_hmap_("../shaders/Sprite.vert", "../shaders/SpriteHmap.frag"),
+      gltf_context_(global_glfw_callback_data),
+      shader_mdl_("../shaders/Model.vert", "../shaders/Model.frag"),
+      shader_mdl_color_("../shaders/Model.vert", "../shaders/ModelColor.frag"),
+      shader_mdl_instanced_("../shaders/ModelInstanced.vert",
+                            "../shaders/Model.frag"),
+      shader_mdl_picking_("../shaders/Model.vert",
+                          "../shaders/ModelPicking.frag"),
+      shader_mdl_selected_("../shaders/Model.vert",
+                           "../shaders/ModelSelected.frag") {
   Init();
-}
-
-void UiSharedResources::UpdateResolution() {
-  static_sprite_shader_.Bind();
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-  dynamic_sprite_shader_.Bind();
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-
-  //Good!
-  static_sprite_picking_shader_.Bind();
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-  dynamic_sprite_picking_shader_.Bind();
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-
-  //  static_sprite_progress_shader_.Bind();
-  //  glUniform1f(shader::kSpriteResolution, res_factor);
-  //  menu_icon_shader_.Bind();
-  //  glUniform1f(shader::kSpriteResolution, res_factor);
-
-
-  mask_sprite_shader_.Bind();
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-
-  glUseProgram(0);
 }
 
 void UiSharedResources::Init() {
   InitVbos();
   InitVaos();
-  glm::vec4 color{1.0f};
-  static_sprite_shader_.Bind();
-  glUniform1i(shader::kSpriteTexture, 0);
-  glUniform1f(shader::kSpriteBrightness, 1.0f);
-  glUniform1f(shader::kSpriteTransparency, 1.0f);
-  glUniform4fv(7, 1, glm::value_ptr(color));
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-  static_sprite_progress_shader_.Bind();
-  glUniform1i(shader::kSpriteTexture, 0);
-  glUniform1f(shader::kSpriteBrightness, 1.0f);
-  glUniform1f(shader::kSpriteTransparency, 1.0f);
-  glUniform4fv(7, 1, glm::value_ptr(color));
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
+  shader_sp_mask_.Bind();
+  glUniform1i(0, 0);
+  glUniform1f(1, 1.0f);
+  glUniform1f(2, 1.0f);
+  glUniform1i(6, 1);
 
-  //Good!
-  static_sprite_picking_shader_.Bind();
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-  dynamic_sprite_picking_shader_.Bind();
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
+  shader_sp_.Bind();
+  glUniform1i(0, 0);
+  glUniform1f(1, 1.0f);
+  glUniform1f(2, 1.0f);
+  glUniform4fv(7, 1, glm::value_ptr(glm::vec4{1.0f}));
 
-  //  glUniform1f(shader::kSpriteResolution, res_factor);
-  menu_icon_shader_.Bind();
-  glUniform1i(shader::kSpriteTexture, 0);
-  //  glUniform1f(shader::kSpriteResolution, res_factor);
+  shader_sp_hmap_.Bind();
+  glUniform1i(0, 0);
 
-  arbitrary_graph_shader_.Bind();
-  glUniform1i(0, 0); // terrain height map
-
-  mask_sprite_shader_.Bind();
-  glUniform1i(shader::kSpriteTexture, 0);
-  glUniform1f(shader::kSpriteBrightness, 1.0f);
-  glUniform1f(shader::kSpriteTransparency, 1.0f);
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-  glUniform1i(shader::kSpriteMask, 1);
-
-  dynamic_sprite_shader_.Bind();
-  glUniform1i(shader::kSpriteTexture, 0);
-  glUniform1f(shader::kSpriteBrightness, 1.0f);
-  glUniform1f(shader::kSpriteTransparency, 1.0f);
-  glUniform4fv(7, 1, glm::value_ptr(color));
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-
-  hmap_shader_.Bind();
-  glUniform1i(shader::kSpriteTexture, 0);
-
-  shader_model_.Bind();
+  shader_mdl_.Bind();
   glUniform1i(1, 0);
-//  glUniform1i(2, 1);
-//  glUniform1i(3, 2);
-//  glUniform1i(4, 3);
-//  glUniform1i(5, 4);
-
-  glUseProgram(0);
-  //  static_sprite_picking_shader_.Bind();
-  //  glUniform1i(shader::kSpriteTexture, 0);
-  //  dynamic_sprite_picking_shader_.Bind();
-  //  glUniform1i(shader::kSpriteTexture, 0);
+  shader_mdl_instanced_.Bind();
+  glUniform1i(1, 0);
 }
 
 void UiSharedResources::InitVbos() {
-#ifndef NDEBUG
   GLuint vbos[3];
   glGenBuffers(3, vbos);
   vbo_ui_ = vbos[0];
@@ -141,15 +61,6 @@ void UiSharedResources::InitVbos() {
   glBufferData(GL_ARRAY_BUFFER,
                data::kUiVboDataTransform.size() * sizeof(float),
                data::kUiVboDataTransform.data(), GL_DYNAMIC_DRAW);
-#else
-  GLuint vbos[2];
-  glGenBuffers(2, vbos);
-  vbo_ui_ = vbos[0];
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_);
-  glBufferData(GL_ARRAY_BUFFER,
-               vbos::kUiVboDataMain.size() * sizeof(float),
-               vbos::kUiVboDataMain.data(), GL_STATIC_DRAW);
-#endif // NDEBUG
 }
 
 void UiSharedResources::InitVaos() {
@@ -159,40 +70,24 @@ void UiSharedResources::InitVaos() {
   glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
                         reinterpret_cast<void*>(0));
-  glEnableVertexAttribArray(0); // position
+  glEnableVertexAttribArray(0);  // position
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
                         reinterpret_cast<void*>(2 * sizeof(float)));
-  glEnableVertexAttribArray(1); // tex coords
+  glEnableVertexAttribArray(1);  // tex coords
 
-#ifndef NDEBUG
   glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_transform_);
   glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
                         reinterpret_cast<void*>(0));
-  glEnableVertexAttribArray(2); // tex coords
-#endif // NDEBUG
+  glEnableVertexAttribArray(2);  // tex coords
 
   glBindVertexArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void UiSharedResources::DeInit() {
-  DeInitVbos();
-  DeInitVaos();
-}
-
-void UiSharedResources::DeInitVaos() {
   glDeleteVertexArrays(1, &vao_ui_);
-}
-
-void UiSharedResources::DeInitVbos() const {
-#ifndef NDEBUG
   GLuint vbos[2];
   vbos[0] = vbo_ui_;
   vbos[1] = vbo_ui_transform_;
   glDeleteBuffers(2, vbos);
-#else
-  GLuint vbos[1];
-  vbos[0] = vbo_ui_;
-  glDeleteBuffers(1, vbos);
-#endif // NDEBUG
 }

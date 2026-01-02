@@ -4,10 +4,10 @@
 #ifndef NDEBUG
 #include <filesystem>
 #endif
+#include <glad/glad.h>
+
 #include <string>
 #include <string_view>
-
-#include <glad/glad.h>
 
 #ifndef NDEBUG
 #include "FixedSizeQueue.h"
@@ -54,7 +54,7 @@ class Shader {
     paths_.PushBack(tese_path);
     paths_.PushBack(frag_path);
 #endif
-    Init (vert_path, tesc_path, tese_path, frag_path);
+    Init(vert_path, tesc_path, tese_path, frag_path);
   }
 
   Shader(const Shader& other) = delete;
@@ -67,9 +67,7 @@ class Shader {
 
   void Bind() const;
 
-  [[nodiscard]] GLuint GetId() const {
-    return opengl_id_;
-  }
+  [[nodiscard]] GLuint GetId() const { return opengl_id_; }
 
 #ifndef NDEBUG
   bool Update();
@@ -88,9 +86,7 @@ class Shader {
     ShaderObject(ShaderObject&& other) noexcept;
     ShaderObject& operator=(ShaderObject&& other) noexcept;
 
-    [[nodiscard]] GLuint GetId() const {
-      return opengl_id_;
-    }
+    [[nodiscard]] GLuint GetId() const { return opengl_id_; }
 
    private:
     GLuint opengl_id_{0};

@@ -1,13 +1,13 @@
 #include "ModelLoader.h"
 
-#include "stb_image.h"
-
 #include <filesystem>
 
-bool LoadImageData(
-    tinygltf::Image *image, const int image_idx, std::string *err,
-    std::string *warn, int req_width, int req_height,
-    const unsigned char *bytes, int size, void *user_data) {
+#include "stb_image.h"
+
+bool LoadImageData(tinygltf::Image* image, const int image_idx,
+                   std::string* err, std::string* warn, int req_width,
+                   int req_height, const unsigned char* bytes, int size,
+                   void* user_data) {
   (void)image;
   (void)image_idx;
   (void)err;
@@ -23,18 +23,18 @@ bool LoadImageData(
 void ModelData::BindTextures() const noexcept {
   glActiveTexture(GL_TEXTURE0);
   material.albedo.Bind();
-//  glActiveTexture(GL_TEXTURE1);
-//  material.emission.Bind();
-//  glActiveTexture(GL_TEXTURE2);
-//  material.metal_rough.Bind();
-//  glActiveTexture(GL_TEXTURE3);
-//  material.normal.Bind();
-//  glActiveTexture(GL_TEXTURE4);
-//  material.occlusion.Bind();
+  //  glActiveTexture(GL_TEXTURE1);
+  //  material.emission.Bind();
+  //  glActiveTexture(GL_TEXTURE2);
+  //  material.metal_rough.Bind();
+  //  glActiveTexture(GL_TEXTURE3);
+  //  material.normal.Bind();
+  //  glActiveTexture(GL_TEXTURE4);
+  //  material.occlusion.Bind();
 }
 
 void ModelData::RenderModelNodes() const {
-  const tinygltf::Scene &scene = model.scenes[model.defaultScene];
+  const tinygltf::Scene& scene = model.scenes[model.defaultScene];
   for (size_t i = 0; i < scene.nodes.size(); ++i) {
     RenderModelNode(model.nodes[scene.nodes[i]]);
   }
@@ -54,21 +54,21 @@ void ModelData::RenderMesh(const tinygltf::Mesh& mesh) const {
     tinygltf::Primitive primitive = mesh.primitives[i];
     tinygltf::Accessor indexAccessor = model.accessors[primitive.indices];
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebos.at(indexAccessor.bufferView));
-    glDrawElements(
-        primitive.mode, indexAccessor.count, indexAccessor.componentType,
-        ((char *)nullptr + (indexAccessor.byteOffset)));
+    glDrawElements(primitive.mode, indexAccessor.count,
+                   indexAccessor.componentType,
+                   ((char*)nullptr + (indexAccessor.byteOffset)));
   }
 }
 
 void ModelData::RenderModelNodesInstanced(int instances_num) const {
-  const tinygltf::Scene &scene = model.scenes[model.defaultScene];
+  const tinygltf::Scene& scene = model.scenes[model.defaultScene];
   for (size_t i = 0; i < scene.nodes.size(); ++i) {
     RenderModelNodeInstanced(model.nodes[scene.nodes[i]], instances_num);
   }
 }
 
-void ModelData::RenderModelNodeInstanced(
-    const tinygltf::Node& node, int instances_num) const {
+void ModelData::RenderModelNodeInstanced(const tinygltf::Node& node,
+                                         int instances_num) const {
   if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
     RenderMeshInstanced(model.meshes[node.mesh], instances_num);
   }
@@ -77,15 +77,14 @@ void ModelData::RenderModelNodeInstanced(
   }
 }
 
-void ModelData::RenderMeshInstanced(
-  const tinygltf::Mesh& mesh, int instances_num) const {
+void ModelData::RenderMeshInstanced(const tinygltf::Mesh& mesh,
+                                    int instances_num) const {
   for (const auto& primitive : mesh.primitives) {
     const auto& indexAccessor = model.accessors[primitive.indices];
-    glBindBuffer(
-      GL_ELEMENT_ARRAY_BUFFER, ebos.at(indexAccessor.bufferView));
-    glDrawElementsInstanced(
-      primitive.mode, indexAccessor.count, indexAccessor.componentType,
-      (void*)indexAccessor.byteOffset, instances_num);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebos.at(indexAccessor.bufferView));
+    glDrawElementsInstanced(primitive.mode, indexAccessor.count,
+                            indexAccessor.componentType,
+                            (void*)indexAccessor.byteOffset, instances_num);
   }
 }
 
@@ -95,7 +94,7 @@ ModelLoader::ModelLoader(UiSharedResources& ui_shared_resources)
 }
 
 ModelLoader::~ModelLoader() {
-  //todo; reserve vaos
+  // todo; reserve vaos
   for (auto& m : models_) {
     glDeleteVertexArrays(1, &m->vao);
   }
@@ -103,13 +102,13 @@ ModelLoader::~ModelLoader() {
 
 const ModelData* ModelLoader::Load(std::string_view path, int id) {
   auto model_data = std::make_unique<ModelData>();
-  ui_shared_resources_.shader_model_.Bind();
+  ui_shared_resources_.shader_mdl_.Bind();
   glUniform1i(1, 0);
   glActiveTexture(GL_TEXTURE0);
   std::string err;
   std::string warn;
-  bool res = loader_.LoadASCIIFromFile(
-      &model_data->model, &err, &warn, path.data());
+  bool res =
+      loader_.LoadASCIIFromFile(&model_data->model, &err, &warn, path.data());
   if (!warn.empty()) {
     std::cout << "WARN: " << warn << std::endl;
   }
@@ -131,12 +130,10 @@ const ModelData* ModelLoader::Load(std::string_view path, int id) {
   return models_.back().get();
 }
 
-
-void ModelLoader::BindMesh(
-    tinygltf::Model& model, tinygltf::Mesh& mesh,
-    std::map<int, GLuint>& ebos) {
+void ModelLoader::BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
+                           std::map<int, GLuint>& ebos) {
   for (size_t i = 0; i < model.bufferViews.size(); ++i) {
-    const tinygltf::BufferView &bufferView = model.bufferViews[i];
+    const tinygltf::BufferView& bufferView = model.bufferViews[i];
     if (bufferView.target == 0) {  // TODO impl drawarrays
       std::cout << "WARN: bufferView.target is zero" << std::endl;
       continue;  // Unsupported bufferView.
@@ -145,22 +142,22 @@ void ModelLoader::BindMesh(
                    https://github.com/KhronosGroup/glTF/tree/master/specification/2.0
                             ... drawArrays function should be used with a count equal to
                    the count            property of any of the accessors referenced by the
-                   attributes            property            (they are all equal for a given
-                   primitive).
+                   attributes            property            (they are all equal for a
+                   given            primitive).
                  */
     }
 
-    const tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
-    std::cout << "bufferview.target " << bufferView.target << std::endl;
+    const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+    // std::cout << "bufferview.target " << bufferView.target << std::endl;
 
     GLuint vbo;
     glGenBuffers(1, &vbo);
     ebos[i] = vbo;
     glBindBuffer(bufferView.target, vbo);
 
-    std::cout << "buffer.data.size = " << buffer.data.size()
-              << ", bufferview.byteOffset = " << bufferView.byteOffset
-              << std::endl;
+    // std::cout << "buffer.data.size = " << buffer.data.size()
+    // << ", bufferview.byteOffset = " << bufferView.byteOffset
+    // << std::endl;
 
     glBufferData(bufferView.target, bufferView.byteLength,
                  &buffer.data.at(0) + bufferView.byteOffset, GL_STATIC_DRAW);
@@ -170,7 +167,7 @@ void ModelLoader::BindMesh(
     tinygltf::Primitive primitive = mesh.primitives[i];
     tinygltf::Accessor indexAccessor = model.accessors[primitive.indices];
 
-    for (auto &attrib : primitive.attributes) {
+    for (auto& attrib : primitive.attributes) {
       tinygltf::Accessor accessor = model.accessors[attrib.second];
       int byteStride =
           accessor.ByteStride(model.bufferViews[accessor.bufferView]);
@@ -187,19 +184,18 @@ void ModelLoader::BindMesh(
       if (attrib.first.compare("TEXCOORD_0") == 0) vaa = 2;
       if (vaa > -1) {
         glEnableVertexAttribArray(vaa);
-        glVertexAttribPointer(
-            vaa, size, accessor.componentType,
-            accessor.normalized ? GL_TRUE : GL_FALSE,
-            byteStride, ((char *)nullptr + (accessor.byteOffset)));
+        glVertexAttribPointer(vaa, size, accessor.componentType,
+                              accessor.normalized ? GL_TRUE : GL_FALSE,
+                              byteStride,
+                              ((char*)nullptr + (accessor.byteOffset)));
       } else
         std::cout << "vaa missing: " << attrib.first << std::endl;
     }
   }
 }
 
-void ModelLoader::BindModelNodes(
-    tinygltf::Model& model, tinygltf::Node &node,
-    std::map<int, GLuint>& ebos) {
+void ModelLoader::BindModelNodes(tinygltf::Model& model, tinygltf::Node& node,
+                                 std::map<int, GLuint>& ebos) {
   if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
     BindMesh(model, model.meshes[node.mesh], ebos);
   }
@@ -210,12 +206,12 @@ void ModelLoader::BindModelNodes(
   }
 }
 
-void ModelLoader::BindModel(
-    tinygltf::Model& model, GLuint& vao, std::map<int, GLuint>& ebos) {
+void ModelLoader::BindModel(tinygltf::Model& model, GLuint& vao,
+                            std::map<int, GLuint>& ebos) {
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 
-  const tinygltf::Scene &scene = model.scenes[model.defaultScene];
+  const tinygltf::Scene& scene = model.scenes[model.defaultScene];
   for (size_t i = 0; i < scene.nodes.size(); ++i) {
     assert((scene.nodes[i] >= 0) && (scene.nodes[i] < model.nodes.size()));
     BindModelNodes(model, model.nodes[scene.nodes[i]], ebos);
@@ -228,35 +224,33 @@ void ModelLoader::BindModel(
     if (bufferView.target != GL_ELEMENT_ARRAY_BUFFER) {
       glDeleteBuffers(1, &ebos[it->first]);
       ebos.erase(it++);
-    }
-    else {
+    } else {
       ++it;
     }
-  } // TODO: check that pretty interesting move with vbo removing
+  }  // TODO: check that pretty interesting move with vbo removing
 }
 
-void ModelLoader::LoadTextures(
-    std::string_view path, ModelData* model_data) {
+void ModelLoader::LoadTextures(std::string_view path, ModelData* model_data) {
   tinygltf::Model& model = model_data->model;
   auto albedo_tex_id =
       model.materials[0].pbrMetallicRoughness.baseColorTexture.index;
   model_data->material.albedo = LoadTexture(path, model, albedo_tex_id);
-//  auto emission_tex_id =
-//      model.materials[0].emissiveTexture.index;
-//  model_data.material.emission = LoadTexture(model, emission_tex_id);
-//  auto metal_rough_tex_id =
-//      model.materials[0].pbrMetallicRoughness.metallicRoughnessTexture.index;
-//  model_data.material.metal_rough = LoadTexture(model, metal_rough_tex_id);
-//  auto normal_tex_id =
-//      model.materials[0].normalTexture.index;
-//  model_data.material.normal = LoadTexture(model, normal_tex_id);
-//  auto occlusion_tex_id =
-//      model.materials[0].occlusionTexture.index;
-//  model_data.material.occlusion = LoadTexture(model, occlusion_tex_id);
+  //  auto emission_tex_id =
+  //      model.materials[0].emissiveTexture.index;
+  //  model_data.material.emission = LoadTexture(model, emission_tex_id);
+  //  auto metal_rough_tex_id =
+  //      model.materials[0].pbrMetallicRoughness.metallicRoughnessTexture.index;
+  //  model_data.material.metal_rough = LoadTexture(model, metal_rough_tex_id);
+  //  auto normal_tex_id =
+  //      model.materials[0].normalTexture.index;
+  //  model_data.material.normal = LoadTexture(model, normal_tex_id);
+  //  auto occlusion_tex_id =
+  //      model.materials[0].occlusionTexture.index;
+  //  model_data.material.occlusion = LoadTexture(model, occlusion_tex_id);
 }
 
-Texture ModelLoader::LoadTexture(
-    std::string_view path, const tinygltf::Model& model, int tex_id) {
+Texture ModelLoader::LoadTexture(std::string_view path,
+                                 const tinygltf::Model& model, int tex_id) {
   if (tex_id == -1) {
     throw "model textures load failed 1";
   }
@@ -283,30 +277,31 @@ Aabb3D ModelLoader::GetAabb(const tinygltf::Model& model) {
       if (it == primitive.attributes.end()) continue;
 
       const tinygltf::Accessor& accessor = model.accessors[it->second];
-      if (accessor.bufferView < 0 || accessor.bufferView >= model.bufferViews.size()) continue;
+      if (accessor.bufferView < 0 ||
+          accessor.bufferView >= model.bufferViews.size())
+        continue;
 
       if (!accessor.minValues.empty() && !accessor.maxValues.empty()) {
-        glm::vec3 minV(
-            static_cast<float>(accessor.minValues[0]),
-            static_cast<float>(accessor.minValues[1]),
-            static_cast<float>(accessor.minValues[2])
-        );
-        glm::vec3 maxV(
-            static_cast<float>(accessor.maxValues[0]),
-            static_cast<float>(accessor.maxValues[1]),
-            static_cast<float>(accessor.maxValues[2])
-        );
+        glm::vec3 minV(static_cast<float>(accessor.minValues[0]),
+                       static_cast<float>(accessor.minValues[1]),
+                       static_cast<float>(accessor.minValues[2]));
+        glm::vec3 maxV(static_cast<float>(accessor.maxValues[0]),
+                       static_cast<float>(accessor.maxValues[1]),
+                       static_cast<float>(accessor.maxValues[2]));
 
         minBounds = glm::min(minBounds, minV);
         maxBounds = glm::max(maxBounds, maxV);
       } else {
-        const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+        const tinygltf::BufferView& bufferView =
+            model.bufferViews[accessor.bufferView];
         const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
-        const unsigned char* dataPtr = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
+        const unsigned char* dataPtr =
+            buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
         size_t stride = accessor.ByteStride(bufferView);
         if (stride == 0)
-          stride = tinygltf::GetComponentSizeInBytes(accessor.componentType) * 3;
+          stride =
+              tinygltf::GetComponentSizeInBytes(accessor.componentType) * 3;
 
         for (size_t i = 0; i < accessor.count; ++i) {
           const float* v = reinterpret_cast<const float*>(dataPtr + stride * i);

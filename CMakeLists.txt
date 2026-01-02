@@ -21,7 +21,6 @@ add_executable(WireboundWorldCreator
         src/common/Texture.cpp
         src/common/TextRenderer.cpp
         src/common/Vbos.cpp
-        src/core/Menu.cpp
         src/core/TileRenderer.cpp
         src/core/WireboundWorldCreator.cpp
         src/io/Cursor.cpp
@@ -35,33 +34,25 @@ add_executable(WireboundWorldCreator
         src/renderers/PlacementRenderer.cpp
         src/renderers/TerrainRenderer.cpp
         src/renderers/WaterRenderer.cpp
-        src/renderers/placement/Grass.cpp
-        src/renderers/water/Ifft.cpp
-        src/renderers/water/WavesCascade.cpp
-        src/renderers/water/Ocean.cpp
+        src/renderers/Grass.cpp
+        src/renderers/Ifft.cpp
+        src/renderers/Ocean.cpp
 
         # temp (need to remove)
-        src/environment/Wind.cpp
-        src/environment/Wind.h
-        src/environment/Time.cpp
-        src/environment/Time.h
-        src/environment/Environment.cpp
-        src/environment/Environment.h
+        src/core/Environment.cpp
+        src/core/Environment.h
         src/common/OpenGlUtility.h
         src/core/Ui.cpp
         src/core/Ui.h
         src/core/Ui.cpp
         src/common/UiDebugger.cpp
         src/common/UiDebugger.h
-        src/renderers/water/MacLabSwe.cpp
-        src/renderers/water/MacLabSwe.h
-        src/common/PlayerCharacter.h
         src/common/SkylineBottomLeft.h
         src/common/LocalTransform.h
         src/common/Font.h
         src/common/Text.h
         src/common/Text.cpp
-        src/common/GlobalGlfwCallbackData.cpp
+        src/common/GlfwContext.cpp
         src/core/UiSlots.cpp
         src/core/UiSlots.h
         src/renderers/UiRenderer.cpp
@@ -71,7 +62,6 @@ add_executable(WireboundWorldCreator
         src/modes/AllUiModes.h
         src/core/UiComplex.cpp
         src/core/UiComplex.h
-        src/modes/UiTerrainConfig.cpp
         src/modes/UiTerrainConfig.h
         src/core/WindowQueue.h
         src/core/WindowQueue.cpp
@@ -119,6 +109,25 @@ add_executable(WireboundWorldCreator
         src/modes/UiTerrainWindows.h
         src/common/Callbacks.cpp
         src/common/Callbacks.h
+        src/modes/UiEditWater.cpp
+        src/modes/UiEditWater.h
+        src/modes/IUiEdit.h
+        src/modes/UiEditBiomes.cpp
+        src/modes/UiEditBiomes.h
+        src/modes/UiEditObjects.cpp
+        src/modes/UiEditObjects.h
+        src/modes/UiEditShared.cpp
+        src/modes/UiEditShared.h
+        src/core/UiConfigWindow.cpp
+        src/core/UiConfigWindow.h
+        src/modes/UiWaterConfig.h
+        src/modes/UiTerrainConfig.cpp
+        src/common/Material.h
+        src/common/GaussianNoise.cpp
+        src/common/PickingFramebuffer.cpp
+        src/common/MapPoint.h
+        src/core/UiMenu.cpp
+        src/core/UiMenu.h
 
 )
 
@@ -141,6 +150,7 @@ target_link_libraries(WireboundWorldCreator
         PUBLIC stb
         PUBLIC rapidjson
         PRIVATE tinygltf
+        PUBLIC nanosvg
 )
 
 # TODO: rapidjson don't like new gcc...

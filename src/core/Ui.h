@@ -3,10 +3,11 @@
 
 #include <array>
 #include <functional>
+#include <iostream>
+#include <limits>
+#include <memory>
 #include <tuple>
 #include <vector>
-#include <memory>
-#include <limits>
 
 #ifndef NDEBUG
 #include <set>
@@ -15,20 +16,15 @@
 #include <glm/glm.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/matrix_transform_2d.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
 
-#include "../common/Shader.h"
-#include "../common/Colors.h"
-#include "../common/Vbos.h"
 #include "../common/LocalTransform.h"
+#include "../common/Shader.h"
+#include "../common/Vbos.h"
 #include "../io/Window.h"
-#include "../renderers/water/WaterBiome.h"
 #include "../modes/UiSharedResources.h"
-
-#include "../common/ArbitraryGraph.h"
-
-#include "../common/Text.h"
+#include "../modes/UiWaterConfig.h"
 
 /// dbg serializing - stored without rotation
 LocalTransformLinear GetParentDbgTransform(size_t id);
@@ -43,9 +39,9 @@ class UiBase {
 
   UiBase(size_t ui_data_id, CallableType&& action);
 
-//  UiBase(UiBase* other) noexcept {
-//    ui_data_id_ = other->ui_data_id_;
-//  }
+  //  UiBase(UiBase* other) noexcept {
+  //    ui_data_id_ = other->ui_data_id_;
+  //  }
 
   UiBase(UiBase&& other) noexcept = default;
   UiBase(const UiBase& other) = default;
@@ -80,13 +76,10 @@ class UiBase {
 
 class UiBasePad final : public UiBase {
  public:
-  UiBasePad()
-      : UiBase(data::VboIdMain::kMenuTerrain, {}) {}
-  void Press() override {
-    std::cerr << "Pad was called, smt went wrong" << std::endl;
-  }
+  UiBasePad() : UiBase(data::VboIdMain::kMenuTerrain, {}) {}
+  void Press() { std::cerr << "Pad was called, smt went wrong" << std::endl; }
 
-  void UpdateTransform() override {}
+  void UpdateTransform() {}
 };
 
 class IUiEventHandler {
@@ -98,14 +91,16 @@ class IUiEventHandler {
   virtual bool IsInRange(int id) = 0;
 };
 
-template<std::size_t MaxSize>
+/// Creates ptr for each alive and UiBasePad for each missing:
+/// IDs 1 2 3 4 5 6 100 creates 93 padding components (inneficient).
+/// for ui components, located close by IDs with trivial handling;
+/// for unrelated by ID sprites, simply use switch/if-else
+template <std::size_t MaxSize>
 class UiEventHandler final : public IUiEventHandler {
  public:
   UiEventHandler() = default;
 
-  UiEventHandler(std::initializer_list<UiBase*> widgets) {
-    Init(widgets);
-  }
+  UiEventHandler(std::initializer_list<UiBase*> widgets) { Init(widgets); }
 
   UiEventHandler(UiEventHandler&& other) = default;
   UiEventHandler(const UiEventHandler& other) = default;
@@ -113,7 +108,7 @@ class UiEventHandler final : public IUiEventHandler {
   UiEventHandler& operator=(UiEventHandler&& other) = default;
   UiEventHandler& operator=(const UiEventHandler& other) = default;
 
-  bool Press(int id) override {
+  bool Press(int id) {
     if (id < start_ || id > end_) {
       return false;
     }
@@ -123,15 +118,13 @@ class UiEventHandler final : public IUiEventHandler {
     return true;
   }
 
-  void Release() override {
+  void Release() {
     for (auto widget : widgets_) {
       widget->Release();
     }
   }
 
-  bool IsInRange(int id) override {
-    return id >= start_ && id <= end_;
-  }
+  bool IsInRange(int id) { return id >= start_ && id <= end_; }
 
  private:
   void Init(std::initializer_list<UiBase*> widgets) {
@@ -180,32 +173,32 @@ class UiDynamicSprite : public UiBase {
 
   void Render();
 
-  void Rotate(float radians) {
-    local_transform_.rotate += radians;
-  }
+  void Rotate(float radians) { local_transform_.rotate += radians; }
 
-  void Scale(float scale) {
-    local_transform_.scale *= scale;
-  }
+  void Scale(float scale) { local_transform_.scale *= scale; }
 
   void Translate(glm::vec2 translate) {
     local_transform_.translate += translate;
   }
 
-  void SetRotate(float radians) {
-    local_transform_.rotate = radians;
-  }
+  void SetRotate(float radians) { local_transform_.rotate = radians; }
 
-  void SetScale(float scale) {
-    local_transform_.scale = scale;
-  }
+  void SetScale(float scale) { local_transform_.scale = scale; }
 
-  void SetExtraScale(float scale) {
-    extra_scale_ = scale;
-  }
+  void SetExtraScale(float scale) { extra_scale_ = scale; }
 
   void SetTranslate(glm::vec2 translate) {
     local_transform_.translate = translate;
+  }
+
+  void SetTransform(LocalTransform transform) { local_transform_ = transform; }
+
+  [[nodiscard]] glm::vec2 GetTranslate() const noexcept {
+    return local_transform_.translate;
+  }
+
+  [[nodiscard]] LocalTransform GetTransform() const noexcept {
+    return local_transform_;
   }
 
   /// useful for transform-animated parent ui components
@@ -213,9 +206,13 @@ class UiDynamicSprite : public UiBase {
     parent_transform_ = transform;
   }
 
+  [[nodiscard]] LocalTransform GetParentTransform() const noexcept {
+    return parent_transform_;
+  }
+
   /// when we operate on arrays of buttons we don't want
   /// bind the same shader 20 times, so this function don't bind shader
-  //TODO: inilne
+  // TODO: inilne
   void RenderPicking() const;
 
   void UpdateTransform() override;
@@ -228,8 +225,23 @@ class UiDynamicSprite : public UiBase {
 
   [[nodiscard]] float GetBottomBorder() const;
 
+  [[nodiscard]] float GetHeight() const;
+
+  [[nodiscard]] float GetWidth() const;
+
+  [[nodiscard]] glm::vec2 GetCentre() const;
+
+  [[nodiscard]] float GetLeftBorderUnScaled() const;
+
+  [[nodiscard]] float GetRightBorderUnScaled() const;
+
+  [[nodiscard]] float GetTopBorderUnScaled() const;
+
+  [[nodiscard]] float GetBottomBorderUnScaled() const;
+
  private:
-  // used for slider handlers, stored separately from gUiTransform & gUiComponents
+  // used for slider handlers, stored separately from gUiTransform &
+  // gUiComponents
   /// dynamic, so do has rotations
   LocalTransform local_transform_;
 
@@ -258,7 +270,7 @@ class UiStaticSprite : public UiBase {
 
   /// when we operate on arrays of buttons we don't want
   /// bind the same shader 20 times, so this function don't bind shader
-  //TODO: inilne
+  // TODO: inilne
   void RenderPicking() const;
 
   void UpdateTransform() override;
@@ -277,8 +289,8 @@ class UiStaticSprite : public UiBase {
 
 class UiSpriteTransformation {
  public:
-  UiSpriteTransformation(UiDynamicSprite& sprite,
-                         LocalTransform start, LocalTransform end);
+  UiSpriteTransformation(UiDynamicSprite& sprite, LocalTransform start,
+                         LocalTransform end);
 
   void Render();
 
@@ -288,29 +300,17 @@ class UiSpriteTransformation {
 
   void StopAnimation();
 
-  [[nodiscard]] LocalTransform GetStart() const noexcept {
-    return start_;
-  }
+  [[nodiscard]] LocalTransform GetStart() const noexcept { return start_; }
 
-  [[nodiscard]] LocalTransform GetEnd() const noexcept {
-    return end_;
-  }
+  [[nodiscard]] LocalTransform GetEnd() const noexcept { return end_; }
 
-  [[nodiscard]] LocalTransform GetCur() const noexcept {
-    return cur_;
-  }
+  [[nodiscard]] LocalTransform GetCur() const noexcept { return cur_; }
 
-  void SetStart(LocalTransform transform) {
-    start_ = transform;
-  }
+  void SetStart(LocalTransform transform) { start_ = transform; }
 
-  void SetEnd(LocalTransform transform) {
-    end_ = transform;
-  }
+  void SetEnd(LocalTransform transform) { end_ = transform; }
 
-  void SetCur(LocalTransform transform) {
-    cur_ = transform;
-  }
+  void SetCur(LocalTransform transform) { cur_ = transform; }
 
   // manual looping
   void SwapStartEnd();
@@ -333,10 +333,8 @@ class UiSpriteTransformation {
 
 class UiSliderV3 final : public UiBase {
  public:
-  UiSliderV3(UiDynamicSprite&& sp_fill,
-            UiDynamicSprite&& sp_track,
-            UiDynamicSprite&& sp_handle,
-            float scale = 1.0f);
+  UiSliderV3(UiDynamicSprite&& sp_fill, UiDynamicSprite&& sp_track,
+             UiDynamicSprite&& sp_handle, float scale = 1.0f);
 
   UiSliderV3(UiSliderV3&& other) noexcept;
   UiSliderV3(const UiSliderV3& other) = delete;
@@ -360,8 +358,7 @@ class UiSliderV3 final : public UiBase {
 
   void UpdateTransform() override;
 
-  void SetMouseDiff(
-      float prev_progress, glm::vec2 start, glm::vec2 end);
+  void SetMouseDiff(float prev_progress, glm::vec2 start, glm::vec2 end);
 
   void SetValue(float value);
 
@@ -384,10 +381,8 @@ class UiSliderV3 final : public UiBase {
 
 class UiSliderH3 final : public UiBase {
  public:
-  UiSliderH3(UiDynamicSprite&& sp_fill,
-             UiDynamicSprite&& sp_track,
-             UiDynamicSprite&& sp_handle,
-             float scale = 1.0f);
+  UiSliderH3(UiDynamicSprite&& sp_fill, UiDynamicSprite&& sp_track,
+             UiDynamicSprite&& sp_handle, float scale = 1.0f);
 
   UiSliderH3(UiSliderH3&& other) noexcept;
   UiSliderH3(const UiSliderH3& other) = delete;
@@ -432,8 +427,7 @@ class UiSliderH3 final : public UiBase {
 
 class UiSliderH2 final : public UiBase {
  public:
-  UiSliderH2(UiDynamicSprite&& sp_track,
-             UiDynamicSprite&& sp_handle,
+  UiSliderH2(UiDynamicSprite&& sp_track, UiDynamicSprite&& sp_handle,
              float scale = 1.0f);
 
   UiSliderH2(UiSliderH2&& other) noexcept;
@@ -491,8 +485,7 @@ class UiSliderH2 final : public UiBase {
 /// used for ui palette, so X-axis is Hue, Y-axis is Saturation
 class UiSlider2D final : public UiBase {
  public:
-  UiSlider2D(UiDynamicSprite&& sp_palette,
-             UiDynamicSprite&& sp_handle,
+  UiSlider2D(UiDynamicSprite&& sp_palette, UiDynamicSprite&& sp_handle,
              glm::vec2 scale = glm::vec2{1.0f});
 
   UiSlider2D(UiSlider2D&& other) noexcept;
@@ -544,8 +537,8 @@ class UiSlider2D final : public UiBase {
 /// You should pass action to off_ sprite (see Press());
 class UiToggle4 final : public UiBase {
  public:
-  UiToggle4(UiDynamicSprite&& off, UiDynamicSprite&& on1,
-           UiDynamicSprite&& on2, UiDynamicSprite&& on3);
+  UiToggle4(UiDynamicSprite&& off, UiDynamicSprite&& on1, UiDynamicSprite&& on2,
+            UiDynamicSprite&& on3);
 
   UiToggle4(UiToggle4&& other) noexcept;
   UiToggle4(const UiToggle4& other) = delete;
@@ -554,6 +547,8 @@ class UiToggle4 final : public UiBase {
   UiToggle4& operator=(const UiToggle4& other) = delete;
 
   void Render();
+
+  void Render(bool state);
 
   void RenderPicking() const;
 
@@ -565,9 +560,7 @@ class UiToggle4 final : public UiBase {
 
   void SetTranslate(glm::vec2 translate);
 
-  [[nodiscard]] bool TurnedOn() const noexcept {
-    return !turned_off_;
-  }
+  [[nodiscard]] bool TurnedOn() const noexcept { return !turned_off_; }
 
   void Set(bool value);
 
@@ -609,9 +602,7 @@ class UiToggle2 final : public UiBase {
 
   void SetTranslate(glm::vec2 translate);
 
-  [[nodiscard]] bool TurnedOn() const noexcept {
-    return !turned_off_;
-  }
+  [[nodiscard]] bool TurnedOn() const noexcept { return !turned_off_; }
 
   void Set(bool value);
 

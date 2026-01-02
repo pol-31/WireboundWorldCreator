@@ -1,49 +1,42 @@
 #include "TextRenderer.h"
 
-#include <glm/gtc/type_ptr.hpp>
 #include <stb_image_write.h>
 
-#include "../modes/IUiMode.h"
+#include <glm/gtc/type_ptr.hpp>
+
 #include "../common/Font.h"
 #include "../common/Text.h"
-#include "ShadersBinding.h"
+#include "../core/UiText.h"
 #include "../io/Window.h"
-#include "UiDebugger.h"
 #include "../modes/IUiMode.h"
+#include "UiDebugger.h"
 
-TextRenderer::TextRenderer(
-    UiSharedResources& ui_shared_resources,
-    const Paths& paths,
-    UiDynamicSprite&& prerender_text_slot,
-    UiDynamicSprite&& sprite_cursor)
+// TODO: we do factor 8:
+//   next_pos.x += symbol_width / 8.0f;
+//  due to sprite tex coords in Vbos.cpp (auto-generated)
+
+TextRenderer::TextRenderer(UiSharedResources& ui_shared_resources,
+                           UiDynamicSprite&& prerender_text_slot,
+                           UiDynamicSprite&& sprite_cursor)
     : tex_bitmap_("../assets/bmp_ascii_header.png", GL_RED),
       prerender_text_slot_(std::move(prerender_text_slot)),
       sprite_cursor_(std::move(sprite_cursor)),
       tex_menu_(1024, 1024, GL_RED),
       tex_mode_(1024, 1024, GL_RED),
-      render_shader_(
-          paths.shader_text_vert, paths.shader_text_frag),
-      render_shader_picking_(
-          paths.shader_sprite_dynamic_vert, paths.shader_sprite_picking_frag),
+      render_shader_("../shaders/Text.vert", "../shaders/Text.frag"),
+      render_shader_picking_("../shaders/Sprite.vert",
+                             "../shaders/SpritePicking.frag"),
       ui_shared_resources_(ui_shared_resources) {
   Init();
 }
 
-TextRenderer::~TextRenderer() {
-  DeInit();
-}
+TextRenderer::~TextRenderer() { DeInit(); }
 
 void TextRenderer::Init() {
   render_shader_.Bind();
-  glUniform1i(shader::kSpriteTexture, 0);
-  glUniform1f(shader::kSpriteBrightness, 1.0f);
-  glUniform1f(shader::kSpriteTransparency, 1.0f);
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-  render_shader_picking_.Bind();
-//  glUniform1i(shader::kSpriteTexture, 0);
-//  glUniform1f(shader::kSpriteResolution, gResFactor);
-  glUseProgram(0);
-
+  glUniform1i(0, 0);
+  glUniform1f(2, 1.0f);
+  glUniform1f(1, 1.0f);
   GLuint fbos[2];
   glGenFramebuffers(2, fbos);
   fbo_read_id_ = fbos[0];
@@ -57,17 +50,17 @@ void TextRenderer::DeInit() {
   glDeleteFramebuffers(2, fbos);
 }
 
-void TextRenderer::RenderTextSelected(
-    UiDynamicSprite& text_slot, std::string_view text,
-    glm::vec2 translate) {
+void TextRenderer::RenderTextSelected(UiDynamicSprite& text_slot,
+                                      std::string_view text,
+                                      glm::vec2 translate) {
   float symbol_height = font::gFullHeight / 1024.0f;
 
   glActiveTexture(GL_TEXTURE0);
   tex_bitmap_.Bind();
   render_shader_.Bind();
-  float ui_scale = debug::gUiTransforms[
-                       4 * (text_slot.GetId() - details::kIdOffsetUi)
-  ].scale;
+  float ui_scale =
+      debug::gUiTransforms[4 * (text_slot.GetId() - details::kIdOffsetUi)]
+          .scale;
   glm::vec2 next_pos = glm::vec2{0.0f, symbol_height};
 
   int start = std::min(selected_start_, selected_end_);
@@ -75,7 +68,7 @@ void TextRenderer::RenderTextSelected(
 
   for (int i = 0; i < start; ++i) {
     char ch = text[i];
-    //TODO: if dbg
+    // TODO: if dbg
     if (ch == '\n') {
       throw "RenderTextSelected: remove \\n";
     }
@@ -87,7 +80,7 @@ void TextRenderer::RenderTextSelected(
 
   for (int i = start; i < end; ++i) {
     char ch = text[i];
-    //TODO: if dbg
+    // TODO: if dbg
     if (ch == '\n') {
       throw "RenderTextSelected: remove \\n";
     }
@@ -113,18 +106,17 @@ void TextRenderer::RenderTextSelected(
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderText(
-    UiDynamicSprite& text_slot, std::string_view text,
-    float scale, glm::vec2 position, Alignment alignment) {
+void TextRenderer::RenderText(UiDynamicSprite& text_slot, std::string_view text,
+                              float scale, glm::vec2 position,
+                              Alignment alignment) {
   float symbol_height = font::gFullHeight * scale / 1024.0f;
-
   glActiveTexture(GL_TEXTURE0);
   tex_bitmap_.Bind();
   render_shader_.Bind();
   text_slot.SetScale(scale);
-  float ui_scale = debug::gUiTransforms[
-                       4 * (text_slot.GetId() - details::kIdOffsetUi)
-  ].scale;
+  float ui_scale =
+      debug::gUiTransforms[4 * (text_slot.GetId() - details::kIdOffsetUi)]
+          .scale;
 
   size_t line_start = 0;
   glm::vec2 next_pos{0.0f, position.y + symbol_height};
@@ -153,18 +145,17 @@ void TextRenderer::RenderText(
     std::string_view line = text.substr(line_start, length);
 
     // --- process line ---
-    float line_length = scale * CalculateLineLength(line, text_slot) / 1024.0f;
-
+    float line_length =
+        (scale * CalculateLineLength(line, text_slot) / 1024.0f) / 4.0f;
     next_pos.x = position.x + line_length * new_line_offset_factor;
 
     // --- process char ---
-
     for (auto ch : line) {
       auto coords = GetGlyphCoords(ch);
       auto coords_transform = CoordsToTransformMatrix(coords);
       float symbol_width =
-          scale * static_cast<float>(
-                      GetWidth(static_cast<int>(ch) - 32)) / 1024.0f;
+          scale * static_cast<float>(GetWidth(static_cast<int>(ch) - 32)) /
+          1024.0f;
 
       glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
 
@@ -172,10 +163,10 @@ void TextRenderer::RenderText(
       symbol_width *= ui_scale * 1024.0f / 78.0f;
 
       /// correct alignment (half prev, half next char)
-      next_pos.x += symbol_width / 2.0f;
+      next_pos.x += symbol_width / 8.0f;
       text_slot.SetTranslate(next_pos);
-      next_pos.x += symbol_width / 2.0f;
       text_slot.Render();
+      next_pos.x += symbol_width / 8.0f;
     }
 
     if (line_end == std::string_view::npos) {
@@ -189,30 +180,29 @@ void TextRenderer::RenderText(
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderTextPicking(
-    UiDynamicSprite& text_slot, std::string_view text,
-    float scale, glm::vec2 position, Alignment alignment) {
-  /// picking for the first line is enough
+void TextRenderer::RenderTextPicking(UiDynamicSprite& text_slot,
+                                     std::string_view text, float scale,
+                                     glm::vec2 position, Alignment alignment) {
+  // picking for the first line is enough
   float symbol_height = font::gFullHeight * scale / 1024.0f;
   text_slot.SetScale(scale);
-
-  float ui_scale = debug::gUiTransforms[
-                       4 * (text_slot.GetId() - details::kIdOffsetUi)
-  ].scale;
+  float ui_scale =
+      debug::gUiTransforms[4 * (text_slot.GetId() - details::kIdOffsetUi)]
+          .scale;
 
   size_t line_start = 0;
   glm::vec2 next_pos{0.0f, position.y + symbol_height};
 
-  float new_line_offset_factor; // why another offset
+  float new_line_offset_factor;  // why another offset
   switch (alignment) {
     case Alignment::kCentre:
-      new_line_offset_factor = 0.0f;
+      new_line_offset_factor = -0.5f;
       break;
     case Alignment::kLeft:
-      new_line_offset_factor = 0.5f;
+      new_line_offset_factor = 0.0f;
       break;
     case Alignment::kRight:
-      new_line_offset_factor = -0.5f;
+      new_line_offset_factor = -1.0f;
       break;
   }
 
@@ -228,15 +218,17 @@ void TextRenderer::RenderTextPicking(
 
     // --- process line ---
 
-    float line_length = scale * CalculateLineLength(line, text_slot) / 1024.0f;
-
-    next_pos.x = position.x + line_length * new_line_offset_factor;
+    float line_length =
+        (scale * CalculateLineLength(line, text_slot) / 1024.0f);
+    next_pos.x = position.x + line_length * new_line_offset_factor / 4.0f;
 
     // --- process char ---
-
-    text_slot.SetExtraScale(line_length * 78.0f / (symbol_height * 1024.0f));
+    text_slot.SetExtraScale((line_length * 78.0f / ui_scale) /
+                            (symbol_height * 1024.0f));
+    next_pos.x += line_length / 8.0f;
     text_slot.SetTranslate(next_pos);
     text_slot.RenderPicking();
+    break;
 
     if (line_end == std::string_view::npos) {
       break;
@@ -246,15 +238,13 @@ void TextRenderer::RenderTextPicking(
   }
 }
 
-void TextRenderer::RenderMenuText(
-    UiDynamicSprite& text_slot, data::TextId id) {
+void TextRenderer::RenderMenuText(UiDynamicSprite& text_slot, data::TextId id) {
   RenderMenuModeText(tex_menu_, coords_menu_, text_slot, static_cast<int>(id));
 }
 
-void TextRenderer::RenderModeText(
-    UiDynamicSprite& text_slot, data::TextId id) {
-  int id_offset = (*ui_shared_resources_.global_glfw_callback_data_.cur_mode)
-                      ->GetPrerenderTextIdStart();
+void TextRenderer::RenderModeText(UiDynamicSprite& text_slot, data::TextId id) {
+  int id_offset =
+      (*ui_shared_resources_.gltf_context_.cur_mode)->GetPrerenderTextIdStart();
   RenderMenuModeText(tex_mode_, coords_mode_, text_slot,
                      static_cast<int>(id) - id_offset);
 }
@@ -268,7 +258,7 @@ void TextRenderer::RenderMenuModeText(
   tex_prerender.Bind();
   render_shader_.Bind();
   glUniform3f(4, 0.2118f, 0.1647f, 0.0745f);
-  //TODO: dbg at() <- error possible if menu_id <-> mode_id
+  // TODO: dbg at() <- error possible if menu_id <-> mode_id
   Aabb coords = tex_coords.at(static_cast<int>(id));
   auto coords_transform = CoordsToTransformMatrix(coords);
   glUniformMatrix3fv(6, 1, false, glm::value_ptr(coords_transform));
@@ -289,8 +279,8 @@ void TextRenderer::RenderMenuTextPicking(UiDynamicSprite& text_slot) {
   RenderMenuModeTextPicking(tex_menu_, text_slot);
 }
 
-void TextRenderer::RenderMenuModeTextPicking(
-    const Texture& tex_prerender, UiDynamicSprite& text_slot) {
+void TextRenderer::RenderMenuModeTextPicking(const Texture& tex_prerender,
+                                             UiDynamicSprite& text_slot) {
   text_slot_ = &text_slot;
   text_slot_->RenderPicking();
 }
@@ -305,8 +295,8 @@ void TextRenderer::PrerenderModeText(int start, int end) {
   PrerenderImpl(start, end, tex_mode_, coords_mode_);
 }
 
-void TextRenderer::PrerenderImpl(
-    int start, int end, Texture& texture, std::vector<Aabb>& coords) {
+void TextRenderer::PrerenderImpl(int start, int end, Texture& texture,
+                                 std::vector<Aabb>& coords) {
   SetupFramebuffer(fbo_write_id_, texture, true);
   fbo_cursor_ = glm::ivec2{0, 1024};
 
@@ -324,7 +314,8 @@ void TextRenderer::PrerenderImpl(
 }
 
 TextRenderer::Aabb TextRenderer::RenderPhrase(std::string_view text) {
-  int calculated_width = CalculateLineLength(text, *text_slot_) * 78.0f / 1024.0f;
+  int calculated_width =
+      CalculateLineLength(text, *text_slot_) * 78.0f / 1024.0f;
   int symbol_height = static_cast<int>(font::gFullHeight);
   if (fbo_cursor_.x + calculated_width > 1024) {
     fbo_cursor_.x = 0;
@@ -345,16 +336,14 @@ TextRenderer::Aabb TextRenderer::RenderPhrase(std::string_view text) {
 
 void TextRenderer::RenderSymbol(char ch) {
   Aabb src = GetGlyphCoords(ch);
-  Aabb dst = {fbo_cursor_.x,
-              fbo_cursor_.x + static_cast<int>(
-                                  GetWidth(static_cast<int>(ch) - 32)),
-              fbo_cursor_.y,
-              fbo_cursor_.y - static_cast<int>(font::gFullHeight)};
-  fbo_cursor_.x += static_cast<int>(
-      GetWidth(static_cast<int>(ch) - 32));
-  glBlitFramebuffer(src.left, src.bottom, src.right, src.top,
-                    dst.left, dst.bottom, dst.right, dst.top,
-                    GL_COLOR_BUFFER_BIT, GL_NEAREST);
+  Aabb dst = {
+      fbo_cursor_.x,
+      fbo_cursor_.x + static_cast<int>(GetWidth(static_cast<int>(ch) - 32)),
+      fbo_cursor_.y, fbo_cursor_.y - static_cast<int>(font::gFullHeight)};
+  fbo_cursor_.x += static_cast<int>(GetWidth(static_cast<int>(ch) - 32));
+  glBlitFramebuffer(src.left, src.bottom, src.right, src.top, dst.left,
+                    dst.bottom, dst.right, dst.top, GL_COLOR_BUFFER_BIT,
+                    GL_NEAREST);
 }
 
 TextRenderer::Aabb TextRenderer::GetGlyphCoords(char ch) {
@@ -362,9 +351,7 @@ TextRenderer::Aabb TextRenderer::GetGlyphCoords(char ch) {
   int column = id & 7;
   int local_id = id - 32;  // bitmap starts from 32
   int row = 12 - (static_cast<int>(local_id / 8));
-  return {128 * column,
-          128 * column + GetWidth(local_id),
-          85 * (row),
+  return {128 * column, 128 * column + GetWidth(local_id), 85 * (row),
           85 * (row - 1)};
 }
 
@@ -399,13 +386,14 @@ void TextRenderer::StartInput(UiTextInput* input_data) {
 
 void TextRenderer::StopInput() {
   glfwSetCharCallback(gWindow, nullptr);
-  (*ui_shared_resources_.global_glfw_callback_data_.cur_mode)->BindCallbacks();
+  (*ui_shared_resources_.gltf_context_.cur_mode)->Setup();
   input_data_->SetText(buffer_input_);
   input_data_->SetTextTranslate(glm::vec2(0.0f));
   input_data_ = nullptr;
-  // NOTE: it could be only UiMode callbacks, so we could remember them (not menu, etc...)
+  // NOTE: it could be only UiMode callbacks, so we could remember them (not
+  // menu, etc...)
 
-  (*ui_shared_resources_.global_glfw_callback_data_.cur_mode)->BindCallbacks();
+  (*ui_shared_resources_.gltf_context_.cur_mode)->Setup();
   input_in_progress_ = false;
 }
 
@@ -438,8 +426,8 @@ void TextRenderer::BtnDelete() {
       selected_end_ = std::clamp(selected_end_ + RightCtrlDistance(), 0,
                                  static_cast<int>(buffer_input_.size()));
     } else {
-      selected_end_ = std::min(
-          selected_end_ + 1, static_cast<int>(buffer_input_.size()));
+      selected_end_ =
+          std::min(selected_end_ + 1, static_cast<int>(buffer_input_.size()));
     }
   }
   TextErase(buffer_input_, selected_start_, selected_end_);
@@ -453,7 +441,7 @@ void TextRenderer::RenderInput() {
   }
   /// blur background, render back
   ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   glUniform1f(1, 1.0f);
   input_data_->sp_back_.Render();
 
@@ -464,7 +452,7 @@ void TextRenderer::RenderInput() {
 
   glEnable(GL_SCISSOR_TEST);
   input_data_->SetScissorArea();
-//  glScissor(x_start, 0, x_length, 4000);
+  //  glScissor(x_start, 0, x_length, 4000);
   if (smt_selected_ || mouse_selection_) {
     // brightness location is 2
     glUniform1f(1, 0.4f);
@@ -481,29 +469,27 @@ void TextRenderer::RenderInput() {
 
   /// render cursor
   ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   CalculateCursorPos(input_data_->sp_text_, input_data_->text_input_);
-  sprite_cursor_.Render(); // has it's position
+  sprite_cursor_.Render();  // has it's position
 }
 
 int TextRenderer::CursorFromMousePos() {
-  float ui_scale = debug::gUiTransforms[
-                       4 * (input_data_->sp_text_.GetId() - details::kIdOffsetUi)
-  ].scale;
-  auto mouse_pos_x = ui_shared_resources_.global_glfw_callback_data_
-                         .cursor_pos_tex_norm_.x;
+  float ui_scale = debug::gUiTransforms[4 * (input_data_->sp_text_.GetId() -
+                                             details::kIdOffsetUi)]
+                       .scale;
+  auto mouse_pos_x = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_.x;
   float next_pos = input_data_->GetLeftBorder();
   int i = 0;
   for (; i < buffer_input_.size(); ++i) {
     char ch = input_data_->text_input_[i];
-    //TODO: if dbg
+    // TODO: if dbg
     if (ch == '\n') {
       throw "RenderTextSelected: remove \\n";
     }
     /// skip first
-    auto char_length = static_cast<float>(GetWidth(static_cast<int>(ch) - 32))
-                       * ui_scale / 78.0f;
-    //    std::cout << mouse_pos_x << " against " << next_pos + char_length / 2 << std::endl;
+    auto char_length = static_cast<float>(GetWidth(static_cast<int>(ch) - 32)) *
+                       ui_scale / 78.0f;
     if (mouse_pos_x < next_pos + char_length) {
       break;
     }
@@ -512,16 +498,16 @@ int TextRenderer::CursorFromMousePos() {
   return i;
 }
 
-void TextRenderer::CalculateCursorPos(
-  UiDynamicSprite& text_slot, const std::string& text) {
+void TextRenderer::CalculateCursorPos(UiDynamicSprite& text_slot,
+                                      const std::string& text) {
   float symbol_height = font::gFullHeight / 1024.0f;
-  float ui_scale = debug::gUiTransforms[
-                       4 * (text_slot.GetId() - details::kIdOffsetUi)
-  ].scale;
+  float ui_scale =
+      debug::gUiTransforms[4 * (text_slot.GetId() - details::kIdOffsetUi)]
+          .scale;
   glm::vec2 next_pos{0.0f, symbol_height};
   for (int i = 0; i < selected_end_; ++i) {
     char ch = text[i];
-    //TODO: if dbg
+    // TODO: if dbg
     if (ch == '\n') {
       throw "RenderTextSelected: remove \\n";
     }
@@ -544,18 +530,18 @@ void TextRenderer::CalculateCursorPos(
   sprite_cursor_.SetTranslate(next_pos);
 }
 
-// smt already selected -> shift ? move cursor : deselect & move cursor & start=end
-// shift ? move cursor & smt_selected=true : move cursor & start & end
+// smt already selected -> shift ? move cursor : deselect & move cursor &
+// start=end shift ? move cursor & smt_selected=true : move cursor & start & end
 void TextRenderer::MoveCursor(int value) {
   smt_selected_ = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
   if (smt_selected_) {
-    selected_end_ = std::clamp(
-        selected_end_ + value, 0, static_cast<int>(buffer_input_.size()));
+    selected_end_ = std::clamp(selected_end_ + value, 0,
+                               static_cast<int>(buffer_input_.size()));
     return;
   }
   if (selected_start_ == selected_end_) {
-    selected_end_ = std::clamp(
-        selected_end_ + value, 0, static_cast<int>(buffer_input_.size()));
+    selected_end_ = std::clamp(selected_end_ + value, 0,
+                               static_cast<int>(buffer_input_.size()));
   } else {
     // deselect & move to selection border
     int set_value;
@@ -575,7 +561,7 @@ int TextRenderer::LeftCtrlDistance() {
     auto code = static_cast<int>(buffer_input_[i]);
     if (code == static_cast<int>(' ') || code == static_cast<int>('_')) {
       if (i != selected_end_ - 1) {
-        break; // skip if it's the first char
+        break;  // skip if it's the first char
       }
     }
     --dist;
@@ -589,7 +575,7 @@ int TextRenderer::RightCtrlDistance() {
     auto code = static_cast<int>(buffer_input_[i - 1]);
     if (code == static_cast<int>(' ') || code == static_cast<int>('_')) {
       if (i != selected_end_ + 1) {
-        break; // skip if it's the first char
+        break;  // skip if it's the first char
       }
     }
     ++dist;
@@ -605,70 +591,66 @@ void TextRenderer::BindCallbacks() {
 }
 
 void TextRenderer::CharCallback(GLFWwindow* window, unsigned int codepoint) {
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
+  auto glfw_context = GetGlfwContext(window);
   /// range of printable char
   if (codepoint > 31 && codepoint < 127) {
-    global_data->text_renderer->AppendChar(codepoint);
+    glfw_context->text_renderer->AppendChar(codepoint);
   }
 }
 
-void TextRenderer::ScrollCallback(
-    GLFWwindow* window, double xoffset, double yoffset) {}
+void TextRenderer::ScrollCallback(GLFWwindow* window, double xoffset,
+                                  double yoffset) {}
 
-void TextRenderer::KeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods) {
+void TextRenderer::KeyCallback(GLFWwindow* window, int key, int scancode,
+                               int action, int mods) {
   if (action == GLFW_RELEASE) {
     return;
   }
   /// so either GLFW_PRESS or GLFW_REPEAT
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
-  global_data->text_renderer->mouse_selection_ = false;
-  if (key == GLFW_KEY_ESCAPE
-      || key == GLFW_KEY_ENTER) {
-    global_data->text_renderer->StopInput();
+  auto glfw_context = GetGlfwContext(window);
+  glfw_context->text_renderer->mouse_selection_ = false;
+  if (key == GLFW_KEY_ESCAPE || key == GLFW_KEY_ENTER) {
+    glfw_context->text_renderer->StopInput();
   } else if (key == GLFW_KEY_BACKSPACE) {
-    global_data->text_renderer->BtnBackspace();
+    glfw_context->text_renderer->BtnBackspace();
   } else if (key == GLFW_KEY_DELETE) {
-    global_data->text_renderer->BtnDelete();
+    glfw_context->text_renderer->BtnDelete();
   } else if (key == GLFW_KEY_LEFT) {
     int move_value = -1;
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-      move_value = global_data->text_renderer->LeftCtrlDistance();
+      move_value = glfw_context->text_renderer->LeftCtrlDistance();
     }
-    global_data->text_renderer->MoveCursor(move_value);
+    glfw_context->text_renderer->MoveCursor(move_value);
   } else if (key == GLFW_KEY_RIGHT) {
     int move_value = 1;
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-      move_value = global_data->text_renderer->RightCtrlDistance();
+      move_value = glfw_context->text_renderer->RightCtrlDistance();
     }
-    global_data->text_renderer->MoveCursor(move_value);
+    glfw_context->text_renderer->MoveCursor(move_value);
   }
 }
 
-void TextRenderer::MouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods) {
+void TextRenderer::MouseButtonCallback(GLFWwindow* window, int button,
+                                       int action, int mods) {
   if (button != GLFW_MOUSE_BUTTON_LEFT) {
     return;
   }
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
+  auto glfw_context = GetGlfwContext(window);
   if (action == GLFW_PRESS) {
-    if (global_data->text_renderer->IsCursorOnInputLine()) {
-      global_data->text_renderer->mouse_selection_ = true;
-      global_data->text_renderer->selected_start_ =
-          global_data->text_renderer->CursorFromMousePos();
+    if (glfw_context->text_renderer->IsCursorOnInputLine()) {
+      glfw_context->text_renderer->mouse_selection_ = true;
+      glfw_context->text_renderer->selected_start_ =
+          glfw_context->text_renderer->CursorFromMousePos();
     } else {
-      global_data->text_renderer->StopInput();
+      glfw_context->text_renderer->StopInput();
     }
-  } else { // GLFW_RELEASE
-    global_data->text_renderer->mouse_selection_ = false;
+  } else {  // GLFW_RELEASE
+    glfw_context->text_renderer->mouse_selection_ = false;
   }
 }
 
-void TextRenderer::SetupFramebuffer(
-    GLuint fbo_id, Texture& texture, bool clear) {
+void TextRenderer::SetupFramebuffer(GLuint fbo_id, Texture& texture,
+                                    bool clear) {
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          texture.GetId(), 0);
@@ -692,12 +674,13 @@ int TextRenderer::GetWidth(int code) {
   } else {
     comp_width = static_cast<float>((font::gWidths[code >> 1]) & 0x0F);
   }
-  auto result = static_cast<int>(comp_width * font::gWidthFactor) + font::gWidthMin;
+  auto result =
+      static_cast<int>(comp_width * font::gWidthFactor) + font::gWidthMin;
   return result;
 }
 
-int TextRenderer::CalculateLineLength(
-    std::string_view text, const UiDynamicSprite& text_slot) {
+float TextRenderer::CalculateLineLength(std::string_view text,
+                                        const UiDynamicSprite& text_slot) {
   int total_length = 0;
   for (auto ch : text) {
     if (ch == '\n') {
@@ -705,15 +688,14 @@ int TextRenderer::CalculateLineLength(
     }
     total_length += GetWidth(static_cast<int>(ch) - 32);
   }
-  float ui_scale = debug::gUiTransforms[
-                       4 * (text_slot.GetId() - details::kIdOffsetUi)
-  ].scale;
-  return total_length * ui_scale * 1024.0f / 78.0f;
+  float ui_scale =
+      debug::gUiTransforms[4 * (text_slot.GetId() - details::kIdOffsetUi)]
+          .scale;
+  return static_cast<float>(total_length) * ui_scale * 1024.0f / 78.0f;
 }
 
 bool TextRenderer::IsCursorOnInputLine() {
-  auto cursor_pos_y = ui_shared_resources_.global_glfw_callback_data_
-                          .cursor_pos_tex_norm_.y;
+  auto cursor_pos_y = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_.y;
   return cursor_pos_y < input_data_->sp_back_.GetTopBorder() &&
          cursor_pos_y > input_data_->sp_back_.GetBottomBorder();
 }
@@ -729,4 +711,3 @@ void TextRenderer::TextErase(std::string& buffer, int pos_start, int pos_end) {
     buffer.erase(buffer.begin() + pos_end, buffer.begin() + pos_start);
   }
 }
-

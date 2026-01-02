@@ -2,12 +2,11 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../../core/Ui.h"
 #include "../../core/TileRenderer.h"
+#include "../../core/Ui.h"
 #include "../../io/Camera.h"
 
-ModelManager::ModelManager(
-    UiSharedResources& ui_shared_resources)
+ModelManager::ModelManager(UiSharedResources& ui_shared_resources)
     : ui_shared_resources_(ui_shared_resources),
       player_(ui_shared_resources),
       mdl_loader_(ui_shared_resources) {
@@ -22,8 +21,8 @@ ModelManager::ModelManager(
       mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Bush.gltf", 4);
   auto mdl_tall_grass =
       mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\TallGrass.gltf", 5);
-  auto mdl_undergrowth =
-      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Undergrowth.gltf", 6);
+  auto mdl_undergrowth = mdl_loader_.Load(
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Undergrowth.gltf", 6);
 
   player_.SetModelData(mdl_snowman);
   int creatures_num = 3;
@@ -48,35 +47,34 @@ void ModelManager::Render() {
   tall_grass_.Render(ui_shared_resources_);
   undergrowth_.Render(ui_shared_resources_);
 
-//  for (auto& o : obstacles_) {
-//    o.Render(ui_shared_resources_);
-//  }
+  //  for (auto& o : obstacles_) {
+  //    o.Render(ui_shared_resources_);
+  //  }
   player_.Render(ui_shared_resources_);
 }
 
-void ModelManager::RenderOnMap(
-    UiDynamicSprite* sp_player,
-    UiDynamicSprite* sp_enemy,
-    UiDynamicSprite* sp_friend,
-    UiDynamicSprite* sp_neutral,
-    UiDynamicSprite* sp_obstacle) {
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+void ModelManager::RenderOnMap(UiDynamicSprite* sp_player,
+                               UiDynamicSprite* sp_enemy,
+                               UiDynamicSprite* sp_friend,
+                               UiDynamicSprite* sp_neutral,
+                               UiDynamicSprite* sp_obstacle) {
+  ui_shared_resources_.shader_sp_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
 
-  auto map_scale = ui_shared_resources_.global_glfw_callback_data_.
-                   tile_renderer->cur_tile_.map_scale;
+  auto map_scale =
+      ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.map_scale;
   glm::mat4 model;
-  auto view = ui_shared_resources_.global_glfw_callback_data_
-                  .camera->GetViewMatrix(map_scale);
-  auto projection = ui_shared_resources_.global_glfw_callback_data_
-                        .camera->GetProjMatrix();
+  auto view =
+      ui_shared_resources_.gltf_context_.camera->GetViewMatrix(map_scale);
+  auto projection = ui_shared_resources_.gltf_context_.camera->GetProjMatrix();
   for (auto& c : creatures_) {
     model = glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));
     auto mvp = projection * view * model;
     glm::vec3 position = c.GetPosition();
-    glm::vec4 clipPos = mvp * glm::vec4(position.x, position.y, position.z, 1.0f);
+    glm::vec4 clipPos =
+        mvp * glm::vec4(position.x, position.y, position.z, 1.0f);
     glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
     sp_enemy->SetTranslate(glm::vec2(ndc.x, ndc.y) / 8.0f);
     sp_enemy->Render();
@@ -95,9 +93,9 @@ void ModelManager::Update() {
   for (auto& c : creatures_) {
     c.Update(ui_shared_resources_);
   }
-//  for (auto& o : obstacles_) {
-//    o.Update(ui_shared_resources_);
-//  }
+  //  for (auto& o : obstacles_) {
+  //    o.Update(ui_shared_resources_);
+  //  }
   player_.Update(ui_shared_resources_);
 }
 

@@ -3,18 +3,13 @@
 
 #include <glad/glad.h>
 
-#include "Ui.h"
-#include "../modes/UiSharedResources.h"
 #include "../common/Shader.h"
+#include "../modes/UiSharedResources.h"
+#include "Ui.h"
 
 class TerrainInstanceData;
 
-enum class SelectionMode {
-  kRectangle,
-  kCircle,
-  kLasso,
-  kTweak
-};
+enum class SelectionMode { kRectangle, kCircle, kLasso, kTweak };
 
 class UiSelection {
  public:
@@ -22,9 +17,7 @@ class UiSelection {
 
   UiSelection(UiSharedResources& ui_shared_resources);
 
-  ~UiSelection() {
-    DeInit();
-  }
+  ~UiSelection() { DeInit(); }
 
   void SetIdBounds(GLuint bound_min, GLuint bound_max) {
     bound_min_ = bound_min;
@@ -38,6 +31,8 @@ class UiSelection {
   void Start(glm::vec2 cursor_pos, bool mod_ctrl, bool mod_shift);
 
   void Stop(glm::vec2 cursor_pos);
+
+  std::set<GLuint> StopIntoSet(glm::vec2 cursor_pos);
 
   void Update(glm::vec2 mouse_pos);
 
@@ -93,17 +88,20 @@ class UiSelection {
 
   void ClearSelectionFbo();
 
-  void UpdateRenderData(
-      const std::vector<glm::vec3>& polygon, float stipple_width);
+  void UpdateRenderData(const std::vector<glm::vec3>& polygon,
+                        float stipple_width);
 
   void UpdateSurfaceSelection(float radius);
 
   void ApplySelection();
 
+  std::set<GLuint> ApplySelectionIntoSet();
+
   UiDynamicSprite sp_circle_;
   UiSharedResources& ui_shared_resources_;
   Shader shader_;
   Shader shader_area_;
+  Shader shader_draw_selection_;
   GLuint vao_ = 0;
   GLuint vbo_ = 0;
 
@@ -127,7 +125,7 @@ class UiSelection {
 
   // parallel and we could merge it... and slightly destroy the readability
   glm::vec2 rectangle_start_pos_ = glm::vec2(0.0f);
-  glm::vec2 render_offset_ = glm::vec2(0.0f); /// circle follow the cursor
+  glm::vec2 render_offset_ = glm::vec2(0.0f);  /// circle follow the cursor
 
   std::vector<glm::vec2> lasso_data_;
   SelectionMode selection_mode_ = SelectionMode::kRectangle;

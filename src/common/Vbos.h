@@ -78,7 +78,6 @@ enum class VboIdMain {
   kMenuPlayerOn2,
   kMenuPlayerOn3,
 
-
   kMenuShaderWirebound,
   kMenuShadersOff,
   kMenuShadersOn1,
@@ -222,7 +221,6 @@ enum class VboIdMain {
   kTerrainEditNoiseStrengthIcon,
   kTerrainEditNoiseHmap,
 
-
   kWaterWaterMode,
   kWaterUpdate,
   kWaterOcean,
@@ -255,7 +253,6 @@ enum class VboIdMain {
   kWaterEditOceanVisibleOn3,
   kWaterEditOceanConfig,
   kWaterEditOceanLayerName,
-
 
   kPlacementPlacementMode,
 
@@ -309,7 +306,6 @@ enum class VboIdMain {
   kPlacementDrawOn2,
   kPlacementDrawOn3,
 
-
   kObjectsObjectsMode,
   kObjectsEditDesk,
   kObjectsEditDeskPinBack,
@@ -322,7 +318,6 @@ enum class VboIdMain {
   kObjectsEditModelName,
   kObjectsEditCharacteristicArea,
   kObjectsEditCharacteristicIcon,
-
 
   kBiomesBiomesMode,
   kBiomesBiomePoint,
@@ -344,7 +339,6 @@ enum class VboIdMain {
   kBiomesEditNoiseStrengthArea,
   kBiomesEditNoiseStrengthIcon,
 
-
   kTilesTilesMode,
   kTilesLeft,
   kTilesRight,
@@ -352,7 +346,6 @@ enum class VboIdMain {
   kTilesDown,
   kTilesCreate,
   kTilesRemove,
-
 
   kPlayerPlayerMode,
   kPlayerHealthPoint,
@@ -376,7 +369,6 @@ enum class VboIdMain {
   kPlayerMapFriend,
   kPlayerMapNeutral,
   kPlayerMapObstacle,
-
 
   kConfigWindowName,
   kConfigWindowDesk,
@@ -502,9 +494,8 @@ enum class VboIdMain {
   kTotal,
 };
 
-inline constexpr int gVboIdSize =
-    static_cast<int>(VboIdMain::kTotal)
-    - static_cast<int>(VboIdMain::kMenuTerrain);
+inline constexpr int gVboIdSize = static_cast<int>(VboIdMain::kTotal) -
+                                  static_cast<int>(VboIdMain::kMenuTerrain);
 
 extern const std::array<std::string_view, gVboIdSize> gVboIdMainText;
 
@@ -526,12 +517,13 @@ inline constexpr int gUiVboTransformSize = gVboIdSize * 4 * 3;
 
 extern const std::array<float, gUiVboTransformSize> kUiVboDataTransform;
 
-#endif // NDEBUG
+#endif  // NDEBUG
 
 inline constexpr std::size_t GetVboMainOffset(VboIdMain id) {
   // for each Ui component 16 floats
   // (4 2d points with position and tex coords)
-  return (static_cast<std::size_t>(id) - (details::kIdOffsetUi)) * 4; // TODO: 4?
+  return (static_cast<std::size_t>(id) - (details::kIdOffsetUi)) *
+         4;  // TODO: 4?
 }
 
 inline UiData GetUiData(VboIdMain btn_type) {
@@ -555,6 +547,6 @@ inline UiData GetUiData(VboIdMain btn_type) {
 // need to use another shader (vbo with starting position is the same)
 extern const std::array<float, gVboIdSize * 16> kUiVboDataMain;
 
-} // namespace vbos
+}  // namespace data
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_VBOS_H_

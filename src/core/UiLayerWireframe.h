@@ -3,11 +3,12 @@
 
 #include <glad/glad.h>
 
+#include "../common/Texture.h"
+#include "../modes/UiSharedResources.h"
 #include "Ui.h"
 #include "UiComplex.h"
-#include "../modes/UiSharedResources.h"
-#include "../common/Texture.h"
 
+struct BaseInstanceData;
 struct TerrainInstanceData;
 
 class UiLayerWireframe {
@@ -20,15 +21,15 @@ class UiLayerWireframe {
   UiLayerWireframe& operator=(UiLayerWireframe&& other) = delete;
   UiLayerWireframe& operator=(const UiLayerWireframe& other) = delete;
 
-  ~UiLayerWireframe() {
-    DeInit();
-  }
+  ~UiLayerWireframe() { DeInit(); }
 
-  void RenderLayerWireframe(TerrainInstanceData* terrain);
+  void RenderLayerWireframe(TerrainInstanceData* terrain,
+                            BaseInstanceData* data);
 
   void RenderPickingLayerWireframe();
 
-  void UpdateLayerWireframe(TerrainInstanceData* terrain);
+  void UpdateLayerWireframe(TerrainInstanceData* terrain,
+                            BaseInstanceData* data);
 
  private:
   void Init();

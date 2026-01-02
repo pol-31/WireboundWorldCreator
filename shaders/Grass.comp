@@ -1,4 +1,4 @@
-#version 450
+#version 460 core
 
 #define WORKGROUP_SIZE 32
 layout(local_size_x = WORKGROUP_SIZE,
@@ -8,6 +8,7 @@ local_size_z = 1) in;
 layout(binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;
+    vec3 pos;
 } camera;
 
 layout(location = 0) uniform float current_time;

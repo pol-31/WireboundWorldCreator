@@ -1,32 +1,32 @@
 #include "UiComplex.h"
 
-#include "../common/UiDebugger.h"
-#include "../common/ShadersBinding.h"
-#include "../common/TextRenderer.h"
+#include <format>
+
 #include "../common/Details.h"
+#include "../common/TextRenderer.h"
+#include "../common/UiDebugger.h"
+#include "../common/models/ModelLoader.h"
+#include "../common/models/ModelManager.h"
 #include "../io/Camera.h"
 
-UiWindowSlider::UiWindowSlider(
-    UiDynamicSprite&& sp_track,
-    UiDynamicSprite&& sp_handle,
-    int slots_num,
-    float track_length_factor,
-    float slots_length_factor)
+UiWindowSlider::UiWindowSlider(UiDynamicSprite&& sp_track,
+                               UiDynamicSprite&& sp_handle, int slots_num,
+                               float track_length_factor,
+                               float slots_length_factor)
     : UiBase(sp_track.GetId(), {}),
       sp_track_(std::move(sp_track)),
       sp_handle_(std::move(sp_handle)),
       slots_num_(slots_num),
       track_length_factor_(track_length_factor),
       slots_length_factor_(slots_length_factor),
-      length_(track_length_factor
-              * (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder())),
-      length_slots_(slots_length_factor
-                    * (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder())),
+      length_(track_length_factor *
+              (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder())),
+      length_slots_(slots_length_factor *
+                    (sp_track_.GetTopBorder() - sp_track_.GetBottomBorder())),
       centre_((sp_track_.GetTopBorder() + sp_track_.GetBottomBorder()) / 2.0f) {
-  gUiComponents[sp_handle_.GetId() - details::kIdOffsetUi].parent_id_
-      = sp_track_.GetId();
-  gUiComponents[GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
+  gUiComponents[sp_handle_.GetId() - details::kIdOffsetUi].parent_id_ =
+      sp_track_.GetId();
+  gUiComponents[GetId() - details::kIdOffsetUi].ui = static_cast<UiBase*>(this);
   UpdateTransform();
 }
 
@@ -49,18 +49,18 @@ UiWindowSlider::UiWindowSlider(UiWindowSlider&& other) noexcept
       scissors_length_(other.scissors_length_),
       cur_slots_offset_(other.cur_slots_offset_),
       start_slot_translate_(other.start_slot_translate_) {
-  gUiComponents[sp_track_.GetId() - details::kIdOffsetUi].ui
-      = static_cast<UiBase*>(this);
+  gUiComponents[sp_track_.GetId() - details::kIdOffsetUi].ui =
+      static_cast<UiBase*>(this);
 }
 
 void UiWindowSlider::SetParentTransform(LocalTransform transform) {
   sp_track_.SetParentTransform(transform);
   sp_handle_.SetParentTransform(transform);
+  UpdateTransform();
 }
 
 void UiWindowSlider::Render(glm::vec2 mouse_pos) {
   if (pressed_) {
-    std::cout << entry_num_ << std::endl;
     Set(mouse_pos);
   }
   sp_track_.Render();
@@ -78,24 +78,18 @@ void UiWindowSlider::RenderPicking() const {
   }
 }
 
-void UiWindowSlider::Press() {
-  pressed_ = true;
-}
+void UiWindowSlider::Press() { pressed_ = true; }
 
-void UiWindowSlider::Release() {
-  pressed_ = false;
-}
+void UiWindowSlider::Release() { pressed_ = false; }
 
-void UiWindowSlider::SetValue(float value) {
-  Set(value);
-}
+void UiWindowSlider::SetValue(float value) { Set(value); }
 
 bool UiWindowSlider::Scroll(GLuint id, float yoffset) {
-//  if (id > sp_handle_.GetId() || id < sp_track_.GetId()) {
-//    return false;
-//  }
-//  Set(progress_ + yoffset * 0.01f);
-//  return true;
+  //  if (id > sp_handle_.GetId() || id < sp_track_.GetId()) {
+  //    return false;
+  //  }
+  //  Set(progress_ + yoffset * 0.01f);
+  //  return true;
   return false;
 }
 
@@ -106,9 +100,7 @@ void UiWindowSlider::SetTranslate(glm::vec2 translate) {
   sp_handle_.SetTranslate(translate);
 }
 
-float UiWindowSlider::GetProgress() const {
-  return progress_;
-}
+float UiWindowSlider::GetProgress() const { return progress_; }
 
 void UiWindowSlider::UpdateTransform() {
   length_ = track_length_factor_ *
@@ -126,28 +118,29 @@ void UiWindowSlider::UpdateTransform() {
 // ---
 // ---
 
-
 void UiWindowSlider::SetEntryNum(int entry_num) {
   entry_num_ = entry_num;
+  Set(1.0f);
   UpdateRenderData();
 }
 
 void UiWindowSlider::UpdateRenderData() {
 #ifndef NDEBUG
   if (!sp_slot_) {
-//    throw "no sp_slot_, unable to calculate slot_height";
+    //    throw "no sp_slot_, unable to calculate slot_height";
     return;
   }
 #endif
   // total n, visible n or n - 1
   slot_height_ = slots_length_factor_ *
                  (sp_slot_->GetTopBorder() - sp_slot_->GetBottomBorder());
-  auto scrollable_slots = static_cast<float>(std::max(entry_num_ - slots_num_ + 1, 0));
+  auto scrollable_slots =
+      static_cast<float>(std::max(entry_num_ - slots_num_ + 1, 0));
   float float_index = scrollable_slots * progress_;
   cur_slots_offset_ = (int)float_index;
   float fractional_part = float_index - cur_slots_offset_;
   float offset_y = fractional_part * slot_height_;
-  start_slot_translate_ = glm::vec2{0.0f, -0.201f + offset_y};
+  start_slot_translate_ = glm::vec2{0.0f, offset_y};
 
   float y_ndc = centre_ - length_ / 2;
   scissors_start_ = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
@@ -156,20 +149,21 @@ void UiWindowSlider::UpdateRenderData() {
 
 int UiWindowSlider::GetSlotId(glm::vec2 mouse_pos) {
   float half_slot_height = slot_height_ / 2.0f;
-  float border = centre_ + length_slots_ / 2.0f + half_slot_height + start_slot_translate_.y;
+  float border = centre_ + length_slots_ / 2.0f - 1.5 * slot_height_ +
+                 start_slot_translate_.y;
   for (int i = 0; i < slots_num_ - 1; ++i) {
     if (mouse_pos.y > border) {
       return i + cur_slots_offset_;
     }
     border -= slot_height_;
   }
-  return slots_num_ - 1 + cur_slots_offset_; // else cond
+  return slots_num_ - 1 + cur_slots_offset_;  // else cond
 }
 
 void UiWindowSlider::Set(glm::vec2 mouse_pos) {
   float half_length_ = length_slots_ / 2.0f;
-  float offset = glm::clamp(
-      mouse_pos.y - centre_, -half_length_, +half_length_);
+  float offset =
+      glm::clamp(mouse_pos.y - centre_, -half_length_, +half_length_);
   progress_ = 1.0 - (offset + half_length_) / length_slots_;
   glm::vec2 translate = {0.0f, offset};
   sp_handle_.SetTranslate(translate);
@@ -199,44 +193,38 @@ void UiWindowSlider::FocusOnSelected(int slot_id) {
     return;
   }
   float float_index = fractional_part + cur_slots_offset_;
-  auto scrollable_slots = static_cast<float>(std::max(entry_num_ - slots_num_ + 1, 0));
+  auto scrollable_slots =
+      static_cast<float>(std::max(entry_num_ - slots_num_ + 1, 0));
   std::cout << "was " << progress_;
   progress_ = float_index / scrollable_slots;
   std::cout << " become " << progress_ << std::endl;
   Set(progress_);
 }
 
-UiLoading::UiLoading(
-    UiDynamicSprite&& sprite0,
-    UiDynamicSprite&& sprite10,
-    UiDynamicSprite&& sprite20,
-    UiDynamicSprite&& sprite30,
-    UiDynamicSprite&& sprite40,
-    UiDynamicSprite&& sprite50,
-    UiDynamicSprite&& sprite60,
-    UiDynamicSprite&& sprite70,
-    UiDynamicSprite&& sprite80,
-    UiDynamicSprite&& sprite90,
-    UiDynamicSprite&& sprite100)
-    : sprites_{
-          {std::move(sprite0), std::move(sprite10), std::move(sprite20),
-           std::move(sprite30), std::move(sprite40), std::move(sprite50),
-           std::move(sprite60), std::move(sprite70), std::move(sprite80),
-           std::move(sprite90), std::move(sprite100)}},
+UiLoading::UiLoading(UiDynamicSprite&& sprite0, UiDynamicSprite&& sprite10,
+                     UiDynamicSprite&& sprite20, UiDynamicSprite&& sprite30,
+                     UiDynamicSprite&& sprite40, UiDynamicSprite&& sprite50,
+                     UiDynamicSprite&& sprite60, UiDynamicSprite&& sprite70,
+                     UiDynamicSprite&& sprite80, UiDynamicSprite&& sprite90,
+                     UiDynamicSprite&& sprite100)
+    : sprites_{{std::move(sprite0), std::move(sprite10), std::move(sprite20),
+                std::move(sprite30), std::move(sprite40), std::move(sprite50),
+                std::move(sprite60), std::move(sprite70), std::move(sprite80),
+                std::move(sprite90), std::move(sprite100)}},
       hierarchy_(&sprites_[0]) {
-  hierarchy_ = UiHierarchy(
-      &sprites_[0], &sprites_[1], &sprites_[2], &sprites_[3],
-      &sprites_[4], &sprites_[5], &sprites_[6], &sprites_[7],
-      &sprites_[8], &sprites_[9], &sprites_[10]);
+  hierarchy_ =
+      UiHierarchy(&sprites_[0], &sprites_[1], &sprites_[2], &sprites_[3],
+                  &sprites_[4], &sprites_[5], &sprites_[6], &sprites_[7],
+                  &sprites_[8], &sprites_[9], &sprites_[10]);
 }
 
 UiLoading::UiLoading(UiLoading&& other) noexcept
     : sprites_(std::move(other.sprites_)),
       hierarchy_(std::move(other.hierarchy_)) {
-  hierarchy_ = UiHierarchy(
-      &sprites_[0], &sprites_[1], &sprites_[2], &sprites_[3],
-      &sprites_[4], &sprites_[5], &sprites_[6], &sprites_[7],
-      &sprites_[8], &sprites_[9], &sprites_[10]);
+  hierarchy_ =
+      UiHierarchy(&sprites_[0], &sprites_[1], &sprites_[2], &sprites_[3],
+                  &sprites_[4], &sprites_[5], &sprites_[6], &sprites_[7],
+                  &sprites_[8], &sprites_[9], &sprites_[10]);
 }
 
 void UiLoading::Render(float progress) {
@@ -245,17 +233,31 @@ void UiLoading::Render(float progress) {
   sprites_[idx].Render();
 }
 
-void UiLoading::RenderPicking() const {
-  sprites_[0].RenderPicking();
+void UiLoading::RenderPicking() const { sprites_[0].RenderPicking(); }
+
+UiSelectedSprite::UiSelectedSprite(UiDynamicSprite&& sp_selected,
+                                   const UiDynamicSprite* sp_ptr_top)
+    : sp_selected_(std::move(sp_selected)), sp_ptr_top_(sp_ptr_top) {
+  SetSelected(0);
 }
 
-UiCompass::UiCompass(
-    const Camera* camera,
-    UiDynamicSprite&& sp_compass,
-    UiDynamicSprite&& sp_north,
-    UiDynamicSprite&& sp_south,
-    UiDynamicSprite&& sp_east,
-    UiDynamicSprite&& sp_west)
+UiSelectedSprite::UiSelectedSprite(UiSelectedSprite&& other) noexcept
+    : sp_selected_(std::move(other.sp_selected_)),
+      sp_ptr_top_(other.sp_ptr_top_) {
+  SetSelected(0);
+}
+
+void UiSelectedSprite::Render() { sp_selected_.Render(); }
+
+void UiSelectedSprite::SetSelected(int id) {
+  auto centre = sp_ptr_top_->GetCentre();
+  centre.y -= id * sp_ptr_top_->GetHeight();
+  sp_selected_.SetTranslate(centre);
+}
+
+UiCompass::UiCompass(const Camera* camera, UiDynamicSprite&& sp_compass,
+                     UiDynamicSprite&& sp_north, UiDynamicSprite&& sp_south,
+                     UiDynamicSprite&& sp_east, UiDynamicSprite&& sp_west)
     : camera_(camera),
       sp_compass_(std::move(sp_compass)),
       sp_north_(std::move(sp_north)),
@@ -263,8 +265,8 @@ UiCompass::UiCompass(
       sp_east_(std::move(sp_east)),
       sp_west_(std::move(sp_west)),
       hierarchy_(&sp_compass_) {
-  hierarchy_ = UiHierarchy(
-      &sp_compass_, &sp_north_, &sp_south_, &sp_east_, &sp_west_);
+  hierarchy_ =
+      UiHierarchy(&sp_compass_, &sp_north_, &sp_south_, &sp_east_, &sp_west_);
 }
 
 UiCompass::UiCompass(UiCompass&& other) noexcept
@@ -275,8 +277,8 @@ UiCompass::UiCompass(UiCompass&& other) noexcept
       sp_east_(std::move(other.sp_east_)),
       sp_west_(std::move(other.sp_west_)),
       hierarchy_(std::move(other.hierarchy_)) {
-  hierarchy_ = UiHierarchy(
-      &sp_compass_, &sp_north_, &sp_south_, &sp_east_, &sp_west_);
+  hierarchy_ =
+      UiHierarchy(&sp_compass_, &sp_north_, &sp_south_, &sp_east_, &sp_west_);
 }
 
 void UiCompass::Render() {
@@ -291,31 +293,22 @@ void UiCompass::Render() {
   transform.rotate = 0.0f;
 
   // North (yaw)
-  transform.translate = glm::vec2(
-      radius.x * cos(yaw),
-      radius.y * sin(yaw)
-  );
+  transform.translate = glm::vec2(radius.x * cos(yaw), radius.y * sin(yaw));
   sp_north_.SetParentTransform(transform);
 
   // South (yaw + 180°)
-  transform.translate = glm::vec2(
-      radius.x * cos(yaw + glm::pi<float>()),
-      radius.y * sin(yaw + glm::pi<float>())
-  );
+  transform.translate = glm::vec2(radius.x * cos(yaw + glm::pi<float>()),
+                                  radius.y * sin(yaw + glm::pi<float>()));
   sp_south_.SetParentTransform(transform);
 
   // East (yaw + 90°)
-  transform.translate = glm::vec2(
-      radius.x * cos(yaw + glm::half_pi<float>()),
-      radius.y * sin(yaw + glm::half_pi<float>())
-  );
+  transform.translate = glm::vec2(radius.x * cos(yaw + glm::half_pi<float>()),
+                                  radius.y * sin(yaw + glm::half_pi<float>()));
   sp_east_.SetParentTransform(transform);
 
   // West (yaw - 90°)
-  transform.translate = glm::vec2(
-      radius.x * cos(yaw - glm::half_pi<float>()),
-      radius.y * sin(yaw - glm::half_pi<float>())
-  );
+  transform.translate = glm::vec2(radius.x * cos(yaw - glm::half_pi<float>()),
+                                  radius.y * sin(yaw - glm::half_pi<float>()));
   sp_west_.SetParentTransform(transform);
 
   sp_compass_.Render();
@@ -325,15 +318,11 @@ void UiCompass::Render() {
   sp_west_.Render();
 }
 
-void UiCompass::RenderPicking() const {
-  sp_compass_.RenderPicking();
-}
+void UiCompass::RenderPicking() const { sp_compass_.RenderPicking(); }
 
-UiTopWindowBase::UiTopWindowBase(
-    UiDynamicSprite&& desk,
-    float size_scale,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue)
+UiTopWindowBase::UiTopWindowBase(UiDynamicSprite&& desk, float size_scale,
+                                 UiSharedResources& ui_shared_resources,
+                                 WindowQueue& window_queue)
     : desk_(std::move(desk)),
       size_scale_(size_scale),
       ui_shared_resources_(ui_shared_resources),
@@ -349,67 +338,54 @@ UiTopWindowBase::UiTopWindowBase(UiTopWindowBase&& other) noexcept
       window_queue_(other.window_queue_),
       hierarchy_(std::move(other.hierarchy_)) {}
 
-void UiTopWindowBase::Show() {
-  window_queue_.SetTopWindow(this);
-}
+void UiTopWindowBase::Show() { window_queue_.SetTopWindow(this); }
 
-void UiTopWindowBase::Hide() {
-  window_queue_.SetTopWindow(nullptr);
-}
+void UiTopWindowBase::Hide() { window_queue_.SetTopWindow(nullptr); }
 
-UiCaution::UiCaution(
-    UiDynamicSprite&& desk,
-    float size_scale,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    UiDynamicSprite&& text)
-    : UiTopWindowBase(std::move(desk), size_scale,
-                      ui_shared_resources, window_queue),
+UiCaution::UiCaution(UiDynamicSprite&& desk, float size_scale,
+                     UiSharedResources& ui_shared_resources,
+                     WindowQueue& window_queue, UiDynamicSprite&& text)
+    : UiTopWindowBase(std::move(desk), size_scale, ui_shared_resources,
+                      window_queue),
       text_(std::move(text)) {
   hierarchy_ = UiHierarchy(&desk_, &text_);
 }
 
 UiCaution::UiCaution(UiCaution&& other) noexcept
-    : Base(std::move(other)),
-      text_(std::move(other.text_)) {
+    : Base(std::move(other)), text_(std::move(other.text_)) {
   hierarchy_ = UiHierarchy(&desk_, &text_);
 }
 
 bool UiCaution::Render() {
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   desk_.Render();
   //  text_.Render();
   return false;
 }
 
 void UiCaution::RenderPicking() {
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   desk_.RenderPicking();
   //  text_.RenderPicking();
 }
 
-void UiCaution::Press(int id) {
-  Hide();
-}
+void UiCaution::Press(int id) { Hide(); }
 
 void UiCaution::Release() {}
 
-UiConfirmation::UiConfirmation(
-    UiDynamicSprite&& desk,
-    float size_scale,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    UiDynamicSprite&& btn_accept,
-    UiDynamicSprite&& btn_decline,
-    UiTextMenuId&& text)
-    : UiTopWindowBase(std::move(desk), size_scale,
-                      ui_shared_resources, window_queue),
+UiConfirmation::UiConfirmation(UiDynamicSprite&& desk, float size_scale,
+                               UiSharedResources& ui_shared_resources,
+                               WindowQueue& window_queue,
+                               UiDynamicSprite&& btn_accept,
+                               UiDynamicSprite&& btn_decline,
+                               UiTextMenuId&& text)
+    : UiTopWindowBase(std::move(desk), size_scale, ui_shared_resources,
+                      window_queue),
       btn_accept_(std::move(btn_accept)),
       btn_decline_(std::move(btn_decline)),
       text_(std::move(text)),
       ui_event_handler_({&btn_accept_, &btn_decline_}) {
-  hierarchy_ = UiHierarchy(
-      &desk_, &btn_accept_, &btn_decline_, &text_);
+  hierarchy_ = UiHierarchy(&desk_, &btn_accept_, &btn_decline_, &text_);
 }
 
 UiConfirmation::UiConfirmation(UiConfirmation&& other) noexcept
@@ -418,12 +394,11 @@ UiConfirmation::UiConfirmation(UiConfirmation&& other) noexcept
       btn_decline_(std::move(other.btn_decline_)),
       text_(std::move(other.text_)),
       ui_event_handler_({&btn_accept_, &btn_decline_}) {
-  hierarchy_ = UiHierarchy(
-      &desk_, &btn_accept_, &btn_decline_, &text_);
+  hierarchy_ = UiHierarchy(&desk_, &btn_accept_, &btn_decline_, &text_);
 }
 
 bool UiConfirmation::Render() {
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   desk_.Render();
   btn_accept_.Render();
   btn_decline_.Render();
@@ -432,7 +407,7 @@ bool UiConfirmation::Render() {
 }
 
 void UiConfirmation::RenderPicking() {
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   desk_.RenderPicking();
   btn_accept_.RenderPicking();
   btn_decline_.RenderPicking();
@@ -440,52 +415,43 @@ void UiConfirmation::RenderPicking() {
 }
 
 void UiConfirmation::Press(int id) {
-//  ui_event_handler_.Press(id);
+  //  ui_event_handler_.Press(id);
   if (id == btn_accept_.GetId()) {
-    callable_(); // TODO: but... why not bth_accept_.Press()... should do smt
+    callable_();  // TODO: but... why not bth_accept_.Press()... should do smt
   } else if (id != desk_.GetId()) {
     Hide();
   }
 }
 
-void UiConfirmation::Release() {
-  ui_event_handler_.Release();
-}
+void UiConfirmation::Release() { ui_event_handler_.Release(); }
 
-void UiConfirmation::SetText(data::TextId text_id) {
-  text_.SetText(text_id);
-}
+void UiConfirmation::SetText(data::TextId text_id) { text_.SetText(text_id); }
 
 void UiConfirmation::SetCallable(std::function<void()>&& callable) {
   callable_ = std::move(callable);
 }
 
-void UiConfirmation::BtnEnter() {
-  callable_();
-}
+void UiConfirmation::BtnEnter() { callable_(); }
 
 void UiConfirmation::BtnEscape() {
   btn_decline_.Press();
   Hide();
 }
 
-UiFile::UiFile(
-    UiDynamicSprite&& desk,
-    float size_scale,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    UiDynamicSprite&& btn_accept,
-    UiDynamicSprite&& btn_decline, UiText&& label,
-    UiTextInput&& text)
-    : UiTopWindowBase(std::move(desk), size_scale,
-                      ui_shared_resources, window_queue),
+UiFile::UiFile(UiDynamicSprite&& desk, float size_scale,
+               UiSharedResources& ui_shared_resources,
+               WindowQueue& window_queue, UiDynamicSprite&& btn_accept,
+               UiDynamicSprite&& btn_decline, UiText&& label,
+               UiTextInput&& text)
+    : UiTopWindowBase(std::move(desk), size_scale, ui_shared_resources,
+                      window_queue),
       btn_accept_(std::move(btn_accept)),
       btn_decline_(std::move(btn_decline)),
       label_(std::move(label)),
       text_(std::move(text)),
-      ui_event_handler_({&btn_accept_/*, &btn_decline_*/}) {
-  hierarchy_ = UiHierarchy(
-      &desk_, &btn_accept_, &btn_decline_, &label_, &text_);
+      ui_event_handler_({&btn_accept_ /*, &btn_decline_*/}) {
+  hierarchy_ =
+      UiHierarchy(&desk_, &btn_accept_, &btn_decline_, &label_, &text_);
   label_.SetText("label");
 }
 
@@ -495,30 +461,30 @@ UiFile::UiFile(UiFile&& other) noexcept
       btn_decline_(std::move(other.btn_decline_)),
       label_(std::move(other.label_)),
       text_(std::move(other.text_)),
-      ui_event_handler_({&btn_accept_/*, &btn_decline_*/}) {
-  hierarchy_ = UiHierarchy(
-      &desk_, &btn_accept_, &btn_decline_, &label_, &text_);
+      ui_event_handler_({&btn_accept_ /*, &btn_decline_*/}) {
+  hierarchy_ =
+      UiHierarchy(&desk_, &btn_accept_, &btn_decline_, &label_, &text_);
 }
 
 bool UiFile::Render() {
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   desk_.Render();
   btn_accept_.Render();
   btn_decline_.Render();
   label_.Render();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   text_.Render();
   return false;
 }
 
 void UiFile::RenderPicking() {
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   desk_.RenderPicking();
   btn_accept_.RenderPicking();
   btn_decline_.RenderPicking();
   label_.RenderPicking();
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   text_.RenderPicking();
 }
 
@@ -533,16 +499,12 @@ void UiFile::Press(int id) {
   }
 }
 
-void UiFile::Release() {
-  ui_event_handler_.Release();
-}
+void UiFile::Release() { ui_event_handler_.Release(); }
 
-UiWindowBase::UiWindowBase(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue)
+UiWindowBase::UiWindowBase(UiDynamicSprite&& sprite, float size_scale,
+                           UiToggle2&& pin,
+                           UiSharedResources& ui_shared_resources,
+                           WindowQueue& window_queue)
     : sprite_(std::move(sprite)),
       size_scale_(size_scale),
       pin_(std::move(pin)),
@@ -564,11 +526,9 @@ UiWindowBase::UiWindowBase(UiWindowBase&& other) noexcept
       back_ready_(other.back_ready_),
       hierarchy_(std::move(other.hierarchy_)) {}
 
-UiWindowBase* UiWindowBase::GetWindowPtr() {
-  return this;
-}
+UiWindowBase* UiWindowBase::GetWindowPtr() { return this; }
 
-//TODO: useless?
+// TODO: useless?
 void UiWindowBase::Show() {
   do_show_ = true;
   if (window_queue_id_ != -1) {
@@ -577,7 +537,7 @@ void UiWindowBase::Show() {
   window_queue_id_ = window_queue_.PushBack(GetWindowPtr());
 }
 
-//unpin -> if(do_show) Hide()
+// unpin -> if(do_show) Hide()
 
 void UiWindowBase::Hide() {
   do_show_ = false;
@@ -600,19 +560,14 @@ void UiWindowBase::ForceHide() {
   progress_ = 0.0f;
 }
 
-bool UiWindowBase::Pinned() const noexcept {
-  return pin_.TurnedOn();
-}
+bool UiWindowBase::Pinned() const noexcept { return pin_.TurnedOn(); }
 
-UiWindowAppear::UiWindowAppear(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue)
-    : UiWindowBase(std::move(sprite), size_scale,
-                   std::move(pin), ui_shared_resources,
-                   window_queue) {}
+UiWindowAppear::UiWindowAppear(UiDynamicSprite&& sprite, float size_scale,
+                               UiToggle2&& pin,
+                               UiSharedResources& ui_shared_resources,
+                               WindowQueue& window_queue)
+    : UiWindowBase(std::move(sprite), size_scale, std::move(pin),
+                   ui_shared_resources, window_queue) {}
 
 UiWindowAppear::UiWindowAppear(UiWindowAppear&& other) noexcept
     : UiWindowBase(std::move(other)) {}
@@ -636,280 +591,31 @@ bool UiWindowAppear::RenderBack(bool show) {
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glActiveTexture(GL_TEXTURE1);
-  ui_shared_resources_.mask_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_mask_.Bind();
   ui_shared_resources_.tex_ui_mask_.Bind();
-  glUniform1f(shader::kSpriteProgress, progress_);
+  glUniform1f(4, progress_);
   sprite_.Render();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  glActiveTexture(GL_TEXTURE0); // go back to default
+  ui_shared_resources_.shader_sp_.Bind();
+  glActiveTexture(GL_TEXTURE0);  // go back to default
   pin_.Render();
   return true;
 }
 
 void UiWindowAppear::RenderPickingBack() {
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   sprite_.RenderPicking();
   pin_.RenderPicking();
 }
 
-UiTabMenu::UiTabMenu(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-
-    UiDynamicSprite&& btn_mode_terrain,
-    UiDynamicSprite&& btn_mode_water,
-    UiDynamicSprite&& btn_mode_placement,
-    UiDynamicSprite&& btn_mode_objects,
-    UiDynamicSprite&& btn_mode_biomes,
-    UiDynamicSprite&& btn_mode_tiles,
-    UiDynamicSprite&& btn_mode_player,
-
-    UiToggle4&& toggle_terrain, UiToggle4&& toggle_water,
-    UiToggle4&& toggle_placement, UiToggle4&& toggle_objects,
-    UiToggle4&& toggle_biomes, UiToggle4&& toggle_tiles,
-
-    UiDynamicSprite&& btn_shader_wirebound, UiToggle4&& toggle_shaders,
-
-    UiDynamicSprite&& arrow_select,
-    UiDynamicSprite&& arrow_selected,
-    UiDynamicSprite&& save_data,
-    UiDynamicSprite&& load_data)
-    : UiWindowAppear(std::move(sprite), size_scale,
-                     std::move(pin), ui_shared_resources,
-                     window_queue),
-      btn_mode_terrain_(std::move(btn_mode_terrain)),
-      btn_mode_water_(std::move(btn_mode_water)),
-      btn_mode_placement_(std::move(btn_mode_placement)),
-      btn_mode_objects_(std::move(btn_mode_objects)),
-      btn_mode_biomes_(std::move(btn_mode_biomes)),
-      btn_mode_tiles_(std::move(btn_mode_tiles)),
-      btn_mode_player_(std::move(btn_mode_player)),
-
-      toggle_terrain_(std::move(toggle_terrain)),
-      toggle_water_(std::move(toggle_water)),
-      toggle_placement_(std::move(toggle_placement)),
-      toggle_objects_(std::move(toggle_objects)),
-      toggle_biomes_(std::move(toggle_biomes)),
-      toggle_tiles_(std::move(toggle_tiles)),
-
-      btn_shader_wirebound_(std::move(btn_shader_wirebound)),
-      toggle_shaders_(std::move(toggle_shaders)),
-
-      arrow_select_(std::move(arrow_select)),
-      arrow_selected_(std::move(arrow_selected)),
-      save_data_(std::move(save_data)),
-      load_data_(std::move(load_data)),
-      ui_event_handler_({
-          &pin_,
-          &btn_mode_terrain_,
-          &btn_mode_water_,
-          &btn_mode_placement_,
-          &btn_mode_objects_,
-          &btn_mode_biomes_,
-          &btn_mode_tiles_,
-          &btn_mode_player_,
-
-          &toggle_terrain_,
-          &toggle_water_,
-          &toggle_placement_,
-          &toggle_objects_,
-          &toggle_biomes_,
-          &toggle_tiles_,
-
-          &btn_shader_wirebound_,
-          &toggle_shaders_,
-          &save_data_,
-          &load_data_,
-      }) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &btn_mode_terrain_, &btn_mode_water_,
-      &btn_mode_placement_,
-      &btn_mode_objects_, &btn_mode_biomes_, &btn_mode_tiles_,
-      &btn_mode_player_,
-      &toggle_terrain_, &toggle_water_,
-      &toggle_placement_, &toggle_objects_, &toggle_biomes_, &toggle_tiles_,
-      &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_, &arrow_selected_,
-      &save_data_, &load_data_);
-  speed_ = 2.0f;
-}
-
-UiTabMenu::UiTabMenu(UiTabMenu&& other) noexcept
-    : Base(std::move(other)),
-      btn_mode_terrain_(std::move(other.btn_mode_terrain_)),
-      btn_mode_water_(std::move(other.btn_mode_water_)),
-      btn_mode_placement_(std::move(other.btn_mode_placement_)),
-      btn_mode_objects_(std::move(other.btn_mode_objects_)),
-      btn_mode_biomes_(std::move(other.btn_mode_biomes_)),
-      btn_mode_tiles_(std::move(other.btn_mode_tiles_)),
-      btn_mode_player_(std::move(other.btn_mode_player_)),
-
-      toggle_terrain_(std::move(other.toggle_terrain_)),
-      toggle_water_(std::move(other.toggle_water_)),
-      toggle_placement_(std::move(other.toggle_placement_)),
-      toggle_objects_(std::move(other.toggle_objects_)),
-      toggle_biomes_(std::move(other.toggle_biomes_)),
-      toggle_tiles_(std::move(other.toggle_tiles_)),
-
-      btn_shader_wirebound_(std::move(other.btn_shader_wirebound_)),
-      toggle_shaders_(std::move(other.toggle_shaders_)),
-
-      arrow_select_(std::move(other.arrow_select_)),
-      arrow_selected_(std::move(other.arrow_selected_)),
-      save_data_(std::move(other.save_data_)),
-      load_data_(std::move(other.load_data_)),
-
-      ui_event_handler_({
-          &pin_,
-          &btn_mode_terrain_,
-          &btn_mode_water_,
-          &btn_mode_placement_,
-          &btn_mode_objects_,
-          &btn_mode_biomes_,
-          &btn_mode_tiles_,
-          &btn_mode_player_,
-
-          &toggle_terrain_,
-          &toggle_water_,
-          &toggle_placement_,
-          &toggle_objects_,
-          &toggle_biomes_,
-          &toggle_tiles_,
-
-          &btn_shader_wirebound_,
-          &toggle_shaders_,
-          &save_data_,
-          &load_data_,
-      }) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &btn_mode_terrain_, &btn_mode_water_,
-      &btn_mode_placement_,
-      &btn_mode_objects_, &btn_mode_biomes_, &btn_mode_tiles_,
-      &btn_mode_player_,
-      &toggle_terrain_, &toggle_water_,
-      &toggle_placement_, &toggle_objects_, &toggle_biomes_, &toggle_tiles_,
-      &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_, &arrow_selected_,
-      &save_data_, &load_data_);
-}
-
-// returns "stop render"
-bool UiTabMenu::Render() {
-  ui_shared_resources_.tex_ui_.Bind();
-  bool stop_show = Base::RenderBack(true);
-//  if (!Base::BackIsReady()) {
-//    return stop_show;
-//  }
-
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-
-  btn_mode_terrain_.Render();
-  btn_mode_water_.Render();
-  btn_mode_placement_.Render();
-  btn_mode_objects_.Render();
-  btn_mode_biomes_.Render();
-  btn_mode_tiles_.Render();
-  btn_mode_player_.Render();
-
-  toggle_terrain_.Render();
-  toggle_water_.Render();
-  toggle_placement_.Render();
-  toggle_objects_.Render();
-  toggle_biomes_.Render();
-  toggle_tiles_.Render();
-
-  btn_shader_wirebound_.Render();
-
-  toggle_shaders_.Render();
-
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-
-  arrow_select_.SetRotate(arrow_select_angle_);
-  arrow_selected_.SetRotate(arrow_selected_angle_);
-
-  arrow_select_.Render();
-  arrow_selected_.Render();
-  save_data_.Render();
-  load_data_.Render();
-
-  return stop_show;
-}
-
-void UiTabMenu::RenderPicking() {
-  Base::RenderPickingBack();
-  if (!Base::BackIsReady()) {
-    return;
-  }
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-
-  btn_mode_terrain_.RenderPicking();
-  btn_mode_water_.RenderPicking();
-  btn_mode_placement_.RenderPicking();
-  btn_mode_objects_.RenderPicking();
-  btn_mode_biomes_.RenderPicking();
-  btn_mode_tiles_.RenderPicking();
-  btn_mode_player_.RenderPicking();
-
-  toggle_terrain_.RenderPicking();
-  toggle_water_.RenderPicking();
-  toggle_placement_.RenderPicking();
-  toggle_objects_.RenderPicking();
-  toggle_biomes_.RenderPicking();
-  toggle_tiles_.RenderPicking();
-
-  btn_shader_wirebound_.RenderPicking();
-
-  toggle_shaders_.RenderPicking();
-
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-
-  arrow_select_.RenderPicking();
-  arrow_selected_.RenderPicking();
-  save_data_.RenderPicking();
-  load_data_.RenderPicking();
-}
-
-bool UiTabMenu::Press(int id) {
-  bool handled = ui_event_handler_.Press(id);
-  if (id != pin_.GetId()) {
-    return handled;
-  }
-  if (!do_show_) {
-    Hide();
-  }
-  return handled;
-}
-
-void UiTabMenu::Release() {
-  ui_event_handler_.Release();
-}
-
-void UiTabMenu::SetSelectedArrow(float angle) {
-  arrow_selected_angle_ = angle;
-}
-
-void UiTabMenu::SetSelectArrow(float angle) {
-  arrow_select_angle_ = angle;
-}
-
 UiObjectInfo::UiObjectInfo(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
+    UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+    UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
 
-    UiDynamicSprite&& sp_enemy,
-    UiDynamicSprite&& sp_friend,
-    UiDynamicSprite&& sp_neutral,
-    UiDynamicSprite&& sp_obstacle,
-    UiText&& txt_name,
-    UiTextModeId&& txt_characteristic,
-    UiTextModeId&& txt_value)
-    : UiWindowAppear(std::move(sprite), size_scale,
-                     std::move(pin), ui_shared_resources,
-                     window_queue),
+    UiDynamicSprite&& sp_enemy, UiDynamicSprite&& sp_friend,
+    UiDynamicSprite&& sp_neutral, UiDynamicSprite&& sp_obstacle,
+    UiText&& txt_name, UiText&& txt_characteristic, UiText&& txt_value)
+    : UiWindowAppear(std::move(sprite), size_scale, std::move(pin),
+                     ui_shared_resources, window_queue),
       sp_enemy_(std::move(sp_enemy)),
       sp_friend_(std::move(sp_friend)),
       sp_neutral_(std::move(sp_neutral)),
@@ -918,9 +624,9 @@ UiObjectInfo::UiObjectInfo(
       txt_characteristic_(std::move(txt_characteristic)),
       txt_value_(std::move(txt_value)),
       ui_event_handler_({&pin_}) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &sp_enemy_, &sp_friend_, &sp_neutral_,
-      &sp_obstacle_, &txt_name_, &txt_characteristic_, &txt_value_);
+  hierarchy_ =
+      UiHierarchy(&sprite_, &pin_, &sp_enemy_, &sp_friend_, &sp_neutral_,
+                  &sp_obstacle_, &txt_name_, &txt_characteristic_, &txt_value_);
   speed_ = 2.0f;
 }
 
@@ -934,25 +640,25 @@ UiObjectInfo::UiObjectInfo(UiObjectInfo&& other) noexcept
       txt_characteristic_(std::move(other.txt_characteristic_)),
       txt_value_(std::move(other.txt_value_)),
       ui_event_handler_({&pin_}) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &sp_enemy_, &sp_friend_, &sp_neutral_,
-      &sp_obstacle_, &txt_name_, &txt_characteristic_, &txt_value_);
+  hierarchy_ =
+      UiHierarchy(&sprite_, &pin_, &sp_enemy_, &sp_friend_, &sp_neutral_,
+                  &sp_obstacle_, &txt_name_, &txt_characteristic_, &txt_value_);
 }
 
 bool UiObjectInfo::Render() {
   ui_shared_resources_.tex_ui_.Bind();
   bool stop_show = Base::RenderBack(true);
-//  if (!Base::BackIsReady()) {
-//    return stop_show;
-//  }
+  //  if (!Base::BackIsReady()) {
+  //    return stop_show;
+  //  }
 
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  glUniform1f(1, 0.4f); /// half-saturated color for non-selected
+  ui_shared_resources_.shader_sp_.Bind();
+  glUniform1f(1, 0.4f);  /// half-saturated color for non-selected
   sp_enemy_.Render();
   sp_friend_.Render();
   sp_neutral_.Render();
   sp_obstacle_.Render();
-  glUniform1f(1, 1.0f); /// full saturated color for selected
+  glUniform1f(1, 1.0f);  /// full saturated color for selected
   if (enemy_selected_) {
     sp_enemy_.Render();
   }
@@ -966,33 +672,39 @@ bool UiObjectInfo::Render() {
     sp_obstacle_.Render();
   }
   txt_name_.Render();
-  if (selected_num_ == 1) {
-    RenderParamsObjSingle();
-  } else {
-    RenderParamsObjGroup();
-  }
-//  txt_characteristic_.Render();
-//  txt_value_.Render();
-
+  RenderParams();
   return stop_show;
 }
 
-void UiObjectInfo::RenderParamsObjSingle() {
-  txt_characteristic_.SetText(data::TextId::kPerlin);
-  txt_characteristic_.Render();
+void UiObjectInfo::RenderParams() {
+  float entry_height =
+      sprite_.GetHeight() / (render_params_.size() + 5);  // +pads
+  LocalTransform transform;
+  for (const auto& p : render_params_) {
+    txt_characteristic_.SetParentTransform(transform);
+    txt_characteristic_.SetText(p.name);
+    txt_characteristic_.Render();
+    txt_value_.SetParentTransform(transform);
+    txt_value_.SetText(std::format("{:.2f}", p.value));
+    txt_value_.Render();
+    transform.translate.y -= entry_height;
+  }
 }
 
-void UiObjectInfo::RenderPickingParamsObjSingle() {
-  txt_characteristic_.RenderPicking();
-}
-
-void UiObjectInfo::RenderParamsObjGroup() {
-  txt_characteristic_.SetText(data::TextId::kMetaballs);
-  txt_characteristic_.Render();
-}
-
-void UiObjectInfo::RenderPickingParamsObjGroup() {
-  txt_characteristic_.RenderPicking();
+void UiObjectInfo::RenderPickingParams() {
+  glm::vec2 next_offset = glm::vec2{0.0f};
+  float entry_height =
+      sprite_.GetHeight() / (render_params_.size() + 5);  // +pads
+  LocalTransform transform;
+  for (const auto& p : render_params_) {
+    txt_characteristic_.SetParentTransform(transform);
+    txt_characteristic_.SetText(p.name);
+    txt_characteristic_.RenderPicking();
+    txt_value_.SetParentTransform(transform);
+    txt_value_.SetText(std::to_string(p.value));
+    txt_value_.RenderPicking();
+    transform.translate -= entry_height;
+  }
 }
 
 void UiObjectInfo::RenderPicking() {
@@ -1000,14 +712,13 @@ void UiObjectInfo::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   sp_enemy_.RenderPicking();
   sp_friend_.RenderPicking();
   sp_neutral_.RenderPicking();
   sp_obstacle_.RenderPicking();
-  //  txt_name_.RenderPicking();
-  //  txt_characteristic_.RenderPicking();
-  //  txt_value_.RenderPicking();
+  txt_name_.RenderPicking();
+  RenderPickingParams();
 }
 
 bool UiObjectInfo::Press(int id) {
@@ -1021,27 +732,25 @@ bool UiObjectInfo::Press(int id) {
   return handled;
 }
 
-void UiObjectInfo::Release() {
-  ui_event_handler_.Release();
-}
+void UiObjectInfo::Release() { ui_event_handler_.Release(); }
 
-void UiObjectInfo::Show(
-    bool enemy_selected, bool friend_selected,
-    bool neutral_selected, bool obstacle_selected,
-    int selected_num) {
+void UiObjectInfo::Show(bool enemy_selected, bool friend_selected,
+                        bool neutral_selected, bool obstacle_selected,
+                        int selected_num) {
   enemy_selected_ = enemy_selected;
   friend_selected_ = friend_selected;
   neutral_selected_ = neutral_selected;
   obstacle_selected_ = obstacle_selected;
   txt_name_.SetText("Pavlushas (a lot)");
   selected_num_ = selected_num;
+  render_params_.clear();
+  render_params_.emplace_back("amount", selected_num);
   Show();
 }
 
-void UiObjectInfo::Show(
-    bool enemy_selected, bool friend_selected,
-    bool neutral_selected, bool obstacle_selected,
-    const ModelData* mdl_data) {
+void UiObjectInfo::Show(bool enemy_selected, bool friend_selected,
+                        bool neutral_selected, bool obstacle_selected,
+                        const ModelData* mdl_data) {
   enemy_selected_ = enemy_selected;
   friend_selected_ = friend_selected;
   neutral_selected_ = neutral_selected;
@@ -1049,44 +758,42 @@ void UiObjectInfo::Show(
   txt_name_.SetText("Pavlusha");
   selected_num_ = 1;
   mdl_data_ = mdl_data;
+  render_params_.clear();
+  render_params_.emplace_back("hp", mdl_data_->hp);
+  render_params_.emplace_back("speed", mdl_data_->speed);
+  render_params_.emplace_back("attack", mdl_data_->attack);
+  render_params_.emplace_back("attack speed", mdl_data_->attack_speed);
   Show();
 }
 
-UiTipWindow::UiTipWindow(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    UiDynamicSprite&& text)
-    : UiWindowAppear(std::move(sprite), size_scale,
-                     std::move(pin), ui_shared_resources,
-                     window_queue),
-      text_(std::move(text)) { // 1
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &text_); // 2
+UiTipWindow::UiTipWindow(UiDynamicSprite&& sprite, float size_scale,
+                         UiToggle2&& pin,
+                         UiSharedResources& ui_shared_resources,
+                         WindowQueue& window_queue, UiDynamicSprite&& text)
+    : UiWindowAppear(std::move(sprite), size_scale, std::move(pin),
+                     ui_shared_resources, window_queue),
+      text_(std::move(text)) {                        // 1
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &text_);  // 2
   speed_ = 2.0f;
 }
 
 UiTipWindow::UiTipWindow(UiTipWindow&& other) noexcept
-    : Base(std::move(other)),
-      text_(std::move(other.text_)) {
+    : Base(std::move(other)), text_(std::move(other.text_)) {
   hierarchy_ = UiHierarchy(&sprite_, &pin_, &text_);
 }
 
 bool UiTipWindow::Render() {
-  UpdateHoverState(ui_shared_resources_.global_glfw_callback_data_.hovered_id);
+  UpdateHoverState(ui_shared_resources_.gltf_context_.hovered_id);
   bool stop_show = Base::RenderBack(hovered_);
   if (!Base::BackIsReady()) {
     return stop_show;
   }
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   text_.Render();
   return stop_show;
 }
 
-void UiTipWindow::RenderPicking() {
-  Base::RenderPickingBack();
-}
+void UiTipWindow::RenderPicking() { Base::RenderPickingBack(); }
 
 bool UiTipWindow::Press(int id) {
   if (id == sprite_.GetId()) {
@@ -1112,17 +819,14 @@ void UiTipWindow::SetText(data::TextId text_id) {
   std::cout << "text id is " << static_cast<int>(text_id);
 }
 
-UiWindowPopUp::UiWindowPopUp(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    LocalTransform start_transform,
-    LocalTransform end_transform)
-    : UiWindowBase(std::move(sprite), size_scale,
-                   std::move(pin), ui_shared_resources,
-                   window_queue),
+UiWindowPopUp::UiWindowPopUp(UiDynamicSprite&& sprite, float size_scale,
+                             UiToggle2&& pin,
+                             UiSharedResources& ui_shared_resources,
+                             WindowQueue& window_queue,
+                             LocalTransform start_transform,
+                             LocalTransform end_transform)
+    : UiWindowBase(std::move(sprite), size_scale, std::move(pin),
+                   ui_shared_resources, window_queue),
       start_transform_(start_transform),
       end_transform_(end_transform) {}
 
@@ -1133,7 +837,7 @@ UiWindowPopUp::UiWindowPopUp(UiWindowPopUp&& other) noexcept
       end_transform_(other.end_transform_) {}
 
 bool UiWindowPopUp::RenderBack(bool show) {
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   if (pin_.TurnedOn() || show) {
     progress_ += speed_ * gDeltaTime;
     if (progress_ >= 1.0f) {
@@ -1156,47 +860,36 @@ bool UiWindowPopUp::RenderBack(bool show) {
 }
 
 void UiWindowPopUp::RenderPickingBack() {
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   sprite_.RenderPicking();
   pin_.RenderPicking();
 }
 
 void UiWindowPopUp::CubicInterpolation() {
   cur_transform_.translate =
-      start_transform_.translate
-      + progress_ * (end_transform_.translate - start_transform_.translate);
+      start_transform_.translate +
+      progress_ * (end_transform_.translate - start_transform_.translate);
   cur_transform_.rotate =
-      start_transform_.rotate
-      + progress_ * (end_transform_.rotate - start_transform_.rotate);
+      start_transform_.rotate +
+      progress_ * (end_transform_.rotate - start_transform_.rotate);
   cur_transform_.scale =
-      start_transform_.scale
-      + progress_ * (end_transform_.scale - start_transform_.scale);
+      start_transform_.scale +
+      progress_ * (end_transform_.scale - start_transform_.scale);
 }
 
 UiSettings::UiSettings(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    LocalTransform start_transform,
-    LocalTransform end_transform,
-    UiDynamicSprite&& resolution_label,
-    UiDynamicSprite&& resolution_left,
-    UiDynamicSprite&& resolution_right,
-    UiDynamicSprite&& resolution,
-    UiToggle4&& toggle_fullscreen,
-    UiSliderH2 sensitivity,
-    UiSliderH2&& sound,
-    UiToggle4&& toggle_sound,
-    UiSliderH2&& music, UiToggle4&& toggle_music,
-    UiDynamicSprite&& tip_info_label,
-    UiDynamicSprite&& tip_info,
+    UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+    UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+    LocalTransform start_transform, LocalTransform end_transform,
+    UiDynamicSprite&& resolution_label, UiDynamicSprite&& resolution_left,
+    UiDynamicSprite&& resolution_right, UiDynamicSprite&& resolution,
+    UiToggle4&& toggle_fullscreen, UiSliderH2 sensitivity, UiSliderH2&& sound,
+    UiToggle4&& toggle_sound, UiSliderH2&& music, UiToggle4&& toggle_music,
+    UiDynamicSprite&& tip_info_label, UiDynamicSprite&& tip_info,
     UiToggle4&& toggle_tip_info)
-    : UiWindowPopUp(std::move(sprite), size_scale,
-                    std::move(pin), ui_shared_resources,
-                    window_queue,
-                    start_transform, end_transform),
+    : UiWindowPopUp(std::move(sprite), size_scale, std::move(pin),
+                    ui_shared_resources, window_queue, start_transform,
+                    end_transform),
       resolution_label_(std::move(resolution_label)),
       resolution_left_(std::move(resolution_left)),
       resolution_right_(std::move(resolution_right)),
@@ -1210,17 +903,15 @@ UiSettings::UiSettings(
       tip_info_label_(std::move(tip_info_label)),
       tip_info_(std::move(tip_info)),
       toggle_tip_info_(std::move(toggle_tip_info)),
-      ui_event_handler_({
-          &pin_, &resolution_left_, &resolution_right_,
-          &toggle_fullscreen_, &sensitivity_,
-          &sound_, &toggle_sound_, &music_, &toggle_music_,
-          &tip_info_, &toggle_tip_info_}) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &resolution_label_, &resolution_left_,
-      &resolution_right_, &resolution_, &toggle_fullscreen_,
-      &sensitivity_, &sound_, &toggle_sound_,
-      &music_, &toggle_music_, &tip_info_label_, &tip_info_,
-      &toggle_tip_info_);
+      ui_event_handler_({&pin_, &resolution_left_, &resolution_right_,
+                         &toggle_fullscreen_, &sensitivity_, &sound_,
+                         &toggle_sound_, &music_, &toggle_music_, &tip_info_,
+                         &toggle_tip_info_}) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &resolution_label_,
+                           &resolution_left_, &resolution_right_, &resolution_,
+                           &toggle_fullscreen_, &sensitivity_, &sound_,
+                           &toggle_sound_, &music_, &toggle_music_,
+                           &tip_info_label_, &tip_info_, &toggle_tip_info_);
 }
 
 UiSettings::UiSettings(UiSettings&& other) noexcept
@@ -1238,28 +929,26 @@ UiSettings::UiSettings(UiSettings&& other) noexcept
       tip_info_label_(std::move(other.tip_info_label_)),
       tip_info_(std::move(other.tip_info_)),
       toggle_tip_info_(std::move(other.toggle_tip_info_)),
-      ui_event_handler_({
-          &pin_, &resolution_left_, &resolution_right_,
-          &toggle_fullscreen_, &sensitivity_,
-          &sound_, &toggle_sound_, &music_, &toggle_music_,
-          &tip_info_, &toggle_tip_info_}) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &resolution_label_, &resolution_left_,
-      &resolution_right_, &resolution_, &toggle_fullscreen_,
-      &sensitivity_, &sound_, &toggle_sound_,
-      &music_, &toggle_music_, &tip_info_label_, &tip_info_,
-      &toggle_tip_info_);
+      ui_event_handler_({&pin_, &resolution_left_, &resolution_right_,
+                         &toggle_fullscreen_, &sensitivity_, &sound_,
+                         &toggle_sound_, &music_, &toggle_music_, &tip_info_,
+                         &toggle_tip_info_}) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &resolution_label_,
+                           &resolution_left_, &resolution_right_, &resolution_,
+                           &toggle_fullscreen_, &sensitivity_, &sound_,
+                           &toggle_sound_, &music_, &toggle_music_,
+                           &tip_info_label_, &tip_info_, &toggle_tip_info_);
 }
 
 // returns "stop render"
 bool UiSettings::Render() {
-  UpdateHoverState(ui_shared_resources_.global_glfw_callback_data_.hovered_id);
+  UpdateHoverState(ui_shared_resources_.gltf_context_.hovered_id);
   ui_shared_resources_.tex_ui_.Bind();
   bool stop_show = Base::RenderBack(hovered_);
-//  if (!Base::BackIsReady()) {
-//    return stop_show;
-//  }
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  //  if (!Base::BackIsReady()) {
+  //    return stop_show;
+  //  }
+  ui_shared_resources_.shader_sp_.Bind();
 
   resolution_label_.SetParentTransform(Base::cur_transform_);
   resolution_left_.SetParentTransform(Base::cur_transform_);
@@ -1275,8 +964,7 @@ bool UiSettings::Render() {
   tip_info_.SetParentTransform(Base::cur_transform_);
   toggle_tip_info_.SetParentTransform(Base::cur_transform_);
 
-  auto mouse_pos =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
 
   resolution_left_.Render();
   resolution_right_.Render();
@@ -1290,12 +978,12 @@ bool UiSettings::Render() {
   tip_info_.Render();
   toggle_tip_info_.Render();
 
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
 
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
+  ui_shared_resources_.gltf_context_.text_renderer->RenderText(
+      resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
+  ui_shared_resources_.gltf_context_.text_renderer->RenderText(
+      tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
 
   return stop_show;
 }
@@ -1305,7 +993,7 @@ void UiSettings::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
 
   resolution_left_.RenderPicking();
   resolution_right_.RenderPicking();
@@ -1319,12 +1007,12 @@ void UiSettings::RenderPicking() {
   tip_info_.RenderPicking();
   toggle_tip_info_.RenderPicking();
 
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
 
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
+  ui_shared_resources_.gltf_context_.text_renderer->RenderTextPicking(
+      resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
+  ui_shared_resources_.gltf_context_.text_renderer->RenderTextPicking(
+      tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
 }
 
 void UiSettings::UpdateHoverState(int id) {
@@ -1342,243 +1030,96 @@ bool UiSettings::Press(int id) {
   return handled;
 }
 
-void UiSettings::Release() {
-  ui_event_handler_.Release();
-}
+void UiSettings::Release() { ui_event_handler_.Release(); }
 
 bool UiSettings::Scroll(GLuint id, float yoffset) {
-  return music_.Scroll(id, yoffset) ||
-         sound_.Scroll(id, yoffset) ||
+  return music_.Scroll(id, yoffset) || sound_.Scroll(id, yoffset) ||
          sensitivity_.Scroll(id, yoffset);
 }
-/*
 
-UiWaterLayerConfig::UiWaterLayerConfig(
-    UiDynamicSprite&& sprite,
-    float size_scale,
-    UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    LocalTransform start_transform,
-    LocalTransform end_transform,
-    UiDynamicSprite&& sprite_layer,
-    UiDynamicSprite&& text_layer,
-    UiToggle4&& toggle_layer,
-    UiDynamicSprite&& scale_text,
-    UiSliderH3&& scale,
-    UiDynamicSprite&& fetch_text,
-    UiSliderH3&& fetch,
-    UiDynamicSprite&& spread_blend_text,
-    UiSliderH3&& spread_blend,
-    UiDynamicSprite&& swell_text,
-    UiSliderH3&& swell,
-    UiDynamicSprite&& peak_enhancement_text,
-    UiSliderH3&& peak_enhancement,
-    UiDynamicSprite&& short_waves_fade_text,
-    UiSliderH3&& short_waves_fade,
-    UiDynamicSprite&& lambda_text,
-    UiSliderH3&& lambda)
-    : UiWindowPopUp(std::move(sprite), size_scale,
-                    std::move(pin), ui_shared_resources,
-                    window_queue,
-                    start_transform, end_transform),
-      sprite_layer_(std::move(sprite_layer)),
-      text_layer_(std::move(text_layer)),
-      toggle_layer_(std::move(toggle_layer)),
-      scale_(std::move(scale)),
-      scale_text_(std::move(scale_text)),
-      fetch_(std::move(fetch)),
-      fetch_text_(std::move(fetch_text)),
-      spread_blend_(std::move(spread_blend)),
-      spread_blend_text_(std::move(spread_blend_text)),
-      swell_(std::move(swell)),
-      swell_text_(std::move(swell_text)),
-      peak_enhancement_(std::move(peak_enhancement)),
-      peak_enhancement_text_(std::move(peak_enhancement_text)),
-      short_waves_fade_(std::move(short_waves_fade)),
-      short_waves_fade_text_(std::move(short_waves_fade_text)),
-      lambda_(std::move(lambda)),
-      lambda_text_(std::move(lambda_text)),
-      ui_event_handler_({
-          &pin_, &toggle_layer_, &scale_, &fetch_, &spread_blend_, &swell_,
-          &peak_enhancement_, &short_waves_fade_, &lambda_
-      }) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &sprite_layer_, &text_layer_,
-      &toggle_layer_, &scale_, &scale_text_,
-      &fetch_, &fetch_text_, &spread_blend_, &spread_blend_text_,
-      &swell_, &swell_text_, &peak_enhancement_, &peak_enhancement_text_,
-      &short_waves_fade_, &short_waves_fade_text_, &lambda_, &lambda_text_);
+UiPlayerMap::UiPlayerMap(UiSharedResources& ui_shared_resources,
+                         WindowQueue& window_queue)
+    : UiWindowPopUp(
+          {data::VboIdMain::kPlayerPhoneMap}, 1.0f,
+          {{data::VboIdMain::kMapFlowerRed}, {data::VboIdMain::kMapFlowerBlue}},
+          ui_shared_resources, window_queue,
+          LocalTransform{glm::vec2{0.2f, 0.0f}, 1.0f, 0.0f},
+          LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f}),
+      sp_player_(data::VboIdMain::kPlayerMapPlayer),
+      sp_enemy_(data::VboIdMain::kPlayerMapEnemy),
+      sp_friend_(data::VboIdMain::kPlayerMapFriend),
+      sp_neutral_(data::VboIdMain::kPlayerMapNeutral),
+      sp_obstacle_(data::VboIdMain::kPlayerMapObstacle) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &sp_player_, &sp_enemy_,
+                           &sp_friend_, &sp_neutral_, &sp_obstacle_);
 }
 
-UiWaterLayerConfig::UiWaterLayerConfig(UiWaterLayerConfig&& other) noexcept
+UiPlayerMap::UiPlayerMap(UiPlayerMap&& other) noexcept
     : Base(std::move(other)),
-      sprite_layer_(std::move(other.sprite_layer_)),
-      text_layer_(std::move(other.text_layer_)),
-      toggle_layer_(std::move(other.toggle_layer_)),
-      scale_(std::move(other.scale_)),
-      scale_text_(std::move(other.scale_text_)),
-      fetch_(std::move(other.fetch_)),
-      fetch_text_(std::move(other.fetch_text_)),
-      spread_blend_(std::move(other.spread_blend_)),
-      spread_blend_text_(std::move(other.spread_blend_text_)),
-      swell_(std::move(other.swell_)),
-      swell_text_(std::move(other.swell_text_)),
-      peak_enhancement_(std::move(other.peak_enhancement_)),
-      peak_enhancement_text_(std::move(other.peak_enhancement_text_)),
-      short_waves_fade_(std::move(other.short_waves_fade_)),
-      short_waves_fade_text_(std::move(other.short_waves_fade_text_)),
-      lambda_(std::move(other.lambda_)),
-      lambda_text_(std::move(other.lambda_text_)),
-      modified_(other.modified_),
-      ui_event_handler_({
-          &pin_, &toggle_layer_, &scale_, &fetch_, &spread_blend_, &swell_,
-          &peak_enhancement_, &short_waves_fade_, &lambda_
-      }) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &sprite_layer_, &text_layer_,
-      &toggle_layer_, &scale_, &scale_text_,
-      &fetch_, &fetch_text_, &spread_blend_, &spread_blend_text_,
-      &swell_, &swell_text_, &peak_enhancement_, &peak_enhancement_text_,
-      &short_waves_fade_, &short_waves_fade_text_, &lambda_, &lambda_text_);
+      sp_player_(std::move(other.sp_player_)),
+      sp_enemy_(std::move(other.sp_enemy_)),
+      sp_friend_(std::move(other.sp_friend_)),
+      sp_neutral_(std::move(other.sp_neutral_)),
+      sp_obstacle_(std::move(other.sp_obstacle_)) {
+  hierarchy_ = UiHierarchy(&sprite_, &pin_, &sp_player_, &sp_enemy_,
+                           &sp_friend_, &sp_neutral_, &sp_obstacle_);
 }
 
-// returns "stop render"
-bool UiWaterLayerConfig::Render() {
-  UpdateHoverState(ui_shared_resources_.global_glfw_callback_data_.hovered_id);
+// TODO: remove? but how...
+bool UiPlayerMap::Render() {
+  std::cerr << "used wrong UiPlayerMap::Render() func" << std::endl;
+  return false;
+}
+
+void UiPlayerMap::Render(ModelManager* mdl_manager) {
+  UpdateHoverState(ui_shared_resources_.gltf_context_.hovered_id);
+  ui_shared_resources_.tex_ui_.Bind();
   bool stop_show = Base::RenderBack(hovered_);
-  if (!Base::BackIsReady()) {
-    return stop_show;
+  ui_shared_resources_.shader_sp_.Bind();
+
+  sp_player_.SetParentTransform(Base::cur_transform_);
+  sp_enemy_.SetParentTransform(Base::cur_transform_);
+  sp_friend_.SetParentTransform(Base::cur_transform_);
+  sp_neutral_.SetParentTransform(Base::cur_transform_);
+  sp_obstacle_.SetParentTransform(Base::cur_transform_);
+
+  glEnable(GL_SCISSOR_TEST);
+  float centre_height =
+      (sprite_.GetTopBorder() + sprite_.GetBottomBorder()) / 2.0f + 0.025f;
+  float length_y = sprite_.GetHeight() / 2.3f;
+  float y_ndc = centre_height - length_y / 2;
+  int y_px = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
+  int height_py = int(length_y * 0.5f * gWindowHeight);
+
+  float centre_width =
+      (sprite_.GetRightBorder() + sprite_.GetLeftBorder()) / 2.0f;
+  float length_x = sprite_.GetWidth() * 0.84f;
+  float x_ndc = centre_width - length_x / 2;
+  int x_px = int((x_ndc + 1.0f) * 0.5f * gWindowWidth);
+  int width_px = int(length_x * 0.5f * gWindowWidth);
+
+  glScissor(x_px, y_px, width_px, height_py);
+  mdl_manager->RenderOnMap(&sp_player_, &sp_enemy_, &sp_friend_, &sp_neutral_,
+                           &sp_obstacle_);
+  glDisable(GL_SCISSOR_TEST);
+}
+
+void UiPlayerMap::RenderPicking() { Base::RenderPickingBack(); }
+
+void UiPlayerMap::UpdateHoverState(int id) {
+  hovered_ = (id >= sprite_.GetId() && id <= sp_obstacle_.GetId());
+}
+
+bool UiPlayerMap::Press(int id) {
+  if (id != pin_.GetId()) {
+    return false;
   }
-
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-
-  sprite_layer_.SetParentTransform(Base::cur_transform_);
-  text_layer_.SetParentTransform(Base::cur_transform_);
-  toggle_layer_.SetParentTransform(Base::cur_transform_);
-  scale_.SetParentTransform(Base::cur_transform_);
-  scale_text_.SetParentTransform(Base::cur_transform_);
-  fetch_.SetParentTransform(Base::cur_transform_);
-  fetch_text_.SetParentTransform(Base::cur_transform_);
-  spread_blend_.SetParentTransform(Base::cur_transform_);
-  spread_blend_text_.SetParentTransform(Base::cur_transform_);
-  swell_.SetParentTransform(Base::cur_transform_);
-  swell_text_.SetParentTransform(Base::cur_transform_);
-  peak_enhancement_.SetParentTransform(Base::cur_transform_);
-  peak_enhancement_text_.SetParentTransform(Base::cur_transform_);
-  short_waves_fade_.SetParentTransform(Base::cur_transform_);
-  short_waves_fade_text_.SetParentTransform(Base::cur_transform_);
-  lambda_.SetParentTransform(Base::cur_transform_);
-  lambda_text_.SetParentTransform(Base::cur_transform_);
-
-  /// shader & transform matrix already bind by Base class
-  auto mouse_pos =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
-  sprite_layer_.Render();
-  toggle_layer_.Render();
-  scale_.Render(mouse_pos);
-  fetch_.Render(mouse_pos);
-  spread_blend_.Render(mouse_pos);
-  swell_.Render(mouse_pos);
-  peak_enhancement_.Render(mouse_pos);
-  short_waves_fade_.Render(mouse_pos);
-  lambda_.Render(mouse_pos);
-
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(text_layer_, "layer name", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(scale_text_, "scale", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(fetch_text_, "fetch", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(spread_blend_text_, "spread blend", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(swell_text_, "swell", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(peak_enhancement_text_, "peak enhancement", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(short_waves_fade_text_, "short waves fade", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderText(lambda_text_, "lambda", 0.1f, glm::vec2{0.0f});
-
-  return stop_show;
-}
-
-void UiWaterLayerConfig::RenderPicking() {
-  Base::RenderPickingBack();
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-  sprite_layer_.RenderPicking();
-  toggle_layer_.RenderPicking();
-  scale_.RenderPicking();
-  fetch_.RenderPicking();
-  spread_blend_.RenderPicking();
-  swell_.RenderPicking();
-  peak_enhancement_.RenderPicking();
-  short_waves_fade_.RenderPicking();
-  lambda_.RenderPicking();
-
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(text_layer_, "layer name", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(scale_text_, "scale", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(fetch_text_, "fetch", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(spread_blend_text_, "spread blend", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(swell_text_, "swell", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(peak_enhancement_text_, "peak enhancement", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(short_waves_fade_text_, "short waves fade", 0.1f, glm::vec2{0.0f});
-  ui_shared_resources_.global_glfw_callback_data_.text_renderer
-      ->RenderTextPicking(lambda_text_, "lambda", 0.1f, glm::vec2{0.0f});
-}
-
-bool UiWaterLayerConfig::Press(int id) {
-  modified_ = ui_event_handler_.Press(id);
-  return modified_;
-}
-
-void UiWaterLayerConfig::Release() {
-  ui_event_handler_.Release();
-}
-
-void UiWaterLayerConfig::UpdateHoverState(int id) {
-  hovered_ = (id >= sprite_.GetId() && id <= lambda_text_.GetId());
-}
-
-bool UiWaterLayerConfig::Scroll(GLuint id, float yoffset) {
-  return scale_.Scroll(id, yoffset) ||
-         fetch_.Scroll(id, yoffset) ||
-         spread_blend_.Scroll(id, yoffset) ||
-         swell_.Scroll(id, yoffset) ||
-         peak_enhancement_.Scroll(id, yoffset) ||
-         short_waves_fade_.Scroll(id, yoffset) ||
-         lambda_.Scroll(id, yoffset);
-}
-
-bool UiWaterLayerConfig::Modified() {
-  if (modified_) {
-    modified_ = false;
-    return true;
+  if (!do_show_) {
+    Hide();
   }
   return false;
 }
 
-OceanLayerTraits UiWaterLayerConfig::GetOceanLayerTraits() const {
-  return {
-      scale_.GetProgress(),
-      fetch_.GetProgress(),
-      spread_blend_.GetProgress(),
-      swell_.GetProgress(),
-      peak_enhancement_.GetProgress(),
-      short_waves_fade_.GetProgress(),
-      lambda_.GetProgress()
-  };
-}
-*/
+void UiPlayerMap::Release() {}
+
+bool UiPlayerMap::Scroll(GLuint id, float yoffset) { return false; }

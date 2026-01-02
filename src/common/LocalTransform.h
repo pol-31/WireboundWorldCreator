@@ -24,7 +24,7 @@ struct LocalTransform {
   glm::vec2 translate{0.0f, 0.0f};
   // scale is first for convenient parsing (we don't parese roatea)
   float scale{1.0f};
-  float rotate{0.0f}; // radians
+  float rotate{0.0f};  // radians
 
   void Apply(LocalTransform other) {
     translate += other.translate;
@@ -38,9 +38,7 @@ struct LocalTransform {
   }
 
   [[nodiscard]] bool Empty() const noexcept {
-    return translate == glm::vec2(0.0f) &&
-           rotate == 0.0f &&
-           scale == 1.0f;
+    return translate == glm::vec2(0.0f) && rotate == 0.0f && scale == 1.0f;
   }
 };
 

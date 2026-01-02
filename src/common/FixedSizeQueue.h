@@ -1,10 +1,10 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_FIXEDSIZEQUEUE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_FIXEDSIZEQUEUE_H_
 
-#include <array>
-#include <functional>
-#include <cassert>
 #include <algorithm>
+#include <array>
+#include <cassert>
+#include <functional>
 #include <iterator>
 
 /// it's like constexpr vector:
@@ -64,13 +64,9 @@ class FixedSizeQueue {
     }
   }
 
-  void Clear() {
-    cur_size_ = 0;
-  }
+  void Clear() { cur_size_ = 0; }
 
-  SizeType Size() const {
-    return cur_size_;
-  }
+  SizeType Size() const { return cur_size_; }
 
   const T& operator[](SizeType index) const {
     assert(index < cur_size_ && "Index out of bounds");
@@ -97,25 +93,15 @@ class FixedSizeQueue {
     cur_size_ -= diff;
   }
 
-  Iterator begin() {
-    return data_.begin();
-  }
+  Iterator begin() { return data_.begin(); }
 
-  Iterator end() {
-    return std::next(data_.begin(), cur_size_);
-  }
+  Iterator end() { return std::next(data_.begin(), cur_size_); }
 
-  ConstIterator cbegin() const {
-    return data_.cbegin();
-  }
+  ConstIterator cbegin() const { return data_.cbegin(); }
 
-  ConstIterator cend() const {
-    return std::next(data_.cbegin(), cur_size_);
-  }
+  ConstIterator cend() const { return std::next(data_.cbegin(), cur_size_); }
 
-  T* data() {
-    return data_.data();
-  }
+  T* data() { return data_.data(); }
 
  private:
   std::array<T, N> data_;

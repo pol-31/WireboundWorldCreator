@@ -2,21 +2,18 @@
 
 #include "../common/Vbos.h"
 
-UiConfigWindow::UiConfigWindow(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer)
-    : UiWindowAppear(
-          (data::VboIdMain::kConfigWindowDesk), 1.0f,
-          {data::VboIdMain::kConfigWindowPinBack,
-           data::VboIdMain::kConfigWindowPinPoint},
-          ui_shared_resources, window_queue),
+UiConfigWindow::UiConfigWindow(UiSharedResources& ui_shared_resources,
+                               WindowQueue& window_queue,
+                               TextRenderer& text_renderer)
+    : UiWindowAppear((data::VboIdMain::kConfigWindowDesk), 1.0f,
+                     {data::VboIdMain::kConfigWindowPinBack,
+                      data::VboIdMain::kConfigWindowPinPoint},
+                     ui_shared_resources, window_queue),
       name_(text_renderer, data::VboIdMain::kConfigWindowName,
             data::TextId::kSeed),
       btn_save_(data::VboIdMain::kConfigWindowSave),
       sl_data_({data::VboIdMain::kConfigWindowSlider},
-               {data::VboIdMain::kConfigWindowHandler},
-               6, 0.75f, 0.8f),
+               {data::VboIdMain::kConfigWindowHandler}, 6, 0.75f, 0.8f),
       config_slider_(data::VboIdMain::kConfigWindowSliderArea,
                      data::VboIdMain::kConfigWindowSliderIcon),
       config_text_(text_renderer, data::VboIdMain::kConfigWindowSliderText,
@@ -24,6 +21,7 @@ UiConfigWindow::UiConfigWindow(
   hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_, &sl_data_);
   hierarchy_.AddNested(&config_slider_, &config_text_);
   sl_data_.SetSlotPtr(config_slider_.GetTrackPtr());
+  SetupUiHierarchy();
 }
 
 UiConfigWindow::UiConfigWindow(UiConfigWindow&& other) noexcept
@@ -35,19 +33,17 @@ UiConfigWindow::UiConfigWindow(UiConfigWindow&& other) noexcept
       config_text_(std::move(other.config_text_)) {
   hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_, &sl_data_);
   hierarchy_.AddNested(&config_slider_, &config_text_);
+  SetupUiHierarchy();
 }
 
 void UiConfigWindow::RenderSlotsSprites(glm::vec2 mouse_pos) {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render = std::min(
-      sl_data_.slots_num_ - 1, static_cast<int>(value_.size()));
-  LocalTransform transform;
+  int slots_to_render =
+      std::min(sl_data_.slots_num_ - 1, static_cast<int>(value_.size()));
   int start_id = sl_data_.cur_slots_offset_;
   int end_id = start_id + slots_to_render;
   for (int i = start_id; i < end_id; ++i) {
-    transform.translate = next_offset;
-    //    config_slider_.SetTranslate(next_offset);
-    config_slider_.SetParentTransform(transform);
+    config_slider_.SetTranslate(next_offset);
     if (i == sl_pressed_config_) {
       config_slider_.Render(mouse_pos);
       value_[i] = config_slider_.GetProgress();
@@ -61,8 +57,8 @@ void UiConfigWindow::RenderSlotsSprites(glm::vec2 mouse_pos) {
 
 void UiConfigWindow::RenderSlotsText() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render = std::min(
-      sl_data_.slots_num_ - 1, static_cast<int>(text_id_.size()));
+  int slots_to_render =
+      std::min(sl_data_.slots_num_ - 1, static_cast<int>(text_id_.size()));
   int start_id = sl_data_.cur_slots_offset_;
   int end_id = start_id + slots_to_render;
   for (int i = start_id; i < end_id; ++i) {
@@ -76,9 +72,8 @@ void UiConfigWindow::RenderSlotsText() {
 
 bool UiConfigWindow::Render() {
   RenderBack(true);
-  auto mouse_pos =
-      ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
+  ui_shared_resources_.shader_sp_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   btn_save_.Render();
   sl_data_.Render(mouse_pos);
@@ -93,15 +88,13 @@ bool UiConfigWindow::Render() {
 
 void UiConfigWindow::RenderPickingSlotsSprites() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  //TODO: config_slider_::handle probably already use SetTranslate
-  int slots_to_render = std::min(
-      sl_data_.slots_num_ - 1, static_cast<int>(value_.size()));
-  LocalTransform transform;
+  // TODO: config_slider_::handle probably already use SetTranslate
+  int slots_to_render =
+      std::min(sl_data_.slots_num_ - 1, static_cast<int>(value_.size()));
   int start_id = sl_data_.cur_slots_offset_;
   int end_id = start_id + slots_to_render;
   for (int i = start_id; i < end_id; ++i) {
-    transform.translate = next_offset;
-    config_slider_.SetParentTransform(transform);
+    config_slider_.SetTranslate(next_offset);
     config_slider_.SetValue(value_[i]);
     config_slider_.RenderPicking();
     next_offset.y -= sl_data_.slot_height_;
@@ -110,8 +103,8 @@ void UiConfigWindow::RenderPickingSlotsSprites() {
 
 void UiConfigWindow::RenderPickingSlotsText() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render = std::min(
-      sl_data_.slots_num_ - 1, static_cast<int>(text_id_.size()));
+  int slots_to_render =
+      std::min(sl_data_.slots_num_ - 1, static_cast<int>(text_id_.size()));
   int start_id = sl_data_.cur_slots_offset_;
   int end_id = start_id + slots_to_render;
   for (int i = start_id; i < end_id; ++i) {
@@ -125,7 +118,7 @@ void UiConfigWindow::RenderPickingSlotsText() {
 
 void UiConfigWindow::RenderPicking() {
   RenderPickingBack();
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   btn_save_.RenderPicking();
   sl_data_.RenderPicking();
@@ -151,8 +144,7 @@ bool UiConfigWindow::Press(int id) {
     return true;
   } else if (id == config_slider_.GetId()) {
     sl_pressed_config_ = sl_data_.GetSlotId(
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_);
-    std::cout << sl_pressed_config_ << std::endl;
+        ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_);
     config_slider_.Press();
     return true;
   }
@@ -172,4 +164,22 @@ void UiConfigWindow::SetNoise(std::span<float> value,
   text_id_ = text_id;
   name_.SetText(name_id);
   sl_data_.SetEntryNum(static_cast<int>(value_.size()));
+}
+
+void UiConfigWindow::SetupUiHierarchy() {
+  LocalTransform transform;
+  float half_width = sprite_.GetWidth() / 2.0f;
+  float quat_width = sprite_.GetWidth() / 4.0f;
+  transform.translate.x = half_width;
+  sl_data_.SetParentTransform(transform);
+  transform.scale = 0.1f;
+  transform.translate.x = -quat_width;
+  transform.translate.y = .0f;
+  transform.translate.y = sprite_.GetHeight() / 4.0f;
+  //  transform.translate.x = sprite_.GetRightBorder();
+  //  transform.translate.y = sprite_.GetTopBorder();
+  config_text_.SetParentTransform(transform);
+  transform.scale = 0.7f;
+  transform.translate.x += half_width;
+  config_slider_.SetParentTransform(transform);
 }

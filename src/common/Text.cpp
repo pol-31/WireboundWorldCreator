@@ -73,7 +73,16 @@ const std::array<std::string_view, gTotalText> gText = {
     "lambda",
     "layer 1",
     "layer 2",
-    "layer 3"
+    "layer 3",
+
+    "wind speed",
+    "wind angle",
+    "sun X",
+    "sun Y",
+    "sun Z",
+    "sun R",
+    "sun G",
+    "sun B",
 };
 
-} // namespace text
+}  // namespace data

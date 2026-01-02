@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "../../modes/UiSharedResources.h"
-#include "ModelLoader.h"
 #include "Creature.h"
+#include "ModelLoader.h"
 #include "Obstacle.h"
 #include "Player.h"
 
@@ -17,12 +17,9 @@ class ModelManager {
 
   void Render();
 
-  void RenderOnMap(
-      UiDynamicSprite* sp_player,
-      UiDynamicSprite* sp_enemy,
-      UiDynamicSprite* sp_friend,
-      UiDynamicSprite* sp_neutral,
-      UiDynamicSprite* sp_obstacle);
+  void RenderOnMap(UiDynamicSprite* sp_player, UiDynamicSprite* sp_enemy,
+                   UiDynamicSprite* sp_friend, UiDynamicSprite* sp_neutral,
+                   UiDynamicSprite* sp_obstacle);
 
   void RenderPicking();
 
@@ -45,7 +42,7 @@ class ModelManager {
   Obstacle tall_grass_;
   Obstacle undergrowth_;
 
-  Obstacle map_point_;
+  Creature map_point_;
 
   Player player_;
 

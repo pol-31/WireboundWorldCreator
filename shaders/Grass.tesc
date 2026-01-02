@@ -1,4 +1,4 @@
-#version 450
+#version 460 core
 
 layout(binding = 0) uniform CameraBufferObject {
   mat4 view;

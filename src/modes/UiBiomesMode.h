@@ -1,20 +1,17 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UIBIOMESMODE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UIBIOMESMODE_H_
 
-#include "IUiMode.h"
+#include "../common/MouseTransform.h"
 #include "../common/Vbos.h"
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
-#include "../common/MouseTransform.h"
+#include "IUiMode.h"
 #include "UiEditBiomes.h"
 
 class UiBiomesMode final : public IUiMode {
  public:
-  UiBiomesMode(
-      UiSharedResources& ui_shared_resources,
-      UiSlots& ui_slots,
-      WindowQueue& window_queue,
-      TextRenderer& text_renderer);
+  UiBiomesMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
+               WindowQueue& window_queue, TextRenderer& text_renderer);
 
   void Render() override;
 
@@ -59,34 +56,30 @@ class UiBiomesMode final : public IUiMode {
 
 namespace biomes {
 
-void ScrollCallback(
-    GLFWwindow* window, double xoffset, double yoffset);
+void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
-void MouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-void KeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods);
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
+                 int mods);
 
 /// selection
-void MouseButtonCallback_Lmb(
-    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
+                             int mods);
 
-void CursorPosCallback_Lmb(
-    GLFWwindow* window, double xpos, double ypos);
+void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos);
 
 /// transform (no rotation and scale - only translation)
 void BindCallbacksTransform();
 
-void MouseButtonCallbackTransform(
-    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallbackTransform(GLFWwindow* window, int button, int action,
+                                  int mods);
 
-void KeyCallbackTransform(
-    GLFWwindow* window, int key, int scancode, int action, int mods);
+void KeyCallbackTransform(GLFWwindow* window, int key, int scancode, int action,
+                          int mods);
 
-void CursorPosCallback_G(
-    GLFWwindow* window, double xpos, double ypos);
+void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos);
 
-} // namespace biomes
+}  // namespace biomes
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIBIOMESMODE_H_

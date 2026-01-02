@@ -1,7 +1,7 @@
 #version 460 core
-in vec3 normal;
-in vec3 position;
-in vec2 texcoord;
+in vec3 v_normal;
+in vec3 v_world_pos;
+in vec2 v_texcoord;
 
 layout (location = 1) uniform sampler2D tex_albedo;
 //layout (location = 2) uniform sampler2D tex_emission;
@@ -9,13 +9,20 @@ layout (location = 1) uniform sampler2D tex_albedo;
 //layout (location = 4) uniform sampler2D tex_normal;
 //layout (location = 5) uniform sampler2D tex_occlusion;
 
+layout(std140, binding = 2) uniform Environment {
+	vec3 sun_color;
+	float _pad1;
+	vec3 sun_direction;
+	float wind_speed;
+	vec2 wind_velocity;
+	float time;
+	float delta_time;
+} environment;
+
 out vec4 color;
 
 void main() {
-	vec3 sun_position = vec3(3.0f, 10.0f, -5.0f);
-	vec3 sun_color = vec3(1.0f);
-	float lum = max(dot(normal, normalize(sun_position)), 0.0f);
-	vec4 albedo = texture(tex_albedo, texcoord);
-	color = albedo * vec4((0.3f + 0.7f * lum) * sun_color, 1.0f);
-	color = vec4((0.3f + 0.7f * lum) * sun_color, 1.0f);
+	float lum = max(dot(v_normal, normalize(environment.sun_direction)), 0.0f);
+	vec4 albedo = texture(tex_albedo, v_texcoord);
+	color = albedo * vec4((0.3f + 0.7f * lum) * environment.sun_color, 1.0f);
 }

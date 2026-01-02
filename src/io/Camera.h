@@ -1,11 +1,11 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_IO_CAMERA_H_
 #define WIREBOUNDWORLDCREATOR_SRC_IO_CAMERA_H_
 
-#include <array>
-#include <memory>
-
 #include <glad/glad.h>
+
+#include <array>
 #include <glm/glm.hpp>
+#include <memory>
 
 #include "Cursor.h"
 
@@ -19,15 +19,13 @@ class Camera {
  public:
   Camera();
 
-  ~Camera() {
-    DeInitUbo();
-  }
+  ~Camera() { DeInitUbo(); }
 
   [[nodiscard]] glm::mat4 GetViewMatrix(float map_scale) const noexcept;
 
   [[nodiscard]] glm::mat4 GetProjMatrix() const noexcept;
 
-  //TODO: map_scale param deprecated, always 1.0f
+  // TODO: map_scale param deprecated, always 1.0f
   void Update(float map_scale);
 
   void UpdateViewMatrix(float map_scale) const;
@@ -38,10 +36,10 @@ class Camera {
 
   void UpdateCameraVectors(float radius = 1.0f);
 
-  //UiTerrainMode, other similar
+  // UiTerrainMode, other similar
   void MoveRotateViewOrigin(float xoffset, float yoffset);
 
-  //UiPlayerMode (no pitch)
+  // UiPlayerMode (no pitch)
   void MoveRotateViewOriginDist(float xoffset);
 
   void MovePanView(float xoffset, float yoffset);
@@ -76,38 +74,21 @@ class Camera {
     UpdateCameraVectors();
   }
 
-  void SetYaw(float yaw) {
-    yaw_ = yaw;
-  }
+  void SetYaw(float yaw) { yaw_ = yaw; }
 
-  void SetPitch(float pitch) {
-    pitch_ = pitch;
-  }
+  void SetPitch(float pitch) { pitch_ = pitch; }
 
-  void SetPosition(glm::vec3 position) {
-    position_ = position;
-  }
+  void SetPosition(glm::vec3 position) { position_ = position; }
 
-  void SetOrigin(glm::vec3 origin) {
-    origin_ = origin;
-  }
+  void SetOrigin(glm::vec3 origin) { origin_ = origin; }
 
-  void SetOriginDist(float origin_dist) {
-    origin_dist_ = origin_dist;
-  }
+  void SetOriginDist(float origin_dist) { origin_dist_ = origin_dist; }
 
-  [[nodiscard]] float GetYaw() const noexcept {
-    return yaw_;
-  }
+  [[nodiscard]] float GetYaw() const noexcept { return yaw_; }
 
-  [[nodiscard]] float GetPitch() const noexcept {
-    return pitch_;
-  }
+  [[nodiscard]] float GetPitch() const noexcept { return pitch_; }
 
-  [[nodiscard]] glm::vec3 GetPosition() const noexcept {
-    return position_;
-  }
-
+  [[nodiscard]] glm::vec3 GetPosition() const noexcept { return position_; }
 
  protected:
   void Init();
@@ -128,7 +109,7 @@ class Camera {
   glm::vec3 direction_world_up_;
   glm::vec3 direction_world_front_;
 
-  float origin_dist_ = 10.0f; // dist to origin
+  float origin_dist_ = 10.0f;  // dist to origin
   glm::vec3 origin_ = glm::vec3(0.0f);
 
   float yaw_;

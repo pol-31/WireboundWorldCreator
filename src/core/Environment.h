@@ -2,28 +2,25 @@
 #define WIREBOUNDWORLDCREATOR_SRC_CORE_ENVIRONMENT_H_
 
 #include <glad/glad.h>
+
 #include <glm/glm.hpp>
 
-#include "../common/Paths.h"
 #include "../common/Texture.h"
 
 class Environment {
  public:
-  explicit Environment(const Paths& paths);
+  Environment();
 
-  ~Environment() {
-    DeInit();
-  }
+  ~Environment() { DeInit(); }
 
   void Update();
 
-  void SetEnvironment(
-    float wind_speed, float wind_angle,
-    glm::vec3 sun_direction, glm::vec3 sun_color);
+  void SetEnvironment(float wind_speed, float wind_angle,
+                      glm::vec3 sun_direction, glm::vec3 sun_color);
 
   [[nodiscard]] float GetFps() const noexcept;
 
-private:
+ private:
   struct UboData {
     glm::vec3 sun_color = glm::vec3(1.0f);
     float _pad1 = 0.0f;

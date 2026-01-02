@@ -18,4 +18,4 @@ class Cursor {
   double last_y_;
 };
 
-#endif //WIREBOUNDWORLDCREATOR_SRC_CURSOR_H_
+#endif  // WIREBOUNDWORLDCREATOR_SRC_CURSOR_H_

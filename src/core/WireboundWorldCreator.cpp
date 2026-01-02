@@ -4,29 +4,20 @@
 
 #define GLFW_INCLUDE_NONE
 #include <glad/glad.h>
-#include "GLFW/glfw3.h"
 
+#include "GLFW/glfw3.h"
 #include "TileRenderer.h"
 
-WireboundWorldCreator::WireboundWorldCreator(
-    const Paths& paths)
-    : tile_renderer_(paths),
-      camera_(),
-      ui_renderer_(paths, global_data_, tile_renderer_, &camera_) {
-  Init(paths);
-}
-
-WireboundWorldCreator::~WireboundWorldCreator() {
-  DeInit();
+WireboundWorldCreator::WireboundWorldCreator()
+    : ui_renderer_(global_data_, tile_renderer_, &camera_) {
+  Init();
 }
 
 void WireboundWorldCreator::RunRenderLoop() {
   CheckGlobalData();
-//  camera_.UpdateProjectionMatrix();
   glEnable(GL_STENCIL_TEST);
   glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
   while (!glfwWindowShouldClose(gWindow)) {
-    /// internal fbos could modify it
     glStencilFunc(GL_ALWAYS, 0, 0xFF);
     glStencilMask(0xFF);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -38,29 +29,21 @@ void WireboundWorldCreator::RunRenderLoop() {
     tile_renderer_.cur_tile_.UpdateMapScale(gDeltaTime);
     cubemap_.Render();
 
-    /// no camera update, each mode do (requires map scale, what may differ)
-
     global_data_.UpdateCursorPos();
     global_data_.UpdateHoveredId();
 
-//    global_data_.event_queue.Process();
-
-    // tile_renderer_.Render();
     ui_renderer_.Render();
 
     picking_fbo_.Bind();
-    // tile_renderer_.RenderPicking();
     ui_renderer_.RenderPicking();
 
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glfwPollEvents();
     glfwSwapBuffers(gWindow);
-
-    /// unbind picking fbo
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
   }
 }
 
-void WireboundWorldCreator::Init(const Paths& paths) {
+void WireboundWorldCreator::Init() {
   glfwSetWindowUserPointer(gWindow, reinterpret_cast<void*>(&global_data_));
 
   global_data_.camera = &camera_;
@@ -72,7 +55,6 @@ void WireboundWorldCreator::Init(const Paths& paths) {
   glEnable(GL_MULTISAMPLE);
 
   glEnable(GL_DEPTH_TEST);
-//  glDepthFunc(GL_LESS);
   glDepthFunc(GL_LEQUAL);
 
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -80,36 +62,18 @@ void WireboundWorldCreator::Init(const Paths& paths) {
 
   glClearColor(0.2f, 0.7f, 0.1f, 1.0f);
 
-  std::array<std::string, 6> cubemap_textures{
-    paths.texture_skybox1_right,
-    paths.texture_skybox1_left,
-    paths.texture_skybox1_top,
-    paths.texture_skybox1_bottom,
-    paths.texture_skybox1_front,
-    paths.texture_skybox1_back
-  };
-  cubemap_ = Cubemap(cubemap_textures, paths.shader_cubemap_vert,
-                     paths.shader_cubemap_frag);
-
   ui_renderer_.Parse();
 
-  // here, not in Menu::Init(), where it would use uninitialised data
   global_data_.menu->SetMode(0);
 }
 
-void WireboundWorldCreator::DeInit() {
-  ui_renderer_.Serialize();
-}
+void WireboundWorldCreator::DeInit() { ui_renderer_.Serialize(); }
 
 void WireboundWorldCreator::CheckGlobalData() {
-  if (!global_data_.camera ||
-      !global_data_.tile_renderer ||
-      !global_data_.cur_mode ||
-      !global_data_.menu ||
-      !global_data_.picking_fbo ||
-      !global_data_.ui_debugger ||
-      !global_data_.ui_shared_resources ||
-      !global_data_.text_renderer ||
+  if (!global_data_.camera || !global_data_.tile_renderer ||
+      !global_data_.cur_mode || !global_data_.menu ||
+      !global_data_.picking_fbo || !global_data_.ui_debugger ||
+      !global_data_.ui_shared_resources || !global_data_.text_renderer ||
       !global_data_.windows) {
     throw "init global glfw callback data plz";
   }

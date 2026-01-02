@@ -1,12 +1,9 @@
 #include "GaussianNoise.h"
 
-#include <random>
-#include <cassert>
-
 #include <glad/glad.h>
 
-GaussianNoise::GaussianNoise(const Paths& paths)
-    : paths_(paths)/*, shader_(paths.gaussian_noise)*/ {}
+#include <cassert>
+#include <random>
 
 Texture32F GaussianNoise::Generate(int size) {
   Texture32F texture(size, GL_RG32F);
@@ -20,8 +17,8 @@ Texture32F GaussianNoise::Generate(int size) {
     }
   }
   texture.Bind();
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, size,
-               size, 0, GL_RG, GL_FLOAT, data.data());
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, size, size, 0, GL_RG, GL_FLOAT,
+               data.data());
   return texture;
 }
 
@@ -32,7 +29,8 @@ float GaussianNoise::NormalRandom() {
   float u = dis(gen);
   float v = dis(gen);
   // Box-Muller-Method
-  return std::cos(2 * std::numbers::pi_v<float> * u) * std::sqrt(-2 * std::log(v));
+  return std::cos(2 * std::numbers::pi_v<float> * u) *
+         std::sqrt(-2 * std::log(v));
 }
 
 float GaussianNoise::StableRandom(int seed) {
@@ -42,6 +40,6 @@ float GaussianNoise::StableRandom(int seed) {
   float u = dis(gen);
   float v = dis(gen);
 
-  return std::cos(2.0f * std::numbers::pi_v<float> * u)
-       * std::sqrt(-2.0f * std::log(v));
+  return std::cos(2.0f * std::numbers::pi_v<float> * u) *
+         std::sqrt(-2.0f * std::log(v));
 }

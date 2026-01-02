@@ -3,27 +3,22 @@
 
 #define GLFW_INCLUDE_NONE
 
-#include "IUiMode.h"
-#include "../common/Vbos.h"
 #include "../common/MouseTransform.h"
-
+#include "../common/Vbos.h"
 #include "../core/Tile.h"
-#include "../core/UiSlots.h"
 #include "../core/UiComplex.h"
 #include "../core/UiSelection.h"
+#include "../core/UiSlots.h"
+#include "IUiMode.h"
 #include "UiTerrainWindows.h"
 
 struct GLFWwindow;
 
 class UiTerrainMode final : public IUiMode {
  public:
-  UiTerrainMode(
-      UiSharedResources& ui_shared_resources,
-      UiSlots& ui_slots,
-      WindowQueue& window_queue,
-      TextRenderer& text_renderer,
-      Tile& cur_tile,
-      UiConfigWindow& ui_config_window);
+  UiTerrainMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
+                WindowQueue& window_queue, TextRenderer& text_renderer,
+                Tile& cur_tile, UiConfigWindow& ui_config_window);
 
   void Render() override;
 
@@ -55,27 +50,24 @@ class UiTerrainMode final : public IUiMode {
   UiTerrainBake ui_bake_;
   std::vector<BaseInstanceData> layers_;
   UiSlots& ui_slots_;
-  UiEditTerrain ui_edit_; // ! after ui_slots
+  UiEditTerrain ui_edit_;  // ! after ui_slots
   UiSelection ui_selection_;
 
   MouseTransform mouse_transform_;
 
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kTerrainEditNoiseHmap) -
-      static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1
-      > ui_event_handler_;
+  UiEventHandler<static_cast<int>(data::VboIdMain::kTerrainEditNoiseHmap) -
+                 static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1>
+      ui_event_handler_;
 };
 
 namespace terrain {
 
-void ScrollCallback(
-    GLFWwindow* window, double xoffset, double yoffset);
+void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
-void MouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-void KeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods);
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
+                 int mods);
 
 /**
 MMB - 3d rotation around camera lookAt_origin, snap with ALT
@@ -90,39 +82,33 @@ LMB+Ctrl+Shift - toggle selection
 RMB_SHIFT_PRESS - set origin
  * */
 
-void CursorPosCallback_Lmb(
-    GLFWwindow* window, double xpos, double ypos);
+void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos);
 
-void CursorPosCallback_RmbShift(
-    GLFWwindow* window, double xpos, double ypos);
-
+void CursorPosCallback_RmbShift(GLFWwindow* window, double xpos, double ypos);
 
 void BindCallbacksTransform(bool init_transform);
 
-void MouseButtonCallbackTransform(
-    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallbackTransform(GLFWwindow* window, int button, int action,
+                                  int mods);
 
-void KeyCallbackTransform(
-    GLFWwindow* window, int key, int scancode, int action, int mods);
+void KeyCallbackTransform(GLFWwindow* window, int key, int scancode, int action,
+                          int mods);
 
-void CursorPosCallback_G(
-    GLFWwindow* window, double xpos, double ypos);
+void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos);
 
-void CursorPosCallback_G_NonSelected(
-    GLFWwindow* window, double xpos, double ypos);
+void CursorPosCallback_G_NonSelected(GLFWwindow* window, double xpos,
+                                     double ypos);
 
-void CursorPosCallback_R(
-    GLFWwindow* window, double xpos, double ypos);
+void CursorPosCallback_R(GLFWwindow* window, double xpos, double ypos);
 
-void CursorPosCallback_S(
-    GLFWwindow* window, double xpos, double ypos);
+void CursorPosCallback_S(GLFWwindow* window, double xpos, double ypos);
 
-void MouseButtonCallback_Lmb(
-    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
+                             int mods);
 
-void MouseButtonCallback_RmbShift(
-    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallback_RmbShift(GLFWwindow* window, int button, int action,
+                                  int mods);
 
-} // namespace terrain
+}  // namespace terrain
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINMODE_H_

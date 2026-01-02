@@ -1,9 +1,9 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_CORE_WINDOWQUEUE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_CORE_WINDOWQUEUE_H_
 
-#include <array>
-
 #include <glad/glad.h>
+
+#include <array>
 
 #include "../common/Text.h"
 
@@ -46,9 +46,7 @@ class WindowQueue {
 
   bool Scroll(GLuint id, float yoffset);
 
-  void SetTopWindow(UiTopWindowBase* window) {
-    top_window_ = window;
-  }
+  void SetTopWindow(UiTopWindowBase* window) { top_window_ = window; }
 
   [[nodiscard]] UiTopWindowBase* GetTopWindow() const noexcept {
     return top_window_;

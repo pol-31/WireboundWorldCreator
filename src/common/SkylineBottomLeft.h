@@ -1,14 +1,14 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_SKYLINEBOTTOMLEFT_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_SKYLINEBOTTOMLEFT_H_
 
-#include <iostream>
-#include <filesystem>
-#include <fstream>
-#include <string>
-#include <vector>
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
 #include <forward_list>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -29,12 +29,8 @@ struct Aabb {
   int left{0};
   int right{0};
 
-  [[nodiscard]] int Height() const {
-    return top - bottom;
-  }
-  [[nodiscard]] int Width() const {
-    return right - left;
-  }
+  [[nodiscard]] int Height() const { return top - bottom; }
+  [[nodiscard]] int Width() const { return right - left; }
 };
 
 struct Sprite {
@@ -49,14 +45,13 @@ struct SpriteEntry {
   const Sprite* sprite;
 };
 
-std::vector<Sprite> ParseSpritesDir(
-    const std::filesystem::path& dir_path) {
+std::vector<Sprite> ParseSpritesDir(const std::filesystem::path& dir_path) {
   std::vector<Sprite> sprites;
   for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
     Sprite sprite;
     sprite.path = entry.path();
-    stbi_info(sprite.path.string().c_str(), &sprite.width,
-              &sprite.height, nullptr);
+    stbi_info(sprite.path.string().c_str(), &sprite.width, &sprite.height,
+              nullptr);
     if (sprite.width == 0 && sprite.height == 0) {
       std::cerr << "Unable to load sprite at " << sprite.path << std::endl;
       //      throw;
@@ -120,8 +115,8 @@ struct PlaceInfo {
 };
 
 // it doesn't modify the list, but returns mutable iterator
-PlaceInfo FindBestSkyline(
-    std::forward_list<SkylineNode>& skylines, int width, int height, int atlas_width) {
+PlaceInfo FindBestSkyline(std::forward_list<SkylineNode>& skylines, int width,
+                          int height, int atlas_width) {
   if (++skylines.begin() == skylines.end()) {
     // width of the atlas initially is GUARANTEED to be at least with
     // width and height of the largest sprites,
@@ -138,10 +133,10 @@ PlaceInfo FindBestSkyline(
 
   std::stable_sort(sorted_skylines.begin(), sorted_skylines.end(),
                    [](NodePtr node1, NodePtr node2) {
-                     return node1->y > node2->y; // reversed: top->bottom
+                     return node1->y > node2->y;  // reversed: top->bottom
                    });
   for (auto cur_node : sorted_skylines) {
-    if (cur_node->y < height) { // can't place due to y-overflow
+    if (cur_node->y < height) {  // can't place due to y-overflow
       return {skylines.end(), 0};
     }
     auto next_node = cur_node;
@@ -155,7 +150,8 @@ PlaceInfo FindBestSkyline(
     }
     auto it_skyline_stop = next_node;
     for (; it_skyline_stop != skylines.end(); ++it_skyline_stop) {
-      if (it_skyline_stop->actual_start > cur_node->x && it_skyline_stop->y < cur_node->y) {
+      if (it_skyline_stop->actual_start > cur_node->x &&
+          it_skyline_stop->y < cur_node->y) {
         break;
       }
     }
@@ -169,15 +165,14 @@ PlaceInfo FindBestSkyline(
       return {cur_node, possible_length};
     }
   }
-  return {skylines.end(), 0}; // can't place due to x-overflow
+  return {skylines.end(), 0};  // can't place due to x-overflow
 }
 
 // guarantee to fit
 // (check for enough space was in FindBestSkyline());
 // invalidates best_node
 void InsertSkyline(std::forward_list<SkylineNode>& skylines,
-                   PlaceInfo best_node,
-                   Aabb aabb, int atlas_width) {
+                   PlaceInfo best_node, Aabb aabb, int atlas_width) {
   int prev_y = best_node.it->y;
   best_node.it->y -= aabb.Height();
   best_node.it->actual_start = best_node.it->x;
@@ -209,7 +204,8 @@ void InsertSkyline(std::forward_list<SkylineNode>& skylines,
       // best node 100% fits (FindBestSkyline()),
       // but do we need to create/erase a node:
       if (next_node->actual_start > skyline_stop) {
-        skylines.emplace_after(best_node.it, skyline_stop, prev_y, skyline_stop);
+        skylines.emplace_after(best_node.it, skyline_stop, prev_y,
+                               skyline_stop);
         break;
       } else if (next_node->actual_start == skyline_stop) {
         break;
@@ -219,7 +215,7 @@ void InsertSkyline(std::forward_list<SkylineNode>& skylines,
         ++next_next_node;
         if (next_next_node != skylines.end()) {
           skylines.erase_after(best_node.it);
-          next_node = best_node.it; // recover
+          next_node = best_node.it;  // recover
         } else {
           next_node->x = skyline_stop;
           //          break;
@@ -235,7 +231,8 @@ void InsertSkyline(std::forward_list<SkylineNode>& skylines,
     if (next_node->y <= best_node.it->y) {
       break;
     }
-    if (/*next_node->y > best_node.it->y && */next_node->x <= best_node.it->x) {
+    if (/*next_node->y > best_node.it->y && */ next_node->x <=
+        best_node.it->x) {
       next_node->x = skyline_stop;
     }
     // if equal we don't remove |_-_-_-_-_-|
@@ -261,27 +258,27 @@ void InsertSkyline(std::forward_list<SkylineNode>& skylines,
         skylines.erase_after(most_left_node);
       }
       *most_left_node = most_left_node_data;
-      best_node.it = most_left_node; // recover
+      best_node.it = most_left_node;  // recover
     }
-    //TODO: need to recover prev node
+    // TODO: need to recover prev node
     if (prev->y == best_node.it->y) {
       skylines.erase_after(prev);
-      best_node.it = prev; // recover (valid)
+      best_node.it = prev;  // recover (valid)
     }
     // merge with next
     next_node = best_node.it;
     ++next_node;
     if (next_node != skylines.end() && next_node->y == best_node.it->y) {
-      skylines.erase_after(best_node.it); // no need to recover next
+      skylines.erase_after(best_node.it);  // no need to recover next
     }
     // to-left
     int x = 0;
     auto most_left_higher_node = best_node.it;
-    for (auto prev_node = skylines.begin();
-         prev_node != best_node.it; ++prev_node) {
+    for (auto prev_node = skylines.begin(); prev_node != best_node.it;
+         ++prev_node) {
       if (prev_node->y < best_node.it->y) {
         most_left_higher_node = prev_node;
-        ++most_left_higher_node; // we need next x
+        ++most_left_higher_node;  // we need next x
         x = most_left_higher_node->x;
       }
     }
@@ -291,11 +288,10 @@ void InsertSkyline(std::forward_list<SkylineNode>& skylines,
 
 // true if there's enough space to place;
 // writes to SpriteInfo::aabb
-bool TrySkylineBottomLeft(std::vector<Sprite>& sprites,
-                          Vec2i size) {
+bool TrySkylineBottomLeft(std::vector<Sprite>& sprites, Vec2i size) {
   // left-to-right
   std::forward_list<SkylineNode> skylines;
-  skylines.emplace_front(0, size.y); // start from the top
+  skylines.emplace_front(0, size.y);  // start from the top
   int counter = 0;
   for (auto& s : sprites) {
     if (counter == 1) {
@@ -311,7 +307,8 @@ bool TrySkylineBottomLeft(std::vector<Sprite>& sprites,
     s.aabb.right = best_node.it->x + s.width;
     s.aabb.top = best_node.it->y;
     s.aabb.bottom = best_node.it->y - s.height;
-    InsertSkyline(skylines, best_node, s.aabb, size.x); // invalidates best_node
+    InsertSkyline(skylines, best_node, s.aabb,
+                  size.x);  // invalidates best_node
     if (--counter == 0) {
       break;
     }
@@ -324,15 +321,14 @@ bool TrySkylineBottomLeft(std::vector<Sprite>& sprites,
   return true;
 }
 
-void StoreAtlas(const std::vector<Sprite>& sprites,
-                Vec2i size,
+void StoreAtlas(const std::vector<Sprite>& sprites, Vec2i size,
                 std::string_view path) {
   std::vector<std::byte> data(size.x * size.y * 4, static_cast<std::byte>(0));
   for (const auto& s : sprites) {
     int x, y;
     int channels = 4;
-    unsigned char* sprite_data = stbi_load(
-        s.path.string().c_str(), &x, &y, nullptr, channels);
+    unsigned char* sprite_data =
+        stbi_load(s.path.string().c_str(), &x, &y, nullptr, channels);
     if (!sprite_data) {
       std::cerr << "Unable to load sprite at " << s.path << std::endl;
       throw;
@@ -356,7 +352,8 @@ void StoreTexCoords(const std::vector<SpriteEntry>& sprite_entries,
     return;
   }
 
-  float atlas_ratio = 2.0f * static_cast<float>(tex_size.x) / static_cast<float>(tex_size.y);
+  float atlas_ratio =
+      2.0f * static_cast<float>(tex_size.x) / static_cast<float>(tex_size.y);
   /*
    * // name
    * pos_x,pos_y,coord_x,coord_y x4 (rb-rt-lb-lt)
@@ -374,7 +371,8 @@ void StoreTexCoords(const std::vector<SpriteEntry>& sprite_entries,
     float width = 2.0f;
     float height = 2.0f;
     if (s.sprite) {
-      sprite_ratio = static_cast<float>(s.sprite->width) / static_cast<float>(s.sprite->height);
+      sprite_ratio = static_cast<float>(s.sprite->width) /
+                     static_cast<float>(s.sprite->height);
       aabb = s.sprite->aabb;
       width = static_cast<float>(aabb.right - aabb.left) / (128.0f * 5.0f);
       height = width * atlas_ratio / sprite_ratio;
@@ -390,24 +388,24 @@ void StoreTexCoords(const std::vector<SpriteEntry>& sprite_entries,
     float half_width = width / 2;
     float half_height = height / 2;
     oss << "// " << s.comment << '\n'
-        << std::to_string(half_width) << ',' << std::to_string(-half_height) << ','
-        << std::to_string(static_cast<float>(aabb.right) / size.x) << ','
+        << std::to_string(half_width) << ',' << std::to_string(-half_height)
+        << ',' << std::to_string(static_cast<float>(aabb.right) / size.x) << ','
         << std::to_string(static_cast<float>(aabb.bottom) / size.y) << ",\n"
-        << std::to_string(half_width) << ',' << std::to_string(half_height) << ','
-        << std::to_string(static_cast<float>(aabb.right) / size.x) << ','
+        << std::to_string(half_width) << ',' << std::to_string(half_height)
+        << ',' << std::to_string(static_cast<float>(aabb.right) / size.x) << ','
         << std::to_string(static_cast<float>(aabb.top) / size.y) << ",\n"
-        << std::to_string(-half_width) << ',' << std::to_string(-half_height) << ','
-        << std::to_string(static_cast<float>(aabb.left) / size.x) << ','
+        << std::to_string(-half_width) << ',' << std::to_string(-half_height)
+        << ',' << std::to_string(static_cast<float>(aabb.left) / size.x) << ','
         << std::to_string(static_cast<float>(aabb.bottom) / size.y) << ",\n"
-        << std::to_string(-half_width) << ',' << std::to_string(half_height) << ','
-        << std::to_string(static_cast<float>(aabb.left) / size.x) << ','
+        << std::to_string(-half_width) << ',' << std::to_string(half_height)
+        << ',' << std::to_string(static_cast<float>(aabb.left) / size.x) << ','
         << std::to_string(static_cast<float>(aabb.top) / size.y) << ",\n\n";
   }
   file << oss.str();
 }
 
-std::vector<SpriteEntry> ParseSpritesInfo(
-    std::string_view path, const std::vector<Sprite>& sprites) {
+std::vector<SpriteEntry> ParseSpritesInfo(std::string_view path,
+                                          const std::vector<Sprite>& sprites) {
   std::ifstream file(path.data());
   if (!file.is_open()) {
     std::cerr << "unable to open sprites info file: " << path << std::endl;
@@ -416,7 +414,7 @@ std::vector<SpriteEntry> ParseSpritesInfo(
   std::vector<SpriteEntry> sprite_entries;
   std::string line, comment, entry_path;
   std::istringstream iss;
-  std::getline(file, line); // skip first
+  std::getline(file, line);  // skip first
   while (std::getline(file, line)) {
     if (line.empty()) {
       continue;
@@ -433,7 +431,8 @@ std::vector<SpriteEntry> ParseSpritesInfo(
       }
     }
     if (!sprite_entry.sprite) {
-      std::cerr << "no sprite path for: \"" << entry_path << "\", set full screen tex_coords" << std::endl;
+      std::cerr << "no sprite path for: \"" << entry_path
+                << "\", set full screen tex_coords" << std::endl;
       sprite_entries.push_back(std::move(sprite_entry));
     }
     iss.str();
@@ -454,9 +453,11 @@ std::vector<SpriteEntry> ParseSpritesInfo(
 
 int main() {
   //  std::string dir_path = R"(C:\Users\Pavlo\Desktop\test_sprites)";
-  //  std::string sprites_info_file = R"(C:\Users\Pavlo\Desktop\test_sprites/SpritesInfo.txt)";
+  //  std::string sprites_info_file =
+  //  R"(C:\Users\Pavlo\Desktop\test_sprites/SpritesInfo.txt)";
   std::string dir_path = R"(C:\Users\Pavlo\Desktop\sprites)";
-  std::string sprites_info_file = R"(C:\Users\Pavlo\Desktop\sprites/SpritesInfo.txt)";
+  std::string sprites_info_file =
+      R"(C:\Users\Pavlo\Desktop\sprites/SpritesInfo.txt)";
   std::vector<Sprite> sprites;
   std::vector<SpriteEntry> sprite_entries;
   try {
@@ -465,8 +466,11 @@ int main() {
     std::stable_sort(sprites.begin(), sprites.end(),
                      [](const Sprite& sprite1, const Sprite& sprite2) {
                        return sprite1.width > sprite2.width;
-                       //                       return sprite1.height > sprite2.height;
-                       //                       return (sprite1.width * sprite1.height) > (sprite2.width * sprite2.height);
+                       //                       return sprite1.height >
+                       //                       sprite2.height; return
+                       //                       (sprite1.width * sprite1.height)
+                       //                       > (sprite2.width *
+                       //                       sprite2.height);
                      });
     sprite_entries = ParseSpritesInfo(sprites_info_file, sprites);
     Vec2i atlas_size = GetAtlasSize(sprites);

@@ -2,9 +2,8 @@
 #define WIREBOUNDWORLDCREATOR_SRC__DETAILS_H_
 
 #include <array>
-#include <string_view>
-
 #include <glm/glm.hpp>
+#include <string_view>
 
 namespace details {
 
@@ -21,28 +20,17 @@ inline constexpr int kTexCoordsSize = sizeof(float) * 8;
 
 /// for debug purposes (GL_TRIANGLE_STRIP order)
 inline constexpr std::array<float, 8> kTexPositionDefault = {
-    1.0f, -1.0f,
-    1.0f, 1.0f,
-    -1.0f, -1.0f,
-    -1.0f, 1.0f
-};
+    1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f};
 inline constexpr std::array<float, 8> kTexCoordsDefault = {
-    1.0f, 0.0f,
-    1.0f, 1.0f,
-    0.0f, 0.0f,
-    0.0f, 1.0f
-};
+    1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 
 inline constexpr std::array<float, 8> kTexPositionCursor = {
-    1.0f / 64.0f, -1.0f / 64.0f,
-    1.0f / 64.0f, 1.0f / 64.0f,
-    -1.0f / 64.0f, -1.0f / 64.0f,
-    -1.0f / 64.0f, 1.0f / 64.0f
-};
+    1.0f / 64.0f,  -1.0f / 64.0f, 1.0f / 64.0f,  1.0f / 64.0f,
+    -1.0f / 64.0f, -1.0f / 64.0f, -1.0f / 64.0f, 1.0f / 64.0f};
 
 inline constexpr int kPrerenderedFramebufferSize = 1024;
 
-inline constexpr int kBitmapTotalChar = 96; // TODO: static_cast
+inline constexpr int kBitmapTotalChar = 96;  // TODO: static_cast
 inline constexpr int kCharMaxResolution = 128;
 
 /// column num should be power of two and kBitmapTotalChar in total
@@ -63,15 +51,13 @@ inline constexpr int kFontBufferSize = 1 << 25;
 
 inline constexpr int kShaderErrorBufferSize = 1024;
 
-inline constexpr int kAsciiFirstChar = 0x0020; // ' '
-inline constexpr int kAsciiLastChar = 0x007E; // '~'
+inline constexpr int kAsciiFirstChar = 0x0020;  // ' '
+inline constexpr int kAsciiLastChar = 0x007E;   // '~'
 
 // TODO: adjust
 inline constexpr float kMinSkylineLen = 0.005f;
 
 inline constexpr float kHeightMapScale = 16.0f;
-
-inline constexpr std::string_view kPathsPath = "../assets/Paths.txt";
 
 inline constexpr float kMapScaleFactor = 1.2f;
 
@@ -83,6 +69,6 @@ inline constexpr std::array<float, 2> kMsgErrorPos = {0.0f, 0.0f};
 
 inline constexpr int gTerrainSize = 1024;
 
-} // namespace details
+}  // namespace details
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC__DETAILS_H_

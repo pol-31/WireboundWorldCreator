@@ -3,33 +3,30 @@
 
 #include <random>
 
-#include "IUiEdit.h"
-#include "../core/Ui.h"
-#include "../core/TileRenderer.h"
-#include "UiSharedResources.h"
-#include "../core/WindowQueue.h"
-#include "../core/UiConfigWindow.h"
-#include "UiEditShared.h"
-#include "UiWaterConfig.h"
 #include "../common/BaseInstanceData.h"
 #include "../common/MapPoint.h"
+#include "../core/TileRenderer.h"
+#include "../core/Ui.h"
+#include "../core/UiConfigWindow.h"
+#include "../core/WindowQueue.h"
+#include "IUiEdit.h"
+#include "UiEditShared.h"
+#include "UiSharedResources.h"
+#include "UiWaterConfig.h"
 
-//TODO:
-// ocean instance: 1 instance as 1 layer.... let's refactor.....
-// river instance: 1 source as 1 layer
+// TODO:
+//  ocean instance: 1 instance as 1 layer.... let's refactor.....
+//  river instance: 1 source as 1 layer
 
-//TODO: different kWaterEditDesk
+// TODO: different kWaterEditDesk
 
 class UiEditOcean : public IUiEdit {
  public:
   using Base = IUiEdit;
-  UiEditOcean(
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue,
-      TextRenderer& text_renderer,
-      std::vector<BaseInstanceData>& base_instances,
-      const int& selected_id,
-      UiConfigWindow& ui_ocean_config);
+  UiEditOcean(UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+              TextRenderer& text_renderer,
+              std::vector<BaseInstanceData>& base_instances,
+              const int& selected_id, UiConfigWindow& ui_ocean_config);
 
   UiEditOcean(UiEditOcean&& other) noexcept;
 
@@ -86,10 +83,9 @@ class UiEditOcean : public IUiEdit {
 
   std::array<OceanLayerConfig, 3> ocean_layers_;
 
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kWaterEditOceanLayerName) -
-      static_cast<int>(data::VboIdMain::kWaterEditDesk) + 1
-      > ui_event_handler_;
+  UiEventHandler<static_cast<int>(data::VboIdMain::kWaterEditOceanLayerName) -
+                 static_cast<int>(data::VboIdMain::kWaterEditDesk) + 1>
+      ui_event_handler_;
 
   UiSharedResources& ui_shared_resources_;
 };
@@ -103,12 +99,10 @@ struct RiverTraits {
 class UiEditRiver : public IUiEdit {
  public:
   using Base = IUiEdit;
-  UiEditRiver(
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue,
-      TextRenderer& text_renderer,
-      std::vector<BaseInstanceData>& base_instances,
-      const int& selected_id);
+  UiEditRiver(UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+              TextRenderer& text_renderer,
+              std::vector<BaseInstanceData>& base_instances,
+              const int& selected_id);
 
   UiEditRiver(UiEditRiver&& other) noexcept;
 
@@ -162,10 +156,9 @@ class UiEditRiver : public IUiEdit {
 
   UiEditConfigSlTxt river_layer_config_;
 
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kWaterEditOceanLayerName) -
-      static_cast<int>(data::VboIdMain::kWaterEditDesk) + 1
-      > ui_event_handler_;
+  UiEventHandler<static_cast<int>(data::VboIdMain::kWaterEditOceanLayerName) -
+                 static_cast<int>(data::VboIdMain::kWaterEditDesk) + 1>
+      ui_event_handler_;
 
   UiSharedResources& ui_shared_resources_;
 };

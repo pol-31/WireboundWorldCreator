@@ -2,12 +2,10 @@
 
 #include "../core/Ui.h"
 
-UiEditConfigTerrain::UiEditConfigTerrain(
-    UiSharedResources& ui_shared_resources,
-    TextRenderer& text_renderer)
+UiEditConfigTerrain::UiEditConfigTerrain(UiSharedResources& ui_shared_resources,
+                                         TextRenderer& text_renderer)
     : btn_config_(data::VboIdMain::kTerrainEditNoiseConfig),
-      txt_name_(text_renderer,
-                {data::VboIdMain::kTerrainEditNoiseName},
+      txt_name_(text_renderer, {data::VboIdMain::kTerrainEditNoiseName},
                 data::TextId::kPerlin),
       tg_invert_({data::VboIdMain::kTerrainEditNoiseInvertOff},
                  {data::VboIdMain::kTerrainEditNoiseInvertOn1},
@@ -31,9 +29,9 @@ void UiEditConfigTerrain::ResetTransform() {
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
 }
-void UiEditConfigTerrain::Render(
-    float strength, bool do_invert, bool do_tiling,
-    glm::vec2 translate, bool update_strength, data::TextId text_id) {
+void UiEditConfigTerrain::Render(float& strength, bool do_invert,
+                                 bool do_tiling, glm::vec2 translate,
+                                 bool update_strength, data::TextId text_id) {
   LocalTransform transform;
   transform.translate = translate;
   sp_hmap_.SetParentTransform(transform);
@@ -43,10 +41,10 @@ void UiEditConfigTerrain::Render(
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
 
-//  ui_shared_resources_.hmap_shader_.Bind();
-//  glBindTexture(GL_TEXTURE_2D, terrain_data->hmap_id);
-//  hmap_.Render();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  //  ui_shared_resources_.hmap_shader_.Bind();
+  //  glBindTexture(GL_TEXTURE_2D, terrain_data->hmap_id);
+  //  hmap_.Render();
+  ui_shared_resources_.shader_sp_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   btn_config_.Render();
   tg_invert_.Set(do_invert);
@@ -54,8 +52,7 @@ void UiEditConfigTerrain::Render(
   tg_invert_.Render();
   tg_tiling_.Render();
   if (update_strength) {
-    auto mouse_pos =
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+    auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
     sl_strength_.Render(mouse_pos);
     strength = sl_strength_.GetProgress();
   } else {
@@ -76,7 +73,7 @@ void UiEditConfigTerrain::RenderPicking(glm::vec2 translate) {
   tg_tiling_.SetParentTransform(transform);
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   btn_config_.RenderPicking();
   tg_invert_.RenderPicking();
   tg_tiling_.RenderPicking();
@@ -89,14 +86,12 @@ void UiEditConfigTerrain::RenderPicking(glm::vec2 translate) {
 }
 
 void UiEditConfigTerrain::AttachToHierarchy(UiHierarchy& hierarchy) {
-  hierarchy.AddNested(
-      &btn_config_, &tg_invert_, &txt_name_,
-      &tg_tiling_, &sl_strength_, &sp_hmap_);
+  hierarchy.AddNested(&btn_config_, &tg_invert_, &txt_name_, &tg_tiling_,
+                      &sl_strength_, &sp_hmap_);
 }
 
-int GetUiEditEntryId(
-    const UiDynamicSprite* sprite, float size,
-    glm::vec2 mouse_pos, float start_height) {
+int GetUiEditEntryId(const UiDynamicSprite* sprite, float size,
+                     glm::vec2 mouse_pos, float start_height) {
   float entry_height = sprite->GetHeight() / (size + 5);
   float cursor = start_height;
   // pretty heavy check on DBG, skip
@@ -114,12 +109,10 @@ int GetUiEditEntryId(
   return -1;
 }
 
-UiEditConfigOcean::UiEditConfigOcean(
-    UiSharedResources& ui_shared_resources,
-    TextRenderer& text_renderer)
+UiEditConfigOcean::UiEditConfigOcean(UiSharedResources& ui_shared_resources,
+                                     TextRenderer& text_renderer)
     : btn_config_(data::VboIdMain::kWaterEditOceanConfig),
-      txt_name_(text_renderer,
-                {data::VboIdMain::kWaterEditOceanLayerName},
+      txt_name_(text_renderer, {data::VboIdMain::kWaterEditOceanLayerName},
                 data::TextId::kPerlin),
       tg_visible_({data::VboIdMain::kWaterEditOceanVisibleOff},
                   {data::VboIdMain::kWaterEditOceanVisibleOn1},
@@ -133,16 +126,16 @@ void UiEditConfigOcean::ResetTransform() {
   txt_name_.SetParentTransform(transform);
   tg_visible_.SetParentTransform(transform);
 }
-void UiEditConfigOcean::Render(
-    bool do_show, glm::vec2 translate, data::TextId text_id) {
+void UiEditConfigOcean::Render(bool do_show, glm::vec2 translate,
+                               data::TextId text_id) {
   LocalTransform transform;
   transform.translate = translate;
   btn_config_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
   tg_visible_.SetParentTransform(transform);
 
-//  ui_shared_resources_.hmap_shader_.Bind();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  //  ui_shared_resources_.hmap_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   btn_config_.Render();
   tg_visible_.Set(do_show);
@@ -157,7 +150,7 @@ void UiEditConfigOcean::RenderPicking(glm::vec2 translate) {
   btn_config_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
   tg_visible_.SetParentTransform(transform);
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   btn_config_.RenderPicking();
   tg_visible_.RenderPicking();
   // only after (due to internal shader & texture modification)
@@ -170,11 +163,10 @@ void UiEditConfigOcean::AttachToHierarchy(UiHierarchy& hierarchy) {
   hierarchy.AddNested(&btn_config_, &txt_name_, &tg_visible_);
 }
 
-UiEditConfigSlTxt::UiEditConfigSlTxt(
-    UiSharedResources& ui_shared_resources,
-    TextRenderer& text_renderer,
-    UiSliderH2&& sl_strength_,
-    UiTextModeId&& txt_name)
+UiEditConfigSlTxt::UiEditConfigSlTxt(UiSharedResources& ui_shared_resources,
+                                     TextRenderer& text_renderer,
+                                     UiSliderH2&& sl_strength_,
+                                     UiTextModeId&& txt_name)
     : sl_strength_(std::move(sl_strength_)),
       txt_name_(std::move(txt_name)),
       ui_shared_resources_(ui_shared_resources) {}
@@ -184,21 +176,19 @@ void UiEditConfigSlTxt::ResetTransform() {
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
 }
-void UiEditConfigSlTxt::Render(
-    float strength, // viscosity / transparency
-    glm::vec2 translate,
-    bool update_strength, data::TextId text_id) {
+void UiEditConfigSlTxt::Render(float& strength,  // viscosity / transparency
+                               glm::vec2 translate, bool update_strength,
+                               data::TextId text_id) {
   LocalTransform transform;
   transform.translate = translate;
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
 
-//  ui_shared_resources_.hmap_shader_.Bind();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
+  //  ui_shared_resources_.hmap_shader_.Bind();
+  ui_shared_resources_.shader_sp_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   if (update_strength) {
-    auto mouse_pos =
-        ui_shared_resources_.global_glfw_callback_data_.cursor_pos_tex_norm_;
+    auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
     sl_strength_.Render(mouse_pos);
     strength = sl_strength_.GetProgress();
   } else {
@@ -214,7 +204,7 @@ void UiEditConfigSlTxt::RenderPicking(glm::vec2 translate) {
   transform.translate = translate;
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   sl_strength_.RenderPicking();
   // only after (due to internal shader & texture modification)
   if (debug::gUiAltMode) {

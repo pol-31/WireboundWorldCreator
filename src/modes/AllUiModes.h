@@ -4,9 +4,9 @@
 #include "UiBiomesMode.h"
 #include "UiObjectsMode.h"
 #include "UiPlacementMode.h"
+#include "UiPlayerMode.h"
 #include "UiTerrainMode.h"
 #include "UiTilesMode.h"
 #include "UiWaterMode.h"
-#include "UiPlayerMode.h"
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_ALLUIMODES_H_

@@ -3,15 +3,14 @@
 #include "Window.h"
 
 Cursor::Cursor()
-    : last_x_(gWindowWidth / 2.0f),
-      last_y_(gWindowHeight / 2.0f) {}
+    : last_x_(gWindowWidth / 2.0f), last_y_(gWindowHeight / 2.0f) {}
 
-//TODO:
-// bug#1 : disabled-cursor started position
-// bug#2 : jump at slightly-lower mid (on y axis)
+// TODO:
+//  bug#1 : disabled-cursor started position
+//  bug#2 : jump at slightly-lower mid (on y axis)
 
 void Cursor::SetModeDisabled() {
-  glfwSetCursorPosCallback(gWindow, CallbackCursorPos);
+  glfwSetCursorPosCallback(gWindow, nullptr);
   glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetCursorPos(gWindow, last_x_, last_y_);
 }

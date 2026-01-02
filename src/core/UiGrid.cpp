@@ -3,15 +3,16 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "TileRenderer.h"
 #include "../io/Camera.h"
+#include "TileRenderer.h"
 
 UiGrid::UiGrid(UiSharedResources& ui_shared_resources)
     : ui_shared_resources_(ui_shared_resources),
       shader_grid_("../shaders/TerrainGrid.vert",
                    "../shaders/TerrainGrid.frag"),
-      shader_axis_("../shaders/TerrainGrid.vert",
-                   "../shaders/Axis.frag") {
+      shader_axis_("../shaders/TerrainGrid.vert", "../shaders/Axis.frag"),
+      shader_world_boundary_("../shaders/TerrainGrid.vert",
+                             "../shaders/TerrainBoundary.frag") {
   Init();
 }
 
@@ -23,10 +24,8 @@ void UiGrid::Init() {
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 
   float quad_data[] = {
-      16.0f, 0.001f, -16.0f,
-      16.0f, 0.001f, 16.0f,
-      -16.0f, 0.001f, -16.0f,
-      -16.0f, 0.001f, 16.0f,
+      16.0f,  0.001f, -16.0f, 16.0f,  0.001f, 16.0f,
+      -16.0f, 0.001f, -16.0f, -16.0f, 0.001f, 16.0f,
   };
   glBufferData(GL_ARRAY_BUFFER, sizeof(quad_data), quad_data, GL_STATIC_DRAW);
 
@@ -45,11 +44,10 @@ void UiGrid::DeInit() {
 void UiGrid::RenderGrid() {
   glBindVertexArray(vao_);
   shader_grid_.Bind();
-  auto map_scale = ui_shared_resources_.global_glfw_callback_data_
-                       .tile_renderer->cur_tile_.map_scale;
+  auto map_scale =
+      ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.map_scale;
   glUniform1f(1, map_scale);
-  auto camera_pos = ui_shared_resources_.global_glfw_callback_data_
-                        .camera->GetPosition();
+  auto camera_pos = ui_shared_resources_.gltf_context_.camera->GetPosition();
   glUniform3fv(2, 1, glm::value_ptr(camera_pos));
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
@@ -57,9 +55,19 @@ void UiGrid::RenderGrid() {
 void UiGrid::RenderAxis(float scale) {
   glBindVertexArray(vao_);
   shader_axis_.Bind();
-  auto camera_pos = ui_shared_resources_.global_glfw_callback_data_
-                        .camera->GetPosition();
+  auto camera_pos = ui_shared_resources_.gltf_context_.camera->GetPosition();
   glUniform3fv(0, 1, glm::value_ptr(camera_pos));
   glUniform1f(1, scale);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+void UiGrid::RenderBoundary() {
+  glBindVertexArray(vao_);
+  shader_world_boundary_.Bind();
+  auto map_scale =
+      ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.map_scale;
+  glUniform1f(1, map_scale);
+  auto camera_pos = ui_shared_resources_.gltf_context_.camera->GetPosition();
+  glUniform3fv(2, 1, glm::value_ptr(camera_pos));
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }

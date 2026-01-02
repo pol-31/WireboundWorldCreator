@@ -3,16 +3,16 @@
 #include <iostream>
 
 #include "../common/Details.h"
-#include "../common/GlobalGlfwCallbackData.h"
-#include "../modes/UiSharedResources.h"
-#include "Camera.h"
+#include "../common/GlfwContext.h"
 #include "../common/PickingFramebuffer.h"
 #include "../common/UiDebugger.h"
+#include "../modes/UiSharedResources.h"
+#include "Camera.h"
 
 extern int gWindowWidth = 1600;
 extern int gWindowHeight = 900;
-extern float gResFactor = static_cast<float>(gWindowHeight) /
-                          static_cast<float>(gWindowWidth);
+extern float gResFactor =
+    static_cast<float>(gWindowHeight) / static_cast<float>(gWindowWidth);
 
 float lastX = static_cast<float>(gWindowWidth) / 2.0;
 float lastY = static_cast<float>(gWindowHeight) / 2.0;
@@ -23,7 +23,7 @@ float last_frame = 0.0f;
 double gEventMouseStartPosX = 0.0;
 double gEventMouseStartPosY = 0.0;
 
-//TODO: bear out to another class/struct
+// TODO: bear out to another class/struct
 
 GLFWwindow* gWindow = nullptr;
 
@@ -31,25 +31,24 @@ void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
   auto resolution = SetWindowSize({width, height});
   gWindowWidth = resolution.x;
   gWindowHeight = resolution.y;
-  gResFactor = static_cast<float>(gWindowHeight) /
-               static_cast<float>(gWindowWidth);
+  gResFactor =
+      static_cast<float>(gWindowHeight) / static_cast<float>(gWindowWidth);
   glViewport(0, 0, resolution.x, resolution.y);
   glfwSetWindowSize(gWindow, resolution.x, resolution.y);
 
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(gWindow));
-  global_data->camera->UpdateProjectionMatrix();
-  global_data->ui_debugger->UpdateMoveSteps();
-  global_data->picking_fbo->UpdateResolution();
-  global_data->ui_shared_resources->UpdateResolution();
+  auto glfw_context =
+      reinterpret_cast<GlfwContext*>(glfwGetWindowUserPointer(gWindow));
+  glfw_context->camera->UpdateProjectionMatrix();
+  glfw_context->ui_debugger->UpdateMoveSteps();
+  glfw_context->picking_fbo->UpdateResolution();
 }
 
-void APIENTRY glDebugOutput(
-    GLenum source, GLenum type, GLuint id,
-    GLenum severity, GLsizei length [[maybe_unused]],
-    const char *message, const void *user_param [[maybe_unused]]) {
+void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id,
+                            GLenum severity, GLsizei length [[maybe_unused]],
+                            const char* message,
+                            const void* user_param [[maybe_unused]]) {
   std::cout << "---------------"
-            << "Debug message (" << id << "): " <<  message;
+            << "Debug message (" << id << "): " << message;
 
   std::cout << "\nSource: ";
   switch (source) {
@@ -143,15 +142,15 @@ void SetupWindow() {
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-  gWindow = glfwCreateWindow(gWindowWidth, gWindowHeight,
-                             "WireboundDev", nullptr, nullptr);
+  gWindow = glfwCreateWindow(gWindowWidth, gWindowHeight, "WireboundDev",
+                             nullptr, nullptr);
   if (!gWindow) {
     glfwTerminate();
     throw std::runtime_error("Failed to create GLFW window");
   }
   glfwMakeContextCurrent(gWindow);
-  glfwSetKeyCallback(gWindow, WasdKeyCallback);
-  glfwSetCursorPosCallback(gWindow, CallbackCursorPos);
+  glfwSetKeyCallback(gWindow, nullptr);
+  glfwSetCursorPosCallback(gWindow, nullptr);
   glfwSetFramebufferSizeCallback(gWindow, CallbackFramebufferSize);
 
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -164,13 +163,11 @@ void SetupWindow() {
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(glDebugOutput, nullptr);
-    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
-                          0, nullptr, GL_TRUE);
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr,
+                          GL_TRUE);
   }
-  glDebugMessageControl(GL_DEBUG_SOURCE_API,
-                        GL_DEBUG_TYPE_ERROR,
-                        GL_DEBUG_SEVERITY_HIGH,
-                        0, nullptr, GL_TRUE);
+  glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR,
+                        GL_DEBUG_SEVERITY_HIGH, 0, nullptr, GL_TRUE);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -196,12 +193,13 @@ glm::ivec2 ChooseNearestSize(glm::ivec2 size) {
 
   // can't be nullptr
   glm::ivec2 result_size = *closest_it;
-  std::cout << "Closest resolution is " << result_size.x << " x " << result_size.y << std::endl;
+  std::cout << "Closest resolution is " << result_size.x << " x "
+            << result_size.y << std::endl;
   return result_size;
 }
 
 glm::ivec2 SetWindowSize(glm::ivec2 size) {
   auto resolution = ChooseNearestSize(size);
-  //TODO: window, viewport, notify all framebuffers, buttons
+  // TODO: window, viewport, notify all framebuffers, buttons
   return resolution;
 }

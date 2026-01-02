@@ -1,17 +1,17 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_
 
-#include <map>
-#include <memory>
-#include <vector>
-#include <iostream>
-
 #include <glad/glad.h>
 #include <tiny_gltf.h>
 
-#include "../Texture.h"
-#include "../Material.h"
+#include <iostream>
+#include <map>
+#include <memory>
+#include <vector>
+
 #include "../../modes/UiSharedResources.h"
+#include "../Material.h"
+#include "../Texture.h"
 
 // local space (rel to 0;0;0 centre)
 struct Aabb3D {
@@ -19,19 +19,13 @@ struct Aabb3D {
   glm::vec3 max;
 };
 
-bool LoadImageData(
-    tinygltf::Image *image, const int image_idx, std::string *err,
-    std::string *warn, int req_width, int req_height,
-    const unsigned char *bytes, int size, void *user_data);
+bool LoadImageData(tinygltf::Image* image, const int image_idx,
+                   std::string* err, std::string* warn, int req_width,
+                   int req_height, const unsigned char* bytes, int size,
+                   void* user_data);
 
 struct ModelData {
-  enum class Category {
-    kPlayer,
-    kEnemy,
-    kFriend,
-    kNeutral,
-    kObstacle
-  };
+  enum class Category { kPlayer, kEnemy, kFriend, kNeutral, kObstacle };
   Category category = Category::kEnemy;
   float hp = 100.0f;
   float speed = 1.0f;
@@ -57,11 +51,10 @@ struct ModelData {
   /// instanced
   void RenderModelNodesInstanced(int instances_num) const;
 
-  void RenderModelNodeInstanced(
-    const tinygltf::Node& node, int instances_num) const;
+  void RenderModelNodeInstanced(const tinygltf::Node& node,
+                                int instances_num) const;
 
-  void RenderMeshInstanced(
-    const tinygltf::Mesh& mesh, int instances_num) const;
+  void RenderMeshInstanced(const tinygltf::Mesh& mesh, int instances_num) const;
 };
 
 class ModelLoader {
@@ -77,23 +70,20 @@ class ModelLoader {
   }
 
  private:
-  void BindMesh(
-      tinygltf::Model& model, tinygltf::Mesh& mesh,
-      std::map<int, GLuint>& ebos);
+  void BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
+                std::map<int, GLuint>& ebos);
 
-  void BindModelNodes(
-      tinygltf::Model& model, tinygltf::Node &node,
-      std::map<int, GLuint>& ebos);
+  void BindModelNodes(tinygltf::Model& model, tinygltf::Node& node,
+                      std::map<int, GLuint>& ebos);
 
-  void BindModel(
-      tinygltf::Model& model, GLuint& vao,
-      std::map<int, GLuint>& ebos);
+  void BindModel(tinygltf::Model& model, GLuint& vao,
+                 std::map<int, GLuint>& ebos);
 
   // ptr (store uniq ptrs)
   void LoadTextures(std::string_view path, ModelData* model_data);
 
-  Texture LoadTexture(
-    std::string_view path, const tinygltf::Model& model, int tex_id);
+  Texture LoadTexture(std::string_view path, const tinygltf::Model& model,
+                      int tex_id);
 
   Aabb3D GetAabb(const tinygltf::Model& model);
 

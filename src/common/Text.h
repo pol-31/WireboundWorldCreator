@@ -68,7 +68,7 @@ enum class TextId {
   kStrength,
 
   /// --- kWaterMode prerender ---
-  kScaleWater, // scale for each mode to prerender section together
+  kScaleWater,  // scale for each mode to prerender section together
   kFetch,
   kSpreadBlend,
   kSwell,
@@ -79,18 +79,28 @@ enum class TextId {
   kLayer2,
   kLayer3,
 
+  /// --- kBiomeMode prerender ---
+  kWindSpeed,
+  kWindAngle,
+  kSunX,
+  kSunY,
+  kSunZ,
+  kSunR,
+  kSunG,
+  kSunB,
+
   /// ---
 
   kTotal,
-  kNotYet, // not yet done
-  kNone, // shouldn't be used (always check != kNone)
+  kNotYet,  // not yet done
+  kNone,    // shouldn't be used (always check != kNone)
 };
 
-inline constexpr int gTotalText = static_cast<int>(TextId::kTotal)
-                                  - static_cast<int>(TextId::kMenuTerrain);
+inline constexpr int gTotalText =
+    static_cast<int>(TextId::kTotal) - static_cast<int>(TextId::kMenuTerrain);
 
 extern const std::array<std::string_view, gTotalText> gText;
 
-} // namespace text
+}  // namespace data
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TEXT_H_

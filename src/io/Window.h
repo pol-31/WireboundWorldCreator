@@ -2,8 +2,9 @@
 #define WIREBOUNDWORLDCREATOR_SRC__SETUPWINDOW_H_
 
 #define GLFW_INCLUDE_NONE
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
+
 #include <glm/glm.hpp>
 
 /// we made this variable global, because to GLFW internally uses functions
@@ -32,18 +33,17 @@ extern int gWindowWidth;
 extern int gWindowHeight;
 extern float gResFactor;
 
-
-//TODO; maybe we can remove global variables, but this is not for now
+// TODO; maybe we can remove global variables, but this is not for now
 
 /// initializes gWindow (see above)
 void SetupWindow();
 
 void CallbackFramebufferSize(GLFWwindow* window, int width, int height);
 
-void APIENTRY glDebugOutput(
-    GLenum source, GLenum type, GLuint id,
-    GLenum severity, GLsizei length [[maybe_unused]],
-    const char *message, const void *user_param [[maybe_unused]]);
+void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id,
+                            GLenum severity, GLsizei length [[maybe_unused]],
+                            const char* message,
+                            const void* user_param [[maybe_unused]]);
 
 glm::ivec2 ChooseNearestSize(glm::ivec2 size);
 

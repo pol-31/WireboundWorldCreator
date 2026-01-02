@@ -1,29 +1,27 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_UIDEBUGGER_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_UIDEBUGGER_H_
 
-#include "../common/Paths.h"
-#include "../common/Vbos.h"
-#include "../common/Details.h"
-#include "../common/LocalTransform.h"
-#include "../io/Window.h"
+#include <glad/glad.h>
 
 #include <string_view>
 #include <vector>
 
-#include <glad/glad.h>
+#include "../common/Details.h"
+#include "../common/LocalTransform.h"
+#include "../common/Vbos.h"
+#include "../io/Window.h"
 
 namespace debug {
 
 extern bool gUiAltMode;
 
-void UiScrollCallback(
-    GLFWwindow* window, double xoffset, double yoffset);
+void UiScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
-void UiMouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods);
+void UiMouseButtonCallback(GLFWwindow* window, int button, int action,
+                           int mods);
 
-void UiKeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods);
+void UiKeyCallback(GLFWwindow* window, int key, int scancode, int action,
+                   int mods);
 
 // UiDebugger allows to translate & scale sprite positions.
 // If you want to change sprite OR modify transformation manually
@@ -33,8 +31,8 @@ void UiKeyCallback(
 // there's not much usage of it, so skip
 class UiDebugger {
  public:
-  UiDebugger(const Paths& paths, GLuint vbo_id_coords,
-             GLuint vbo_id_transform, const glm::vec2& cursor_pos);
+  UiDebugger(GLuint vbo_id_coords, GLuint vbo_id_transform,
+             const glm::vec2& cursor_pos);
 
   ~UiDebugger();
 
@@ -59,11 +57,11 @@ class UiDebugger {
 
   void Reset();
 
-// TODO: --- maybe later ---
+  // TODO: --- maybe later ---
   // generate config file for vbo_id_ based on config_path_transform_
-//  void ApplyTransforms(std::string_view dest);
+  //  void ApplyTransforms(std::string_view dest);
   // generate config file for vbo_id_transform_ based on config_path_
-//  void GetTransforms(std::string_view dest);
+  //  void GetTransforms(std::string_view dest);
 
   void UpdateMoveSteps() {
     gTranslateStepV = 1.0f / gWindowHeight;
@@ -79,9 +77,7 @@ class UiDebugger {
   void UpdateBuffer(LocalTransformLinear pos);
 
   // for translate vbo
-  int GetVboOffset() const {
-    return cur_ui_vbo_id_ * 4;
-  }
+  int GetVboOffset() const { return cur_ui_vbo_id_ * 4; }
 
   void UpdatePosition();
 
@@ -92,9 +88,8 @@ class UiDebugger {
 
   static void SerializeConfigFile(
       std::string_view path,
-      std::array<LocalTransformLinear, data::gUiVboTransformSize / 3> transforms);
-
-  const Paths& paths_;
+      std::array<LocalTransformLinear, data::gUiVboTransformSize / 3>
+          transforms);
 
   int cur_ui_vbo_id_{-1};
 
@@ -116,6 +111,6 @@ class UiDebugger {
 extern std::array<LocalTransformLinear, data::gUiVboTransformSize / 3>
     gUiTransforms;
 
-} // namespace debug
+}  // namespace debug
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_UIDEBUGGER_H_

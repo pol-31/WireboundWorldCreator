@@ -1,24 +1,23 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_WIREBOUNDWORLDCREATOR_H_
 #define WIREBOUNDWORLDCREATOR_SRC_WIREBOUNDWORLDCREATOR_H_
 
-#include "../common/Paths.h"
-#include "../io/Camera.h"
-#include "Cubemap.h"
-#include "../common/GlobalGlfwCallbackData.h"
+#include "../common/GlfwContext.h"
 #include "../common/PickingFramebuffer.h"
-#include "TileRenderer.h"
+#include "../io/Camera.h"
 #include "../renderers/UiRenderer.h"
+#include "Cubemap.h"
+#include "TileRenderer.h"
 
 class WireboundWorldCreator {
  public:
-  explicit WireboundWorldCreator(const Paths& paths);
+  WireboundWorldCreator();
 
-  ~WireboundWorldCreator();
+  ~WireboundWorldCreator() { DeInit(); }
 
   void RunRenderLoop();
 
  private:
-  void Init(const Paths& paths);
+  void Init();
 
   void DeInit();
 
@@ -28,7 +27,7 @@ class WireboundWorldCreator {
   Camera camera_;
   Cubemap cubemap_;
 
-  GlobalGlfwCallbackData global_data_;
+  GlfwContext global_data_;
 
   PickingFramebuffer picking_fbo_;
 

@@ -4,9 +4,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "../modes/UiSharedResources.h"
 #include "Shader.h"
 #include "Texture.h"
-#include "../modes/UiSharedResources.h"
 
 class MouseTransform {
  public:
@@ -15,28 +15,21 @@ class MouseTransform {
   void CancelTransform();
   void ApplyTransform();
 
-  void InitTransform(
-      glm::vec3* translate, glm::quat* rotate, glm::vec3* scale);
+  void InitTransform(glm::vec3* translate, glm::quat* rotate, glm::vec3* scale);
 
   glm::vec3 GetInstanceTransform();
 
-  void TranslateSelected(
-      double xpos, double ypos);
+  void TranslateSelected(double xpos, double ypos);
   void RotateSelected(double xpos, double ypos);
   void ScaleSelected(double xpos, double ypos);
- void TranslateSelectedVerticesUp(
-      double xpos, double ypos,
-      const Texture& selection_mask, float falloff);
+  void TranslateSelectedVerticesUp(double xpos, double ypos,
+                                   const Texture& selection_mask, bool smooth);
 
- void Reset();
+  void Reset();
 
- void SetAxis(glm::vec3 axis) {
-   axis_ = axis;
- }
+  void SetAxis(glm::vec3 axis) { axis_ = axis; }
 
- [[nodiscard]] glm::vec3 GetAxis() const noexcept {
-   return axis_;
- }
+  [[nodiscard]] glm::vec3 GetAxis() const noexcept { return axis_; }
 
  private:
   void UpdateStartAngle();
@@ -60,6 +53,8 @@ class MouseTransform {
   UiSharedResources& ui_shared_resources_;
 
   Shader vertices_transform_shader_;
+
+  double last_update_time_ = 0.0f;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MOUSETRANSFORM_H_

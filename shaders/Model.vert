@@ -8,17 +8,18 @@ layout (location = 0) uniform mat4 model_mat;
 layout(binding = 0) uniform CameraBufferObject {
 	mat4 view;
 	mat4 proj;
+	vec3 pos;
 } camera;
 
-out vec3 normal;
-out vec3 position;
-out vec2 texcoord;
+out vec3 v_normal;
+out vec3 v_world_pos;
+out vec2 v_texcoord;
 
 void main(){
-	mat4 mvp = camera.proj * camera.view * model_mat;
-	gl_Position = mvp * vec4(in_vertex, 1);
-	position = gl_Position.xyz;
-	normal = normalize(mat3(mvp) * in_normal);
-	position = in_vertex;
-	texcoord = in_texcoord;
+	vec4 world_pos = model_mat * vec4(in_vertex, 1.0);
+	gl_Position = camera.proj * camera.view * world_pos;
+	v_world_pos = world_pos.xyz;
+	mat3 normal_mat = transpose(inverse(mat3(model_mat)));
+	v_normal = normalize(normal_mat * in_normal);
+	v_texcoord = in_texcoord;
 }

@@ -3,22 +3,19 @@
 
 #include <glad/glad.h>
 
-#include "IUiMode.h"
-#include "../common/Vbos.h"
-#include "../core/Ui.h"
-#include "../common/Paths.h"
 #include "../common/Shader.h"
 #include "../common/Texture.h"
-#include "../core/UiSelection.h"
+#include "../common/Vbos.h"
 #include "../common/models/ModelManager.h"
+#include "../core/Ui.h"
+#include "../core/UiComplex.h"
+#include "../core/UiSelection.h"
+#include "IUiMode.h"
 
 class UiPlacementMode final : public IUiMode {
  public:
-  UiPlacementMode(
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue,
-      const Paths& paths,
-      ModelManager& mdl_manager);
+  UiPlacementMode(UiSharedResources& ui_shared_resources,
+                  WindowQueue& window_queue, ModelManager& mdl_manager);
 
   void Render() override;
 
@@ -38,9 +35,7 @@ class UiPlacementMode final : public IUiMode {
 
   void SetPlacementMode(Texture* tex_placement);
 
-  [[nodiscard]] bool IsPreviewMode() const noexcept {
-    return preview_mode_;
-  }
+  [[nodiscard]] bool IsPreviewMode() const noexcept { return preview_mode_; }
 
   UiDynamicSprite btn_trees_;
   UiDynamicSprite btn_bushes_;
@@ -49,16 +44,15 @@ class UiPlacementMode final : public IUiMode {
   UiDynamicSprite btn_asphalt_;
   UiDynamicSprite btn_gravel_;
   UiDynamicSprite btn_soil_;
-  UiDynamicSprite btn_change_mode_; /// toggle/swap
-  UiDynamicSprite sp_selected_mode_;
+  UiDynamicSprite btn_change_mode_;  /// toggle/swap
+  UiSelectedSprite sp_selected_mode_;
 
   UiSelection ui_selection_;
   ModelManager& mdl_manager_;
 
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kPlacementChangeMode) -
-      static_cast<int>(data::VboIdMain::kPlacementPlacementMode) + 1
-      > ui_event_handler_;
+  UiEventHandler<static_cast<int>(data::VboIdMain::kPlacementChangeMode) -
+                 static_cast<int>(data::VboIdMain::kPlacementPlacementMode) + 1>
+      ui_event_handler_;
 
   Texture tex_placement_trees_;
   Texture tex_placement_bushes_;
@@ -79,21 +73,18 @@ class UiPlacementMode final : public IUiMode {
 
 namespace placement {
 
-void ScrollCallback(
-    GLFWwindow* window, double xoffset, double yoffset);
+void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
-void MouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-void KeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods);
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
+                 int mods);
 
-void MouseButtonCallback_Lmb(
-    GLFWwindow* window, int button, int action, int mods);
+void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
+                             int mods);
 
-void CursorPosCallback_Lmb(
-    GLFWwindow* window, double xpos, double ypos);
+void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos);
 
-} // namespace placement
+}  // namespace placement
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIPLACEMENTMODE_H_

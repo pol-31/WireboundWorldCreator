@@ -1,40 +1,30 @@
 #include "UiPlayerMode.h"
 
-#include "../io/Window.h"
-#include "../core/Menu.h"
-#include "../io/Camera.h"
 #include "../common/PickingFramebuffer.h"
 #include "../core/TileRenderer.h"
+#include "../io/Camera.h"
+#include "../io/Window.h"
 #include "../renderers/UiRenderer.h"
 
-UiPlayerMode::UiPlayerMode(
-    UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer,
-    Tile& cur_tile,
-    ModelManager& mdl_manager)
-    : IUiMode(
-          ui_shared_resources,
-          {data::VboIdMain::kMenuPlayer}),
+UiPlayerMode::UiPlayerMode(UiSharedResources& ui_shared_resources,
+                           WindowQueue& window_queue,
+                           TextRenderer& text_renderer, Tile& cur_tile,
+                           ModelManager& mdl_manager)
+    : IUiMode(ui_shared_resources, {data::VboIdMain::kPlayerPlayerMode}),
       sp_hp_(data::VboIdMain::kPlayerHealthPoint),
-//      sp_map_(data::VboIdMain::kTerrainUpdate2),
-      sp_phone_(data::VboIdMain::kPlayerPhoneMap),
+      ui_map_(ui_shared_resources, window_queue),
       ui_obj_info_(
-          {data::VboIdMain::kPlayerGameObjInfoDesk},
-          1.0f,
-          {{data::VboIdMain::kPlayerGameObjInfoPinBack, [](){}},
+          {data::VboIdMain::kPlayerGameObjInfoDesk}, 1.0f,
+          {{data::VboIdMain::kPlayerGameObjInfoPinBack, []() {}},
            {data::VboIdMain::kPlayerGameObjInfoPinPoint}},
-          ui_shared_resources_,
-          window_queue,
+          ui_shared_resources_, window_queue,
           {data::VboIdMain::kPlayerGameObjInfoEnemy},
           {data::VboIdMain::kPlayerGameObjInfoFriend},
           {data::VboIdMain::kPlayerGameObjInfoNeutal},
           {data::VboIdMain::kPlayerGameObjInfoObstacle},
           {text_renderer, {data::VboIdMain::kPlayerGameObjInfoName}},
-          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoCharacteristic},
-           data::TextId::kNotYet},
-          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoValue},
-           data::TextId::kNotYet}),
+          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoCharacteristic}},
+          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoValue}}),
       ui_selection_(ui_shared_resources),
       mdl_manager_(mdl_manager) {}
 
@@ -42,7 +32,7 @@ void UiPlayerMode::Setup() {
   BindDefaultCallbacks();
   ui_selection_.SetIdBounds(details::kIdOffsetWater, details::kIdOffsetFences);
   ui_selection_.SetModeForce(SelectionMode::kRectangle);
-  auto camera = ui_shared_resources_.global_glfw_callback_data_.camera;
+  auto camera = ui_shared_resources_.gltf_context_.camera;
   camera->SetPitch(45.0f);
   camera->SetOriginDist(10.0f);
 }
@@ -58,13 +48,20 @@ void UiPlayerMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-
 int UiPlayerMode::GetPrerenderTextIdStart() const noexcept {
-  return static_cast<int>(data::TextId::kScaleTerrain); //todo;
+  return static_cast<int>(data::TextId::kScaleTerrain);  // todo;
 }
 
 int UiPlayerMode::GetPrerenderTextIdEnd() const noexcept {
-  return static_cast<int>(data::TextId::kStrength) + 1; //todo;
+  return static_cast<int>(data::TextId::kStrength) + 1;  // todo;
+}
+
+void UiPlayerMode::RenderWorld() {
+  ui_shared_resources_.gltf_context_.tile_renderer->Render();
+}
+
+void UiPlayerMode::RenderPickingWorld() {
+  ui_shared_resources_.gltf_context_.tile_renderer->RenderPicking();
 }
 
 void UiPlayerMode::Render() {
@@ -75,34 +72,34 @@ void UiPlayerMode::Render() {
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-//  sprite_mode_.Render();
+  ui_shared_resources_.shader_sp_.Bind();
+  sp_mode_.Render();
   sp_hp_.Render();
-//  sp_map_.Render();
-  sp_phone_.Render();
-  ui_shared_resources_.global_glfw_callback_data_.windows->Render();
+  ui_map_.Render(&mdl_manager_);
+  ui_shared_resources_.gltf_context_.windows->Render();
+  auto camera = ui_shared_resources_.gltf_context_.camera;
+  camera->Update(1.0f);  // const pos
 }
 
 void UiPlayerMode::RenderPicking() {
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
-//  sprite_mode_.RenderPicking();
+  ui_shared_resources_.shader_sp_picking_.Bind();
+  sp_mode_.RenderPicking();
   sp_hp_.RenderPicking();
-//  sp_map_.RenderPicking();
-  sp_phone_.RenderPicking();
-  ui_shared_resources_.global_glfw_callback_data_.windows->RenderPicking();
+  ui_map_.RenderPicking();
+  ui_shared_resources_.gltf_context_.windows->RenderPicking();
   mdl_manager_.RenderPicking();
 }
 
 void UiPlayerMode::HandleSelection() {
   const auto& tex_selected = ui_selection_.GetMask();
-  std::vector<uint8_t> selected_pixels(
-      tex_selected.GetHeight() * tex_selected.GetWidth());
+  std::vector<uint8_t> selected_pixels(tex_selected.GetHeight() *
+                                       tex_selected.GetWidth());
   tex_selected.Bind();
-  glGetTexImage(
-      GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, selected_pixels.data());
+  glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE,
+                selected_pixels.data());
   glBindTexture(GL_TEXTURE_2D, 0);
   int selected_num = 0;
 
@@ -128,7 +125,7 @@ void UiPlayerMode::HandleSelection() {
         friend_selected = true;
       } else if (model->category == ModelData::Category::kNeutral) {
         neutral_selected = true;
-      } else { // kObstacle
+      } else {  // kObstacle
         obstacle_selected = true;
       }
     } else {
@@ -147,35 +144,27 @@ void UiPlayerMode::HandleSelection() {
 namespace player {
 
 /// scroll -> scale map
-void ScrollCallback(
-    GLFWwindow* window, double xoffset, double yoffset) {
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
-  auto player = dynamic_cast<UiPlayerMode*>(*global_data->cur_mode);
+void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+  auto glfw_context = GetGlfwContext(window);
+  auto player = dynamic_cast<UiPlayerMode*>(*glfw_context->cur_mode);
   if (player->ui_selection_.Scroll(yoffset)) {
     return;
   }
-  glm::dvec2 cursor_pos = global_data->cursor_pos_;
-  auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+  glm::dvec2 cursor_pos = glfw_context->cursor_pos_;
+  auto pressed_id = glfw_context->picking_fbo->GetIdByMousePos(cursor_pos);
   if (pressed_id >= details::kIdOffsetUi &&
       pressed_id != static_cast<GLuint>(-1)) {
-    global_data->windows->Scroll(pressed_id, yoffset); // ui
+    glfw_context->windows->Scroll(pressed_id, yoffset);  // ui
     return;
   }
-  if (yoffset < 0.0f) { // map
-    global_data->tile_renderer->cur_tile_.DownScale();
-  } else {
-    global_data->tile_renderer->cur_tile_.UpScale();
-  }
+  glfw_context->tile_renderer->cur_tile_.OnScroll(yoffset);
 }
 
-void MouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods) {
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
-  auto player = dynamic_cast<UiPlayerMode*>(*global_data->cur_mode);
-  glm::dvec2 cursor_pos = global_data->cursor_pos_;
-  //  global_data->camera->ProcessMouseKey(button, action, mods);
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+  auto glfw_context = GetGlfwContext(window);
+  auto player = dynamic_cast<UiPlayerMode*>(*glfw_context->cur_mode);
+  glm::dvec2 cursor_pos = glfw_context->cursor_pos_;
+  //  glfw_context->camera->ProcessMouseKey(button, action, mods);
 
   bool mod_ctrl = mods & GLFW_MOD_CONTROL;
   bool mod_shift = mods & GLFW_MOD_SHIFT;
@@ -185,34 +174,34 @@ void MouseButtonCallback(
     lastX = xpos;
     lastY = ypos;
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      auto pressed_id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+      auto pressed_id = glfw_context->picking_fbo->GetIdByMousePos(cursor_pos);
       std::cout << "Pressed id: " << pressed_id << std::endl;
-      if (global_data->windows->Press(pressed_id)) {
-        return; // ui handled
+      if (glfw_context->windows->Press(pressed_id)) {
+        return;  // ui handled
       }
       glfwSetCursorPosCallback(gWindow, player::CursorPosCallback_Lmb);
-      glfwSetMouseButtonCallback(gWindow, player::MouseButtonCallback_Selection);
-      player->ui_selection_.Start(global_data->cursor_pos_tex_norm_, mod_ctrl,
+      glfwSetMouseButtonCallback(gWindow,
+                                 player::MouseButtonCallback_Selection);
+      player->ui_selection_.Start(glfw_context->cursor_pos_tex_norm_, mod_ctrl,
                                   mod_shift);
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       glfwSetCursorPosCallback(gWindow, CursorPosCallback_Mmb);
     }
-  } else { // GLFW_RELEASE
+  } else {  // GLFW_RELEASE
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      global_data->windows->Release();
+      glfw_context->windows->Release();
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-      glfwSetCursorPosCallback(gWindow, nullptr); /// restore
+      glfwSetCursorPosCallback(gWindow, nullptr);  /// restore
     }
   }
 }
 
 /// smt already pressed
-void MouseButtonCallback_Selection(
-    GLFWwindow* window, int button, int action, int mods) {
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
-  auto player = dynamic_cast<UiPlayerMode*>(*global_data->cur_mode);
-  glm::dvec2 cursor_pos = global_data->cursor_pos_;
+void MouseButtonCallback_Selection(GLFWwindow* window, int button, int action,
+                                   int mods) {
+  auto glfw_context = GetGlfwContext(window);
+  auto player = dynamic_cast<UiPlayerMode*>(*glfw_context->cur_mode);
+  glm::dvec2 cursor_pos = glfw_context->cursor_pos_;
   if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     player->BindDefaultCallbacks();
     player->ui_selection_.Stop(cursor_pos);
@@ -222,12 +211,12 @@ void MouseButtonCallback_Selection(
   }
 }
 
-void KeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods) {
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
+                 int mods) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(window);
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
-  auto player = dynamic_cast<UiPlayerMode*>(*global_data->cur_mode);
-  global_data->ui_renderer->Press(key, action);
+  auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
+  auto player = dynamic_cast<UiPlayerMode*>(*glfw_context->cur_mode);
+  glfw_context->ui_renderer->Press(key, action);
 
   bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
   bool mod_shift = (mods & GLFW_MOD_SHIFT);
@@ -236,23 +225,25 @@ void KeyCallback(
     if (key == GLFW_KEY_ESCAPE) {
       if (mod_shift) {
         glfwSetWindowShouldClose(window, true);
-      } else if (!global_data->windows->GetTopWindow() &&
-                 global_data->windows->GetSize() == 0) {
-        global_data->ui_renderer->AskForConfirmation(
-            data::TextId::kConfirmationExit, []() {
-              glfwSetWindowShouldClose(gWindow, true);
-            });
+      } else if (!glfw_context->windows->GetTopWindow() &&
+                 glfw_context->windows->GetSize() == 0) {
+        glfw_context->ui_renderer->AskForConfirmation(
+            data::TextId::kConfirmationExit,
+            []() { glfwSetWindowShouldClose(gWindow, true); });
       } else {
-        global_data->windows->BtnEscape();
+        glfw_context->windows->BtnEscape();
       }
     } else if (key == GLFW_KEY_ENTER) {
-      global_data->windows->BtnEnter();
+      glfw_context->windows->BtnEnter();
     } else if (key == GLFW_KEY_W) {
       player->mdl_manager_.player_.SetMoveForward();
     } else if (key == GLFW_KEY_A) {
       player->mdl_manager_.player_.SetMoveLeft();
     } else if (key == GLFW_KEY_S) {
       player->mdl_manager_.player_.SetMoveBackward();
+      auto player_pos = player->mdl_manager_.player_.GetPosition();
+      std::cerr << player_pos.x << ' ' << player_pos.y << ' ' << player_pos.z
+                << std::endl;
     } else if (key == GLFW_KEY_D) {
       player->mdl_manager_.player_.SetMoveRight();
     } else if (key == GLFW_KEY_SPACE) {
@@ -272,26 +263,23 @@ void KeyCallback(
 }
 
 /// select
-void CursorPosCallback_Lmb(
-    GLFWwindow* window, double xpos, double ypos) {
+void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(window);
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
-  auto player = dynamic_cast<UiPlayerMode*>(*global_data->cur_mode);
-  player->ui_selection_.Update(global_data->cursor_pos_tex_norm_);
+  auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
+  auto player = dynamic_cast<UiPlayerMode*>(*glfw_context->cur_mode);
+  player->ui_selection_.Update(glfw_context->cursor_pos_tex_norm_);
 }
 
 /// move the camera (not height, only pos around the Z axis)
-void CursorPosCallback_Mmb(
-    GLFWwindow* window, double xpos, double ypos) {
+void CursorPosCallback_Mmb(GLFWwindow* window, double xpos, double ypos) {
   float xoffset = (xpos - lastX) / 0.05f;
   float yoffset = (lastY - ypos) / 0.05f;
 
   lastX = xpos;
   lastY = ypos;
 
-  void* global_data = glfwGetWindowUserPointer(window);
-  Camera* camera = reinterpret_cast<GlobalGlfwCallbackData*>(global_data)->camera;
-  camera->MoveRotateViewOriginDist(xoffset); // const pitch
+  Camera* camera = GetGlfwContext(window)->camera;
+  camera->MoveRotateViewOriginDist(xoffset);  // const pitch
 }
 
-} // namespace player
+}  // namespace player

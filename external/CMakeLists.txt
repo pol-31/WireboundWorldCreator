@@ -21,4 +21,7 @@ add_subdirectory(rapidjson EXCLUDE_FROM_ALL)
 message(STATUS "---> tinygltf building")
 add_subdirectory(tinygltf EXCLUDE_FROM_ALL)
 
+message(STATUS "---> nanosvg building")
+add_subdirectory(nanosvg EXCLUDE_FROM_ALL)
+
 # rapidjson header-only, so included directly

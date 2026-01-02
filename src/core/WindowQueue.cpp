@@ -4,10 +4,7 @@
 
 #include "UiComplex.h"
 
-WindowQueue::WindowQueue()
-    : windows_{} {
-  windows_.fill(nullptr);
-}
+WindowQueue::WindowQueue() : windows_{} { windows_.fill(nullptr); }
 
 WindowQueue::SizeType WindowQueue::PushBack(UiWindowBase* window) {
   for (int i = 0; i < windows_.size(); ++i) {
@@ -37,7 +34,6 @@ int WindowQueue::GetSize() const noexcept {
   return counter;
 }
 
-
 // ---
 
 void WindowQueue::BtnEnter() {
@@ -66,7 +62,7 @@ bool WindowQueue::Render() {
   bool result = false;
   for (auto window : windows_) {
     if (window && !result) {
-      /*result |= */window->Render();
+      /*result |= */ window->Render();
     }
   }
   if (top_window_) {

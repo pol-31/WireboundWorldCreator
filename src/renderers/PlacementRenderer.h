@@ -1,32 +1,23 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_RENDERERS_PLACEMENTRENDERER_H_
 #define WIREBOUNDWORLDCREATOR_SRC_RENDERERS_PLACEMENTRENDERER_H_
 
-#include "../core/Tile.h"
-#include "../common/Paths.h"
 #include "../common/Texture.h"
-
-#include "placement/AllPlacement.h"
+#include "../core/Tile.h"
+#include "Grass.h"
 
 class PlacementRenderer {
  public:
-  PlacementRenderer(Tile& tile, const Paths& paths);
+  PlacementRenderer();
 
   void Render();
 
-  void RenderPicking() const {}
+  void RenderPicking();
 
-  std::vector<GLuint> UpdatePipeline(
-    Texture& placement, int density_level = 0);
-
-  void RenderDraw() const;
+  std::vector<GLuint> UpdatePipeline(Texture& placement, int density_level = 0);
 
  private:
   void Init();
 
-  Tile& tile_;
-  GLuint vao_{0};
-  GLuint vbo_{0};
-  Shader shader_;
   Shader poisson_shader_;
 
   Texture density_low_;
@@ -40,7 +31,6 @@ class PlacementRenderer {
 
   /// UpdatePipeline here, get its data and collect points
   Texture placement_temp_;
-
   Grass grass_;
 };
 

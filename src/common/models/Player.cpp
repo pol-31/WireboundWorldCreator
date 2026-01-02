@@ -2,21 +2,21 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../../io/Camera.h"
 #include "../../core/TileRenderer.h"
+#include "../../io/Camera.h"
 #include "ModelLoader.h"
 
-const float Player::gSpeedSlow = 5.0f;
-const float Player::gSpeedModerate = 10.0f;
+const float Player::gSpeedSlow = 0.5f;
+const float Player::gSpeedModerate = 5.0f;
 const float Player::gSpeedFast = 20.0f;
 
 Player::Player(UiSharedResources& ui_shared_resources)
-    : camera_(ui_shared_resources.global_glfw_callback_data_.camera) {
+    : camera_(ui_shared_resources.gltf_context_.camera) {
   speed_ = gSpeedModerate;
 }
 
 void Player::Render(UiSharedResources& ui_shared_resources) {
-  ui_shared_resources.shader_model_.Bind();
+  ui_shared_resources.shader_mdl_.Bind();
   model_data_->BindTextures();
   auto model = GenModelMat(ui_shared_resources, 0.1f);
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
@@ -27,19 +27,18 @@ void Player::Render(UiSharedResources& ui_shared_resources) {
 
 void Player::Update(UiSharedResources& ui_shared_resources) {
   auto pos_diff = front_move_to_ + side_move_to_;
-  if (front_move_to_ != glm::vec3(0.0f) &&
-      side_move_to_ != glm::vec3(0.0f)) {
-    pos_diff /= 2.0f; // otherwise double speed
+  if (front_move_to_ != glm::vec3(0.0f) && side_move_to_ != glm::vec3(0.0f)) {
+    pos_diff /= 2.0f;  // otherwise double speed
   }
   UpdatePosition(ui_shared_resources, pos_diff);
   UpdateCamera(ui_shared_resources);
 }
 
 void Player::UpdateCamera(UiSharedResources& ui_shared_resources) {
-  auto map_scale = ui_shared_resources.global_glfw_callback_data_
-                       .tile_renderer->cur_tile_.map_scale;
+  auto map_scale =
+      ui_shared_resources.gltf_context_.tile_renderer->cur_tile_.map_scale;
   camera_->SetOrigin(GetPosition() * map_scale);
-  camera_->MoveRotateViewOriginDist(0.0f); // update camera vectors
+  camera_->MoveRotateViewOriginDist(0.0f);  // update camera vectors
   camera_->Update(1.0f);
 }
 

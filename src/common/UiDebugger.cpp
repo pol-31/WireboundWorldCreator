@@ -2,10 +2,11 @@
 
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 
-#include "../common/GlobalGlfwCallbackData.h"
-#include "../core/Ui.h"
+#include "../common/GlfwContext.h"
 #include "../common/PickingFramebuffer.h"
+#include "../core/Ui.h"
 #include "../renderers/UiRenderer.h"
 
 namespace debug {
@@ -14,22 +15,21 @@ bool gUiAltMode = false;
 
 std::array<LocalTransformLinear, data::gUiVboTransformSize / 3> gUiTransforms{};
 
-void UiScrollCallback(
-    GLFWwindow* window, double xoffset, double yoffset) {
-  auto& ui_debugger = reinterpret_cast<GlobalGlfwCallbackData*>(
-                          glfwGetWindowUserPointer(window))->ui_debugger;
+void UiScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+  auto& ui_debugger =
+      reinterpret_cast<GlfwContext*>(glfwGetWindowUserPointer(window))
+          ->ui_debugger;
   ui_debugger->SetScale(static_cast<float>(yoffset) * ui_debugger->gScaleStep);
 }
 
-void UiMouseButtonCallback(
-    GLFWwindow* window, int button, int action, int mods) {
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(
-      glfwGetWindowUserPointer(window));
-  auto& ui_debugger = global_data->ui_debugger;
-  glm::dvec2 cursor_pos = global_data->cursor_pos_;
+void UiMouseButtonCallback(GLFWwindow* window, int button, int action,
+                           int mods) {
+  auto glfw_context = GetGlfwContext(window);
+  auto& ui_debugger = glfw_context->ui_debugger;
+  glm::dvec2 cursor_pos = glfw_context->cursor_pos_;
   if (button == GLFW_MOUSE_BUTTON_LEFT) {
     if (action == GLFW_PRESS) {
-      auto id = global_data->picking_fbo->GetIdByMousePos(cursor_pos);
+      auto id = glfw_context->picking_fbo->GetIdByMousePos(cursor_pos);
       ui_debugger->Press(id);
     } else {
       ui_debugger->Release();
@@ -37,12 +37,12 @@ void UiMouseButtonCallback(
   }
 }
 
-void UiKeyCallback(
-    GLFWwindow* window, int key, int scancode, int action, int mods) {
+void UiKeyCallback(GLFWwindow* window, int key, int scancode, int action,
+                   int mods) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(window);
-  auto global_data = reinterpret_cast<GlobalGlfwCallbackData*>(global_data_void_ptr);
-  auto& ui_debugger = global_data->ui_debugger;
-  global_data->ui_renderer->Press(key, action);
+  auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
+  auto& ui_debugger = glfw_context->ui_debugger;
+  glfw_context->ui_renderer->Press(key, action);
   if (action == GLFW_PRESS) {
     // left control key is handled from Interface class (you should hold it)
     if (key == GLFW_KEY_ESCAPE) {
@@ -71,11 +71,9 @@ void UiKeyCallback(
   }
 }
 
-UiDebugger::UiDebugger(
-    const Paths& paths, GLuint vbo_id_coords,
-    GLuint vbo_id_transform, const glm::vec2& cursor_pos)
-    : paths_(paths),
-      vbo_id_(vbo_id_coords),
+UiDebugger::UiDebugger(GLuint vbo_id_coords, GLuint vbo_id_transform,
+                       const glm::vec2& cursor_pos)
+    : vbo_id_(vbo_id_coords),
       vbo_id_transform_(vbo_id_transform),
       cursor_pos_(cursor_pos),
       delta_transform_(glm::vec2{0.0f}, 0.0f) {
@@ -83,21 +81,18 @@ UiDebugger::UiDebugger(
 }
 
 void UiDebugger::Init() {
-  auto data = ParseConfigFile(paths_.config_vbo_sprites);
+  auto data = ParseConfigFile("../assets/TexCoordsInfo.txt");
   glBindBuffer(GL_ARRAY_BUFFER, vbo_id_);
-  glBufferSubData(
-      GL_ARRAY_BUFFER, 0,
-      static_cast<GLsizeiptr>(data.size() * sizeof(float)),
-      data.data());
+  glBufferSubData(GL_ARRAY_BUFFER, 0,
+                  static_cast<GLsizeiptr>(data.size() * sizeof(float)),
+                  data.data());
   glBindBuffer(GL_ARRAY_BUFFER, 0);
-  data = ParseConfigFile4(paths_.config_vbo_transform);
+  data = ParseConfigFile4("test.txt");
   std::memcpy(gUiTransforms.data(), data.data(), data.size() * sizeof(float));
   ForceUpdate();
 }
 
-UiDebugger::~UiDebugger() {
-  SerializeConfigFile("test.txt", gUiTransforms);
-}
+UiDebugger::~UiDebugger() { SerializeConfigFile("test.txt", gUiTransforms); }
 
 void UiDebugger::BindCallbacks() {
   glfwSetScrollCallback(gWindow, UiScrollCallback);
@@ -149,14 +144,13 @@ void UiDebugger::ForceUpdate() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-std::vector<float> UiDebugger::ParseConfigFile(
-    std::string_view path) {
+std::vector<float> UiDebugger::ParseConfigFile(std::string_view path) {
   std::ifstream config_file(path.data());
   if (!config_file) {
     throw std::runtime_error("Unable to open Ui VBO data");
   }
   std::vector<float> data;
-  data.reserve(100 * 16); // assume 100 ui components total
+  data.reserve(100 * 16);  // assume 100 ui components total
   std::string line_buffer, entry_buffer;
   std::istringstream line_stream;
   // no trim for tabs/whitespaces, but we don't need it
@@ -183,14 +177,13 @@ std::vector<float> UiDebugger::ParseConfigFile(
   return data;
 }
 
-std::vector<float> UiDebugger::ParseConfigFile4(
-    std::string_view path) {
+std::vector<float> UiDebugger::ParseConfigFile4(std::string_view path) {
   std::ifstream config_file(path.data());
   if (!config_file) {
     throw std::runtime_error("Unable to open Ui VBO data");
   }
   std::vector<float> data;
-  data.reserve(100 * 16); // assume 100 ui components total
+  data.reserve(100 * 16);  // assume 100 ui components total
   std::string line_buffer, entry_buffer;
   std::istringstream line_stream;
   // no trim for tabs/whitespaces, but we don't need it
@@ -226,7 +219,8 @@ std::vector<float> UiDebugger::ParseConfigFile4(
 
 void UiDebugger::SerializeConfigFile(
     std::string_view path,
-    std::array<LocalTransformLinear, data::gUiVboTransformSize / 3> transforms) {
+    std::array<LocalTransformLinear, data::gUiVboTransformSize / 3>
+        transforms) {
   std::ofstream file(path.data());
   if (!file.is_open()) {
     std::cerr << "Error: Could not open file: " << path << std::endl;
@@ -238,7 +232,7 @@ void UiDebugger::SerializeConfigFile(
     oss_line << "// " << data::gVboIdMainText[j] << '\n';
     oss_line << std::to_string(transforms[i].translate.x) << ','
              << std::to_string(transforms[i].translate.y) << ','
-             << std::to_string(transforms[i].scale) << ",\n"; // x4
+             << std::to_string(transforms[i].scale) << ",\n";  // x4
     auto per_vertex_line = oss_line.str();
     oss_file << per_vertex_line;
     //    for (int j = 0; j < 4; ++j) {
@@ -253,14 +247,14 @@ void UiDebugger::SerializeConfigFile(
   std::filesystem::path path_backup{path};
   path_backup.replace_filename(path_backup.stem().string() + "_backup.txt");
   std::filesystem::remove(path_backup);
-  std::filesystem::copy_file(
-      path, path_backup, std::filesystem::copy_options::overwrite_existing);
+  std::filesystem::copy_file(path, path_backup,
+                             std::filesystem::copy_options::overwrite_existing);
 }
 
 void UiDebugger::TranslateToCursorPos() {
   float prev_scale = gUiTransforms[GetVboOffset()].scale;
-  LocalTransformLinear pos = {
-      glm::vec2{cursor_pos_.x, cursor_pos_.y}, prev_scale};
+  LocalTransformLinear pos = {glm::vec2{cursor_pos_.x, cursor_pos_.y},
+                              prev_scale};
   UpdateBuffer(pos);
 }
 
@@ -300,8 +294,8 @@ void UiDebugger::ApplyAndReset() {
   if (ui) {
     ui->UpdateTransform();
   }
-//  cur_ui_vbo_id_ = -1;
-//  delta_transform_ = Transform{0.0f, 0.0f, 0.0f};
+  //  cur_ui_vbo_id_ = -1;
+  //  delta_transform_ = Transform{0.0f, 0.0f, 0.0f};
 }
 
 void UiDebugger::Reset() {
@@ -309,8 +303,6 @@ void UiDebugger::Reset() {
   delta_transform_ = LocalTransformLinear{glm::vec2{0.0f}, 0.0f};
 }
 
-void UiDebugger::Release() {
-  mouse_pressed_ = false;
-}
+void UiDebugger::Release() { mouse_pressed_ = false; }
 
-} // namespace debug
+}  // namespace debug

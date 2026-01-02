@@ -6,6 +6,8 @@ layout(location = 1) uniform sampler2D tex_color;  // Diffuse color texture
 layout(location = 2) uniform sampler2D tex_nmap;   // Normal map (GL_RG)
 layout(location = 3) uniform sampler2D tex_occlusion;   // Normal map (GL_RG)
 
+layout(location = 4) uniform sampler2D tex_river; // temp
+
 layout(std140, binding = 2) uniform Environment {
     vec3 sun_color;
     float _pad1;
@@ -132,11 +134,14 @@ void main() {
                             n_terrain.xy + normal.xy,
                             n_terrain.z * normal.z));
 
-    vec3 sun_direction = vec3(0.0f, 1.0f, -1.0f);
+    vec3 sun_direction = vec3(0.0f, 0.1f, -0.2f);
     float NdotL = max(dot(normal, normalize(-sun_direction)), 0.0);
 
     vec3 direct  = environment.sun_color * NdotL;
     vec3 ambient = vec3(0.1f, 0.1f, 0.1f) * ao;
     vec3 lighting = direct + ambient;
-    out_color = vec4(albedo * lighting, 1.0);
+    vec3 river_color = vec3(0.2f, 0.2f, 0.6f);
+    float river = texture(tex_river, fs_in.tc).r;
+//    out_color = vec4(vec3(river), 1.0);
+    out_color = vec4(mix(albedo * lighting, river_color, river), 1.0);
 }

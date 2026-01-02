@@ -21,14 +21,12 @@ class Player : public RigidBody {
     return model_data_;
   }
 
-  void SetModelData(const ModelData* model) {
-    model_data_ = model;
-  }
+  void SetModelData(const ModelData* model) { model_data_ = model; }
 
   /**
    * why not SetFront/Side 1/-1?
    * because we can dynamically change the move direction, what
-   * requires full Reset()! But if 1/-1 and we've changed the camera
+   * requires full ResetConfig()! But if 1/-1 and we've changed the camera
    * yaw it leads to +1 at one direction and -1 at another.
    * and it just keep moving until you trying to find that 8.0452 degrees
    * But anyway with this approach we have an issue:

@@ -3,13 +3,13 @@
 
 #include <random>
 
-#include "IUiEdit.h"
-#include "../core/Ui.h"
-#include "../core/TileRenderer.h"
-#include "UiSharedResources.h"
-#include "../core/WindowQueue.h"
-#include "UiEditShared.h"
 #include "../common/BaseInstanceData.h"
+#include "../core/TileRenderer.h"
+#include "../core/Ui.h"
+#include "../core/WindowQueue.h"
+#include "IUiEdit.h"
+#include "UiEditShared.h"
+#include "UiSharedResources.h"
 
 struct BiomeTraits {
   float wind_speed = .0f;
@@ -21,12 +21,10 @@ struct BiomeTraits {
 class UiEditBiomes : public IUiEdit {
  public:
   using Base = IUiEdit;
-  UiEditBiomes(
-      UiSharedResources& ui_shared_resources,
-      WindowQueue& window_queue,
-      TextRenderer& text_renderer,
-      std::vector<BaseInstanceData>& base_instances,
-      const int& selected_id);
+  UiEditBiomes(UiSharedResources& ui_shared_resources,
+               WindowQueue& window_queue, TextRenderer& text_renderer,
+               std::vector<BaseInstanceData>& base_instances,
+               const int& selected_id);
 
   UiEditBiomes(UiEditBiomes&& other) noexcept;
 
@@ -80,10 +78,10 @@ class UiEditBiomes : public IUiEdit {
 
   UiEditConfigSlTxt value_config_;
 
-  UiEventHandler<
-      static_cast<int>(data::VboIdMain::kBiomesEditNoiseStrengthIcon) -
-      static_cast<int>(data::VboIdMain::kBiomesEditDesk) + 1
-      > ui_event_handler_;
+  UiEventHandler<static_cast<int>(
+                     data::VboIdMain::kBiomesEditNoiseStrengthIcon) -
+                 static_cast<int>(data::VboIdMain::kBiomesEditDesk) + 1>
+      ui_event_handler_;
 
   UiSharedResources& ui_shared_resources_;
 };

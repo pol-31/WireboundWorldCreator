@@ -3,12 +3,11 @@
 int UiButtons::gIndentMod = 12;
 int UiButtons::gIndentKey = 10;
 
-UiButtons::UiButtons(
-    UiSharedResources& ui_shared_resources,
-    TextRenderer& text_renderer)
+UiButtons::UiButtons(UiSharedResources& ui_shared_resources,
+                     TextRenderer& text_renderer)
     : ui_shared_resources_(ui_shared_resources),
-      txt_keys_(text_renderer, data::VboIdMain::kSpare3),
-      txt_mods_(text_renderer, data::VboIdMain::kSpare4),
+      txt_keys_(text_renderer, data::VboIdMain::kButtonsTextKeys),
+      txt_mods_(text_renderer, data::VboIdMain::kButtonsTextMods),
       sp_key_(data::VboIdMain::kPressedKey) {}
 
 void UiButtons::Press(int key, int action) {
@@ -25,7 +24,7 @@ void UiButtons::Press(int key, int action) {
   } else if (key > GLFW_KEY_SPACE && key <= GLFW_KEY_GRAVE_ACCENT) {
     if (action == GLFW_RELEASE) {
       RemoveKey(key);
-    } else { // GLFW_PRESS, GLFW_REPEAT
+    } else {  // GLFW_PRESS, GLFW_REPEAT
       AddKey(key);
     }
   }
@@ -33,8 +32,8 @@ void UiButtons::Press(int key, int action) {
 
 void UiButtons::UpdateModsText() {
   text_mods_.clear();
-  int total_mods = static_cast<int>(alt_) + static_cast<int>(ctrl_)
-                   + static_cast<int>(shift_);
+  int total_mods = static_cast<int>(alt_) + static_cast<int>(ctrl_) +
+                   static_cast<int>(shift_);
   if (!total_mods) {
     return;
   }
@@ -74,7 +73,7 @@ void UiButtons::UpdateModsText() {
       }
       text_mods_ += shift_text;
     }
-  } else { // 3
+  } else {  // 3
     text_mods_ += alt_text;
     for (int i = 0; i < gIndentMod; ++i) {
       text_mods_ += ' ';
@@ -118,26 +117,24 @@ void UiButtons::RemoveKey(int idx) {
 }
 
 void UiButtons::Render() {
-  // I fucking hate them, my crew. I've never felt such disgust toward them.
-  // But maybe I felt the same the last time, when they were drunk.
-  // What can I say is I don't appreciate such behavior. Moreover I hate
-  // those people with all my hearth
   ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.dynamic_sprite_shader_.Bind();
-  sp_key_.SetScale(0.9f); // 1.0f for modifiers (todo; gVar)
+  ui_shared_resources_.shader_sp_.Bind();
+  sp_key_.SetScale(0.9f);  // 1.0f for modifiers (todo; gVar)
   // wrt scale
-  glm::vec2 half_length((sp_key_.GetRightBorder() - sp_key_.GetLeftBorder()) / 2.0f, 0.0f);
+  glm::vec2 half_length(
+      (sp_key_.GetRightBorder() - sp_key_.GetLeftBorder()) / 2.0f, 0.0f);
   glm::vec2 offset(-half_length);
-  int total_mods = static_cast<int>(alt_) + static_cast<int>(ctrl_)
-                   + static_cast<int>(shift_);
+  int total_mods = static_cast<int>(alt_) + static_cast<int>(ctrl_) +
+                   static_cast<int>(shift_);
   for (int i = 0; i < total_mods; ++i) {
     offset += half_length;
     sp_key_.SetTranslate(offset);
     sp_key_.Render();
     offset += half_length;
   }
-  sp_key_.SetScale(0.65f); // 1.0f for keys (todo; gVar)
-  half_length = glm::vec2((sp_key_.GetRightBorder() - sp_key_.GetLeftBorder()) / 2.0f, 0.0f);
+  sp_key_.SetScale(0.65f);  // 1.0f for keys (todo; gVar)
+  half_length = glm::vec2(
+      (sp_key_.GetRightBorder() - sp_key_.GetLeftBorder()) / 2.0f, 0.0f);
   LocalTransform keys_offset;
   keys_offset.translate = offset + half_length;
   txt_keys_.SetParentTransform(keys_offset);
@@ -160,7 +157,7 @@ void UiButtons::RenderModifier(bool value, std::string_view text) {
 }
 
 void UiButtons::RenderPicking() {
-  ui_shared_resources_.dynamic_sprite_picking_shader_.Bind();
+  ui_shared_resources_.shader_sp_picking_.Bind();
   sp_key_.RenderPicking();
   txt_mods_.RenderPicking();
   txt_keys_.RenderPicking();

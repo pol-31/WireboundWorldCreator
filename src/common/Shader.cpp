@@ -22,8 +22,7 @@ void Shader::Init(std::string_view comp_path) {
   std::string comp_code;
   try {
     comp_code = LoadShader(comp_path);
-  }
-  catch (const std::ifstream::failure& e) {
+  } catch (const std::ifstream::failure& e) {
     std::cerr << "shader reading error: " << e.what() << std::endl;
   }
 
@@ -41,8 +40,7 @@ void Shader::Init(std::string_view vert_path, std::string_view frag_path) {
   try {
     vert_code = LoadShader(vert_path);
     frag_code = LoadShader(frag_path);
-  }
-  catch (const std::ifstream::failure& e) {
+  } catch (const std::ifstream::failure& e) {
     std::cerr << "shader reading error: " << e.what() << std::endl;
   }
 
@@ -59,7 +57,7 @@ void Shader::Init(std::string_view vert_path, std::string_view frag_path) {
 }
 
 void Shader::Init(std::string_view vert_path, std::string_view frag_path,
-                      std::string_view geom_path) {
+                  std::string_view geom_path) {
   std::string vert_code, frag_code, geom_code;
   try {
     vert_code = LoadShader(vert_path);
@@ -67,8 +65,7 @@ void Shader::Init(std::string_view vert_path, std::string_view frag_path,
     if (!geom_path.empty()) {
       geom_code = LoadShader(geom_path);
     }
-  }
-  catch (const std::ifstream::failure& e) {
+  } catch (const std::ifstream::failure& e) {
     std::cerr << "shader reading error: " << e.what() << std::endl;
   }
 
@@ -91,15 +88,14 @@ void Shader::Init(std::string_view vert_path, std::string_view frag_path,
 }
 
 void Shader::Init(std::string_view vert_path, std::string_view tesc_path,
-                      std::string_view tese_path, std::string_view frag_path) {
+                  std::string_view tese_path, std::string_view frag_path) {
   std::string vert_code, tesc_code, tese_code, frag_code;
   try {
     vert_code = LoadShader(vert_path);
     tesc_code = LoadShader(tesc_path);
     tese_code = LoadShader(tese_path);
     frag_code = LoadShader(frag_path);
-  }
-  catch (const std::ifstream::failure& e) {
+  } catch (const std::ifstream::failure& e) {
     std::cerr << "shader reading error: " << e.what() << std::endl;
   }
 
@@ -160,24 +156,20 @@ Shader::ShaderObject& Shader::ShaderObject::operator=(
   return *this;
 }
 
-Shader::ShaderObject::~ShaderObject() {
-  glDeleteShader(opengl_id_);
-}
+Shader::ShaderObject::~ShaderObject() { glDeleteShader(opengl_id_); }
 
-void Shader::Bind() const {
-  glUseProgram(opengl_id_);
-}
+void Shader::Bind() const { glUseProgram(opengl_id_); }
 
 void Shader::CheckCompilation(GLuint shader, GLenum type) {
   GLint success;
   GLchar buffer[details::kShaderErrorBufferSize];
   glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
   if (!success) {
-    glGetShaderInfoLog(shader, details::kShaderErrorBufferSize,
-                       nullptr, buffer);
-    std::cerr
-        << "Shader compiling error at " << ShaderNameFromType(type)
-        << " shader:\n" << buffer << std::endl;
+    glGetShaderInfoLog(shader, details::kShaderErrorBufferSize, nullptr,
+                       buffer);
+    std::cerr << "Shader compiling error at " << ShaderNameFromType(type)
+              << " shader:\n"
+              << buffer << std::endl;
   }
 }
 
@@ -186,8 +178,8 @@ void Shader::CheckLinking(GLuint shader) {
   GLchar buffer[details::kShaderErrorBufferSize];
   glGetProgramiv(shader, GL_LINK_STATUS, &success);
   if (!success) {
-    glGetProgramInfoLog(shader, details::kShaderErrorBufferSize,
-                        nullptr, buffer);
+    glGetProgramInfoLog(shader, details::kShaderErrorBufferSize, nullptr,
+                        buffer);
     std::cerr << "Shader linking error:\n" << buffer << std::endl;
   }
 }

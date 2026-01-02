@@ -1,8 +1,0 @@
-All thrash ideas (never again):
---- ---
-#1
-alpha-blend ui interface (extra param "progress" == alpha channel)
-Issue:
-- sprite alpha blending suffers at the borders (edges),
-so NO WAY to use it with rgba sprites
---- ---

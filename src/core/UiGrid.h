@@ -3,21 +3,21 @@
 
 #include <glad/glad.h>
 
-#include "../modes/UiSharedResources.h"
 #include "../common/Shader.h"
+#include "../modes/UiSharedResources.h"
 
 class UiGrid {
  public:
   UiGrid(UiSharedResources& ui_shared_resources);
 
-  ~UiGrid() {
-    DeInit();
-  }
+  ~UiGrid() { DeInit(); }
 
   void RenderGrid();
 
   // scale for UiLayerWireframe axis render
   void RenderAxis(float scale);
+
+  void RenderBoundary();
 
  private:
   void Init();
@@ -27,6 +27,7 @@ class UiGrid {
   UiSharedResources& ui_shared_resources_;
   Shader shader_grid_;
   Shader shader_axis_;
+  Shader shader_world_boundary_;
   GLuint vao_;
   GLuint vbo_;
 };

@@ -1,15 +1,10 @@
+#include <stb_image.h>
+
 #include <iostream>
 #include <string>
 
-// TODO: we still need PLACEMENT (add models loading)
-
-#include <stb_image.h>
-
-#include "io/Window.h"
-#include "common/Details.h"
-
-#include "common/Paths.h"
 #include "core/WireboundWorldCreator.h"
+#include "io/Window.h"
 
 // TODO: after window size changing we should recreate all fbos
 //  with new resolution
@@ -31,42 +26,35 @@
 
 // TODO: we can prerender all picking framebuffer (!)
 
+// TODO: remove utility::UnBindImageTexture at NDEBUG
+
 // TODO: check all classes declaration order:
 /* damn...
  * In C++, member variables are initialized in the order they are declared
  * in the class, not in the order they appear in the initializer list.
  * */
 
+/// in Ui*Mode everything's public, otherwise need to make too much callback
+/// friends
+
+/**
+ * NAMING CONVENTION
+tex texture (GL_TEXTURE_*)
+sp sprite (non-clickable picture)
+tg toggle (on/off)
+sl slider (hor vert, 2, 3, 2d, etc)
+mdl model (3d obj)
+btn button (clickable picture)
+ui_ ui (complex ui component)
+ */
+
 int main(int argc, char* args[]) {
-  std::cout << "can't reach here" << std::endl;
-  std::string world_map_path{};
-  // TODO: подавився кісточкою
-  /*if (argc == 3) {
-    world_map_path = args[1];
-  } else if (argc != 2) {
-    std::cerr
-        << "wrong args:"
-        << "\n- param_1 for output dir;"
-        << "\n- param_2(optional) for AllTiles.txt;" << std::endl;
-    return 0;
-  }
-  std::string out_dir_path = args[0];*/
-
-  Paths paths(details::kPathsPath);
-  if (!world_map_path.empty()) {
-    paths.world_map = world_map_path;
-  }
-
   stbi_set_flip_vertically_on_load(true);
-
   SetupWindow();
-
-  /// internal scope, so WireboundWorldCreator::DeInit() before glfwTerminate()
   {
-    WireboundWorldCreator app(paths);
+    WireboundWorldCreator app;
     app.RunRenderLoop();
   }
-
   glfwTerminate();
   return 0;
 }

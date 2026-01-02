@@ -7,15 +7,15 @@
 
 namespace utility {
 
-//TODO: GLuint?
-inline void BindImageTexture(
-    int bind_id, const Texture& texture, GLenum access) {
-  glBindImageTexture(
-      bind_id, texture.GetId(), 0, GL_FALSE, 0, access, texture.GetFormat());
+// TODO: GLuint?
+inline void BindImageTexture(int bind_id, const Texture& texture,
+                             GLenum access) {
+  glBindImageTexture(bind_id, texture.GetId(), 0, GL_FALSE, 0, access,
+                     texture.GetFormat());
 }
 
-inline void UnBindImageTexture(
-    int bind_id, const Texture& texture, GLenum access) {
+inline void UnBindImageTexture(int bind_id, const Texture& texture,
+                               GLenum access) {
   glBindImageTexture(bind_id, 0, 0, GL_FALSE, 0, access, texture.GetFormat());
 }
 
@@ -30,8 +30,8 @@ inline void InitUbo(GLuint& id, GLsizeiptr size, GLenum usage, GLuint bind_id) {
   glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-inline void UpdateUbo(GLuint id, GLintptr offset,
-                      GLsizeiptr size, const void* data) {
+inline void UpdateUbo(GLuint id, GLintptr offset, GLsizeiptr size,
+                      const void* data) {
   glBindBuffer(GL_UNIFORM_BUFFER, id);
   glBufferSubData(GL_UNIFORM_BUFFER, offset, size, data);
   glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -39,6 +39,6 @@ inline void UpdateUbo(GLuint id, GLintptr offset,
 
 // TODO: deleting N buffers
 
-} // namespace utility
+}  // namespace utility
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_OPENGLUTILITY_H_
