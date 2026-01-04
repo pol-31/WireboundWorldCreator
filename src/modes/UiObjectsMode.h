@@ -32,13 +32,11 @@ class UiObjectsMode final : public IUiMode {
 
   void RenderPickingWorld() override;
 
-  void HandleSelection();
+  void HandleSelection(const std::set<GLuint>& selected_ids);
 
   void CancelTransform();
 
   void ApplyTransform();
-
-  void ResetTransform();
 
   void UpdateModelsList();
 
@@ -63,18 +61,6 @@ class UiObjectsMode final : public IUiMode {
   UiEditObjects ui_edit_;
 
   ModelManager& mdl_manager_;
-
-  glm::vec3 prev_translate_ = glm::vec3(0.0f);
-  glm::quat prev_rotate_ = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-  glm::vec3 prev_scale_ = glm::vec3(1.0f);
-  glm::vec3 cur_translate_ = glm::vec3(0.0f);
-  glm::quat cur_rotate_ = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-  glm::vec3 cur_scale_ = glm::vec3(1.0f);
-
-  //  UiEventHandler<
-  //      static_cast<int>(data::VboIdMain::kObjectsHuman) -
-  //      static_cast<int>(data::VboIdMain::kObjectsObjectsMode) + 1
-  //      > ui_event_handler_;
 };
 
 namespace objects {

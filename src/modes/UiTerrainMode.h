@@ -40,6 +40,8 @@ class UiTerrainMode final : public IUiMode {
 
   void ApplyTransform();
 
+  void UpdateTransform();
+
   void Reset();
 
   UiDynamicSprite btn_update_;

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../../modes/UiSharedResources.h"
+#include "../MapPoint.h"
 #include "Creature.h"
 #include "ModelLoader.h"
 #include "Obstacle.h"
@@ -17,9 +18,15 @@ class ModelManager {
 
   void Render();
 
+  void RenderPlacement();
+
   void RenderOnMap(UiDynamicSprite* sp_player, UiDynamicSprite* sp_enemy,
                    UiDynamicSprite* sp_friend, UiDynamicSprite* sp_neutral,
                    UiDynamicSprite* sp_obstacle);
+
+  void RenderMapPoints(const std::vector<MapPoint>& map_points, glm::vec4 color);
+
+  void RenderPickingMapPoints(const std::vector<MapPoint>& map_points);
 
   void RenderPicking();
 

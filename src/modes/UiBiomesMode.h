@@ -2,6 +2,7 @@
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UIBIOMESMODE_H_
 
 #include "../common/MouseTransform.h"
+#include "../common/MapPoints.h"
 #include "../common/Vbos.h"
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
@@ -11,7 +12,8 @@
 class UiBiomesMode final : public IUiMode {
  public:
   UiBiomesMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
-               WindowQueue& window_queue, TextRenderer& text_renderer);
+               WindowQueue& window_queue, TextRenderer& text_renderer,
+               ModelManager& mdl_manager);
 
   void Render() override;
 
@@ -29,29 +31,25 @@ class UiBiomesMode final : public IUiMode {
 
   void RenderPickingWorld() override;
 
-  void HandleSelection();
+  void HandleSelection(const std::set<GLuint>& selected_ids);
 
   void CancelTransform();
 
   void ApplyTransform();
 
-  void ResetTransform();
-
   void SpawnObject(GLuint pressed_id);
-
-  void UpdateTranslateForSelected();
 
   UiDynamicSprite sp_biome_;
 
-  std::vector<BaseInstanceData> biomes_;
   UiSlots& ui_slots_;
+  std::vector<BaseInstanceData> biomes_;
   UiEditBiomes ui_edit_;
-  UiSelection ui_selection_;
-  MouseTransform mouse_transform_;
 
+  UiSelection ui_selection_;
   bool anything_selected_ = false;
-  glm::vec3 prev_translate_ = glm::vec3(0.0f);
-  glm::vec3 cur_translate_ = glm::vec3(0.0f);
+
+  MapPoints map_points_;
+  MouseTransform mouse_transform_;
 };
 
 namespace biomes {
@@ -63,23 +61,19 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
                  int mods);
 
-/// selection
+void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos);
+
 void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
                              int mods);
 
-void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos);
+void KeyCallback_LmbSelected(
+  GLFWwindow* window, int key, int scancode, int action, int mods);
 
-/// transform (no rotation and scale - only translation)
-void BindCallbacksTransform();
+void CursorPosCallback_LmbSelected(GLFWwindow* window, double xpos,
+                                   double ypos);
 
-void MouseButtonCallbackTransform(GLFWwindow* window, int button, int action,
-                                  int mods);
-
-void KeyCallbackTransform(GLFWwindow* window, int key, int scancode, int action,
-                          int mods);
-
-void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos);
-
+void MouseButtonCallback_LmbSelected(GLFWwindow* window, int button, int action,
+                                     int mods);
 }  // namespace biomes
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIBIOMESMODE_H_

@@ -92,6 +92,7 @@ class UiEditOcean : public IUiEdit {
 
 struct RiverTraits {
   std::vector<MapPoint> map_points;
+  std::vector<glm::uvec2> map_joints;
   float transparency;
   float viscosity;
 };

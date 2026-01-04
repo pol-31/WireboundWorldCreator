@@ -5,6 +5,7 @@
 
 #include "../common/MouseTransform.h"
 #include "../common/Vbos.h"
+#include "../common/MapPoints.h"
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
 #include "IUiMode.h"
@@ -21,10 +22,6 @@ class UiWaterMode final : public IUiMode {
 
   void RenderPicking() override;
 
-  void RenderMapPoints();
-
-  void RenderPickingMapPoints();
-
   void Setup() override;
 
   void BindDefaultCallbacks() override;
@@ -37,8 +34,6 @@ class UiWaterMode final : public IUiMode {
 
   void RenderPickingWorld() override;
 
-  void AddPlacementPoint(GLuint pressed_id);
-
   void HandleSelection(const std::set<GLuint>& selected_ids);
 
   void UpdateRivers();
@@ -47,11 +42,7 @@ class UiWaterMode final : public IUiMode {
 
   void ApplyTransform();
 
-  void AddJoints(GLuint id);
-
-  //  void UpdateOcean();
-  //
-  //  bool ConfigModified();
+  void OnSelectedSlotChanged(bool is_ocean);
 
   UiDynamicSprite btn_bake_ocean_;
   UiDynamicSprite btn_bake_river_;
@@ -65,15 +56,12 @@ class UiWaterMode final : public IUiMode {
   UiEditOcean ui_edit_ocean_;
   UiEditRiver ui_edit_river_;
 
-  bool ocean_ = true;  // otherwise river
-
   UiSelection ui_selection_;
   bool anything_selected_ = false;
 
-  glm::vec3 temp_translate_ = glm::vec3(0.0f);
-
-  ModelManager& mdl_manager_;
   MouseTransform mouse_transform_;
+
+  MapPoints map_points_;
 
   UiEventHandler<static_cast<int>(data::VboIdMain::kWaterRiver) -
                  static_cast<int>(data::VboIdMain::kWaterUpdate) + 1>
@@ -93,6 +81,9 @@ void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos);
 
 void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
                              int mods);
+
+void KeyCallback_LmbSelected(
+  GLFWwindow* window, int key, int scancode, int action, int mods);
 
 void CursorPosCallback_LmbSelected(GLFWwindow* window, double xpos,
                                    double ypos);

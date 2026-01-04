@@ -4,6 +4,7 @@
 #include <random>
 
 #include "../common/BaseInstanceData.h"
+#include "../common/MapPoint.h"
 #include "../core/TileRenderer.h"
 #include "../core/Ui.h"
 #include "../core/WindowQueue.h"
@@ -12,6 +13,7 @@
 #include "UiSharedResources.h"
 
 struct BiomeTraits {
+  std::vector<MapPoint> map_points;
   float wind_speed = .0f;
   float wind_angle = .0f;
   glm::vec3 sun_direction = glm::vec3(-1.0f);

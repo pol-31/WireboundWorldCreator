@@ -7,48 +7,63 @@
 #include "../modes/UiSharedResources.h"
 #include "Shader.h"
 #include "Texture.h"
+#include "MapPoint.h"
 
 class MouseTransform {
  public:
   MouseTransform(UiSharedResources& ui_shared_resources);
 
-  void CancelTransform();
-  void ApplyTransform();
+  void InitTransform(
+    glm::vec3 translate = glm::vec3(0.0f),
+    glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+    glm::vec3 scale = glm::vec3(1.0f)
+    );
 
-  void InitTransform(glm::vec3* translate, glm::quat* rotate, glm::vec3* scale);
+  void SetAxis(int key, bool mod_shift);
 
-  glm::vec3 GetInstanceTransform();
+  void RotateSelected(double xpos, double ypos);
+
+  void ScaleSelected(double xpos, double ypos);
 
   void TranslateSelected(double xpos, double ypos);
-  void RotateSelected(double xpos, double ypos);
-  void ScaleSelected(double xpos, double ypos);
+
+  void TranslateSelectedMapPoints(
+    std::vector<MapPoint>& map_points, double xpos, double ypos);
+
+  void TranslateSelectedMapPointsBack(std::vector<MapPoint>& map_points);
+
   void TranslateSelectedVerticesUp(double xpos, double ypos,
                                    const Texture& selection_mask, bool smooth);
 
-  void Reset();
+  void Reset(
+    glm::vec3 translate = glm::vec3(0.0f),
+    glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+    glm::vec3 scale = glm::vec3(1.0f));
 
-  void SetAxis(glm::vec3 axis) { axis_ = axis; }
-
-  [[nodiscard]] glm::vec3 GetAxis() const noexcept { return axis_; }
-
- private:
   void UpdateStartAngle();
+
   float UpdateAngle(float xpos, float ypos);
+
+  glm::vec2 GetWorldOffset(float xpos, float ypos);
+
+  glm::vec3 GetWorldOffsetTranslate(float xpos, float ypos);
 
   glm::vec3 axis_ = glm::vec3(1.0f);
 
-  glm::vec3 temp_translate_{0.0f};
-  glm::quat temp_rotate_{1.0f, 0.0f, 0.0f, 0.0f};
-  glm::vec3 temp_scale_{0.0f};
+  // what to set in case of Cancel()
+  glm::vec3 prev_translate_ = glm::vec3(0.0f);
+  glm::quat prev_rotate_ = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+  glm::vec3 prev_scale_ = glm::vec3(1.0f);
+
+  // starts from prev_*, dynamically changed
+  glm::vec3 cur_translate_ = glm::vec3(0.0f);
+  glm::quat cur_rotate_ = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+  glm::vec3 cur_scale_ = glm::vec3(1.0f);
 
   float last_angle_ = 0.0f;
   float zero_angle_ = 0.0f;
   float zero_scale_length_ = 0.0f;
   float prev_value_y_ = 0.0f;
-
-  glm::vec3* translate_ = nullptr;
-  glm::quat* rotate_ = nullptr;
-  glm::vec3* scale_ = nullptr;
 
   UiSharedResources& ui_shared_resources_;
 

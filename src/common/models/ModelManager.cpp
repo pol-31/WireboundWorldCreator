@@ -10,31 +10,31 @@ ModelManager::ModelManager(UiSharedResources& ui_shared_resources)
     : ui_shared_resources_(ui_shared_resources),
       player_(ui_shared_resources),
       mdl_loader_(ui_shared_resources) {
-  auto mdl_musca =
-      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Musca.gltf", 1);
-  auto mdl_snowman =
-      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\NpcBoy.gltf", 2);
+  // auto mdl_musca =
+      // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Musca.gltf", 1);
+  // auto mdl_snowman =
+      // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Horse.gltf", 2);
 
   auto mdl_tree =
-      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Tree.gltf", 3);
-  auto mdl_bush =
-      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Bush.gltf", 4);
-  auto mdl_tall_grass =
-      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\TallGrass.gltf", 5);
-  auto mdl_undergrowth = mdl_loader_.Load(
-      "C:\\Users\\Pavlo\\Desktop\\assets\\Undergrowth.gltf", 6);
+      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\TreeNew.gltf", 3);
+  // auto mdl_bush =
+      // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Bush.gltf", 4);
+  // auto mdl_tall_grass =
+      // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\TallGrass.gltf", 5);
+  // auto mdl_undergrowth = mdl_loader_.Load(
+      // "C:\\Users\\Pavlo\\Desktop\\assets\\Undergrowth.gltf", 6);
 
-  player_.SetModelData(mdl_snowman);
+  player_.SetModelData(mdl_tree);
   int creatures_num = 3;
   for (int i = 0; i < creatures_num; ++i) {
     creatures_.emplace_back();
-    creatures_[i].SetModelData(mdl_musca);
+    creatures_[i].SetModelData(mdl_tree);
     creatures_[i].SetPosition(glm::vec3(i + 1, 0.0f, i));
   }
   tree_.SetModelData(mdl_tree);
-  bush_.SetModelData(mdl_bush);
-  tall_grass_.SetModelData(mdl_tall_grass);
-  undergrowth_.SetModelData(mdl_undergrowth);
+  bush_.SetModelData(mdl_tree);
+  tall_grass_.SetModelData(mdl_tree);
+  undergrowth_.SetModelData(mdl_tree);
   map_point_.SetModelData(mdl_tree);
 }
 
@@ -51,6 +51,13 @@ void ModelManager::Render() {
   //    o.Render(ui_shared_resources_);
   //  }
   player_.Render(ui_shared_resources_);
+}
+
+void ModelManager::RenderPlacement() {
+  tree_.Render(ui_shared_resources_);
+  bush_.Render(ui_shared_resources_);
+  tall_grass_.Render(ui_shared_resources_);
+  undergrowth_.Render(ui_shared_resources_);
 }
 
 void ModelManager::RenderOnMap(UiDynamicSprite* sp_player,
@@ -83,9 +90,36 @@ void ModelManager::RenderOnMap(UiDynamicSprite* sp_player,
   sp_player->Render();
 }
 
+void ModelManager::RenderMapPoints(
+    const std::vector<MapPoint>& map_points, glm::vec4 color) {
+  for (int i = 0; i < map_points.size(); ++i) {
+    // not instancesd draw call, but separate class MapPoint
+    if (map_points[i].selected) {
+      map_point_.Select();
+    } else {
+      map_point_.DeSelect();
+    }
+    map_point_.Render(ui_shared_resources_, map_points[i].position, color);
+  }
+}
+
+void ModelManager::RenderPickingMapPoints(
+    const std::vector<MapPoint>& map_points) {
+  for (int i = 0; i < map_points.size(); ++i) {
+    // not instancesd draw call, but separate class MapPoint
+    if (map_points[i].selected) {
+      map_point_.Select();
+    } else {
+      map_point_.DeSelect();
+    }
+    map_point_.RenderPicking(ui_shared_resources_,
+      map_points[i].position, details::kIdOffsetObjects + 100 + i);
+  }
+}
+
 void ModelManager::RenderPicking() {
-  for (auto& c : creatures_) {
-    c.RenderPicking(ui_shared_resources_);
+  for (int i = 0; i < creatures_.size(); ++i) {
+    creatures_[i].RenderPicking(ui_shared_resources_, 100 + i);
   }
 }
 
