@@ -2,33 +2,25 @@
 #define WIREBOUNDWORLDCREATOR_SRC_RENDERERS_PLACEMENTRENDERER_H_
 
 #include "../common/Texture.h"
-#include "../core/Tile.h"
 #include "Grass.h"
 
 class PlacementRenderer {
  public:
-  PlacementRenderer();
+  PlacementRenderer() = default;
 
   void Render();
 
   void RenderPicking();
 
-  std::vector<GLuint> UpdatePipeline(Texture& placement, int density_level = 0);
+  /// density: 1.0f - every pixel, 0.0f - never
+  /// seed: model / instance / tile id
+  std::vector<GLuint> UpdatePipeline(
+    Texture& placement, float density, uint32_t seed);
+
+  /// MurmurHash3 finalizer
+  float PlacementHash(uint32_t x);
 
  private:
-  void Init();
-
-  Shader poisson_shader_;
-
-  Texture density_low_;
-  Texture density_medium_low_;
-  Texture density_medium_;
-  Texture density_medium_high_;
-  Texture density_high_;
-  Texture density_very_high_;
-  Texture density_ultra_high_;
-  Texture density_extreme_;
-
   /// UpdatePipeline here, get its data and collect points
   Texture placement_temp_;
   Grass grass_;
