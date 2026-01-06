@@ -29,9 +29,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
 
       tg_terrain_{{data::VboIdMain::kMenuTerrainOff,
                    [this]() {
-                     bool state = this->ui_shared_resources_.gltf_context_
+                     bool state = this->ui_shared_resources_.glfw_context_
                                       .tile_renderer->show_terrain_;
-                     this->ui_shared_resources_.gltf_context_.tile_renderer
+                     this->ui_shared_resources_.glfw_context_.tile_renderer
                          ->show_terrain_ = !state;
                    }},
                   {data::VboIdMain::kMenuTerrainOn1},
@@ -39,9 +39,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                   {data::VboIdMain::kMenuTerrainOn3}},
       tg_water_{{data::VboIdMain::kMenuWaterOff,
                  [this]() {
-                   bool state = this->ui_shared_resources_.gltf_context_
+                   bool state = this->ui_shared_resources_.glfw_context_
                                     .tile_renderer->show_water_;
-                   this->ui_shared_resources_.gltf_context_.tile_renderer
+                   this->ui_shared_resources_.glfw_context_.tile_renderer
                        ->show_water_ = !state;
                  }},
                 {data::VboIdMain::kMenuWaterOn1},
@@ -49,9 +49,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                 {data::VboIdMain::kMenuWaterOn3}},
       tg_placement_{{data::VboIdMain::kMenuPlacementOff,
                      [this]() {
-                       bool state = this->ui_shared_resources_.gltf_context_
+                       bool state = this->ui_shared_resources_.glfw_context_
                                         .tile_renderer->show_placement_;
-                       this->ui_shared_resources_.gltf_context_.tile_renderer
+                       this->ui_shared_resources_.glfw_context_.tile_renderer
                            ->show_placement_ = !state;
                      }},
                     {data::VboIdMain::kMenuPlacementOn1},
@@ -59,9 +59,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                     {data::VboIdMain::kMenuPlacementOn3}},
       tg_objects_{{data::VboIdMain::kMenuObjectsOff,
                    [this]() {
-                     bool state = this->ui_shared_resources_.gltf_context_
+                     bool state = this->ui_shared_resources_.glfw_context_
                                       .tile_renderer->show_objects_;
-                     this->ui_shared_resources_.gltf_context_.tile_renderer
+                     this->ui_shared_resources_.glfw_context_.tile_renderer
                          ->show_objects_ = !state;
                    }},
                   {data::VboIdMain::kMenuObjectsOn1},
@@ -69,9 +69,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                   {data::VboIdMain::kMenuObjectsOn3}},
       tg_biomes_{{data::VboIdMain::kMenuBiomesOff,
                   [this]() {
-                    bool state = this->ui_shared_resources_.gltf_context_
+                    bool state = this->ui_shared_resources_.glfw_context_
                                      .tile_renderer->show_biomes_;
-                    this->ui_shared_resources_.gltf_context_.tile_renderer
+                    this->ui_shared_resources_.glfw_context_.tile_renderer
                         ->show_biomes_ = !state;
                   }},
                  {data::VboIdMain::kMenuBiomesOn1},
@@ -79,9 +79,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                  {data::VboIdMain::kMenuBiomesOn3}},
       tg_tiles_{{data::VboIdMain::kMenuTilesOff,
                  [this]() {
-                   bool state = this->ui_shared_resources_.gltf_context_
+                   bool state = this->ui_shared_resources_.glfw_context_
                                     .tile_renderer->show_tiles_;
-                   this->ui_shared_resources_.gltf_context_.tile_renderer
+                   this->ui_shared_resources_.glfw_context_.tile_renderer
                        ->show_tiles_ = !state;
                  }},
                 {data::VboIdMain::kMenuTilesOn1},
@@ -233,7 +233,7 @@ bool UiMenu::Render() {
 
   ui_shared_resources_.shader_sp_.Bind();
 
-  auto cursor_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
+  auto cursor_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
   float arrow_select_angle =
       std::atan2(-cursor_pos.x, cursor_pos.y * gResFactor);
 

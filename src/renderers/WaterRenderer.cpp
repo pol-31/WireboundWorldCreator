@@ -14,7 +14,7 @@ WaterRenderer::WaterRenderer(Tile& tile)
     : tile_(tile),
       shader_("../shaders/Water.vert", "../shaders/Water.tesc",
               "../shaders/Water.tese", "../shaders/Water.frag"),
-      tex_foam_("../assets/foam.png", GL_RGBA) {
+      tex_foam_("../assets/tex_foam.png", GL_RGBA) {
   Init();
 }
 

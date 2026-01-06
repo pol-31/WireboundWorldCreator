@@ -67,9 +67,9 @@ void UiLayerWireframe::UpdateLayerWireframe(TerrainInstanceData* terrain,
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  ui_shared_resources_.gltf_context_.tile_renderer->terrain.RenderWireframe(
+  ui_shared_resources_.glfw_context_.tile_renderer->terrain.RenderWireframe(
       terrain, data);
-  ui_shared_resources_.gltf_context_.ui_renderer->RenderAxis(5.0f);
+  ui_shared_resources_.glfw_context_.ui_renderer->RenderAxis(5.0f);
 
   ui_shared_resources_.shader_sp_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
@@ -113,11 +113,11 @@ void UiLayerWireframe::RenderAxis(int first_idx) {
 glm::mat4 UiLayerWireframe::GetPointMvpMatrix() {
   auto model = glm::mat4(1.0f);
   auto map_scale =
-      ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.map_scale;
+      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   model = glm::scale(model, glm::vec3(glm::sqrt(map_scale)));
   auto view =
-      ui_shared_resources_.gltf_context_.camera->GetViewMatrix(map_scale);
-  auto projection = ui_shared_resources_.gltf_context_.camera->GetProjMatrix();
+      ui_shared_resources_.glfw_context_.camera->GetViewMatrix(map_scale);
+  auto projection = ui_shared_resources_.glfw_context_.camera->GetProjMatrix();
   return projection * view * model;
 }
 

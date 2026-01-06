@@ -24,7 +24,6 @@
 #include "../common/Vbos.h"
 #include "../io/Window.h"
 #include "../modes/UiSharedResources.h"
-#include "../modes/UiWaterConfig.h"
 
 /// dbg serializing - stored without rotation
 LocalTransformLinear GetParentDbgTransform(size_t id);

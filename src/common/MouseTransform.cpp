@@ -16,7 +16,7 @@ MouseTransform::MouseTransform(UiSharedResources& ui_shared_resources)
           "../shaders/generate_shaders/VerticesTransform.comp") {}
 
 void MouseTransform::UpdateStartAngle() {
-  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_;
+  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_;
   auto offset = GetWorldOffset(mouse_pos.x, mouse_pos.y);
   zero_angle_ = std::atan2(offset.y, offset.x) - zero_angle_;
   last_angle_ = 0.0f;
@@ -41,7 +41,7 @@ void MouseTransform::InitTransform(
   axis_ = glm::vec3(1.0f);
   Reset(translate, rotate, scale);
   UpdateStartAngle();
-  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_;
+  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_;
   auto offset = GetWorldOffset(mouse_pos.x, mouse_pos.y);
   zero_scale_length_ = glm::length(offset);
 }
@@ -67,9 +67,9 @@ void MouseTransform::SetAxis(int key, bool mod_shift) {
 }
 
 void MouseTransform::RotateSelected(double xpos, double ypos) {
-  float map_scale = ui_shared_resources_.gltf_context_.tile_renderer
+  float map_scale = ui_shared_resources_.glfw_context_.tile_renderer
     ->cur_tile_.map_scale;
-  Camera* camera = ui_shared_resources_.gltf_context_.camera;
+  Camera* camera = ui_shared_resources_.glfw_context_.camera;
   glm::vec3 axis = axis_;
   if (axis == glm::vec3(1.0f)) {
     auto camera_pos = camera->GetPosition();
@@ -175,7 +175,7 @@ void MouseTransform::TranslateSelectedVerticesUp(
   }
   vertices_transform_shader_.Bind();
   utility::BindImageTexture(
-    0, ui_shared_resources_.gltf_context_.tile_renderer
+    0, ui_shared_resources_.glfw_context_.tile_renderer
     ->cur_tile_.map_terrain_height, GL_READ_WRITE);
   utility::BindImageTexture(1, selection_mask, GL_READ_ONLY);
   glUniform1f(0, value_y);
@@ -189,7 +189,7 @@ void MouseTransform::TranslateSelectedVerticesUp(
   glDispatchCompute(workGroupSizeX, workGroupSizeY, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   utility::UnBindImageTexture(
-    0, ui_shared_resources_.gltf_context_.tile_renderer
+    0, ui_shared_resources_.glfw_context_.tile_renderer
     ->cur_tile_.map_terrain_height, GL_READ_WRITE);
   utility::UnBindImageTexture(1, selection_mask, GL_READ_ONLY);
 }
@@ -206,9 +206,9 @@ void MouseTransform::Reset(
 }
 
 glm::vec2 MouseTransform::GetWorldOffset(float xpos, float ypos) {
-  float map_scale = ui_shared_resources_.gltf_context_.tile_renderer
+  float map_scale = ui_shared_resources_.glfw_context_.tile_renderer
     ->cur_tile_.map_scale;
-  Camera* camera = ui_shared_resources_.gltf_context_.camera;
+  Camera* camera = ui_shared_resources_.glfw_context_.camera;
 
   glm::vec4 object_centre_3d
     = glm::vec4(cur_translate_.x, cur_translate_.y, cur_translate_.z, 1.0f);

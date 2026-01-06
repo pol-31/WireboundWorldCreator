@@ -19,13 +19,13 @@ void UiWorldOrigin::Render(glm::vec4 position, glm::vec4 color) {
 
   //  auto mvp = GetPointMvpMatrix();
   auto map_scale =
-      ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.map_scale;
+      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   //  std::cout << map_scale << " map_scale" << std::endl;
   auto model = glm::mat4(1.0f);
   model = glm::scale(model, glm::vec3(map_scale));
   auto view =
-      ui_shared_resources_.gltf_context_.camera->GetViewMatrix(map_scale);
-  auto projection = ui_shared_resources_.gltf_context_.camera->GetProjMatrix();
+      ui_shared_resources_.glfw_context_.camera->GetViewMatrix(map_scale);
+  auto projection = ui_shared_resources_.glfw_context_.camera->GetProjMatrix();
   auto mvp = projection * view * model;
 
   //  glm::vec2 translate = GetBillboardTranslate(mvp, i);

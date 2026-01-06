@@ -37,7 +37,7 @@ void UiSelection::Render() {
 
 void UiSelection::RenderOnSurface(const Texture32F* surface) {
   glm::vec3 color = glm::vec3(0.8f, 0.8f, 0.1f);
-  ui_shared_resources_.gltf_context_.tile_renderer->terrain.RenderSelection(
+  ui_shared_resources_.glfw_context_.tile_renderer->terrain.RenderSelection(
       surface, selection_tex_surface_, color);
 }
 
@@ -73,7 +73,7 @@ void UiSelection::Stop(glm::vec2 cursor_pos) {
   ApplySelection();
   ClearSelectionFbo();
   vertex_num_ = 0;
-  mouse_check_point_ = ui_shared_resources_.gltf_context_.cursor_pos_;
+  mouse_check_point_ = ui_shared_resources_.glfw_context_.cursor_pos_;
   mouse_check_point_.y = gWindowHeight - mouse_check_point_.y;
 }
 
@@ -337,7 +337,7 @@ void UiSelection::RenderCircleLike() {
 }
 
 void UiSelection::RenderSelectionCircle() {
-  auto cursor_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
+  auto cursor_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
   sp_circle_.SetTranslate(cursor_pos);
   glBindVertexArray(ui_shared_resources_.vao_ui_);
   glActiveTexture(GL_TEXTURE0);
@@ -375,11 +375,11 @@ void UiSelection::UpdateRenderData(const std::vector<glm::vec3>& polygon,
 
 // only for tweak and circle
 void UiSelection::UpdateSurfaceSelection(float radius) {
-  glm::vec2 mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_;
+  glm::vec2 mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_;
   mouse_pos.y = gWindowHeight - mouse_pos.y;
   shader_draw_selection_.Bind();
   const auto& fbo_tex =
-      ui_shared_resources_.gltf_context_.picking_fbo->GetTex();
+      ui_shared_resources_.glfw_context_.picking_fbo->GetTex();
   utility::BindImageTexture(0, selection_tex_, GL_WRITE_ONLY);
   utility::BindImageTexture(1, fbo_tex, GL_READ_ONLY);
   glUniform1f(2, radius);
@@ -414,7 +414,7 @@ void UiSelection::ApplySelection() {
   }
   last_update_time_ = cur_time;
   const auto& fbo_tex =
-      ui_shared_resources_.gltf_context_.picking_fbo->GetTex();
+      ui_shared_resources_.glfw_context_.picking_fbo->GetTex();
   int buffer_size = gWindowWidth * gWindowHeight;
 
   std::vector<uint8_t> selection_data(buffer_size);
@@ -459,7 +459,7 @@ void UiSelection::ApplySelection() {
 
 std::set<GLuint> UiSelection::ApplySelectionIntoSet() {
   const auto& fbo_tex =
-      ui_shared_resources_.gltf_context_.picking_fbo->GetTex();
+      ui_shared_resources_.glfw_context_.picking_fbo->GetTex();
   int buffer_size = gWindowWidth * gWindowHeight;
 
   std::vector<uint8_t> selection_data(buffer_size);
@@ -500,7 +500,7 @@ std::set<GLuint> UiSelection::StopIntoSet(glm::vec2 cursor_pos) {
   auto selected_ids = ApplySelectionIntoSet();
   ClearSelectionFbo();
   vertex_num_ = 0;
-  mouse_check_point_ = ui_shared_resources_.gltf_context_.cursor_pos_;
+  mouse_check_point_ = ui_shared_resources_.glfw_context_.cursor_pos_;
   mouse_check_point_.y = gWindowHeight - mouse_check_point_.y;
   return selected_ids;
 }

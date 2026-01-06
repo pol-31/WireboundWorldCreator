@@ -18,7 +18,7 @@
 TextRenderer::TextRenderer(UiSharedResources& ui_shared_resources,
                            UiDynamicSprite&& prerender_text_slot,
                            UiDynamicSprite&& sprite_cursor)
-    : tex_bitmap_("../assets/bmp_ascii_header.png", GL_RED),
+    : tex_bitmap_("../assets/tex_ascii.png", GL_RED),
       prerender_text_slot_(std::move(prerender_text_slot)),
       sprite_cursor_(std::move(sprite_cursor)),
       tex_menu_(1024, 1024, GL_RED),
@@ -244,7 +244,7 @@ void TextRenderer::RenderMenuText(UiDynamicSprite& text_slot, data::TextId id) {
 
 void TextRenderer::RenderModeText(UiDynamicSprite& text_slot, data::TextId id) {
   int id_offset =
-      (*ui_shared_resources_.gltf_context_.cur_mode)->GetPrerenderTextIdStart();
+      (*ui_shared_resources_.glfw_context_.cur_mode)->GetPrerenderTextIdStart();
   RenderMenuModeText(tex_mode_, coords_mode_, text_slot,
                      static_cast<int>(id) - id_offset);
 }
@@ -386,14 +386,14 @@ void TextRenderer::StartInput(UiTextInput* input_data) {
 
 void TextRenderer::StopInput() {
   glfwSetCharCallback(gWindow, nullptr);
-  (*ui_shared_resources_.gltf_context_.cur_mode)->Setup();
+  (*ui_shared_resources_.glfw_context_.cur_mode)->Setup();
   input_data_->SetText(buffer_input_);
   input_data_->SetTextTranslate(glm::vec2(0.0f));
   input_data_ = nullptr;
   // NOTE: it could be only UiMode callbacks, so we could remember them (not
   // menu, etc...)
 
-  (*ui_shared_resources_.gltf_context_.cur_mode)->Setup();
+  (*ui_shared_resources_.glfw_context_.cur_mode)->Setup();
   input_in_progress_ = false;
 }
 
@@ -478,7 +478,7 @@ int TextRenderer::CursorFromMousePos() {
   float ui_scale = debug::gUiTransforms[4 * (input_data_->sp_text_.GetId() -
                                              details::kIdOffsetUi)]
                        .scale;
-  auto mouse_pos_x = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_.x;
+  auto mouse_pos_x = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_.x;
   float next_pos = input_data_->GetLeftBorder();
   int i = 0;
   for (; i < buffer_input_.size(); ++i) {
@@ -695,7 +695,7 @@ float TextRenderer::CalculateLineLength(std::string_view text,
 }
 
 bool TextRenderer::IsCursorOnInputLine() {
-  auto cursor_pos_y = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_.y;
+  auto cursor_pos_y = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_.y;
   return cursor_pos_y < input_data_->sp_back_.GetTopBorder() &&
          cursor_pos_y > input_data_->sp_back_.GetBottomBorder();
 }

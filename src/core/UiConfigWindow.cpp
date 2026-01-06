@@ -72,7 +72,7 @@ void UiConfigWindow::RenderSlotsText() {
 
 bool UiConfigWindow::Render() {
   RenderBack(true);
-  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
+  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
   ui_shared_resources_.shader_sp_.Bind();
   ui_shared_resources_.tex_ui_.Bind();
   btn_save_.Render();
@@ -144,7 +144,7 @@ bool UiConfigWindow::Press(int id) {
     return true;
   } else if (id == config_slider_.GetId()) {
     sl_pressed_config_ = sl_data_.GetSlotId(
-        ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_);
+        ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_);
     config_slider_.Press();
     return true;
   }
