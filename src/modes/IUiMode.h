@@ -26,7 +26,7 @@ class IUiMode {
   virtual void BindDefaultCallbacks() = 0;
 
   void PrerenderText() const noexcept {
-    ui_shared_resources_.gltf_context_.text_renderer->PrerenderModeText(
+    ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
         GetPrerenderTextIdStart(), GetPrerenderTextIdEnd());
   }
 

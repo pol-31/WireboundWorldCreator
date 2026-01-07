@@ -11,7 +11,9 @@
 
 UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
                              UiSlots& ui_slots, WindowQueue& window_queue,
-                             TextRenderer& text_renderer, Tile& cur_tile,
+                             TextRenderer& text_renderer,
+    UiEditSlots& ui_edit_slots,
+    UiEditConfigSlCfg& value_config, Tile& cur_tile,
                              UiConfigWindow& ui_config_window)
     : IUiMode(ui_shared_resources, {data::VboIdMain::kTerrainTerrainMode}),
       btn_update_(data::VboIdMain::kTerrainUpdate,
@@ -50,8 +52,8 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
                 {data::VboIdMain::kTerrainBakeWeatheringStepInputBack}}),
       layers_{},
       ui_slots_(ui_slots),
-      ui_edit_(cur_tile, ui_shared_resources, window_queue, text_renderer,
-               layers_, ui_slots_.GetSelectedIdRef(), ui_config_window),
+      ui_edit_(cur_tile, ui_shared_resources, text_renderer,
+        ui_edit_slots, value_config, ui_config_window),
       ui_selection_(ui_shared_resources),
       mouse_transform_(ui_shared_resources),
       ui_event_handler_({&btn_update_, &btn_reset_, &tg_flatten_,
@@ -59,8 +61,9 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
 
 void UiTerrainMode::Setup() {
   ui_slots_.Setup(&layers_, &ui_edit_);
+  ui_edit_.SetUp(&layers_, &ui_slots_.GetSelectedIdRef());
   BindDefaultCallbacks();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->SetPosition(glm::vec3{5.0f});
   camera->SetPitch(45.0f);
   camera->SetYaw(0.0f);
@@ -91,15 +94,15 @@ int UiTerrainMode::GetPrerenderTextIdEnd() const noexcept {
 
 void UiTerrainMode::RenderWorld() {
   if (ui_slots_.GetSelectedSlotId() == -1) {
-    ui_shared_resources_.gltf_context_.tile_renderer->Render();
+    ui_shared_resources_.glfw_context_.tile_renderer->Render();
   } else {
-    ui_shared_resources_.gltf_context_.tile_renderer->RenderUiTerrain(
+    ui_shared_resources_.glfw_context_.tile_renderer->RenderUiTerrain(
         ui_edit_.GetInstanceData().data.hmap);
   }
 }
 
 void UiTerrainMode::RenderPickingWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->RenderPicking();
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
 }
 
 void UiTerrainMode::Render() {
@@ -107,7 +110,7 @@ void UiTerrainMode::Render() {
   ui_edit_.RenderGraph();  // should be first (terrain render before ui render)
   ui_selection_.Render();
   ui_selection_.RenderOnSurface(
-      &ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_
+      &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
            .map_terrain_height);
 
   glActiveTexture(GL_TEXTURE0);
@@ -123,11 +126,11 @@ void UiTerrainMode::Render() {
 
   tg_flatten_.Render();
 
-  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
+  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
   ui_slots_.Render(mouse_pos);
 
-  ui_shared_resources_.gltf_context_.windows->Render();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  ui_shared_resources_.glfw_context_.windows->Render();
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->Update(1.0f);  // const pos
 }
 
@@ -147,9 +150,9 @@ void UiTerrainMode::RenderPicking() {
 
   ui_slots_.RenderPicking();
   auto& ui_layer_wireframe =
-      ui_shared_resources_.gltf_context_.ui_renderer->GetUiLayerWireframe();
+      ui_shared_resources_.glfw_context_.ui_renderer->GetUiLayerWireframe();
   ui_layer_wireframe.RenderPickingLayerWireframe();
-  ui_shared_resources_.gltf_context_.windows->RenderPicking();
+  ui_shared_resources_.glfw_context_.windows->RenderPicking();
 }
 
 void UiTerrainMode::CancelTransform() {
@@ -180,7 +183,7 @@ void UiTerrainMode::Reset() {
   ui_selection_.Stop(glm::vec2{0.0f});
   ui_bake_.ForceHide();
   ui_slots_.Reset();
-  ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.ResetTerrain();
+  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.ResetTerrain();
   mouse_transform_.Reset();
   ui_edit_.Reset();
 }

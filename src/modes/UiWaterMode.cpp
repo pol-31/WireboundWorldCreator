@@ -10,6 +10,9 @@
 UiWaterMode::UiWaterMode(UiSharedResources& ui_shared_resources,
                          UiSlots& ui_slots, WindowQueue& window_queue,
                          TextRenderer& text_renderer,
+    UiEditSlots& ui_edit_slots,
+    UiEditConfigSlCfg& value_config_ocean,
+    UiEditConfigSlTxt& value_config_river,
                          UiConfigWindow& ui_config_window,
                          ModelManager& mdl_manager)
     : IUiMode(ui_shared_resources, {data::VboIdMain::kWaterWaterMode}),
@@ -19,6 +22,7 @@ UiWaterMode::UiWaterMode(UiSharedResources& ui_shared_resources,
                         bool is_ocean = true;
                         ui_slots_.Setup(&instances_ocean_, &ui_edit_ocean_, [this, is_ocean]() {
                           this->OnSelectedSlotChanged(is_ocean);
+                          ui_edit_ocean_.SetUp(&instances_ocean_, &ui_slots_.GetSelectedIdRef());
                         });
                       }),
       btn_bake_river_(data::VboIdMain::kWaterRiver,
@@ -27,17 +31,16 @@ UiWaterMode::UiWaterMode(UiSharedResources& ui_shared_resources,
                         bool is_ocean = false;
                         ui_slots_.Setup(&instances_river_, &ui_edit_river_, [this, is_ocean]() {
                           this->OnSelectedSlotChanged(is_ocean);
+                        ui_edit_river_.SetUp(&instances_river_, &ui_slots_.GetSelectedIdRef());
                         });
                       }),
       map_points_(mdl_manager),
       btn_update_(data::VboIdMain::kWaterUpdate, [this]() { UpdateRivers(); }),
       sp_selected_mode_({data::VboIdMain::kWaterSelected}, &btn_bake_ocean_),
       ui_slots_(ui_slots),
-      ui_edit_ocean_(ui_shared_resources, window_queue, text_renderer,
-                     instances_ocean_, ui_slots_.GetSelectedIdRef(),
-                     ui_config_window),
-      ui_edit_river_(ui_shared_resources, window_queue, text_renderer,
-                     instances_river_, ui_slots_.GetSelectedIdRef()),
+      ui_edit_ocean_(ui_shared_resources, text_renderer,
+                     ui_edit_slots, value_config_ocean, ui_config_window),
+      ui_edit_river_(ui_shared_resources, ui_edit_slots, value_config_river),
       ui_selection_(ui_shared_resources),
       mouse_transform_(ui_shared_resources),
       ui_event_handler_({&btn_update_, &btn_bake_ocean_, &btn_bake_river_}) {}
@@ -59,7 +62,7 @@ void UiWaterMode::OnSelectedSlotChanged(bool is_ocean) {
 void UiWaterMode::Setup() {
   btn_bake_ocean_.Press();
   BindDefaultCallbacks();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->SetPosition(glm::vec3{5.0f});
   camera->SetPitch(45.0f);
   camera->SetYaw(0.0f);
@@ -89,11 +92,11 @@ int UiWaterMode::GetPrerenderTextIdEnd() const noexcept {
 }
 
 void UiWaterMode::RenderWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->Render();
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
 }
 
 void UiWaterMode::RenderPickingWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->RenderPicking();
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
 }
 
 void UiWaterMode::Render() {
@@ -102,9 +105,9 @@ void UiWaterMode::Render() {
     map_points_.RenderPoints(ui_slots_.GetInstanceBaseData()->color);
   }
 
-  auto map_scale = ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.map_scale;
+  auto map_scale = ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   map_points_.RenderJoints(
-    ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.map_terrain_height, map_scale);
+    ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_terrain_height, map_scale);
 
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
@@ -117,11 +120,11 @@ void UiWaterMode::Render() {
   btn_update_.Render();
   sp_selected_mode_.Render();
 
-  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
+  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
   ui_slots_.Render(mouse_pos);
 
-  ui_shared_resources_.gltf_context_.windows->Render();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  ui_shared_resources_.glfw_context_.windows->Render();
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->Update(1.0f);  // const pos
 }
 
@@ -140,9 +143,9 @@ void UiWaterMode::RenderPicking() {
 
   ui_slots_.RenderPicking();
   auto& ui_layer_wireframe =
-      ui_shared_resources_.gltf_context_.ui_renderer->GetUiLayerWireframe();
+      ui_shared_resources_.glfw_context_.ui_renderer->GetUiLayerWireframe();
   ui_layer_wireframe.RenderPickingLayerWireframe();
-  ui_shared_resources_.gltf_context_.windows->RenderPicking();
+  ui_shared_resources_.glfw_context_.windows->RenderPicking();
 }
 
 void UiWaterMode::HandleSelection(const std::set<GLuint>& selected_ids) {
@@ -281,7 +284,7 @@ void UiWaterMode::UpdateRivers() {
     return;
   }
 
-  Texture* mask = &ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_
+  Texture* mask = &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
                        .map_river_mask;
   glClearTexImage(mask->GetId(), 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
   std::vector<float> flow(1024 * 1024, 0.0f);
@@ -290,7 +293,7 @@ void UiWaterMode::UpdateRivers() {
     int sx = pos_id >> 10;
     int sy = pos_id & 1023;
     for (int i = 0; i < 40; ++i) {
-      PourRiver(ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_
+      PourRiver(ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
                     .terrain_heights_,
                 flow, sx, sy);
     }
@@ -302,6 +305,7 @@ void UiWaterMode::UpdateRivers() {
                       details::gTerrainSize, GL_RED, GL_UNSIGNED_BYTE,
                       mask_data.data());
   std::cout << "Processed river flood" << std::endl;
+  ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline(); //excessive?
 }
 
 namespace water {

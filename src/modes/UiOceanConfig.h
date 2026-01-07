@@ -1,5 +1,5 @@
-#ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UIWATERCONFIG_H_
-#define WIREBOUNDWORLDCREATOR_SRC_MODES_UIWATERCONFIG_H_
+#ifndef WIREBOUNDWORLDCREATOR_UIOCEANCONFIG_H
+#define WIREBOUNDWORLDCREATOR_UIOCEANCONFIG_H
 
 #include <random>
 #include <span>
@@ -22,7 +22,6 @@ struct OceanLayerTraits {
 };
 
 struct OceanTraits {
-  float height = 0.0f;
   std::vector<MapPoint> map_points;
   OceanLayerTraits near;
   OceanLayerTraits mid;
@@ -78,9 +77,14 @@ class OceanLayerConfig {
 
   bool GetVisible() const noexcept { return visible_; }
 
+  bool GetVisible2() const noexcept { return visible2_; }
+
+  float& GetStrengthRef() { return strength_; }
+
   data::TextId GetTextId() const noexcept { return layer_name_id_; }
 
   void ToggleVisible() { visible_ = !visible_; }
+  void ToggleVisible2() { visible2_ = !visible2_; }
 
  private:
   data::TextId layer_name_id_;
@@ -88,6 +92,10 @@ class OceanLayerConfig {
   std::array<float, 8> scale_;
   std::array<data::TextId, 8> text_id_;
   bool visible_ = true;
+
+  // not used yet
+  bool visible2_ = true;
+  float strength_ = 0.0f;
 };
 
-#endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIWATERCONFIG_H_
+#endif  // WIREBOUNDWORLDCREATOR_UIOCEANCONFIG_H

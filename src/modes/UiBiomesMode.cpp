@@ -10,14 +10,15 @@
 UiBiomesMode::UiBiomesMode(
     UiSharedResources& ui_shared_resources,
     UiSlots& ui_slots, WindowQueue& window_queue,
-    TextRenderer& text_renderer, ModelManager& mdl_manager)
+    TextRenderer& text_renderer,
+    UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
+    ModelManager& mdl_manager)
     : IUiMode(ui_shared_resources, {data::VboIdMain::kBiomesBiomesMode}),
       sp_biome_(data::VboIdMain::kMapTomb),
       ui_selection_(ui_shared_resources),
       mouse_transform_(ui_shared_resources),
       ui_slots_(ui_slots),
-      ui_edit_(ui_shared_resources, window_queue, text_renderer, biomes_,
-               ui_slots_.GetSelectedIdRef()),
+      ui_edit_(ui_shared_resources, ui_edit_slots, value_config),
       map_points_(mdl_manager) {}
 
 void UiBiomesMode::Setup() {
@@ -28,8 +29,9 @@ void UiBiomesMode::Setup() {
     }
     map_points_.SetData(points, nullptr);
   });
+  ui_edit_.SetUp(&biomes_, &ui_slots_.GetSelectedIdRef());
   BindDefaultCallbacks();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->SetPosition(glm::vec3{5.0f});
   camera->SetPitch(45.0f);
   camera->SetYaw(0.0f);
@@ -59,11 +61,11 @@ int UiBiomesMode::GetPrerenderTextIdEnd() const noexcept {
 }
 
 void UiBiomesMode::RenderWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->Render();
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
 }
 
 void UiBiomesMode::RenderPickingWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->RenderPicking();
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
 }
 
 void UiBiomesMode::Render() {
@@ -79,11 +81,11 @@ void UiBiomesMode::Render() {
   ui_shared_resources_.shader_sp_.Bind();
   sp_mode_.Render();
 
-  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
+  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
   ui_slots_.Render(mouse_pos);
 
-  ui_shared_resources_.gltf_context_.windows->Render();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  ui_shared_resources_.glfw_context_.windows->Render();
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->Update(1.0f);  // const pos
 }
 
@@ -96,7 +98,7 @@ void UiBiomesMode::RenderPicking() {
   ui_shared_resources_.shader_sp_picking_.Bind();
   sp_mode_.RenderPicking();
   ui_slots_.RenderPicking();
-  ui_shared_resources_.gltf_context_.windows->RenderPicking();
+  ui_shared_resources_.glfw_context_.windows->RenderPicking();
 }
 
 void UiBiomesMode::HandleSelection(const std::set<GLuint>& selected_ids) {

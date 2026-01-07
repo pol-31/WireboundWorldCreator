@@ -15,14 +15,21 @@ UiRenderer::UiRenderer(GlfwContext& global_glfw_data_,
                      {data::VboIdMain::kTextRendererCursor}),
       ui_slots_(ui_shared_resources_, text_renderer_),
       ui_config_window_(ui_shared_resources_, windows_, text_renderer_),
+      ui_edit_slots_(ui_shared_resources_, windows_, text_renderer_),
+      ui_edit_1_(ui_shared_resources_, text_renderer_),
+      ui_edit_2_(ui_shared_resources_, text_renderer_),
       terrain_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
+               ui_edit_slots_, ui_edit_1_,
                tile_renderer.cur_tile_, ui_config_window_),
       water_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
+      ui_edit_slots_, ui_edit_1_, ui_edit_2_,
              ui_config_window_, mdl_manager_),
-      biomes_(ui_shared_resources_, ui_slots_, windows_, text_renderer_),
+      biomes_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
+        ui_edit_slots_, ui_edit_2_, mdl_manager_),
       objects_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
-               mdl_manager_),
-      placement_(ui_shared_resources_, windows_, mdl_manager_),
+      ui_edit_slots_, ui_edit_2_, mdl_manager_),
+      placement_(ui_shared_resources_, ui_slots_, windows_,
+        ui_edit_slots_, ui_edit_2_, mdl_manager_),
       tiles_(ui_shared_resources_, windows_),
       player_(ui_shared_resources_, windows_, text_renderer_,
               tile_renderer.cur_tile_, mdl_manager_),
@@ -204,14 +211,14 @@ void UiRenderer::Init() {
 }
 
 void UiRenderer::SetupGlobalData() {
-  ui_shared_resources_.gltf_context_.windows = &windows_;
-  ui_shared_resources_.gltf_context_.cur_mode = &cur_mode_;
-  ui_shared_resources_.gltf_context_.menu = &ui_menu_;
-  ui_shared_resources_.gltf_context_.ui_debugger = &ui_debugger_;
-  ui_shared_resources_.gltf_context_.ui_shared_resources =
+  ui_shared_resources_.glfw_context_.windows = &windows_;
+  ui_shared_resources_.glfw_context_.cur_mode = &cur_mode_;
+  ui_shared_resources_.glfw_context_.menu = &ui_menu_;
+  ui_shared_resources_.glfw_context_.ui_debugger = &ui_debugger_;
+  ui_shared_resources_.glfw_context_.ui_shared_resources =
       &ui_shared_resources_;
-  ui_shared_resources_.gltf_context_.text_renderer = &text_renderer_;
-  ui_shared_resources_.gltf_context_.ui_renderer = this;
+  ui_shared_resources_.glfw_context_.text_renderer = &text_renderer_;
+  ui_shared_resources_.glfw_context_.ui_renderer = this;
 }
 
 void UiRenderer::AskForConfirmation(data::TextId text_id,

@@ -30,9 +30,9 @@ UiPlayerMode::UiPlayerMode(UiSharedResources& ui_shared_resources,
 
 void UiPlayerMode::Setup() {
   BindDefaultCallbacks();
-  ui_selection_.SetIdBounds(details::kIdOffsetWater, details::kIdOffsetFences);
+  ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
   ui_selection_.SetModeForce(SelectionMode::kRectangle);
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->SetPitch(45.0f);
   camera->SetOriginDist(10.0f);
 }
@@ -57,11 +57,11 @@ int UiPlayerMode::GetPrerenderTextIdEnd() const noexcept {
 }
 
 void UiPlayerMode::RenderWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->Render();
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
 }
 
 void UiPlayerMode::RenderPickingWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->RenderPicking();
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
 }
 
 void UiPlayerMode::Render() {
@@ -76,8 +76,8 @@ void UiPlayerMode::Render() {
   sp_mode_.Render();
   sp_hp_.Render();
   ui_map_.Render(&mdl_manager_);
-  ui_shared_resources_.gltf_context_.windows->Render();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  ui_shared_resources_.glfw_context_.windows->Render();
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->Update(1.0f);  // const pos
 }
 
@@ -89,33 +89,22 @@ void UiPlayerMode::RenderPicking() {
   sp_mode_.RenderPicking();
   sp_hp_.RenderPicking();
   ui_map_.RenderPicking();
-  ui_shared_resources_.gltf_context_.windows->RenderPicking();
+  ui_shared_resources_.glfw_context_.windows->RenderPicking();
   mdl_manager_.RenderPicking();
 }
 
-void UiPlayerMode::HandleSelection() {
-  const auto& tex_selected = ui_selection_.GetMask();
-  std::vector<uint8_t> selected_pixels(tex_selected.GetHeight() *
-                                       tex_selected.GetWidth());
-  tex_selected.Bind();
-  glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE,
-                selected_pixels.data());
-  glBindTexture(GL_TEXTURE_2D, 0);
+void UiPlayerMode::HandleSelection(const std::set<GLuint>& selected_ids) {
   int selected_num = 0;
-
   const ModelData* mdl_single_selected = nullptr;
   bool enemy_selected = false;
   bool friend_selected = false;
   bool neutral_selected = false;
   bool obstacle_selected = false;
-
-  for (auto& m : mdl_manager_.creatures_) {
-    auto position = m.GetPosition();
-    int x = static_cast<int>(position.x * 16.0f + 512.0f);
-    int y = static_cast<int>(position.z * 16.0f + 512.0f);
-    if (selected_pixels[y * 1024 + x] > 0) {
-      m.Select();
-      const auto model = m.GetModelData();
+  for (int i = 0; i < mdl_manager_.creatures_.size(); ++i) {
+    auto it = selected_ids.find(details::kIdOffsetObjects + 100 + i);
+    if (it != selected_ids.end()) {
+      mdl_manager_.creatures_[i].Select();
+      const auto model = mdl_manager_.creatures_[i].GetModelData();
       if (++selected_num == 1) {
         mdl_single_selected = model;
       }
@@ -129,7 +118,7 @@ void UiPlayerMode::HandleSelection() {
         obstacle_selected = true;
       }
     } else {
-      m.DeSelect();
+      mdl_manager_.creatures_[i].DeSelect();
     }
   }
   if (selected_num == 1) {
@@ -182,8 +171,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
       glfwSetCursorPosCallback(gWindow, player::CursorPosCallback_Lmb);
       glfwSetMouseButtonCallback(gWindow,
                                  player::MouseButtonCallback_Selection);
-      player->ui_selection_.Start(glfw_context->cursor_pos_tex_norm_, mod_ctrl,
-                                  mod_shift);
+      player->ui_selection_.Start(
+        glfw_context->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       glfwSetCursorPosCallback(gWindow, CursorPosCallback_Mmb);
     }
@@ -204,8 +193,9 @@ void MouseButtonCallback_Selection(GLFWwindow* window, int button, int action,
   glm::dvec2 cursor_pos = glfw_context->cursor_pos_;
   if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     player->BindDefaultCallbacks();
-    player->ui_selection_.Stop(cursor_pos);
-    player->HandleSelection();
+    auto selected_ids =player->ui_selection_.StopIntoSet(
+      glfw_context->cursor_pos_tex_norm_);
+    player->HandleSelection(selected_ids);
   } else if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_RIGHT) {
     player->ui_selection_.NextMode();
   }

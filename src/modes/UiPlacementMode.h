@@ -12,12 +12,18 @@
 #include "../core/Ui.h"
 #include "../core/UiComplex.h"
 #include "../core/UiSelection.h"
+#include "../core/UiSlots.h"
 #include "IUiMode.h"
+#include "UiEditRoads.h"
 
 class UiPlacementMode final : public IUiMode {
  public:
   UiPlacementMode(UiSharedResources& ui_shared_resources,
-                  WindowQueue& window_queue, ModelManager& mdl_manager);
+    UiSlots& ui_slots,
+    WindowQueue& window_queue,
+    UiEditSlots& ui_edit_slots,
+    UiEditConfigSlTxt& value_config,
+    ModelManager& mdl_manager);
 
   void Render() override;
 
@@ -35,7 +41,7 @@ class UiPlacementMode final : public IUiMode {
 
   void RenderPickingWorld() override;
 
-  void SetPlacementMode(Texture* tex_placement);
+  void SetPlacementMode(Texture* tex_placement, int id);
 
   [[nodiscard]] bool IsPreviewMode() const noexcept { return preview_mode_; }
 
@@ -45,15 +51,26 @@ class UiPlacementMode final : public IUiMode {
 
   void ApplyTransform();
 
+  void OnSelectedSlotChanged();
+
+  void TogglePlacement();
+
+  Texture* GetPlacementTree();
+  Texture* GetPlacementBushes();
+  Texture* GetPlacementTallGrass();
+  Texture* GetPlacementUndergrowth();
+
   UiDynamicSprite btn_trees_;
   UiDynamicSprite btn_bushes_;
   UiDynamicSprite btn_tall_grass;
   UiDynamicSprite btn_undergrowth_;
-  UiDynamicSprite btn_asphalt_;
-  UiDynamicSprite btn_gravel_;
-  UiDynamicSprite btn_soil_;
   UiDynamicSprite btn_change_mode_;  /// toggle/swap
   UiSelectedSprite sp_selected_mode_;
+
+  UiSlots& ui_slots_;
+
+  std::vector<BaseInstanceData> instances_;
+  UiEditRoads ui_edit_;
 
   UiSelection ui_selection_;
   bool anything_selected_ = false;
@@ -63,30 +80,11 @@ class UiPlacementMode final : public IUiMode {
                  static_cast<int>(data::VboIdMain::kPlacementPlacementMode) + 1>
       ui_event_handler_;
 
-  Texture tex_placement_trees_;
-  Texture tex_placement_bushes_;
-  Texture tex_placement_tall_grass_;
-  Texture tex_placement_undergrowth_;
-
   Texture* tex_cur_placement_ = nullptr;
   bool preview_mode_ = false;
 
-  std::vector<MapPoint> asphalt_map_points_;
-  std::vector<glm::uvec2> asphalt_map_joints_;
-
-  std::vector<MapPoint> gravel_map_points_;
-  std::vector<glm::uvec2> gravel_map_joints_;
-
-  std::vector<MapPoint> soil_map_points_;
-  std::vector<glm::uvec2> soil_map_joints_;
-
   MapPoints map_points_;
   MouseTransform mouse_transform_;
-
- private:
-  void SetDrawTexture(Texture* tex_placement);
-
-  void TogglePlacement();
 };
 
 namespace placement {

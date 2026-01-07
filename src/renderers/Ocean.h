@@ -6,7 +6,7 @@
 #include "../common/GaussianNoise.h"
 #include "../core/Environment.h"
 #include "../io/Window.h"
-#include "../modes/UiWaterConfig.h"
+#include "../modes/UiOceanConfig.h"
 #include "Ifft.h"
 
 class Ocean {

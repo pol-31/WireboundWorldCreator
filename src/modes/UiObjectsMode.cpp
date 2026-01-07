@@ -10,19 +10,20 @@
 UiObjectsMode::UiObjectsMode(UiSharedResources& ui_shared_resources,
                              UiSlots& ui_slots, WindowQueue& window_queue,
                              TextRenderer& text_renderer,
+UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
                              ModelManager& mdl_manager)
     : IUiMode(ui_shared_resources, {data::VboIdMain::kObjectsObjectsMode}),
       ui_selection_(ui_shared_resources),
       mouse_transform_(ui_shared_resources),
       ui_slots_(ui_slots),
-      ui_edit_(ui_shared_resources, window_queue, text_renderer, models_,
-               ui_slots_.GetSelectedIdRef(), mdl_manager),
+      ui_edit_(ui_shared_resources, ui_edit_slots, value_config, mdl_manager),
       mdl_manager_(mdl_manager) {}
 
 void UiObjectsMode::Setup() {
   ui_slots_.Setup(&models_, &ui_edit_);
+  ui_edit_.SetUp(&models_, &ui_slots_.GetSelectedIdRef());
   BindDefaultCallbacks();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->SetPosition(glm::vec3{5.0f});
   camera->SetPitch(45.0f);
   camera->SetYaw(0.0f);
@@ -53,11 +54,11 @@ int UiObjectsMode::GetPrerenderTextIdEnd() const noexcept {
 }
 
 void UiObjectsMode::RenderWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->Render();
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
 }
 
 void UiObjectsMode::RenderPickingWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->RenderPicking();
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
 }
 
 void UiObjectsMode::Render() {
@@ -69,11 +70,11 @@ void UiObjectsMode::Render() {
   ui_shared_resources_.shader_sp_.Bind();
   sp_mode_.Render();
 
-  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
+  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
   ui_slots_.Render(mouse_pos);
 
-  ui_shared_resources_.gltf_context_.windows->Render();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  ui_shared_resources_.glfw_context_.windows->Render();
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->Update(1.0f);  // const pos
 }
 
@@ -84,7 +85,7 @@ void UiObjectsMode::RenderPicking() {
   ui_shared_resources_.shader_sp_picking_.Bind();
   sp_mode_.RenderPicking();
   ui_slots_.RenderPicking();
-  ui_shared_resources_.gltf_context_.windows->RenderPicking();
+  ui_shared_resources_.glfw_context_.windows->RenderPicking();
   mdl_manager_.RenderPicking();
 }
 

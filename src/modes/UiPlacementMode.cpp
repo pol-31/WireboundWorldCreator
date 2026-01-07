@@ -1,122 +1,98 @@
 #include "UiPlacementMode.h"
 
 #include "../common/Callbacks.h"
+#include "../common/OpenGLUtility.h"
 #include "../common/PickingFramebuffer.h"
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
 #include "../renderers/UiRenderer.h"
 
+#include "../common/GraphBakeConfig.h"
+
 UiPlacementMode::UiPlacementMode(UiSharedResources& ui_shared_resources,
-                                 WindowQueue& window_queue,
-                                 ModelManager& mdl_manager)
+    UiSlots& ui_slots,
+    WindowQueue& window_queue,
+    UiEditSlots& ui_edit_slots,
+    UiEditConfigSlTxt& value_config,
+    ModelManager& mdl_manager)
     : IUiMode(ui_shared_resources, {data::VboIdMain::kPlacementPlacementMode}),
       btn_trees_(data::VboIdMain::kPlacementTrees,
                  [this]() {
-                   SetPlacementMode(&tex_placement_trees_);
-                   sp_selected_mode_.SetSelected(0);
+                   SetPlacementMode(GetPlacementTree(), 0);
                  }),
       btn_bushes_(data::VboIdMain::kPlacementBushes,
                   [this]() {
-                    SetPlacementMode(&tex_placement_bushes_);
-                    sp_selected_mode_.SetSelected(1);
+                    SetPlacementMode(GetPlacementBushes(), 1);
                   }),
       btn_tall_grass(data::VboIdMain::kPlacementTallGrass,
                      [this]() {
-                       SetPlacementMode(&tex_placement_tall_grass_);
-                       sp_selected_mode_.SetSelected(2);
+                       SetPlacementMode(GetPlacementTallGrass(), 2);
                      }),
       btn_undergrowth_(data::VboIdMain::kPlacementUndergrowth,
                        [this]() {
-                         SetPlacementMode(&tex_placement_undergrowth_);
-                         sp_selected_mode_.SetSelected(3);
+                         SetPlacementMode(GetPlacementUndergrowth(), 3);
                        }),
-      btn_asphalt_(data::VboIdMain::kPlacementAsphalt,
-                   [this]() {
-                     ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
-                     map_points_.SetData(&asphalt_map_points_, &asphalt_map_joints_);
-                         sp_selected_mode_.SetSelected(4);
-                     map_points_.UpdateJointsBuffer();
-                   }),
-      btn_gravel_(data::VboIdMain::kPlacemenGravel,
-                  [this]() {
-                     ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
-                    map_points_.SetData(&gravel_map_points_, &gravel_map_joints_);
-                         sp_selected_mode_.SetSelected(5);
-                     map_points_.UpdateJointsBuffer();
-                  }),
-      btn_soil_(data::VboIdMain::kPlacementSoil,
-                [this]() {
-                     ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
-                  map_points_.SetData(&soil_map_points_, &soil_map_joints_);
-                         sp_selected_mode_.SetSelected(6);
-                     map_points_.UpdateJointsBuffer();
-                }),
       btn_change_mode_(data::VboIdMain::kPlacementChangeMode,
                        [this]() { TogglePlacement(); }),
       ui_selection_(ui_shared_resources),
       ui_event_handler_({&btn_trees_, &btn_bushes_, &btn_tall_grass,
-                         &btn_undergrowth_, &btn_asphalt_, &btn_gravel_,
-                         &btn_soil_, &btn_change_mode_}),
-      tex_placement_trees_(details::gTerrainSize, details::gTerrainSize, GL_R8),
-      tex_placement_bushes_(details::gTerrainSize, details::gTerrainSize,
-                            GL_R8),
-      tex_placement_tall_grass_(details::gTerrainSize, details::gTerrainSize,
-                                GL_R8),
-      tex_placement_undergrowth_(details::gTerrainSize, details::gTerrainSize,
-                                 GL_R8),
+                         &btn_undergrowth_, &btn_change_mode_}),
       sp_selected_mode_({data::VboIdMain::kPlacementSelected}, &btn_trees_),
       mdl_manager_(mdl_manager),
       map_points_(mdl_manager),
+      ui_slots_(ui_slots),
+      ui_edit_(ui_shared_resources, ui_edit_slots, value_config),
+
       mouse_transform_(ui_shared_resources) {}
 
-void UiPlacementMode::SetPlacementMode(Texture* tex_placement) {
+void UiPlacementMode::SetPlacementMode(Texture* tex_placement, int id) {
   if (IsPreviewMode()) {
     TogglePlacement();
   }
-  SetDrawTexture(tex_placement);
-  map_points_.SetData(nullptr, nullptr);
-  ui_selection_.SetIdBounds(details::kIdOffsetTerrain, details::kIdOffsetWater);
-}
-
-void UiPlacementMode::SetDrawTexture(Texture* tex_placement) {
   tex_cur_placement_ = tex_placement;
   ui_selection_.SetMask(*tex_cur_placement_);
+  ui_slots_.DeSelect();
+  ui_selection_.SetIdBounds(details::kIdOffsetTerrain, details::kIdOffsetWater);
+  sp_selected_mode_.SetSelected(id);
 }
 
 void UiPlacementMode::TogglePlacement() {
-  auto tile_renderer = ui_shared_resources_.gltf_context_.tile_renderer;
   if (IsPreviewMode()) {
     // tile_renderer->show_terrain_ = false;
   } else {
-    if (tex_cur_placement_->GetId() == tex_placement_trees_.GetId()) {
-      auto positions =
-          tile_renderer->placement.UpdatePipeline(*tex_cur_placement_, 0);
-      mdl_manager_.tree_.SetPlacement(ui_shared_resources_, positions);
-    } else if (tex_cur_placement_->GetId() == tex_placement_bushes_.GetId()) {
-      auto positions =
-          tile_renderer->placement.UpdatePipeline(*tex_cur_placement_, 1);
-      mdl_manager_.bush_.SetPlacement(ui_shared_resources_, positions);
-    } else if (tex_cur_placement_->GetId() ==
-               tex_placement_tall_grass_.GetId()) {
-      auto positions =
-          tile_renderer->placement.UpdatePipeline(*tex_cur_placement_, 2);
-      mdl_manager_.tall_grass_.SetPlacement(ui_shared_resources_, positions);
-    } else if (tex_cur_placement_->GetId() ==
-               tex_placement_undergrowth_.GetId()) {
-      auto positions =
-          tile_renderer->placement.UpdatePipeline(*tex_cur_placement_, 3);
-      mdl_manager_.undergrowth_.SetPlacement(ui_shared_resources_, positions);
-    }
     // tile_renderer->show_terrain_ = true;
   }
   preview_mode_ = !preview_mode_;
+  auto tile_renderer = ui_shared_resources_.glfw_context_.tile_renderer;
+  tile_renderer->UpdatePipeline();
+  Tile& tile = tile_renderer->cur_tile_;
+  mdl_manager_.tree_.SetPlacement(ui_shared_resources_, tile.placement_trees_);
+  mdl_manager_.bush_.SetPlacement(ui_shared_resources_, tile.placement_bushes_);
+  mdl_manager_.tall_grass_.SetPlacement(ui_shared_resources_, tile.placement_tall_grass_);
+  mdl_manager_.undergrowth_.SetPlacement(ui_shared_resources_, tile.placement_undergrowth_);
+}
+
+void UiPlacementMode::OnSelectedSlotChanged() {
+  std::vector<MapPoint>* points = nullptr;
+  std::vector<glm::uvec2>* joints = nullptr;
+  if (ui_slots_.GetSelectedSlotId() != -1) {
+    points = &ui_edit_.GetInstanceData().map_points;
+    joints = &ui_edit_.GetInstanceData().map_joints;
+  }
+  map_points_.SetData(points, joints);
+  ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
+  map_points_.UpdateJointsBuffer();
 }
 
 void UiPlacementMode::Setup() {
+  ui_slots_.Setup(&instances_, &ui_edit_, [this] {
+    this->OnSelectedSlotChanged();
+  });
+  ui_edit_.SetUp(&instances_, &ui_slots_.GetSelectedIdRef());
   BindDefaultCallbacks();
-  SetPlacementMode(&tex_placement_trees_);
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  btn_trees_.Press();
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->SetPosition(glm::vec3{5.0f});
   camera->SetPitch(45.0f);
   camera->SetYaw(0.0f);
@@ -141,24 +117,28 @@ int UiPlacementMode::GetPrerenderTextIdEnd() const noexcept {
 }
 
 void UiPlacementMode::RenderWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->Render();
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
 }
 
 void UiPlacementMode::RenderPickingWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->RenderPicking();
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
 }
 
 void UiPlacementMode::Render() {
   if (!IsPreviewMode()) {
     ui_selection_.Render();
     ui_selection_.RenderOnSurface(
-        &ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_
+        &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
              .map_terrain_height);
   }
-  map_points_.RenderPoints(glm::vec4{1.0f});
-  auto map_scale = ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.map_scale;
-  map_points_.RenderJoints(
-    ui_shared_resources_.gltf_context_.tile_renderer->cur_tile_.map_terrain_height, map_scale);
+  if (ui_slots_.GetSelectedSlotId() != -1) {
+    map_points_.RenderPoints(ui_slots_.GetInstanceBaseData()->color);
+  }
+  auto map_scale =
+      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+  map_points_.RenderJoints(ui_shared_resources_.glfw_context_.tile_renderer
+                               ->cur_tile_.map_terrain_height,
+                           map_scale);
 
   mdl_manager_.RenderPlacement();
 
@@ -172,14 +152,14 @@ void UiPlacementMode::Render() {
   btn_bushes_.Render();
   btn_tall_grass.Render();
   btn_undergrowth_.Render();
-  btn_asphalt_.Render();
-  btn_gravel_.Render();
-  btn_soil_.Render();
   btn_change_mode_.Render();
-  sp_selected_mode_.Render();
-
-  ui_shared_resources_.gltf_context_.windows->Render();
-  auto camera = ui_shared_resources_.gltf_context_.camera;
+  if (ui_slots_.GetSelectedSlotId() == -1) {
+    sp_selected_mode_.Render();
+  }
+  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
+  ui_slots_.Render(mouse_pos);
+  ui_shared_resources_.glfw_context_.windows->Render();
+  auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->Update(1.0f);  // const pos
 }
 
@@ -196,12 +176,9 @@ void UiPlacementMode::RenderPicking() {
   btn_bushes_.RenderPicking();
   btn_tall_grass.RenderPicking();
   btn_undergrowth_.RenderPicking();
-  btn_asphalt_.RenderPicking();
-  btn_gravel_.RenderPicking();
-  btn_soil_.RenderPicking();
   btn_change_mode_.RenderPicking();
-
-  ui_shared_resources_.gltf_context_.windows->RenderPicking();
+  ui_shared_resources_.glfw_context_.windows->RenderPicking();
+  ui_slots_.RenderPicking();
 }
 
 void UiPlacementMode::HandleSelection(const std::set<GLuint>& selected_ids) {
@@ -241,6 +218,7 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
   auto pressed_id = glfw_context->picking_fbo->GetIdByMousePos(cursor_pos);
   if (pressed_id >= details::kIdOffsetUi &&
       pressed_id != static_cast<GLuint>(-1)) {
+    placement->ui_slots_.Scroll(pressed_id, yoffset);
     glfw_context->windows->Scroll(pressed_id, yoffset);
     return;
   }
@@ -264,12 +242,14 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
       std::cout << "Pressed id: " << pressed_id << std::endl;
       bool ui_handled = glfw_context->windows->Press(pressed_id) ||
-                        placement->ui_event_handler_.Press(pressed_id);
+        placement->ui_event_handler_.Press(pressed_id) ||
+        placement->ui_slots_.Press(pressed_id);
       if (ui_handled) {
         return;
       }
       if (placement->map_points_.GetPoints()) {
-        if (placement->anything_selected_ && pressed_id > details::kIdOffsetObjects &&
+        if (placement->anything_selected_ &&
+            pressed_id > details::kIdOffsetObjects &&
             pressed_id < details::kIdOffsetUi) {
           double xpos, ypos;
           glfwGetCursorPos(gWindow, &xpos, &ypos);
@@ -280,30 +260,31 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
           glfwSetCursorPosCallback(gWindow, CursorPosCallback_LmbSelected);
           glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_LmbSelected);
           glfwSetKeyCallback(gWindow, KeyCallback_LmbSelected);
-          } else {
-            placement->ui_selection_.Start(
+        } else {
+          placement->ui_selection_.Start(
             glfw_context->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
-            glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
-            glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
-            glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
-          }
+          glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
+          glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
+          glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+        }
       } else {
-        placement->ui_selection_.Start(
-          glfw_context->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
+        placement->ui_selection_.Start(glfw_context->cursor_pos_tex_norm_,
+                                       mod_ctrl, mod_shift);
         glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
         glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
         glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
       }
     } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-      if (pressed_id > details::kIdOffsetObjects && placement->anything_selected_ &&
-          pressed_id < details::kIdOffsetUi) {
+      if (pressed_id > details::kIdOffsetObjects &&
+          placement->anything_selected_ && pressed_id < details::kIdOffsetUi) {
         placement->map_points_.AddJoints(pressed_id);
-          } else if (pressed_id < details::kIdOffsetWater) {
-            return placement->map_points_.AddPoint({pressed_id, false});
-          }
+      } else if (pressed_id < details::kIdOffsetWater) {
+        return placement->map_points_.AddPoint({pressed_id, false});
+      }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       if (mod_shift) {
-        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_MmbShift);
+        glfwSetCursorPosCallback(gWindow,
+                                 callbacks::CursorPosCallback_MmbShift);
       } else {
         glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_Mmb);
       }
@@ -313,6 +294,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     }
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     glfw_context->windows->Release();
+    placement->ui_slots_.Release();
     placement->ui_event_handler_.Release();
   }
 }
@@ -361,7 +343,8 @@ void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
   if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     placement->BindDefaultCallbacks();
     if (placement->map_points_.GetPoints()) {
-      auto selected_ids = placement->ui_selection_.StopIntoSet(glfw_context->cursor_pos_tex_norm_);
+      auto selected_ids = placement->ui_selection_.StopIntoSet(
+          glfw_context->cursor_pos_tex_norm_);
       placement->HandleSelection(selected_ids);
     }
     placement->ui_selection_.Stop(glfw_context->cursor_pos_tex_norm_);
@@ -386,7 +369,8 @@ void CursorPosCallback_LmbSelected(GLFWwindow* window, double xpos,
   auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
   auto placement = dynamic_cast<UiPlacementMode*>(*glfw_context->cur_mode);
   auto map_points = placement->map_points_.GetPoints();
-  placement->mouse_transform_.TranslateSelectedMapPoints(*map_points, xpos, ypos);
+  placement->mouse_transform_.TranslateSelectedMapPoints(*map_points, xpos,
+                                                         ypos);
   placement->map_points_.UpdateJointsBuffer();
 }
 
@@ -406,8 +390,8 @@ void MouseButtonCallback_LmbSelected(GLFWwindow* window, int button, int action,
   }
 }
 
-void KeyCallback_LmbSelected(
-  GLFWwindow* window, int key, int scancode, int action, int mods) {
+void KeyCallback_LmbSelected(GLFWwindow* window, int key, int scancode,
+                             int action, int mods) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
   auto placement = dynamic_cast<UiPlacementMode*>(*glfw_context->cur_mode);
@@ -425,3 +409,19 @@ void KeyCallback_LmbSelected(
 }
 
 }  // namespace placement
+
+Texture* UiPlacementMode::GetPlacementTree() {
+  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.tex_placement_trees_;
+}
+
+Texture* UiPlacementMode::GetPlacementBushes() {
+  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.tex_placement_bushes_;
+}
+
+Texture* UiPlacementMode::GetPlacementTallGrass() {
+  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.tex_placement_tall_grass_;
+}
+
+Texture* UiPlacementMode::GetPlacementUndergrowth() {
+  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.tex_placement_undergrowth_;
+}

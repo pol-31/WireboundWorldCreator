@@ -67,11 +67,8 @@ add_executable(WireboundWorldCreator
         src/core/WindowQueue.cpp
         src/core/UiText.cpp
         src/core/UiText.h
-        src/modes/UiTerrainWindows.cpp
-        src/modes/UiTerrainWindows.h
         src/core/Tile.cpp
         src/modes/TerrainNoiseData.h
-        src/modes/TerrainInstanceData.h
         src/core/UiLayerWireframe.cpp
         src/core/UiLayerWireframe.h
         src/core/UiWorldOrigin.cpp
@@ -105,13 +102,14 @@ add_executable(WireboundWorldCreator
         src/common/BaseInstanceData.h
         src/core/UiCloning.cpp
         src/core/UiCloning.h
-        src/modes/UiTerrainWindows.cpp
-        src/modes/UiTerrainWindows.h
         src/common/Callbacks.cpp
         src/common/Callbacks.h
-        src/modes/UiEditWater.cpp
-        src/modes/UiEditWater.h
-        src/modes/IUiEdit.h
+        src/modes/UiEditOcean.cpp
+        src/modes/UiEditOcean.h
+        src/modes/UiEditRiver.cpp
+        src/modes/UiEditRiver.h
+        src/modes/UiEdit.cpp
+        src/modes/UiEdit.h
         src/modes/UiEditBiomes.cpp
         src/modes/UiEditBiomes.h
         src/modes/UiEditObjects.cpp
@@ -120,7 +118,7 @@ add_executable(WireboundWorldCreator
         src/modes/UiEditShared.h
         src/core/UiConfigWindow.cpp
         src/core/UiConfigWindow.h
-        src/modes/UiWaterConfig.h
+        src/modes/UiOceanConfig.h
         src/modes/UiTerrainConfig.cpp
         src/common/Material.h
         src/common/GaussianNoise.cpp
@@ -128,7 +126,21 @@ add_executable(WireboundWorldCreator
         src/common/MapPoint.h
         src/core/UiMenu.cpp
         src/core/UiMenu.h
-
+        src/common/MapPoints.cpp
+        src/common/MapPoints.h
+        src/modes/UiEditOcean.cpp
+        src/modes/UiEditOcean.h
+        src/modes/UiOceanConfig.h
+        src/modes/UiEditRiver.cpp
+        src/modes/UiEditRiver.h
+        src/modes/UiEditTerrain.cpp
+        src/modes/UiEditTerrain.h
+        src/modes/UiTerrainBake.cpp
+        src/modes/UiTerrainBake.h
+        src/common/GraphBakeConfig.h
+        src/modes/UiEdit.cpp
+        src/modes/UiEditRoads.cpp
+        src/modes/UiEditRoads.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

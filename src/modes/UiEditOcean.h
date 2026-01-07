@@ -1,0 +1,60 @@
+#ifndef WIREBOUNDWORLDCREATOR_UIEDITOCEAN_H
+#define WIREBOUNDWORLDCREATOR_UIEDITOCEAN_H
+
+#include <array>
+#include <vector>
+#include <glad/glad.h>
+
+#include "../core/UiConfigWindow.h"
+#include "UiEdit.h"
+#include "UiEditShared.h"
+#include "UiOceanConfig.h"
+#include "UiSharedResources.h"
+
+class UiEditOcean : public IUiEdit {
+public:
+  UiEditOcean(UiSharedResources& ui_shared_resources,
+    TextRenderer& text_renderer,
+    UiEditSlots& ui_edit_slots,
+    UiEditConfigSlCfg& value_config,
+    UiConfigWindow& ui_ocean_config);
+
+  UiEditOcean(UiEditOcean&& other) noexcept;
+
+  void HideAll() override;
+
+  void CreateInstance() override;
+
+  void UpdateConfig() override;
+
+  void SetInstanceId(int id) override;
+
+  void RemoveInstance(GLuint id) override;
+
+  void Reset() override;
+
+  void Generate() override;
+
+  void RandomGenerate() override;
+
+  bool Press(int id, float height) override;
+
+  void Release() override;
+
+  void Render(float height) override;
+
+  void RenderPicking(float height) override;
+
+  [[nodiscard]] OceanTraits& GetInstanceData() noexcept;
+
+private:
+  std::vector<OceanTraits> instances_;
+  UiEditConfigSlCfg& value_config_;
+  UiConfigWindow& ui_ocean_config_;
+
+  std::array<OceanLayerConfig, 3> ocean_layers_;
+
+  UiSharedResources& ui_shared_resources_;
+};
+
+#endif  // WIREBOUNDWORLDCREATOR_UIEDITOCEAN_H

@@ -36,7 +36,7 @@ class UiPlayerMode final : public IUiMode {
 
   void RenderPickingWorld() override;
 
-  void HandleSelection();
+  void HandleSelection(const std::set<GLuint>& selected_ids);
 
   UiDynamicSprite sp_hp_;
 

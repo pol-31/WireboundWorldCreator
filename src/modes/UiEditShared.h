@@ -1,6 +1,8 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UIEDITSHARED_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UIEDITSHARED_H_
 
+#include <span>
+
 #include <glm/glm.hpp>
 
 #include "../core/Ui.h"
@@ -10,76 +12,60 @@
 
 class UiDynamicSprite;
 
-int GetUiEditEntryId(const UiDynamicSprite* sprite, float size,
-                     glm::vec2 mouse_pos, float start_height);
+int GetUiEditEntryId(float height, float size,
+                     glm::vec2 mouse_pos,  float start_height);
 
-class UiEditConfigTerrain {
- public:
-  UiEditConfigTerrain(UiSharedResources& ui_shared_resources,
+class UiEditConfigSlCfg {
+public:
+  struct Trait {
+    float* value;
+    data::TextId label;
+    bool tg1;
+    bool tg2;
+  };
+
+  UiEditConfigSlCfg(UiSharedResources& ui_shared_resources,
                       TextRenderer& text_renderer);
 
-  UiEditConfigTerrain(UiEditConfigTerrain&& other) noexcept = default;
-  UiEditConfigTerrain(const UiEditConfigTerrain& other) = delete;
+  UiEditConfigSlCfg(UiEditConfigSlCfg&& other) noexcept = default;
+  UiEditConfigSlCfg(const UiEditConfigSlCfg& other) = delete;
 
-  UiEditConfigTerrain& operator=(UiEditConfigTerrain&& other) = delete;
-  UiEditConfigTerrain& operator=(const UiEditConfigTerrain& other) = delete;
+  UiEditConfigSlCfg& operator=(UiEditConfigSlCfg&& other) = delete;
+  UiEditConfigSlCfg& operator=(const UiEditConfigSlCfg& other) = delete;
 
-  /// so we could get GetTopBorder & GetBottomBorder and estimate position
-  void ResetTransform();
+  void Release();
 
-  /// no Press(), Release() <- done in external ui_event_handler
   void Render(float& strength, bool do_invert, bool do_tiling,
               glm::vec2 translate, bool update_strength, data::TextId text_id);
 
-  void RenderPicking(glm::vec2 translate);
+  void RenderPicking(float sprite_height, int num);
 
   void AttachToHierarchy(UiHierarchy& hierarchy);
 
-  UiDynamicSprite btn_config_;
-  UiTextModeId txt_name_;
-  UiToggle4 tg_invert_;
-  UiToggle4 tg_tiling_;
-  UiSliderH2 sl_strength_;
-  UiDynamicSprite sp_hmap_;
-
-  int pressed_strength_id_ = -1.0f;
-
-  UiSharedResources& ui_shared_resources_;
-};
-
-class UiEditConfigOcean {
- public:
-  UiEditConfigOcean(UiSharedResources& ui_shared_resources,
-                    TextRenderer& text_renderer);
-
-  UiEditConfigOcean(UiEditConfigOcean&& other) noexcept = default;
-  UiEditConfigOcean(const UiEditConfigOcean& other) = delete;
-
-  UiEditConfigOcean& operator=(UiEditConfigOcean&& other) = delete;
-  UiEditConfigOcean& operator=(const UiEditConfigOcean& other) = delete;
-
-  /// so we could get GetTopBorder & GetBottomBorder and estimate position
   void ResetTransform();
 
-  /// no Press(), Release() <- done in external ui_event_handler
-  void Render(bool do_show, glm::vec2 translate, data::TextId text_id);
-
-  void RenderPicking(glm::vec2 translate);
-
-  void AttachToHierarchy(UiHierarchy& hierarchy);
-
   UiDynamicSprite btn_config_;
   UiTextModeId txt_name_;
-  UiToggle4 tg_visible_;
+  UiToggle4 tg1_;
+  UiToggle4 tg2_;
+  UiSliderH2 sl_strength_;
+  int pressed_strength_id_ = -1.0f;
+
+private:
+  void RenderPickingEntry(glm::vec2 translate);
 
   UiSharedResources& ui_shared_resources_;
 };
 
 class UiEditConfigSlTxt {
  public:
+  struct Trait {
+    float* value;
+    data::TextId label;
+  };
+
   UiEditConfigSlTxt(UiSharedResources& ui_shared_resources,
-                    TextRenderer& text_renderer, UiSliderH2&& sl_strength_,
-                    UiTextModeId&& txt_name_);
+                    TextRenderer& text_renderer);
 
   UiEditConfigSlTxt(UiEditConfigSlTxt&& other) noexcept = default;
   UiEditConfigSlTxt(const UiEditConfigSlTxt& other) = delete;
@@ -87,22 +73,28 @@ class UiEditConfigSlTxt {
   UiEditConfigSlTxt& operator=(UiEditConfigSlTxt&& other) = delete;
   UiEditConfigSlTxt& operator=(const UiEditConfigSlTxt& other) = delete;
 
-  /// so we could get GetTopBorder & GetBottomBorder and estimate position
-  void ResetTransform();
+  bool Press(int id, float height, int num);
 
-  /// no Press(), Release() <- done in external ui_event_handler
-  void Render(float& strength, glm::vec2 translate, bool update_strength,
-              data::TextId text_id);
+  void Release();
 
-  void RenderPicking(glm::vec2 translate);
+  void Render(float sprite_height, std::span<Trait> traits);
+
+  void RenderPicking(float sprite_height, int num);
 
   void AttachToHierarchy(UiHierarchy& hierarchy);
 
   UiSliderH2 sl_strength_;
   UiTextModeId txt_name_;
 
-  int pressed_strength_id_ = -1.0f;
+ private:
+  void RenderEntry(float& strength, glm::vec2 translate, bool update_strength,
+              data::TextId text_id);
 
+  void RenderPickingEntry(glm::vec2 translate);
+
+  void ResetTransform();
+
+  int pressed_strength_id_ = -1.0f;
   UiSharedResources& ui_shared_resources_;
 };
 

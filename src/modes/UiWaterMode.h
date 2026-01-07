@@ -9,13 +9,16 @@
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
 #include "IUiMode.h"
-#include "UiEditWater.h"
+#include "UiEditOcean.h"
+#include "UiEditRiver.h"
 
 /// two modes: ocean (Ifft), river (Swelbm)
 class UiWaterMode final : public IUiMode {
  public:
   UiWaterMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
-              WindowQueue& window_queue, TextRenderer& text_renderer,
+  WindowQueue& window_queue, TextRenderer& text_renderer,
+UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config_ocean,
+    UiEditConfigSlTxt& value_config_river,
               UiConfigWindow& ui_config_window, ModelManager& mdl_manager);
 
   void Render() override;

@@ -10,15 +10,18 @@
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
 #include "IUiMode.h"
-#include "UiTerrainWindows.h"
+#include "UiEditTerrain.h"
+#include "UiTerrainBake.h"
 
 struct GLFWwindow;
 
 class UiTerrainMode final : public IUiMode {
  public:
   UiTerrainMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
-                WindowQueue& window_queue, TextRenderer& text_renderer,
-                Tile& cur_tile, UiConfigWindow& ui_config_window);
+  WindowQueue& window_queue, TextRenderer& text_renderer,
+UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config,
+                Tile& cur_tile, UiConfigWindow& ui_config_windowm
+                );
 
   void Render() override;
 

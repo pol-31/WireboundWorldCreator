@@ -3,6 +3,8 @@
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
+#include "GLFW/glfw3.h"
+
 #include "../common/TextRenderer.h"
 #include "../common/UiDebugger.h"
 #include "../common/models/ModelManager.h"  // temp
@@ -17,7 +19,9 @@
 #include "../core/UiWorldOrigin.h"
 #include "../core/WindowQueue.h"
 #include "../modes/AllUiModes.h"
-#include "GLFW/glfw3.h"
+
+#include "../modes/UiEdit.h"
+#include "../modes/UiEditShared.h"
 
 class Camera;
 
@@ -66,6 +70,9 @@ class UiRenderer {
 
   UiSlots ui_slots_;
   UiConfigWindow ui_config_window_;
+  UiEditSlots ui_edit_slots_;
+  UiEditConfigSlCfg ui_edit_1_;
+  UiEditConfigSlTxt ui_edit_2_;
 
   IUiMode* cur_mode_{nullptr};
   UiTerrainMode terrain_;  //

@@ -13,6 +13,7 @@ class UiBiomesMode final : public IUiMode {
  public:
   UiBiomesMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
                WindowQueue& window_queue, TextRenderer& text_renderer,
+UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
                ModelManager& mdl_manager);
 
   void Render() override;
