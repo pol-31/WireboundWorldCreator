@@ -11,12 +11,11 @@ void Obstacle::Render(UiSharedResources& ui_shared_resources) {
   }
   ui_shared_resources.shader_mdl_instanced_.Bind();
   auto map_scale =
-      ui_shared_resources.gltf_context_.tile_renderer->cur_tile_.map_scale;
+      ui_shared_resources.glfw_context_.tile_renderer->cur_tile_.map_scale;
   glm::mat4 map_model =
       glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));  // upscaled
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(map_model));
   model_data_->BindTextures();
-  glBindVertexArray(model_data_->vao);
   model_data_->RenderModelNodesInstanced(instances_num_);
   glBindVertexArray(0);
 }
@@ -43,7 +42,7 @@ void Obstacle::ClearPlacement() { instances_num_ = 0; }
 void Obstacle::GenerateVbo(const std::vector<glm::mat4>& model_matrices) {
   instances_num_ = model_matrices.size();
   GLuint prev_vbo = placement_vbo_;
-  glBindVertexArray(model_data_->vao);
+  glBindVertexArray(model_data_->primitives[0].vao);
   glGenBuffers(1, &placement_vbo_);
   glBindBuffer(GL_ARRAY_BUFFER, placement_vbo_);
   glBufferData(GL_ARRAY_BUFFER, instances_num_ * sizeof(glm::mat4),
@@ -64,7 +63,7 @@ void Obstacle::DeleteVbo(GLuint vbo) { glDeleteBuffers(1, &vbo); }
 glm::vec3 Obstacle::GenPosition(UiSharedResources& ui_shared_resources,
                                 GLuint pos_id) {
   glm::vec3 position(0.0f);
-  glm::uvec2 pos(pos_id >> 10, pos_id & 1023);
+  glm::uvec2 pos(pos_id & 1023, pos_id >> 10);
   position.x = pos.x / 16.0f - 32.0f;
   position.z = pos.y / 16.0f - 32.0f;
 
@@ -74,7 +73,7 @@ glm::vec3 Obstacle::GenPosition(UiSharedResources& ui_shared_resources,
   float tx = pos.x - x;  // 0..1
   float ty = pos.y - y;  // 0..1
 
-  const auto& h = ui_shared_resources.gltf_context_.tile_renderer->cur_tile_
+  const auto& h = ui_shared_resources.glfw_context_.tile_renderer->cur_tile_
                       .terrain_heights_;
   int stride = 1024;
 

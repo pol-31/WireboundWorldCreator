@@ -5,10 +5,13 @@ layout(location = 2) in vec2 in_texcoord;
 
 layout(location = 3) in mat4 instance_model;
 
-layout(binding = 0) uniform CameraBufferObject {
-	mat4 view;
-	mat4 proj;
-	vec3 pos;
+layout(std140, binding = 0) uniform Camera {
+    vec3 pos;       float _pad0;
+    vec3 forward;   float _pad1;
+    vec3 right;     float _pad2;
+    vec3 up;        float cos_half_fov;
+    mat4 view;
+    mat4 proj;
 } camera;
 
 layout(location = 0) uniform mat4 map_model;

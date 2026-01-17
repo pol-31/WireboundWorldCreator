@@ -4,6 +4,7 @@
 #include <glad/glad.h>
 #include <tiny_gltf.h>
 
+#include <glm/gtc/quaternion.hpp>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -12,12 +13,7 @@
 #include "../../modes/UiSharedResources.h"
 #include "../Material.h"
 #include "../Texture.h"
-
-// local space (rel to 0;0;0 centre)
-struct Aabb3D {
-  glm::vec3 min;
-  glm::vec3 max;
-};
+#include "Aabb3D.h"
 
 bool LoadImageData(tinygltf::Image* image, const int image_idx,
                    std::string* err, std::string* warn, int req_width,
@@ -25,20 +21,24 @@ bool LoadImageData(tinygltf::Image* image, const int image_idx,
                    void* user_data);
 
 struct ModelData {
-  enum class Category { kPlayer, kEnemy, kFriend, kNeutral, kObstacle };
-  Category category = Category::kEnemy;
+  struct Mesh {
+    GLuint vao = 0;
+    GLuint ebo = 0;
+    GLenum mode = 0;
+    GLsizei indexCount = 0;
+    GLenum indexType = 0;
+    std::size_t indexOffset = 0;
+  };
+
+  std::vector<Mesh> primitives;
+  tinygltf::Model model;
+  Material material;
+  Aabb3D aabb;
+
   float hp = 100.0f;
   float speed = 1.0f;
   float attack = 1.0f;
   float attack_speed = 1.0f;
-
-  tinygltf::Model model;
-  GLuint vao = 0;
-  std::map<int, GLuint> ebos;
-  GLuint id = 0;
-
-  Material material;
-  Aabb3D aabb;
 
   void BindTextures() const noexcept;
 
@@ -59,25 +59,26 @@ struct ModelData {
 
 class ModelLoader {
  public:
-  ModelLoader(UiSharedResources& ui_shared_resources);
+  ModelLoader(UiSharedResources& ui_shared_resources,
+              tinygltf::TinyGLTF& loader);
 
   ~ModelLoader();
 
-  const ModelData* Load(std::string_view path, int id);
+  ModelData* Load(std::string_view path, int id);
 
-  const std::vector<std::unique_ptr<ModelData>>& GetLoadedModels() {
-    return models_;
-  }
+  std::vector<std::unique_ptr<ModelData>>& GetLoadedModels() { return models_; }
 
  private:
   void BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
-                std::map<int, GLuint>& ebos);
+                std::map<int, GLuint>& ebos,
+                std::vector<ModelData::Mesh>& primitives);
 
   void BindModelNodes(tinygltf::Model& model, tinygltf::Node& node,
-                      std::map<int, GLuint>& ebos);
+                      std::map<int, GLuint>& ebos,
+                      std::vector<ModelData::Mesh>& primitives);
 
-  void BindModel(tinygltf::Model& model, GLuint& vao,
-                 std::map<int, GLuint>& ebos);
+  void BindModel(tinygltf::Model& model,
+                 std::vector<ModelData::Mesh>& primitives);
 
   // ptr (store uniq ptrs)
   void LoadTextures(std::string_view path, ModelData* model_data);
@@ -89,7 +90,7 @@ class ModelLoader {
 
   std::vector<std::unique_ptr<ModelData>> models_;
   UiSharedResources& ui_shared_resources_;
-  tinygltf::TinyGLTF loader_;
+  tinygltf::TinyGLTF& loader_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_
