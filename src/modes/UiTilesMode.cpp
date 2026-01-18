@@ -59,11 +59,11 @@ void UiTilesMode::Render() {
 }
 
 void UiTilesMode::RenderWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->Render();
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
 }
 
 void UiTilesMode::RenderPickingWorld() {
-  ui_shared_resources_.gltf_context_.tile_renderer->RenderPicking();
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
 }
 
 void UiTilesMode::RenderPicking() {

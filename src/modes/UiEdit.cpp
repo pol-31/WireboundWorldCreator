@@ -1,8 +1,7 @@
 #include "UiEdit.h"
 
 UiEditSlots::UiEditSlots(UiSharedResources& ui_shared_resources,
-                         WindowQueue& window_queue,
-                         TextRenderer& text_renderer)
+                         WindowQueue& window_queue, TextRenderer& text_renderer)
     : Base({data::VboIdMain::kBiomesEditDesk, [] {}}, 1.0f,
            {{data::VboIdMain::kBiomesEditDeskPinBack, [] {}},
             {data::VboIdMain::kBiomesEditDeskPinPoint}},
@@ -50,8 +49,8 @@ UiEditSlots::UiEditSlots(UiEditSlots&& other) noexcept
 }
 
 void UiEditSlots::SetUp(IUiEdit* ui_edit,
-  std::vector<BaseInstanceData>* base_instances,
-  const int* selected_id) {
+                        std::vector<BaseInstanceData>* base_instances,
+                        const int* selected_id) {
   ui_edit_ = ui_edit;
   base_instances_ = base_instances;
   selected_id_ = selected_id;

@@ -1,13 +1,14 @@
 #include "UiEditOcean.h"
+
 #include "../core/TileRenderer.h"
 
 UiEditOcean::UiEditOcean(UiSharedResources& ui_shared_resources,
-  TextRenderer& text_renderer,
-  UiEditSlots& ui_edit_slots,
-  UiEditConfigSlCfg& value_config,
-  UiConfigWindow& ui_ocean_config)
-: IUiEdit(ui_edit_slots),
-value_config_(value_config),
+                         TextRenderer& text_renderer,
+                         UiEditSlots& ui_edit_slots,
+                         UiEditConfigSlCfg& value_config,
+                         UiConfigWindow& ui_ocean_config)
+    : IUiEdit(ui_edit_slots),
+      value_config_(value_config),
       ocean_layers_(
           {{data::TextId::kLayer1,
             {100.0f, 20'000.0f, 1'0000, 0.6f, 0.7f, 5.0f, 0.7f, 1.1f}},
@@ -22,7 +23,7 @@ value_config_(value_config),
 
 UiEditOcean::UiEditOcean(UiEditOcean&& other) noexcept
     : IUiEdit(std::move(*this)),
-value_config_(other.value_config_),
+      value_config_(other.value_config_),
       ocean_layers_(std::move(other.ocean_layers_)),
       ui_shared_resources_(other.ui_shared_resources_),
       instances_(std::move(other.instances_)),
@@ -59,9 +60,7 @@ void UiEditOcean::RemoveInstance(GLuint id) {
   UpdateConfig();
 }
 
-void UiEditOcean::Reset() {
-  instances_.clear();
-}
+void UiEditOcean::Reset() { instances_.clear(); }
 
 void UiEditOcean::Generate() {
   int id = *ui_.selected_id_;
@@ -113,20 +112,18 @@ bool UiEditOcean::Press(int id, float height) {
   return true;
 }
 
-void UiEditOcean::Release() {
-  value_config_.Release();
-}
+void UiEditOcean::Release() { value_config_.Release(); }
 
 void UiEditOcean::Render(float height) {
   ui_shared_resources_.glfw_context_.tile_renderer->water.SetWaterColor(
-    (*ui_.base_instances_)[*ui_.selected_id_].color);
+      (*ui_.base_instances_)[*ui_.selected_id_].color);
   glm::vec2 next_offset = glm::vec2{0.0f};
   float entry_height = height / (ocean_layers_.size() + 5);  // +pads
   for (int i = 0; i < ocean_layers_.size(); ++i) {
-    value_config_.Render(ocean_layers_[i].GetStrengthRef(),
-      ocean_layers_[i].GetVisible(), ocean_layers_[i].GetVisible2(),
-      next_offset, value_config_.pressed_strength_id_ == i,
-      ocean_layers_[i].GetTextId());
+    value_config_.Render(
+        ocean_layers_[i].GetStrengthRef(), ocean_layers_[i].GetVisible(),
+        ocean_layers_[i].GetVisible2(), next_offset,
+        value_config_.pressed_strength_id_ == i, ocean_layers_[i].GetTextId());
     next_offset.y -= entry_height;
   }
 }

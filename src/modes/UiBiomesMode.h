@@ -1,8 +1,8 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UIBIOMESMODE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UIBIOMESMODE_H_
 
-#include "../common/MouseTransform.h"
 #include "../common/MapPoints.h"
+#include "../common/MouseTransform.h"
 #include "../common/Vbos.h"
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
@@ -13,7 +13,7 @@ class UiBiomesMode final : public IUiMode {
  public:
   UiBiomesMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
                WindowQueue& window_queue, TextRenderer& text_renderer,
-UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
+               UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
                ModelManager& mdl_manager);
 
   void Render() override;
@@ -37,8 +37,6 @@ UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
   void CancelTransform();
 
   void ApplyTransform();
-
-  void SpawnObject(GLuint pressed_id);
 
   UiDynamicSprite sp_biome_;
 
@@ -67,8 +65,8 @@ void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos);
 void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
                              int mods);
 
-void KeyCallback_LmbSelected(
-  GLFWwindow* window, int key, int scancode, int action, int mods);
+void KeyCallback_LmbSelected(GLFWwindow* window, int key, int scancode,
+                             int action, int mods);
 
 void CursorPosCallback_LmbSelected(GLFWwindow* window, double xpos,
                                    double ypos);

@@ -3,9 +3,9 @@
 
 #include <glad/glad.h>
 
+#include "../common/MapPoints.h"
 #include "../common/MouseTransform.h"
 #include "../common/Vbos.h"
-#include "../common/MapPoints.h"
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
 #include "IUiMode.h"
@@ -16,9 +16,9 @@
 class UiWaterMode final : public IUiMode {
  public:
   UiWaterMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
-  WindowQueue& window_queue, TextRenderer& text_renderer,
-UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config_ocean,
-    UiEditConfigSlTxt& value_config_river,
+              WindowQueue& window_queue, TextRenderer& text_renderer,
+              UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config_ocean,
+              UiEditConfigSlTxt& value_config_river,
               UiConfigWindow& ui_config_window, ModelManager& mdl_manager);
 
   void Render() override;
@@ -85,14 +85,22 @@ void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos);
 void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
                              int mods);
 
-void KeyCallback_LmbSelected(
-  GLFWwindow* window, int key, int scancode, int action, int mods);
+void KeyCallback_LmbSelected(GLFWwindow* window, int key, int scancode,
+                             int action, int mods);
 
 void CursorPosCallback_LmbSelected(GLFWwindow* window, double xpos,
                                    double ypos);
 
 void MouseButtonCallback_LmbSelected(GLFWwindow* window, int button, int action,
                                      int mods);
+
+void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos);
+
+void MouseButtonCallbackTransform(GLFWwindow* window, int button, int action,
+                                  int mods);
+
+void KeyCallbackTransform(GLFWwindow* window, int key, int scancode, int action,
+                          int mods);
 
 }  // namespace water
 

@@ -7,12 +7,12 @@
 #include "../io/Window.h"
 #include "../renderers/UiRenderer.h"
 
-UiBiomesMode::UiBiomesMode(
-    UiSharedResources& ui_shared_resources,
-    UiSlots& ui_slots, WindowQueue& window_queue,
-    TextRenderer& text_renderer,
-    UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
-    ModelManager& mdl_manager)
+UiBiomesMode::UiBiomesMode(UiSharedResources& ui_shared_resources,
+                           UiSlots& ui_slots, WindowQueue& window_queue,
+                           TextRenderer& text_renderer,
+                           UiEditSlots& ui_edit_slots,
+                           UiEditConfigSlTxt& value_config,
+                           ModelManager& mdl_manager)
     : IUiMode(ui_shared_resources, {data::VboIdMain::kBiomesBiomesMode}),
       sp_biome_(data::VboIdMain::kMapTomb),
       ui_selection_(ui_shared_resources),
@@ -22,8 +22,8 @@ UiBiomesMode::UiBiomesMode(
       map_points_(mdl_manager) {}
 
 void UiBiomesMode::Setup() {
-  ui_slots_.Setup(&biomes_, &ui_edit_, [this]() {
-      std::vector<MapPoint>* points = nullptr;
+  ui_slots_.Setup(&biomes_, &ui_edit_, [this] {
+    std::vector<MapPoint>* points = nullptr;
     if (ui_slots_.GetSelectedSlotId() != -1) {
       points = &ui_edit_.GetInstanceData().map_points;
     }
@@ -86,7 +86,7 @@ void UiBiomesMode::Render() {
 
   ui_shared_resources_.glfw_context_.windows->Render();
   auto camera = ui_shared_resources_.glfw_context_.camera;
-  camera->Update(1.0f);  // const pos
+  camera->Update();  // const pos
 }
 
 void UiBiomesMode::RenderPicking() {
@@ -105,7 +105,7 @@ void UiBiomesMode::HandleSelection(const std::set<GLuint>& selected_ids) {
   auto map_points = map_points_.GetPoints();
   anything_selected_ = false;
   for (int i = 0; i < map_points->size(); ++i) {
-    auto it = selected_ids.find(details::kIdOffsetObjects + 100 + i);
+    auto it = selected_ids.find(i);
     if (it != selected_ids.end()) {
       anything_selected_ = true;
       (*map_points)[i].selected = true;
@@ -121,16 +121,7 @@ void UiBiomesMode::CancelTransform() {
   mouse_transform_.TranslateSelectedMapPointsBack(*map_points);
 }
 
-void UiBiomesMode::ApplyTransform() {
-  BindDefaultCallbacks();
-}
-
-void UiBiomesMode::SpawnObject(GLuint pressed_id) {
-  glm::vec2 object_pos = {(pressed_id >> 10) / 16.0f - 32.0f,
-                          (pressed_id & 1023) / 16.0f - 32.0f};
-  //  ui_edit_.AddInstance(ui_slots_.GetInstanceBaseData()->type_id,
-  //  object_pos);
-}
+void UiBiomesMode::ApplyTransform() { BindDefaultCallbacks(); }
 
 namespace biomes {
 
@@ -172,7 +163,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
       if (ui_handled) {
         return;
       }
-      if (biomes->anything_selected_ && pressed_id > details::kIdOffsetObjects &&
+      if (biomes->anything_selected_ &&
+          pressed_id > details::kIdOffsetObjects &&
           pressed_id < details::kIdOffsetUi) {
         double xpos, ypos;
         glfwGetCursorPos(gWindow, &xpos, &ypos);
@@ -186,8 +178,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         return;
       }
       if (biomes->ui_slots_.GetSelectedSlotId() != -1) {
-        biomes->ui_selection_.Start(
-          glfw_context->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
+        biomes->ui_selection_.Start(glfw_context->cursor_pos_tex_norm_,
+                                    mod_ctrl, mod_shift);
         glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
         glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
         glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
@@ -195,7 +187,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
       if (pressed_id < details::kIdOffsetWater &&
           biomes->ui_slots_.GetSelectedSlotId() != -1) {
-        biomes->map_points_.AddPoint({pressed_id, false});
+        biomes->map_points_.AddPoint(pressed_id);
       }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       if (mod_shift) {
@@ -299,8 +291,8 @@ void MouseButtonCallback_LmbSelected(GLFWwindow* window, int button, int action,
   }
 }
 
-void KeyCallback_LmbSelected(
-  GLFWwindow* window, int key, int scancode, int action, int mods) {
+void KeyCallback_LmbSelected(GLFWwindow* window, int key, int scancode,
+                             int action, int mods) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
   auto biomes = dynamic_cast<UiBiomesMode*>(*glfw_context->cur_mode);

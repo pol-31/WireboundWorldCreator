@@ -2,33 +2,28 @@
 #define WIREBOUNDWORLDCREATOR_UIEDITTERRAIN_H
 
 #include <array>
-#include <vector>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <vector>
 
 #include "../common/TextRenderer.h"
 #include "../core/Tile.h"
 #include "../core/UiConfigWindow.h"
+#include "TerrainInstanceData.h"
+#include "TerrainNoiseData.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
 #include "UiSharedResources.h"
 #include "UiTerrainConfig.h"
-#include "TerrainNoiseData.h"
-#include "TerrainInstanceData.h"
 
 class UiEditTerrain final : public IUiEdit {
  public:
-  UiEditTerrain(Tile& cur_tile,
-    UiSharedResources& ui_shared_resources,
-    TextRenderer& text_renderer,
-    UiEditSlots& ui_edit_slots,
-    UiEditConfigSlCfg& value_config,
-    UiConfigWindow& ui_noise_config);
+  UiEditTerrain(Tile& cur_tile, UiSharedResources& ui_shared_resources,
+                TextRenderer& text_renderer, UiEditSlots& ui_edit_slots,
+                UiEditConfigSlCfg& value_config,
+                UiConfigWindow& ui_noise_config);
 
-  ~UiEditTerrain() override {
-    DeInit();
-  }
+  ~UiEditTerrain() override { DeInit(); }
 
   UiEditTerrain(UiEditTerrain&& other) noexcept;
 

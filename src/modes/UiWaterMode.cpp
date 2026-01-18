@@ -10,9 +10,9 @@
 UiWaterMode::UiWaterMode(UiSharedResources& ui_shared_resources,
                          UiSlots& ui_slots, WindowQueue& window_queue,
                          TextRenderer& text_renderer,
-    UiEditSlots& ui_edit_slots,
-    UiEditConfigSlCfg& value_config_ocean,
-    UiEditConfigSlTxt& value_config_river,
+                         UiEditSlots& ui_edit_slots,
+                         UiEditConfigSlCfg& value_config_ocean,
+                         UiEditConfigSlTxt& value_config_river,
                          UiConfigWindow& ui_config_window,
                          ModelManager& mdl_manager)
     : IUiMode(ui_shared_resources, {data::VboIdMain::kWaterWaterMode}),
@@ -20,26 +20,32 @@ UiWaterMode::UiWaterMode(UiSharedResources& ui_shared_resources,
                       [this]() {
                         sp_selected_mode_.SetSelected(0);
                         bool is_ocean = true;
-                        ui_slots_.Setup(&instances_ocean_, &ui_edit_ocean_, [this, is_ocean]() {
-                          this->OnSelectedSlotChanged(is_ocean);
-                          ui_edit_ocean_.SetUp(&instances_ocean_, &ui_slots_.GetSelectedIdRef());
-                        });
+                        ui_slots_.Setup(&instances_ocean_, &ui_edit_ocean_,
+                                        [this, is_ocean]() {
+                                          this->OnSelectedSlotChanged(is_ocean);
+                                          ui_edit_ocean_.SetUp(
+                                              &instances_ocean_,
+                                              &ui_slots_.GetSelectedIdRef());
+                                        });
                       }),
       btn_bake_river_(data::VboIdMain::kWaterRiver,
                       [this]() {
                         sp_selected_mode_.SetSelected(1);
                         bool is_ocean = false;
-                        ui_slots_.Setup(&instances_river_, &ui_edit_river_, [this, is_ocean]() {
-                          this->OnSelectedSlotChanged(is_ocean);
-                        ui_edit_river_.SetUp(&instances_river_, &ui_slots_.GetSelectedIdRef());
-                        });
+                        ui_slots_.Setup(&instances_river_, &ui_edit_river_,
+                                        [this, is_ocean]() {
+                                          this->OnSelectedSlotChanged(is_ocean);
+                                          ui_edit_river_.SetUp(
+                                              &instances_river_,
+                                              &ui_slots_.GetSelectedIdRef());
+                                        });
                       }),
       map_points_(mdl_manager),
       btn_update_(data::VboIdMain::kWaterUpdate, [this]() { UpdateRivers(); }),
       sp_selected_mode_({data::VboIdMain::kWaterSelected}, &btn_bake_ocean_),
       ui_slots_(ui_slots),
-      ui_edit_ocean_(ui_shared_resources, text_renderer,
-                     ui_edit_slots, value_config_ocean, ui_config_window),
+      ui_edit_ocean_(ui_shared_resources, text_renderer, ui_edit_slots,
+                     value_config_ocean, ui_config_window),
       ui_edit_river_(ui_shared_resources, ui_edit_slots, value_config_river),
       ui_selection_(ui_shared_resources),
       mouse_transform_(ui_shared_resources),
@@ -55,11 +61,17 @@ void UiWaterMode::OnSelectedSlotChanged(bool is_ocean) {
       points = &ui_edit_river_.GetInstanceData().map_points;
       joints = &ui_edit_river_.GetInstanceData().map_joints;
     }
+    ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
+  } else {
+    ui_selection_.SetIdBounds(details::kIdOffsetTerrain,
+                              details::kIdOffsetWater);
   }
   map_points_.SetData(points, joints);
 }
 
 void UiWaterMode::Setup() {
+  ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
+  ui_selection_.SetModeForce(SelectionMode::kRectangle);  // before Press()
   btn_bake_ocean_.Press();
   BindDefaultCallbacks();
   auto camera = ui_shared_resources_.glfw_context_.camera;
@@ -68,8 +80,6 @@ void UiWaterMode::Setup() {
   camera->SetYaw(0.0f);
   camera->SetOrigin(glm::vec3{0.0f});
   camera->MoveRotateViewOrigin(0.0f, 0.0f);  // to update camera vectors
-  ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
-  ui_selection_.SetModeForce(SelectionMode::kRectangle);
 }
 
 void UiWaterMode::BindDefaultCallbacks() {
@@ -103,11 +113,17 @@ void UiWaterMode::Render() {
   ui_selection_.Render();
   if (ui_slots_.GetSelectedSlotId() != -1) {
     map_points_.RenderPoints(ui_slots_.GetInstanceBaseData()->color);
+  } else {
+    ui_selection_.RenderOnSurface(
+        &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+             .map_ocean_surface_);
   }
 
-  auto map_scale = ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
-  map_points_.RenderJoints(
-    ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_terrain_height, map_scale);
+  auto map_scale =
+      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+  map_points_.RenderJoints(ui_shared_resources_.glfw_context_.tile_renderer
+                               ->cur_tile_.map_terrain_height,
+                           map_scale);
 
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
@@ -125,7 +141,7 @@ void UiWaterMode::Render() {
 
   ui_shared_resources_.glfw_context_.windows->Render();
   auto camera = ui_shared_resources_.glfw_context_.camera;
-  camera->Update(1.0f);  // const pos
+  camera->Update();  // const pos
 }
 
 void UiWaterMode::RenderPicking() {
@@ -152,7 +168,7 @@ void UiWaterMode::HandleSelection(const std::set<GLuint>& selected_ids) {
   auto map_points = map_points_.GetPoints();
   anything_selected_ = false;
   for (int i = 0; i < map_points->size(); ++i) {
-    auto it = selected_ids.find(details::kIdOffsetObjects + 100 + i);
+    auto it = selected_ids.find(i);
     if (it != selected_ids.end()) {
       anything_selected_ = true;
       (*map_points)[i].selected = true;
@@ -169,9 +185,7 @@ void UiWaterMode::CancelTransform() {
   map_points_.UpdateJointsBuffer();
 }
 
-void UiWaterMode::ApplyTransform() {
-  BindDefaultCallbacks();
-}
+void UiWaterMode::ApplyTransform() { BindDefaultCallbacks(); }
 
 constexpr int W = 1024;
 constexpr int H = 1024;
@@ -289,9 +303,8 @@ void UiWaterMode::UpdateRivers() {
   glClearTexImage(mask->GetId(), 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
   std::vector<float> flow(1024 * 1024, 0.0f);
   for (auto point : ui_edit_river_.GetInstanceData().map_points) {
-    GLuint pos_id = point.position;
-    int sx = pos_id >> 10;
-    int sy = pos_id & 1023;
+    auto sx = static_cast<int>(point.position.x * 16.0f + 512.0f);
+    auto sy = static_cast<int>(point.position.y * 16.0f + 512.0f);
     for (int i = 0; i < 40; ++i) {
       PourRiver(ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
                     .terrain_heights_,
@@ -305,7 +318,8 @@ void UiWaterMode::UpdateRivers() {
                       details::gTerrainSize, GL_RED, GL_UNSIGNED_BYTE,
                       mask_data.data());
   std::cout << "Processed river flood" << std::endl;
-  ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline(); //excessive?
+  ui_shared_resources_.glfw_context_.tile_renderer
+      ->UpdatePipeline();  // excessive?
 }
 
 namespace water {
@@ -362,19 +376,17 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         glfwSetKeyCallback(gWindow, KeyCallback_LmbSelected);
         return;
       }
-      if (water->ui_slots_.GetSelectedSlotId() != -1) {
-        water->ui_selection_.Start(
-          glfw_context->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
-        glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
-        glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
-        glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
-      }
+      water->ui_selection_.Start(glfw_context->cursor_pos_tex_norm_, mod_ctrl,
+                                 mod_shift);
+      glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
+      glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
+      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
     } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
       if (pressed_id > details::kIdOffsetObjects && water->anything_selected_ &&
           pressed_id < details::kIdOffsetUi) {
         water->map_points_.AddJoints(pressed_id);
       } else if (pressed_id < details::kIdOffsetWater) {
-        water->map_points_.AddPoint({pressed_id, false});
+        water->map_points_.AddPoint(pressed_id);
       }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       if (mod_shift) {
@@ -429,6 +441,19 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
     water->ui_selection_.SetMode(SelectionMode::kLasso);
   } else if (key == GLFW_KEY_4) {
     water->ui_selection_.SetMode(SelectionMode::kTweak);
+  } else if (key == GLFW_KEY_G) {
+    double xpos, ypos;
+    glfwGetCursorPos(gWindow, &xpos, &ypos);
+    lastX = xpos;
+    lastY = ypos;
+    glfwSetScrollCallback(gWindow, nullptr);
+    glfwSetMouseButtonCallback(gWindow, MouseButtonCallbackTransform);
+    glfwSetKeyCallback(gWindow, KeyCallbackTransform);
+    void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
+    auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
+    auto water = dynamic_cast<UiWaterMode*>(*glfw_context->cur_mode);
+    water->mouse_transform_.Reset();
+    glfwSetCursorPosCallback(gWindow, CursorPosCallback_G);
   }
 }
 
@@ -440,9 +465,13 @@ void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
     water->BindDefaultCallbacks();
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     water->BindDefaultCallbacks();
-    auto selected_ids =
-        water->ui_selection_.StopIntoSet(glfw_context->cursor_pos_tex_norm_);
-    water->HandleSelection(selected_ids);
+    if (water->ui_slots_.GetSelectedSlotId() != -1) {
+      auto selected_ids =
+          water->ui_selection_.StopIntoSet(glfw_context->cursor_pos_tex_norm_);
+      water->HandleSelection(selected_ids);
+    } else {
+      water->ui_selection_.Stop(glfw_context->cursor_pos_tex_norm_);
+    }
   }
 }
 
@@ -479,8 +508,8 @@ void MouseButtonCallback_LmbSelected(GLFWwindow* window, int button, int action,
   }
 }
 
-void KeyCallback_LmbSelected(
-  GLFWwindow* window, int key, int scancode, int action, int mods) {
+void KeyCallback_LmbSelected(GLFWwindow* window, int key, int scancode,
+                             int action, int mods) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
   auto water = dynamic_cast<UiWaterMode*>(*glfw_context->cur_mode);
@@ -495,6 +524,46 @@ void KeyCallback_LmbSelected(
       return water->ApplyTransform();
   }
   water->mouse_transform_.SetAxis(key, mods & GLFW_MOD_SHIFT);
+}
+
+void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
+  auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
+  auto water = dynamic_cast<UiWaterMode*>(*glfw_context->cur_mode);
+  water->mouse_transform_.TranslateSelectedVerticesUp(
+      xpos, ypos, glfw_context->tile_renderer->cur_tile_.map_ocean_surface_,
+      water->ui_selection_.GetMask(), true);
+}
+
+void MouseButtonCallbackTransform(GLFWwindow* window, int button, int action,
+                                  int mods) {
+  auto glfw_context = GetGlfwContext(window);
+  auto water = dynamic_cast<UiWaterMode*>(*glfw_context->cur_mode);
+  if (action != GLFW_PRESS) {
+    return;
+  }
+  if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    water->ApplyTransform();
+  } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+    water->CancelTransform();
+  }
+}
+
+void KeyCallbackTransform(GLFWwindow* window, int key, int scancode, int action,
+                          int mods) {
+  void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
+  auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
+  auto water = dynamic_cast<UiWaterMode*>(*glfw_context->cur_mode);
+  glfw_context->ui_renderer->Press(key, action);
+  if (action != GLFW_PRESS) {
+    return;
+  }
+  water->mouse_transform_.SetAxis(key, mods & GLFW_MOD_SHIFT);
+  if (key == GLFW_KEY_ESCAPE) {
+    return water->CancelTransform();
+  } else if (key == GLFW_KEY_ENTER) {
+    return water->ApplyTransform();
+  }
 }
 
 }  // namespace water

@@ -3,23 +3,21 @@
 
 #include <random>
 
-#include "../core/UiComplex.h"
 #include "../common/BaseInstanceData.h"
+#include "../core/UiComplex.h"
 
 class IUiEdit;
 
 class UiEditSlots final : public UiWindowAppear {
  public:
   using Base = UiWindowAppear;
-  UiEditSlots(UiSharedResources& ui_shared_resources,
-    WindowQueue& window_queue,
-    TextRenderer& text_renderer);
+  UiEditSlots(UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+              TextRenderer& text_renderer);
 
   UiEditSlots(UiEditSlots&& other) noexcept;
 
-  void SetUp(IUiEdit* ui_edit,
-    std::vector<BaseInstanceData>* base_instances,
-    const int* selected_id);
+  void SetUp(IUiEdit* ui_edit, std::vector<BaseInstanceData>* base_instances,
+             const int* selected_id);
 
   void SetInstance(int id);
 
@@ -34,7 +32,7 @@ class UiEditSlots final : public UiWindowAppear {
   void RenderPicking() override;
 
   IUiEdit* ui_edit_ = nullptr;
-  const int* selected_id_= nullptr;
+  const int* selected_id_ = nullptr;
   std::vector<BaseInstanceData>* base_instances_ = nullptr;
 
   std::mt19937 random_generator_;
@@ -56,8 +54,7 @@ class UiEditSlots final : public UiWindowAppear {
 
 class IUiEdit {
  public:
-  IUiEdit(UiEditSlots& ui)
-    : ui_(ui) {}
+  IUiEdit(UiEditSlots& ui) : ui_(ui) {}
 
   virtual ~IUiEdit() = default;
 
@@ -77,15 +74,12 @@ class IUiEdit {
   virtual void Render(float height) = 0;
   virtual void RenderPicking(float height) = 0;
 
-  void SetUp(
-      std::vector<BaseInstanceData>* base_instances,
-      const int* selected_id) {
+  void SetUp(std::vector<BaseInstanceData>* base_instances,
+             const int* selected_id) {
     ui_.SetUp(this, base_instances, selected_id);
   }
 
-  void Show() {
-    ui_.Show();
-  }
+  void Show() { ui_.Show(); }
 
   UiEditSlots& ui_;
 };

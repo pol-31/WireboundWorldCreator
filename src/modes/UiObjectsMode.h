@@ -1,10 +1,9 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UIOBJECTSMODE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UIOBJECTSMODE_H_
 
+#include "../common/MapPoints.h"
 #include "../common/MouseTransform.h"
-#include "../common/Vbos.h"
 #include "../common/models/ModelManager.h"
-#include "../core/UiCloning.h"
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
 #include "IUiMode.h"
@@ -14,7 +13,7 @@ class UiObjectsMode final : public IUiMode {
  public:
   UiObjectsMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
                 WindowQueue& window_queue, TextRenderer& text_renderer,
-UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
+                UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
                 ModelManager& mdl_manager);
 
   void Render() override;
@@ -41,27 +40,17 @@ UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
 
   void UpdateModelsList();
 
-  void SpawnObject(GLuint pressed_id);
-
-  // todo;O_O names
-  /// to transform selected objects
-  void UpdateTranslateForSelected();
-  void UpdateRotateForSelected();
-  void UpdateScaleForSelected();
-
-  UiCloning ui_cloning_;  // key C to create array/line-s of objects
-
-  bool anything_selected_ = false;
-
-  UiSelection ui_selection_;
-
-  MouseTransform mouse_transform_;
-
-  std::vector<BaseInstanceData> models_;  // TODO: mdl_manager/loader
+  std::vector<BaseInstanceData> models_;
   UiSlots& ui_slots_;
   UiEditObjects ui_edit_;
 
-  ModelManager& mdl_manager_;
+  UiSelection ui_selection_;
+  bool anything_selected_ = false;
+
+  MouseTransform mouse_transform_;
+
+  MapObjects map_points_;      // for graphs (e.g. fences)
+  ModelManager& mdl_manager_;  // for separate objects (rotated / scaled)
 };
 
 namespace objects {
@@ -93,12 +82,6 @@ void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos);
 void CursorPosCallback_R(GLFWwindow* window, double xpos, double ypos);
 
 void CursorPosCallback_S(GLFWwindow* window, double xpos, double ypos);
-
-/// cloning (C key)
-void CursorPosCallback_C(GLFWwindow* window, double xpos, double ypos);
-
-void MouseButtonCallback_C(GLFWwindow* window, int button, int action,
-                           int mods);
 
 }  // namespace objects
 

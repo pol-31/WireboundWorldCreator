@@ -1,6 +1,7 @@
 #include "UiPlacementMode.h"
 
 #include "../common/Callbacks.h"
+#include "../common/GraphBakeConfig.h"
 #include "../common/OpenGLUtility.h"
 #include "../common/PickingFramebuffer.h"
 #include "../core/TileRenderer.h"
@@ -8,31 +9,22 @@
 #include "../io/Window.h"
 #include "../renderers/UiRenderer.h"
 
-#include "../common/GraphBakeConfig.h"
-
 UiPlacementMode::UiPlacementMode(UiSharedResources& ui_shared_resources,
-    UiSlots& ui_slots,
-    WindowQueue& window_queue,
-    UiEditSlots& ui_edit_slots,
-    UiEditConfigSlTxt& value_config,
-    ModelManager& mdl_manager)
+                                 UiSlots& ui_slots, WindowQueue& window_queue,
+                                 UiEditSlots& ui_edit_slots,
+                                 UiEditConfigSlTxt& value_config,
+                                 ModelManager& mdl_manager)
     : IUiMode(ui_shared_resources, {data::VboIdMain::kPlacementPlacementMode}),
       btn_trees_(data::VboIdMain::kPlacementTrees,
-                 [this]() {
-                   SetPlacementMode(GetPlacementTree(), 0);
-                 }),
+                 [this]() { SetPlacementMode(GetPlacementTree(), 0); }),
       btn_bushes_(data::VboIdMain::kPlacementBushes,
-                  [this]() {
-                    SetPlacementMode(GetPlacementBushes(), 1);
-                  }),
-      btn_tall_grass(data::VboIdMain::kPlacementTallGrass,
-                     [this]() {
-                       SetPlacementMode(GetPlacementTallGrass(), 2);
-                     }),
-      btn_undergrowth_(data::VboIdMain::kPlacementUndergrowth,
-                       [this]() {
-                         SetPlacementMode(GetPlacementUndergrowth(), 3);
-                       }),
+                  [this]() { SetPlacementMode(GetPlacementBushes(), 1); }),
+      btn_tall_grass(
+          data::VboIdMain::kPlacementTallGrass,
+          [this]() { SetPlacementMode(GetPlacementTallGrass(), 2); }),
+      btn_undergrowth_(
+          data::VboIdMain::kPlacementUndergrowth,
+          [this]() { SetPlacementMode(GetPlacementUndergrowth(), 3); }),
       btn_change_mode_(data::VboIdMain::kPlacementChangeMode,
                        [this]() { TogglePlacement(); }),
       ui_selection_(ui_shared_resources),
@@ -69,8 +61,10 @@ void UiPlacementMode::TogglePlacement() {
   Tile& tile = tile_renderer->cur_tile_;
   mdl_manager_.tree_.SetPlacement(ui_shared_resources_, tile.placement_trees_);
   mdl_manager_.bush_.SetPlacement(ui_shared_resources_, tile.placement_bushes_);
-  mdl_manager_.tall_grass_.SetPlacement(ui_shared_resources_, tile.placement_tall_grass_);
-  mdl_manager_.undergrowth_.SetPlacement(ui_shared_resources_, tile.placement_undergrowth_);
+  mdl_manager_.tall_grass_.SetPlacement(ui_shared_resources_,
+                                        tile.placement_tall_grass_);
+  mdl_manager_.undergrowth_.SetPlacement(ui_shared_resources_,
+                                         tile.placement_undergrowth_);
 }
 
 void UiPlacementMode::OnSelectedSlotChanged() {
@@ -86,9 +80,8 @@ void UiPlacementMode::OnSelectedSlotChanged() {
 }
 
 void UiPlacementMode::Setup() {
-  ui_slots_.Setup(&instances_, &ui_edit_, [this] {
-    this->OnSelectedSlotChanged();
-  });
+  ui_slots_.Setup(&instances_, &ui_edit_,
+                  [this] { this->OnSelectedSlotChanged(); });
   ui_edit_.SetUp(&instances_, &ui_slots_.GetSelectedIdRef());
   BindDefaultCallbacks();
   btn_trees_.Press();
@@ -160,7 +153,7 @@ void UiPlacementMode::Render() {
   ui_slots_.Render(mouse_pos);
   ui_shared_resources_.glfw_context_.windows->Render();
   auto camera = ui_shared_resources_.glfw_context_.camera;
-  camera->Update(1.0f);  // const pos
+  camera->Update();  // const pos
 }
 
 void UiPlacementMode::RenderPicking() {
@@ -185,7 +178,7 @@ void UiPlacementMode::HandleSelection(const std::set<GLuint>& selected_ids) {
   auto map_points = map_points_.GetPoints();
   anything_selected_ = false;
   for (int i = 0; i < map_points->size(); ++i) {
-    auto it = selected_ids.find(details::kIdOffsetObjects + 100 + i);
+    auto it = selected_ids.find(i);
     if (it != selected_ids.end()) {
       anything_selected_ = true;
       (*map_points)[i].selected = true;
@@ -202,9 +195,7 @@ void UiPlacementMode::CancelTransform() {
   map_points_.UpdateJointsBuffer();
 }
 
-void UiPlacementMode::ApplyTransform() {
-  BindDefaultCallbacks();
-}
+void UiPlacementMode::ApplyTransform() { BindDefaultCallbacks(); }
 
 namespace placement {
 
@@ -242,8 +233,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
       std::cout << "Pressed id: " << pressed_id << std::endl;
       bool ui_handled = glfw_context->windows->Press(pressed_id) ||
-        placement->ui_event_handler_.Press(pressed_id) ||
-        placement->ui_slots_.Press(pressed_id);
+                        placement->ui_event_handler_.Press(pressed_id) ||
+                        placement->ui_slots_.Press(pressed_id);
       if (ui_handled) {
         return;
       }
@@ -261,8 +252,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
           glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_LmbSelected);
           glfwSetKeyCallback(gWindow, KeyCallback_LmbSelected);
         } else {
-          placement->ui_selection_.Start(
-            glfw_context->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
+          placement->ui_selection_.Start(glfw_context->cursor_pos_tex_norm_,
+                                         mod_ctrl, mod_shift);
           glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
           glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
           glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
@@ -279,7 +270,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
           placement->anything_selected_ && pressed_id < details::kIdOffsetUi) {
         placement->map_points_.AddJoints(pressed_id);
       } else if (pressed_id < details::kIdOffsetWater) {
-        return placement->map_points_.AddPoint({pressed_id, false});
+        return placement->map_points_.AddPoint(pressed_id);
       }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       if (mod_shift) {
@@ -411,17 +402,21 @@ void KeyCallback_LmbSelected(GLFWwindow* window, int key, int scancode,
 }  // namespace placement
 
 Texture* UiPlacementMode::GetPlacementTree() {
-  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.tex_placement_trees_;
+  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+              .tex_placement_trees_;
 }
 
 Texture* UiPlacementMode::GetPlacementBushes() {
-  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.tex_placement_bushes_;
+  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+              .tex_placement_bushes_;
 }
 
 Texture* UiPlacementMode::GetPlacementTallGrass() {
-  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.tex_placement_tall_grass_;
+  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+              .tex_placement_tall_grass_;
 }
 
 Texture* UiPlacementMode::GetPlacementUndergrowth() {
-  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.tex_placement_undergrowth_;
+  return &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+              .tex_placement_undergrowth_;
 }

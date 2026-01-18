@@ -7,20 +7,26 @@
 
 UiSharedResources::UiSharedResources(GlfwContext& global_glfw_callback_data)
     : tex_ui_("../assets/TexAtlas.png", GL_RGBA),
-      tex_ui_mask_("../assets/1.png", GL_RGBA),
+      tex_ui_mask_("../assets/tex_ui_mask.png", GL_RGBA),
       shader_sp_mask_("../shaders/Sprite.vert", "../shaders/SpriteMask.frag"),
       shader_sp_("../shaders/Sprite.vert", "../shaders/Sprite.frag"),
       shader_sp_picking_("../shaders/Sprite.vert",
                          "../shaders/SpritePicking.frag"),
       shader_sp_hmap_("../shaders/Sprite.vert", "../shaders/SpriteHmap.frag"),
-      gltf_context_(global_glfw_callback_data),
+      glfw_context_(global_glfw_callback_data),
       shader_mdl_("../shaders/Model.vert", "../shaders/Model.frag"),
+      shader_animated_mdl_("../shaders/ModelAnimated.vert",
+                           "../shaders/Model.frag"),
       shader_mdl_color_("../shaders/Model.vert", "../shaders/ModelColor.frag"),
       shader_mdl_instanced_("../shaders/ModelInstanced.vert",
                             "../shaders/Model.frag"),
-      shader_mdl_picking_("../shaders/Model.vert",
+      shader_mdl_picking_("../shaders/ModelPicking.vert",
                           "../shaders/ModelPicking.frag"),
-      shader_mdl_selected_("../shaders/Model.vert",
+      shader_animated_mdl_picking_("../shaders/ModelAnimatedPicking.vert",
+                                   "../shaders/ModelPicking.frag"),
+      shader_mdl_selected_("../shaders/ModelPicking.vert",
+                           "../shaders/ModelSelected.frag"),
+      shader_animated_mdl_selected_("../shaders/ModelAnimatedPicking.vert",
                            "../shaders/ModelSelected.frag") {
   Init();
 }
@@ -44,6 +50,8 @@ void UiSharedResources::Init() {
   glUniform1i(0, 0);
 
   shader_mdl_.Bind();
+  glUniform1i(1, 0);
+  shader_animated_mdl_.Bind();
   glUniform1i(1, 0);
   shader_mdl_instanced_.Bind();
   glUniform1i(1, 0);

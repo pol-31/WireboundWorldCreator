@@ -24,18 +24,15 @@ struct RiverTraits {
   float radius_flat = 1.0f;
   float radius = 4.0f;
 
-  static constexpr int GetTraitsSize() noexcept {
-    return 8;
-  }
+  static constexpr int GetTraitsSize() noexcept { return 8; }
 
   GraphBakeConfig GetGraphConfig() const noexcept;
 };
 
 class UiEditRiver : public IUiEdit {
-public:
+ public:
   UiEditRiver(UiSharedResources& ui_shared_resources,
-              UiEditSlots& ui_edit_slots,
-              UiEditConfigSlTxt& value_config);
+              UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
 
   UiEditRiver(UiEditRiver&& other) noexcept;
 
@@ -65,7 +62,7 @@ public:
 
   [[nodiscard]] RiverTraits& GetInstanceData() noexcept;
 
-private:
+ private:
   std::vector<RiverTraits> instances_;
   std::array<UiEditConfigSlTxt::Trait, RiverTraits::GetTraitsSize()> traits_;
   UiEditConfigSlTxt& value_config_;

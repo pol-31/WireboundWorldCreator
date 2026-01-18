@@ -2,8 +2,8 @@
 
 #include "../core/Ui.h"
 
-int GetUiEditEntryId(float height, float size,
-                     glm::vec2 mouse_pos, float start_height) {
+int GetUiEditEntryId(float height, float size, glm::vec2 mouse_pos,
+                     float start_height) {
   float entry_height = height / (size + 5);
   float cursor = start_height;
   // pretty heavy check on DBG, skip
@@ -27,13 +27,13 @@ UiEditConfigSlCfg::UiEditConfigSlCfg(UiSharedResources& ui_shared_resources,
       txt_name_(text_renderer, {data::VboIdMain::kTerrainEditNoiseName},
                 data::TextId::kPerlin),
       tg1_({data::VboIdMain::kTerrainEditNoiseInvertOff},
-                 {data::VboIdMain::kTerrainEditNoiseInvertOn1},
-                 {data::VboIdMain::kTerrainEditNoiseInvertOn2},
-                 {data::VboIdMain::kTerrainEditNoiseInvertOn3}),
+           {data::VboIdMain::kTerrainEditNoiseInvertOn1},
+           {data::VboIdMain::kTerrainEditNoiseInvertOn2},
+           {data::VboIdMain::kTerrainEditNoiseInvertOn3}),
       tg2_({data::VboIdMain::kTerrainEditNoiseTilingOff},
-                 {data::VboIdMain::kTerrainEditNoiseTilingOn1},
-                 {data::VboIdMain::kTerrainEditNoiseTilingOn2},
-                 {data::VboIdMain::kTerrainEditNoiseTilingOn3}),
+           {data::VboIdMain::kTerrainEditNoiseTilingOn1},
+           {data::VboIdMain::kTerrainEditNoiseTilingOn2},
+           {data::VboIdMain::kTerrainEditNoiseTilingOn3}),
       sl_strength_({data::VboIdMain::kTerrainEditNoiseStrengthArea},
                    {data::VboIdMain::kTerrainEditNoiseStrengthIcon}),
       ui_shared_resources_(ui_shared_resources) {}
@@ -43,9 +43,9 @@ void UiEditConfigSlCfg::Release() {
   pressed_strength_id_ = -1;
 }
 
-void UiEditConfigSlCfg::Render(float& strength, bool do_invert,
-                                 bool do_tiling, glm::vec2 translate,
-                                 bool update_strength, data::TextId text_id) {
+void UiEditConfigSlCfg::Render(float& strength, bool do_invert, bool do_tiling,
+                               glm::vec2 translate, bool update_strength,
+                               data::TextId text_id) {
   LocalTransform transform;
   transform.translate = translate;
   btn_config_.SetParentTransform(transform);
@@ -74,8 +74,7 @@ void UiEditConfigSlCfg::Render(float& strength, bool do_invert,
   txt_name_.Render();
 }
 
-void UiEditConfigSlCfg::RenderPicking(
-    float sprite_height, int num) {
+void UiEditConfigSlCfg::RenderPicking(float sprite_height, int num) {
   glm::vec2 next_offset = glm::vec2{0.0f};
   float entry_height = sprite_height / (num + 5);  // +pads
   for (int i = 0; i < num; ++i) {
@@ -118,11 +117,11 @@ void UiEditConfigSlCfg::AttachToHierarchy(UiHierarchy& hierarchy) {
 
 UiEditConfigSlTxt::UiEditConfigSlTxt(UiSharedResources& ui_shared_resources,
                                      TextRenderer& text_renderer)
-: sl_strength_({{data::VboIdMain::kBiomesEditNoiseStrengthArea},
-                 {data::VboIdMain::kBiomesEditNoiseStrengthIcon}}),
-txt_name_({text_renderer,
-               {data::VboIdMain::kBiomesEditNoiseName},
-               data::TextId::kPerlin}),
+    : sl_strength_({{data::VboIdMain::kBiomesEditNoiseStrengthArea},
+                    {data::VboIdMain::kBiomesEditNoiseStrengthIcon}}),
+      txt_name_({text_renderer,
+                 {data::VboIdMain::kBiomesEditNoiseName},
+                 data::TextId::kPerlin}),
       ui_shared_resources_(ui_shared_resources) {}
 
 bool UiEditConfigSlTxt::Press(int id, float height, int num) {
@@ -143,19 +142,17 @@ void UiEditConfigSlTxt::Release() {
   pressed_strength_id_ = -1;
 }
 
-void UiEditConfigSlTxt::Render(
-    float sprite_height, std::span<Trait> traits) {
+void UiEditConfigSlTxt::Render(float sprite_height, std::span<Trait> traits) {
   glm::vec2 offset{0.0f};
   float entry_height = sprite_height / (traits.size() + 5);  // +pads
   for (int i = 0; i < traits.size(); ++i) {
-    RenderEntry(*traits[i].value, offset,
-      pressed_strength_id_ == i, traits[i].label);
+    RenderEntry(*traits[i].value, offset, pressed_strength_id_ == i,
+                traits[i].label);
     offset.y -= entry_height;
   }
 }
 
-void UiEditConfigSlTxt::RenderPicking(
-    float sprite_height, int num) {
+void UiEditConfigSlTxt::RenderPicking(float sprite_height, int num) {
   glm::vec2 next_offset = glm::vec2{0.0f};
   float entry_height = sprite_height / (num + 5);  // +pads
   for (int i = 0; i < num; ++i) {
@@ -164,9 +161,9 @@ void UiEditConfigSlTxt::RenderPicking(
   }
 }
 
-void UiEditConfigSlTxt::RenderEntry(
-    float& strength, glm::vec2 translate,
-    bool update_strength, data::TextId text_id) {
+void UiEditConfigSlTxt::RenderEntry(float& strength, glm::vec2 translate,
+                                    bool update_strength,
+                                    data::TextId text_id) {
   LocalTransform transform;
   transform.translate = translate;
   sl_strength_.SetParentTransform(transform);

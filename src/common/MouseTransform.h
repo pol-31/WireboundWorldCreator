@@ -5,19 +5,17 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "../modes/UiSharedResources.h"
+#include "MapPoint.h"
 #include "Shader.h"
 #include "Texture.h"
-#include "MapPoint.h"
 
 class MouseTransform {
  public:
   MouseTransform(UiSharedResources& ui_shared_resources);
 
-  void InitTransform(
-    glm::vec3 translate = glm::vec3(0.0f),
-    glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-    glm::vec3 scale = glm::vec3(1.0f)
-    );
+  void InitTransform(glm::vec3 translate = glm::vec3(0.0f),
+                     glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                     glm::vec3 scale = glm::vec3(1.0f));
 
   void SetAxis(int key, bool mod_shift);
 
@@ -27,18 +25,32 @@ class MouseTransform {
 
   void TranslateSelected(double xpos, double ypos);
 
-  void TranslateSelectedMapPoints(
-    std::vector<MapPoint>& map_points, double xpos, double ypos);
+  void TranslateSelectedMapPoints(std::vector<MapPoint>& map_points,
+                                  double xpos, double ypos);
 
   void TranslateSelectedMapPointsBack(std::vector<MapPoint>& map_points);
 
+  void RotateSelectedMapPoints(const std::vector<MapPoint>& map_points,
+                               std::vector<glm::quat>& rotates, double xpos,
+                               double ypos);
+
+  void RotateSelectedMapPointsBack(const std::vector<MapPoint>& map_points,
+                                   std::vector<glm::quat>& rotates);
+
+  void ScaleSelectedMapPoints(const std::vector<MapPoint>& map_points,
+                              std::vector<glm::vec3>& scales, double xpos,
+                              double ypos);
+
+  void ScaleSelectedMapPointsBack(const std::vector<MapPoint>& map_points,
+                                  std::vector<glm::vec3>& scales);
+
   void TranslateSelectedVerticesUp(double xpos, double ypos,
+                                   const Texture& hmap,
                                    const Texture& selection_mask, bool smooth);
 
-  void Reset(
-    glm::vec3 translate = glm::vec3(0.0f),
-    glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-    glm::vec3 scale = glm::vec3(1.0f));
+  void Reset(glm::vec3 translate = glm::vec3(0.0f),
+             glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+             glm::vec3 scale = glm::vec3(1.0f));
 
   void UpdateStartAngle();
 

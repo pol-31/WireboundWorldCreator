@@ -3,10 +3,10 @@
 
 #include <glad/glad.h>
 
-#include "../common/Shader.h"
-#include "../common/Texture.h"
 #include "../common/MapPoints.h"
 #include "../common/MouseTransform.h"
+#include "../common/Shader.h"
+#include "../common/Texture.h"
 #include "../common/Vbos.h"
 #include "../common/models/ModelManager.h"
 #include "../core/Ui.h"
@@ -18,12 +18,9 @@
 
 class UiPlacementMode final : public IUiMode {
  public:
-  UiPlacementMode(UiSharedResources& ui_shared_resources,
-    UiSlots& ui_slots,
-    WindowQueue& window_queue,
-    UiEditSlots& ui_edit_slots,
-    UiEditConfigSlTxt& value_config,
-    ModelManager& mdl_manager);
+  UiPlacementMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
+                  WindowQueue& window_queue, UiEditSlots& ui_edit_slots,
+                  UiEditConfigSlTxt& value_config, ModelManager& mdl_manager);
 
   void Render() override;
 
@@ -101,8 +98,8 @@ void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
 
 void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos);
 
-void KeyCallback_LmbSelected(
-  GLFWwindow* window, int key, int scancode, int action, int mods);
+void KeyCallback_LmbSelected(GLFWwindow* window, int key, int scancode,
+                             int action, int mods);
 
 void CursorPosCallback_LmbSelected(GLFWwindow* window, double xpos,
                                    double ypos);

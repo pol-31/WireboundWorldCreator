@@ -3,36 +3,32 @@
 #include "../core/TileRenderer.h"
 
 GraphBakeConfig RoadTraits::GetGraphConfig() const noexcept {
-  return {
-    .curve_amplitude = curve_amplitude,
-    .height_drift = height_drift,
-    .height_raise = height_raise,
-    .side_sagging = side_sagging,
-    .radius_flat = radius_flat,
-    .radius = radius
-  };
+  return {.curve_amplitude = curve_amplitude,
+          .height_drift = height_drift,
+          .height_raise = height_raise,
+          .side_sagging = side_sagging,
+          .radius_flat = radius_flat,
+          .radius = radius};
 }
 
 UiEditRoads::UiEditRoads(UiSharedResources& ui_shared_resources,
                          UiEditSlots& ui_edit_slots,
-           UiEditConfigSlTxt& value_config)
+                         UiEditConfigSlTxt& value_config)
     : IUiEdit(ui_edit_slots),
-value_config_(value_config),
-  ui_shared_resources_(ui_shared_resources) {
+      value_config_(value_config),
+      ui_shared_resources_(ui_shared_resources) {
   // river_layer_config_.AttachToHierarchy(hierarchy_);
 }
 
 UiEditRoads::UiEditRoads(UiEditRoads&& other) noexcept
     : IUiEdit(std::move(*this)),
-instances_(std::move(other.instances_)),
+      instances_(std::move(other.instances_)),
       value_config_(other.value_config_),
       ui_shared_resources_(other.ui_shared_resources_) {
   // river_layer_config_.AttachToHierarchy(hierarchy_);
 }
 
-void UiEditRoads::HideAll() {
-  ui_.ForceHide();
-}
+void UiEditRoads::HideAll() { ui_.ForceHide(); }
 
 void UiEditRoads::CreateInstance() {
   instances_.push_back(RoadTraits{});
@@ -46,14 +42,15 @@ void UiEditRoads::UpdateConfig() {
   }
   auto& inst = instances_[id];
   traits_ = {{
-    {&inst.curve_amplitude, data::TextId::kStrength},
-    {&inst.height_drift, data::TextId::kStrength},
-    {&inst.height_raise, data::TextId::kStrength},
-    {&inst.side_sagging, data::TextId::kStrength},
-    {&inst.radius_flat, data::TextId::kStrength},
-    {&inst.radius, data::TextId::kStrength},
+      {&inst.curve_amplitude, data::TextId::kStrength},
+      {&inst.height_drift, data::TextId::kStrength},
+      {&inst.height_raise, data::TextId::kStrength},
+      {&inst.side_sagging, data::TextId::kStrength},
+      {&inst.radius_flat, data::TextId::kStrength},
+      {&inst.radius, data::TextId::kStrength},
   }};
-  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.roads_ = &instances_;
+  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.roads_ =
+      &instances_;
   ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline();
 }
 
@@ -72,9 +69,7 @@ void UiEditRoads::Reset() {
   UpdateConfig();
 }
 
-void UiEditRoads::Generate() {
-  UpdateConfig();
-}
+void UiEditRoads::Generate() { UpdateConfig(); }
 
 void UiEditRoads::RandomGenerate() {
   std::uniform_real_distribution<float> dist_float(0.0f, 1.0f);
@@ -95,9 +90,7 @@ bool UiEditRoads::Press(int id, float height) {
   return value_config_.Press(id, height, traits_.size());
 }
 
-void UiEditRoads::Release() {
-  value_config_.Release();
-}
+void UiEditRoads::Release() { value_config_.Release(); }
 
 void UiEditRoads::Render(float height) {
   value_config_.Render(height, traits_);

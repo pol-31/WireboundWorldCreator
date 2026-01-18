@@ -37,10 +37,9 @@ UiTerrainBake::UiTerrainBake(
       tex_erosion_hydraulic_map_(cur_tile.map_terrain_erosion_hydraulic),
       tex_water_accum_(cur_tile.map_water_accum),
       tex_water_flow_(cur_tile.map_water_flow) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &accept_, &erosion_label_,
-      &erosion_input_, &weathering_label_, &weathering_input_,
-      &sprite_hmap_);
+  hierarchy_ =
+      UiHierarchy(&sprite_, &pin_, &accept_, &erosion_label_, &erosion_input_,
+                  &weathering_label_, &weathering_input_, &sprite_hmap_);
   speed_ = 2.0f;
 }
 
@@ -74,10 +73,9 @@ UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
 
       tex_water_accum_(other.tex_water_accum_),
       tex_water_flow_(other.tex_water_flow_) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &accept_, &erosion_label_,
-      &erosion_input_, &weathering_label_, &weathering_input_,
-      &sprite_hmap_);
+  hierarchy_ =
+      UiHierarchy(&sprite_, &pin_, &accept_, &erosion_label_, &erosion_input_,
+                  &weathering_label_, &weathering_input_, &sprite_hmap_);
 }
 
 bool UiTerrainBake::Press(int id) { return ui_event_handler_.Press(id); }

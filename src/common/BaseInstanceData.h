@@ -1,10 +1,9 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_BASEINSTANCEDATA_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_BASEINSTANCEDATA_H_
 
-#include <string>
 #include <cmath>
-
 #include <glm/glm.hpp>
+#include <string>
 
 inline glm::vec4 HSBtoRGB(float h, float s, float b) {
   float r = 0, g = 0, bl = 0;

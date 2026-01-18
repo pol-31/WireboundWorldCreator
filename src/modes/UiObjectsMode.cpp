@@ -10,17 +10,32 @@
 UiObjectsMode::UiObjectsMode(UiSharedResources& ui_shared_resources,
                              UiSlots& ui_slots, WindowQueue& window_queue,
                              TextRenderer& text_renderer,
-UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
+                             UiEditSlots& ui_edit_slots,
+                             UiEditConfigSlTxt& value_config,
                              ModelManager& mdl_manager)
     : IUiMode(ui_shared_resources, {data::VboIdMain::kObjectsObjectsMode}),
       ui_selection_(ui_shared_resources),
       mouse_transform_(ui_shared_resources),
       ui_slots_(ui_slots),
       ui_edit_(ui_shared_resources, ui_edit_slots, value_config, mdl_manager),
+      map_points_(mdl_manager),
       mdl_manager_(mdl_manager) {}
 
 void UiObjectsMode::Setup() {
-  ui_slots_.Setup(&models_, &ui_edit_);
+  ui_slots_.Setup(&models_, &ui_edit_, [this] {
+    std::vector<MapPoint>* points = nullptr;
+    std::vector<glm::uvec2>* joints = nullptr;
+    std::vector<glm::quat>* rotates = nullptr;
+    std::vector<glm::vec3>* scales = nullptr;
+    if (ui_slots_.GetSelectedSlotId() != -1) {
+      points = &ui_edit_.GetInstanceData().map_points;
+      joints = &ui_edit_.GetInstanceData().map_joints;
+      rotates = &ui_edit_.GetInstanceData().rotations;
+      scales = &ui_edit_.GetInstanceData().scales;
+    }
+    map_points_.SetData(points, joints, rotates, scales);
+    map_points_.UpdateJointsBuffer();
+  });
   ui_edit_.SetUp(&models_, &ui_slots_.GetSelectedIdRef());
   BindDefaultCallbacks();
   auto camera = ui_shared_resources_.glfw_context_.camera;
@@ -62,8 +77,15 @@ void UiObjectsMode::RenderPickingWorld() {
 }
 
 void UiObjectsMode::Render() {
-  mdl_manager_.Render();
   ui_selection_.Render();
+  if (ui_slots_.GetSelectedSlotId() != -1) {
+    map_points_.RenderPoints(ui_slots_.GetInstanceBaseData()->color);
+  }
+  auto map_scale =
+      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+  map_points_.RenderJoints(ui_shared_resources_.glfw_context_.tile_renderer
+                               ->cur_tile_.map_terrain_height,
+                           map_scale);
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
@@ -75,10 +97,11 @@ void UiObjectsMode::Render() {
 
   ui_shared_resources_.glfw_context_.windows->Render();
   auto camera = ui_shared_resources_.glfw_context_.camera;
-  camera->Update(1.0f);  // const pos
+  camera->Update();  // const pos
 }
 
 void UiObjectsMode::RenderPicking() {
+  map_points_.RenderPickingPoints();
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
@@ -86,102 +109,43 @@ void UiObjectsMode::RenderPicking() {
   sp_mode_.RenderPicking();
   ui_slots_.RenderPicking();
   ui_shared_resources_.glfw_context_.windows->RenderPicking();
-  mdl_manager_.RenderPicking();
 }
 
 void UiObjectsMode::UpdateModelsList() {
   ui_slots_.Reset();
   const auto& models = mdl_manager_.GetLoadedModels();
   for (const auto& m : models) {
-    BaseInstanceData data(std::to_string(m->vao), glm::vec4(1.0f), true,
-                          m->vao);
+    BaseInstanceData data(std::to_string(0), glm::vec4(1.0f), true, 0);
     ui_slots_.AddInstance(std::move(data));
   }
 }
 
 void UiObjectsMode::HandleSelection(const std::set<GLuint>& selected_ids) {
-  int selected_num = 0;
-  for (int i = 0; i < mdl_manager_.creatures_.size(); ++i) {
-    auto it = selected_ids.find(details::kIdOffsetObjects + 100 + i);
+  auto map_points = map_points_.GetPoints();
+  anything_selected_ = false;
+  for (int i = 0; i < map_points->size(); ++i) {
+    auto it = selected_ids.find(i);
     if (it != selected_ids.end()) {
-      ++selected_num;
-      mdl_manager_.creatures_[i].Select();
+      anything_selected_ = true;
+      (*map_points)[i].selected = true;
     } else {
-      mdl_manager_.creatures_[i].DeSelect();
+      (*map_points)[i].selected = false;
     }
-  }
-  if (selected_num > 0) {
-    anything_selected_ = true;
-  } else {
-    anything_selected_ = false;
   }
 }
 
 void UiObjectsMode::CancelTransform() {
   BindDefaultCallbacks();
-  for (auto& m : mdl_manager_.creatures_) {
-    if (m.IsSelected()) {
-      auto obj_translate = m.GetPosition();
-      auto obj_rotate = m.GetRotation();
-      auto obj_scale = m.GetScale();
-      m.SetPosition(obj_translate - mouse_transform_.prev_translate_);
-      m.SetRotation(glm::inverse(mouse_transform_.prev_rotate_) * obj_rotate);
-      m.SetScale(obj_scale / mouse_transform_.prev_scale_);
-      m.UpdatePositionY(ui_shared_resources_);
-    }
-  }
+  auto map_points = map_points_.GetPoints();
+  auto rotates = map_points_.GetRotates();
+  auto scales = map_points_.GetScales();
+  mouse_transform_.TranslateSelectedMapPointsBack(*map_points);
+  mouse_transform_.RotateSelectedMapPointsBack(*map_points, *rotates);
+  mouse_transform_.ScaleSelectedMapPointsBack(*map_points, *scales);
+  map_points_.UpdateJointsBuffer();
 }
 
-void UiObjectsMode::ApplyTransform() {
-  BindDefaultCallbacks();
-}
-
-void UiObjectsMode::UpdateTranslateForSelected() {
-  // -1 to get prev, -1 to get delta value
-  glm::vec3 translate = -mouse_transform_.prev_translate_ * 2.0f
-    + mouse_transform_.cur_translate_;
-  for (auto& m : mdl_manager_.creatures_) {
-    if (m.IsSelected()) {
-      auto obj_translate = m.GetPosition();
-      m.SetPosition(obj_translate + translate);
-      m.UpdatePositionY(ui_shared_resources_);
-    }
-  }
-  mouse_transform_.prev_translate_ = mouse_transform_.cur_translate_
-    - mouse_transform_.prev_translate_;
-}
-
-void UiObjectsMode::UpdateRotateForSelected() {
-  glm::quat delta = mouse_transform_.cur_rotate_ *
-    glm::inverse(mouse_transform_.prev_rotate_);
-  for (auto& m : mdl_manager_.creatures_) {
-    if (m.IsSelected()) {
-      glm::quat obj_rot = m.GetRotation();
-      obj_rot = delta * obj_rot;
-      m.SetRotation(obj_rot);
-    }
-  }
-  mouse_transform_.prev_rotate_ = mouse_transform_.cur_rotate_;
-}
-
-void UiObjectsMode::UpdateScaleForSelected() {
-  glm::vec3 delta = mouse_transform_.cur_scale_ /
-    (mouse_transform_.prev_scale_ * mouse_transform_.prev_scale_);
-  for (auto& m : mdl_manager_.creatures_) {
-    if (m.IsSelected()) {
-      glm::vec3 s = m.GetScale();
-      m.SetScale(s * delta);
-    }
-  }
-  mouse_transform_.prev_scale_ = mouse_transform_.cur_scale_
-    / mouse_transform_.prev_scale_;
-}
-
-void UiObjectsMode::SpawnObject(GLuint pressed_id) {
-  glm::vec2 object_pos = {(pressed_id >> 10) / 16.0f - 32.0f,
-                          (pressed_id & 1023) / 16.0f - 32.0f};
-  mdl_manager_.Spawn(ui_slots_.GetInstanceBaseData()->type_id, object_pos);
-}
+void UiObjectsMode::ApplyTransform() { BindDefaultCallbacks(); }
 
 namespace objects {
 
@@ -195,6 +159,7 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
   auto pressed_id = glfw_context->picking_fbo->GetIdByMousePos(cursor_pos);
   if (pressed_id >= details::kIdOffsetUi &&
       pressed_id != static_cast<GLuint>(-1)) {
+    objects->ui_slots_.Scroll(pressed_id, yoffset);
     glfw_context->windows->Scroll(pressed_id, yoffset);
     return;
   }
@@ -216,23 +181,24 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     lastX = xpos;
     lastY = ypos;
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      auto pressed_id = glfw_context->picking_fbo->GetIdByMousePos(cursor_pos);
       std::cout << "Pressed id: " << pressed_id << std::endl;
       bool ui_handled = glfw_context->windows->Press(pressed_id) ||
                         objects->ui_slots_.Press(pressed_id);
       if (ui_handled) {
         return;
       }
-      if (objects->ui_slots_.GetSelectedSlotId() != -1 &&
-          pressed_id < details::kIdOffsetWater) {
-        objects->SpawnObject(pressed_id);
-        return;
-      }
-      objects->ui_selection_.Start(
-        glfw_context->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
+      objects->ui_selection_.Start(glfw_context->cursor_pos_tex_norm_, mod_ctrl,
+                                   mod_shift);
       glfwSetCursorPosCallback(gWindow, CursorPosCallback_Lmb);
       glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Lmb);
       glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+    } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+      if (pressed_id > details::kIdOffsetObjects &&
+          objects->anything_selected_ && pressed_id < details::kIdOffsetUi) {
+        objects->map_points_.AddJoints(pressed_id);
+      } else if (pressed_id < details::kIdOffsetWater) {
+        return objects->map_points_.AddPoint(pressed_id);
+      }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       if (mod_shift) {
         glfwSetCursorPosCallback(gWindow,
@@ -298,16 +264,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
   } else if (key == GLFW_KEY_R) {
     BindCallbacksTransform();
     glfwSetCursorPosCallback(gWindow, CursorPosCallback_R);
-  } else if (key == GLFW_KEY_C) {
-    double xpos, ypos;
-    glfwGetCursorPos(gWindow, &xpos, &ypos);
-    lastX = xpos;
-    lastY = ypos;
-    objects->ui_cloning_.Start(glfw_context->cursor_pos_tex_norm_);
-    glfwSetScrollCallback(gWindow, nullptr);
-    glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_C);
-    glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
-    glfwSetCursorPosCallback(gWindow, CursorPosCallback_C);
   }
 }
 
@@ -374,24 +330,29 @@ void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
   auto objects = dynamic_cast<UiObjectsMode*>(*glfw_context->cur_mode);
-  objects->mouse_transform_.TranslateSelected(xpos, ypos);
-  objects->UpdateTranslateForSelected();
+  auto map_points = objects->map_points_.GetPoints();
+  objects->mouse_transform_.TranslateSelectedMapPoints(*map_points, xpos, ypos);
+  objects->map_points_.UpdateJointsBuffer();
 }
 
 void CursorPosCallback_R(GLFWwindow* window, double xpos, double ypos) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
   auto objects = dynamic_cast<UiObjectsMode*>(*glfw_context->cur_mode);
-  objects->mouse_transform_.RotateSelected(xpos, ypos);
-  objects->UpdateRotateForSelected();
+  auto map_points = objects->map_points_.GetPoints();
+  auto rotates = objects->map_points_.GetRotates();
+  objects->mouse_transform_.RotateSelectedMapPoints(*map_points, *rotates, xpos,
+                                                    ypos);
 }
 
 void CursorPosCallback_S(GLFWwindow* window, double xpos, double ypos) {
   void* global_data_void_ptr = glfwGetWindowUserPointer(gWindow);
   auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
   auto objects = dynamic_cast<UiObjectsMode*>(*glfw_context->cur_mode);
-  objects->mouse_transform_.ScaleSelected(xpos, ypos);
-  objects->UpdateScaleForSelected();
+  auto map_points = objects->map_points_.GetPoints();
+  auto scales = objects->map_points_.GetScales();
+  objects->mouse_transform_.ScaleSelectedMapPoints(*map_points, *scales, xpos,
+                                                   ypos);
 }
 
 void CursorPosCallback_Lmb(GLFWwindow* window, double xpos, double ypos) {
@@ -410,31 +371,11 @@ void MouseButtonCallback_Lmb(GLFWwindow* window, int button, int action,
     objects->BindDefaultCallbacks();
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     objects->BindDefaultCallbacks();
-    auto selected_objects = objects->ui_selection_.StopIntoSet(
-      glfw_context->cursor_pos_tex_norm_);
-    objects->HandleSelection(selected_objects);
-  }
-}
-
-/// cloning
-
-void CursorPosCallback_C(GLFWwindow* window, double xpos, double ypos) {
-  void* global_data_void_ptr = glfwGetWindowUserPointer(window);
-  auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
-  auto objects = dynamic_cast<UiObjectsMode*>(*glfw_context->cur_mode);
-  objects->ui_cloning_.Update(glfw_context->cursor_pos_tex_norm_);
-}
-
-void MouseButtonCallback_C(GLFWwindow* window, int button, int action,
-                           int mods) {
-  auto glfw_context = GetGlfwContext(window);
-  auto objects = dynamic_cast<UiObjectsMode*>(*glfw_context->cur_mode);
-  if (action == GLFW_PRESS) {
-    objects->BindDefaultCallbacks();
-  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
-    objects->BindDefaultCallbacks();
-    objects->ui_cloning_.Stop(glfw_context->cursor_pos_tex_norm_);
-    objects->ui_cloning_.ShowConfigWindow();
+    if (objects->map_points_.GetPoints()) {
+      auto selected_ids = objects->ui_selection_.StopIntoSet(
+          glfw_context->cursor_pos_tex_norm_);
+      objects->HandleSelection(selected_ids);
+    }
   }
 }
 

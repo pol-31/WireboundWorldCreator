@@ -2,22 +2,19 @@
 
 UiEditBiomes::UiEditBiomes(UiSharedResources& ui_shared_resources,
                            UiEditSlots& ui_edit_slots,
-               UiEditConfigSlTxt& value_config)
-    : IUiEdit(ui_edit_slots),
-value_config_(value_config) {
+                           UiEditConfigSlTxt& value_config)
+    : IUiEdit(ui_edit_slots), value_config_(value_config) {
   // value_config_.AttachToHierarchy(ui_.hierarchy_);
 }
 
 UiEditBiomes::UiEditBiomes(UiEditBiomes&& other) noexcept
     : IUiEdit(std::move(*this)),
-instances_(std::move(other.instances_)),
+      instances_(std::move(other.instances_)),
       value_config_(other.value_config_) {
   // value_config_.AttachToHierarchy(ui_.hierarchy_);
 }
 
-void UiEditBiomes::HideAll() {
-  ui_.ForceHide();
-}
+void UiEditBiomes::HideAll() { ui_.ForceHide(); }
 
 void UiEditBiomes::CreateInstance() {
   instances_.push_back(BiomeTraits{});
@@ -31,20 +28,21 @@ void UiEditBiomes::UpdateConfig() {
   }
   auto& inst = instances_[id];
   traits_ = {{
-    {&inst.wind_angle, data::TextId::kStrength},
-    {&inst.wind_speed, data::TextId::kStrength},
-    {&inst.sun_x, data::TextId::kStrength},
-    {&inst.sun_y, data::TextId::kStrength},
-    {&inst.sun_z, data::TextId::kStrength},
-    {&inst.sun_r, data::TextId::kStrength},
-    {&inst.sun_g, data::TextId::kStrength},
-    {&inst.sun_b, data::TextId::kStrength},
+      {&inst.wind_angle, data::TextId::kStrength},
+      {&inst.wind_speed, data::TextId::kStrength},
+      {&inst.sun_x, data::TextId::kStrength},
+      {&inst.sun_y, data::TextId::kStrength},
+      {&inst.sun_z, data::TextId::kStrength},
+      {&inst.sun_r, data::TextId::kStrength},
+      {&inst.sun_g, data::TextId::kStrength},
+      {&inst.sun_b, data::TextId::kStrength},
   }};
   glm::vec3 sun_direction = {inst.sun_x, inst.sun_y, inst.sun_z};
   glm::vec3 sun_color = {inst.sun_r, inst.sun_g, inst.sun_b};
   const auto& biome = instances_[id];
-  ui_.ui_shared_resources_.glfw_context_.tile_renderer->environment_.SetEnvironment(
-      biome.wind_angle, biome.wind_speed, sun_direction, sun_color);
+  ui_.ui_shared_resources_.glfw_context_.tile_renderer->environment_
+      .SetEnvironment(biome.wind_angle, biome.wind_speed, sun_direction,
+                      sun_color);
 }
 
 void UiEditBiomes::SetInstanceId(int id) {
@@ -62,9 +60,7 @@ void UiEditBiomes::Reset() {
   UpdateConfig();
 }
 
-void UiEditBiomes::Generate() {
-  UpdateConfig();
-}
+void UiEditBiomes::Generate() { UpdateConfig(); }
 
 void UiEditBiomes::RandomGenerate() {
   std::uniform_real_distribution<float> dist_float(0.0f, 1.0f);
@@ -86,9 +82,7 @@ bool UiEditBiomes::Press(int id, float height) {
   return value_config_.Press(id, height, traits_.size());
 }
 
-void UiEditBiomes::Release() {
-  value_config_.Release();
-}
+void UiEditBiomes::Release() { value_config_.Release(); }
 
 void UiEditBiomes::Render(float height) {
   value_config_.Render(height, traits_);

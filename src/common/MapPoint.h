@@ -1,13 +1,11 @@
 #ifndef WIREBOUNDWORLDCREATOR_MAPPOINT_H
 #define WIREBOUNDWORLDCREATOR_MAPPOINT_H
 
-#include <glad/glad.h>
-
 #include <glm/glm.hpp>
 
 struct MapPoint {
-  GLuint position = 0;
-  bool selected;
+  glm::vec2 position = glm::vec2(1.0f);
+  bool selected = false;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_MAPPOINT_H

@@ -1,9 +1,10 @@
 #ifndef WIREBOUNDWORLDCREATOR_UIEDITOCEAN_H
 #define WIREBOUNDWORLDCREATOR_UIEDITOCEAN_H
 
+#include <glad/glad.h>
+
 #include <array>
 #include <vector>
-#include <glad/glad.h>
 
 #include "../core/UiConfigWindow.h"
 #include "UiEdit.h"
@@ -12,12 +13,10 @@
 #include "UiSharedResources.h"
 
 class UiEditOcean : public IUiEdit {
-public:
+ public:
   UiEditOcean(UiSharedResources& ui_shared_resources,
-    TextRenderer& text_renderer,
-    UiEditSlots& ui_edit_slots,
-    UiEditConfigSlCfg& value_config,
-    UiConfigWindow& ui_ocean_config);
+              TextRenderer& text_renderer, UiEditSlots& ui_edit_slots,
+              UiEditConfigSlCfg& value_config, UiConfigWindow& ui_ocean_config);
 
   UiEditOcean(UiEditOcean&& other) noexcept;
 
@@ -47,7 +46,7 @@ public:
 
   [[nodiscard]] OceanTraits& GetInstanceData() noexcept;
 
-private:
+ private:
   std::vector<OceanTraits> instances_;
   UiEditConfigSlCfg& value_config_;
   UiConfigWindow& ui_ocean_config_;

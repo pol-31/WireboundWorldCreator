@@ -3,36 +3,32 @@
 #include "../core/TileRenderer.h"
 
 GraphBakeConfig RiverTraits::GetGraphConfig() const noexcept {
-  return {
-    .curve_amplitude = curve_amplitude,
-    .height_drift = height_drift,
-    .height_raise = height_raise,
-    .side_sagging = side_sagging,
-    .radius_flat = radius_flat,
-    .radius = radius
-  };
+  return {.curve_amplitude = curve_amplitude,
+          .height_drift = height_drift,
+          .height_raise = height_raise,
+          .side_sagging = side_sagging,
+          .radius_flat = radius_flat,
+          .radius = radius};
 }
 
 UiEditRiver::UiEditRiver(UiSharedResources& ui_shared_resources,
                          UiEditSlots& ui_edit_slots,
-           UiEditConfigSlTxt& value_config)
+                         UiEditConfigSlTxt& value_config)
     : IUiEdit(ui_edit_slots),
-value_config_(value_config),
-  ui_shared_resources_(ui_shared_resources) {
+      value_config_(value_config),
+      ui_shared_resources_(ui_shared_resources) {
   // river_layer_config_.AttachToHierarchy(hierarchy_);
 }
 
 UiEditRiver::UiEditRiver(UiEditRiver&& other) noexcept
     : IUiEdit(std::move(*this)),
-instances_(std::move(other.instances_)),
+      instances_(std::move(other.instances_)),
       value_config_(other.value_config_),
       ui_shared_resources_(other.ui_shared_resources_) {
   // river_layer_config_.AttachToHierarchy(hierarchy_);
 }
 
-void UiEditRiver::HideAll() {
-  ui_.ForceHide();
-}
+void UiEditRiver::HideAll() { ui_.ForceHide(); }
 
 void UiEditRiver::CreateInstance() {
   instances_.push_back(RiverTraits{});
@@ -46,16 +42,17 @@ void UiEditRiver::UpdateConfig() {
   }
   auto& inst = instances_[id];
   traits_ = {{
-    {&inst.transparency, data::TextId::kStrength},
-    {&inst.viscosity, data::TextId::kStrength},
-    {&inst.curve_amplitude, data::TextId::kStrength},
-    {&inst.height_drift, data::TextId::kStrength},
-    {&inst.height_raise, data::TextId::kStrength},
-    {&inst.side_sagging, data::TextId::kStrength},
-    {&inst.radius_flat, data::TextId::kStrength},
-    {&inst.radius, data::TextId::kStrength},
+      {&inst.transparency, data::TextId::kStrength},
+      {&inst.viscosity, data::TextId::kStrength},
+      {&inst.curve_amplitude, data::TextId::kStrength},
+      {&inst.height_drift, data::TextId::kStrength},
+      {&inst.height_raise, data::TextId::kStrength},
+      {&inst.side_sagging, data::TextId::kStrength},
+      {&inst.radius_flat, data::TextId::kStrength},
+      {&inst.radius, data::TextId::kStrength},
   }};
-  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.rivers_ = &instances_;
+  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.rivers_ =
+      &instances_;
   ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline();
 }
 
@@ -74,9 +71,7 @@ void UiEditRiver::Reset() {
   UpdateConfig();
 }
 
-void UiEditRiver::Generate() {
-  UpdateConfig();
-}
+void UiEditRiver::Generate() { UpdateConfig(); }
 
 void UiEditRiver::RandomGenerate() {
   std::uniform_real_distribution<float> dist_float(0.0f, 1.0f);
@@ -98,9 +93,7 @@ bool UiEditRiver::Press(int id, float height) {
   return value_config_.Press(id, height, traits_.size());
 }
 
-void UiEditRiver::Release() {
-  value_config_.Release();
-}
+void UiEditRiver::Release() { value_config_.Release(); }
 
 void UiEditRiver::Render(float height) {
   value_config_.Render(height, traits_);

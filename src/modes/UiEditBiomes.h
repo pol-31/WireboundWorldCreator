@@ -21,16 +21,13 @@ struct BiomeTraits {
   float sun_g = 1.0f;
   float sun_b = 1.0f;
 
-  static constexpr int GetTraitsSize() noexcept {
-    return 8;
-  }
+  static constexpr int GetTraitsSize() noexcept { return 8; }
 };
 
 class UiEditBiomes : public IUiEdit {
  public:
   UiEditBiomes(UiSharedResources& ui_shared_resources,
-               UiEditSlots& ui_edit_slots,
-               UiEditConfigSlTxt& value_config);
+               UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
 
   UiEditBiomes(UiEditBiomes&& other) noexcept;
 

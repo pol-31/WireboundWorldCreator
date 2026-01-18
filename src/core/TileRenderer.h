@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-#include "../renderers/PlacementRenderer.h"
+#include "../renderers/Vegetation.h"
 #include "../renderers/TerrainRenderer.h"
 #include "../renderers/WaterRenderer.h"
 #include "Environment.h"
@@ -23,13 +23,39 @@ class TileRenderer {
 
   void RenderPicking();
 
+  void UpdatePipeline();
+
+  /// --- graphs (roads, river) ---
+  /// MurMur3 0.0f-1.0f
+  static float Hash(uint32_t x);
+
+  void BakeGraph(const GraphBakeConfig& config,
+                 const std::vector<float>& heights_in,
+                 std::vector<float>& heights_out,
+                 std::vector<uint8_t>& distances, glm::uvec2 a, glm::uvec2 b,
+                 float height_a, float height_b);
+
+  void BakeGraphs(const GraphBakeConfig& config,
+                  const std::vector<float>& heights_in,
+                  std::vector<float>& heights_out,
+                  std::vector<uint8_t>& distances,
+                  const std::vector<MapPoint>& points,
+                  const std::vector<glm::uvec2>& joints);
+  /// --- ---
+  ///
+
+  void BakeRivers(const std::vector<float>& heights_in);
+  void BakeRoads(const std::vector<float>& heights_in);
+
   Tile cur_tile_;
 
   Environment environment_;
 
   TerrainRenderer terrain;
   WaterRenderer water;
-  PlacementRenderer placement;
+  Vegetation vegetation;
+
+  Shader shader_apply_rivers_roads_;
 
   bool show_terrain_ = true;
   bool show_water_ = true;

@@ -479,7 +479,7 @@ std::set<GLuint> UiSelection::ApplySelectionIntoSet() {
     if (id < bound_min_ || id > bound_max_) {
       continue;
     }
-    selected_ids.insert(id);
+    selected_ids.insert(id - bound_min_);
   }
   return selected_ids;
 }

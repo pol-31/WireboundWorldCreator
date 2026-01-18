@@ -1,9 +1,8 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UIEDITSHARED_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UIEDITSHARED_H_
 
-#include <span>
-
 #include <glm/glm.hpp>
+#include <span>
 
 #include "../core/Ui.h"
 #include "../core/UiComplex.h"
@@ -12,11 +11,11 @@
 
 class UiDynamicSprite;
 
-int GetUiEditEntryId(float height, float size,
-                     glm::vec2 mouse_pos,  float start_height);
+int GetUiEditEntryId(float height, float size, glm::vec2 mouse_pos,
+                     float start_height);
 
 class UiEditConfigSlCfg {
-public:
+ public:
   struct Trait {
     float* value;
     data::TextId label;
@@ -25,7 +24,7 @@ public:
   };
 
   UiEditConfigSlCfg(UiSharedResources& ui_shared_resources,
-                      TextRenderer& text_renderer);
+                    TextRenderer& text_renderer);
 
   UiEditConfigSlCfg(UiEditConfigSlCfg&& other) noexcept = default;
   UiEditConfigSlCfg(const UiEditConfigSlCfg& other) = delete;
@@ -51,7 +50,7 @@ public:
   UiSliderH2 sl_strength_;
   int pressed_strength_id_ = -1.0f;
 
-private:
+ private:
   void RenderPickingEntry(glm::vec2 translate);
 
   UiSharedResources& ui_shared_resources_;
@@ -88,7 +87,7 @@ class UiEditConfigSlTxt {
 
  private:
   void RenderEntry(float& strength, glm::vec2 translate, bool update_strength,
-              data::TextId text_id);
+                   data::TextId text_id);
 
   void RenderPickingEntry(glm::vec2 translate);
 

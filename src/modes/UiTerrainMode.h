@@ -18,10 +18,9 @@ struct GLFWwindow;
 class UiTerrainMode final : public IUiMode {
  public:
   UiTerrainMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
-  WindowQueue& window_queue, TextRenderer& text_renderer,
-UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config,
-                Tile& cur_tile, UiConfigWindow& ui_config_windowm
-                );
+                WindowQueue& window_queue, TextRenderer& text_renderer,
+                UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config,
+                Tile& cur_tile, UiConfigWindow& ui_config_windowm);
 
   void Render() override;
 
@@ -57,6 +56,10 @@ UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config,
   UiSlots& ui_slots_;
   UiEditTerrain ui_edit_;  // ! after ui_slots
   UiSelection ui_selection_;
+
+  /// G / S / R transformation started -> moving the whole layer,
+  /// not selected only (everything considered to be selected)
+  bool nothing_selected_ = true;
 
   MouseTransform mouse_transform_;
 

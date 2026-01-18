@@ -1,18 +1,18 @@
 #include "UiEditTerrain.h"
 
+#include "../common/OpenGlUtility.h"
 #include "../core/TileRenderer.h"
 #include "../renderers/UiRenderer.h"
-#include "../common/OpenGlUtility.h"
 
 UiEditTerrain::UiEditTerrain(Tile& cur_tile,
-    UiSharedResources& ui_shared_resources,
-    TextRenderer& text_renderer,
-    UiEditSlots& ui_edit_slots,
-    UiEditConfigSlCfg& value_config,
-    UiConfigWindow& ui_noise_config)
-: IUiEdit(ui_edit_slots),
-value_config_(value_config),
-text_noise_invert_({text_renderer,
+                             UiSharedResources& ui_shared_resources,
+                             TextRenderer& text_renderer,
+                             UiEditSlots& ui_edit_slots,
+                             UiEditConfigSlCfg& value_config,
+                             UiConfigWindow& ui_noise_config)
+    : IUiEdit(ui_edit_slots),
+      value_config_(value_config),
+      text_noise_invert_({text_renderer,
                           {data::VboIdMain::kTerrainEditLabelInvert},
                           data::TextId::kInvert}),
       text_noise_tiling_({text_renderer,
@@ -85,7 +85,7 @@ text_noise_invert_({text_renderer,
 
 UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
     : IUiEdit(std::move(*this)),
-text_noise_invert_(std::move(other.text_noise_invert_)),
+      text_noise_invert_(std::move(other.text_noise_invert_)),
       text_noise_tiling_(std::move(other.text_noise_tiling_)),
       text_noise_strength_(std::move(other.text_noise_strength_)),
 
@@ -94,7 +94,7 @@ text_noise_invert_(std::move(other.text_noise_invert_)),
       shader_flatten_step_(std::move(other.shader_flatten_step_)),
       shader_flatten_merge_(std::move(other.shader_flatten_merge_)),
 
-value_config_(other.value_config_),
+      value_config_(other.value_config_),
 
       noise_perlin_(std::move(other.noise_perlin_)),
       noise_cellular_(std::move(other.noise_cellular_)),
@@ -121,7 +121,8 @@ void UiEditTerrain::HideAll() {
 void UiEditTerrain::CreateInstance() {
   instances_.push_back(TerrainInstanceData{});
   instances_.back().data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
-  glClearTexImage(instances_.back().data.hmap.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
+  glClearTexImage(instances_.back().data.hmap.GetId(), 0, GL_RED, GL_FLOAT,
+                  nullptr);
   UpdateConfig();
 }
 
@@ -191,7 +192,7 @@ void UiEditTerrain::UpdateConfig() {
   }
 
   ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
-    .map_terrain_height_raw_ = std::move(hmap);
+      .map_terrain_height_raw_ = std::move(hmap);
   ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline();
   if (IsHmapNan()) {
     std::cerr << "unnable to generate noises, change the config" << std::endl;
@@ -339,18 +340,16 @@ bool UiEditTerrain::Press(int id, float height) {
   return true;
 }
 
-void UiEditTerrain::Release() {
-  value_config_.Release();
-}
+void UiEditTerrain::Release() { value_config_.Release(); }
 
 void UiEditTerrain::Render(float height) {
   glm::vec2 next_offset = glm::vec2{0.0f};
   float entry_height = height / (noises_.size() + 5);  // +pads
   for (int i = 0; i < noises_.size(); ++i) {
     auto data = noises_[i]->GetBaseData();
-    value_config_.Render(
-        data->strength, data->do_invert, data->do_tiling, next_offset,
-        value_config_.pressed_strength_id_ == i, noises_[i]->GetTextId());
+    value_config_.Render(data->strength, data->do_invert, data->do_tiling,
+                         next_offset, value_config_.pressed_strength_id_ == i,
+                         noises_[i]->GetTextId());
     next_offset.y -= entry_height;
   }
   text_noise_invert_.Render();
@@ -392,8 +391,8 @@ void UiEditTerrain::RenderGraph() {
   /// wireframe left bottom
   auto& ui_layer_wireframe =
       ui_shared_resources_.glfw_context_.ui_renderer->GetUiLayerWireframe();
-  ui_layer_wireframe.RenderLayerWireframe(
-    &instances_[id], &(*ui_.base_instances_)[id]);
+  ui_layer_wireframe.RenderLayerWireframe(&instances_[id],
+                                          &(*ui_.base_instances_)[id]);
 }
 
 void UiEditTerrain::SetPivotPosition(GLuint pressed_id) {
@@ -449,14 +448,11 @@ void UiEditTerrain::Init() {
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
-void UiEditTerrain::DeInit() {
-  glDeleteBuffers(1, &ssbo_atomic_modified_);
-}
+void UiEditTerrain::DeInit() { glDeleteBuffers(1, &ssbo_atomic_modified_); }
 
 glm::vec4 UiEditTerrain::GetLayerCentre() {
   int id = *ui_.selected_id_;
-  return {instances_[id].translate.x,
-          instances_[id].translate.y,
+  return {instances_[id].translate.x, instances_[id].translate.y,
           instances_[id].translate.z, 1.0f};
 }
 

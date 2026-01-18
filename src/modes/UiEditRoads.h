@@ -1,7 +1,6 @@
 #ifndef WIREBOUNDWORLDCREATOR_UIEDITROADS_H
 #define WIREBOUNDWORLDCREATOR_UIEDITROADS_H
 
-
 #include <array>
 #include <vector>
 
@@ -23,18 +22,15 @@ struct RoadTraits {
   float radius_flat = 1.0f;
   float radius = 4.0f;
 
-  static constexpr int GetTraitsSize() noexcept {
-    return 6;
-  }
+  static constexpr int GetTraitsSize() noexcept { return 6; }
 
   GraphBakeConfig GetGraphConfig() const noexcept;
 };
 
 class UiEditRoads : public IUiEdit {
-public:
+ public:
   UiEditRoads(UiSharedResources& ui_shared_resources,
-              UiEditSlots& ui_edit_slots,
-              UiEditConfigSlTxt& value_config);
+              UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
 
   UiEditRoads(UiEditRoads&& other) noexcept;
 
@@ -64,7 +60,7 @@ public:
 
   [[nodiscard]] RoadTraits& GetInstanceData() noexcept;
 
-private:
+ private:
   std::vector<RoadTraits> instances_;
   std::array<UiEditConfigSlTxt::Trait, RoadTraits::GetTraitsSize()> traits_;
   UiEditConfigSlTxt& value_config_;

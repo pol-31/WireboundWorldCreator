@@ -26,13 +26,16 @@ class UiSharedResources {
   Shader shader_sp_picking_;
   Shader shader_sp_hmap_;
 
-  GlfwContext& gltf_context_;
+  GlfwContext& glfw_context_;
 
   Shader shader_mdl_;
+  Shader shader_animated_mdl_;
   Shader shader_mdl_color_;
   Shader shader_mdl_instanced_;
   Shader shader_mdl_picking_;
+  Shader shader_animated_mdl_picking_;
   Shader shader_mdl_selected_;
+  Shader shader_animated_mdl_selected_;
 
  private:
   void Init();
