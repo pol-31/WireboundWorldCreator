@@ -31,10 +31,8 @@ add_executable(WireboundWorldCreator
         src/modes/UiTerrainMode.cpp
         src/modes/UiTilesMode.cpp
         src/modes/UiWaterMode.cpp
-        src/renderers/PlacementRenderer.cpp
         src/renderers/TerrainRenderer.cpp
         src/renderers/WaterRenderer.cpp
-        src/renderers/Grass.cpp
         src/renderers/Ifft.cpp
         src/renderers/Ocean.cpp
 
@@ -85,23 +83,20 @@ add_executable(WireboundWorldCreator
         src/io/Camera.h
         src/common/models/ModelLoader.cpp
         src/common/models/ModelLoader.h
-        src/common/models/Player.cpp
-        src/common/models/Player.h
-        src/common/models/Creature.cpp
-        src/common/models/Creature.h
+        src/common/models/PlayerBase.h
+        src/common/models/PlayerFpv.cpp
+        src/common/models/PlayerFpv.h
+        src/common/models/PlayerHuman.cpp
+        src/common/models/PlayerHuman.h
         src/common/models/RigidBody.cpp
         src/common/models/RigidBody.h
         src/common/models/Obstacle.cpp
         src/common/models/Obstacle.h
         src/common/models/ModelManager.cpp
         src/common/models/ModelManager.h
-        src/common/models/MappedObject.cpp
-        src/common/models/MappedObject.h
         src/common/MouseTransform.cpp
         src/common/MouseTransform.h
         src/common/BaseInstanceData.h
-        src/core/UiCloning.cpp
-        src/core/UiCloning.h
         src/common/Callbacks.cpp
         src/common/Callbacks.h
         src/modes/UiEditOcean.cpp
@@ -141,6 +136,21 @@ add_executable(WireboundWorldCreator
         src/modes/UiEdit.cpp
         src/modes/UiEditRoads.cpp
         src/modes/UiEditRoads.h
+        src/common/models/Animator.cpp
+        src/common/models/Animator.h
+        src/common/models/Aabb3D.cpp
+        src/common/models/Aabb3D.h
+        src/common/EntityIdManager.cpp
+        src/common/EntityIdManager.h
+        src/common/models/AttackEvent.h
+        src/common/models/MapMarker.cpp
+        src/common/models/MapMarker.h
+        src/renderers/Vegetation.cpp
+        src/renderers/Vegetation.h
+        src/common/models/Fpv.cpp
+        src/common/models/Fpv.h
+        src/common/models/Human.cpp
+        src/common/models/Human.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

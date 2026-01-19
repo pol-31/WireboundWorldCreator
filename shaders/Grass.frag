@@ -1,33 +1,33 @@
 #version 460 core
 
-layout(binding = 0) uniform CameraBufferObject {
-  mat4 view;
-  mat4 proj;
-} camera;
+in vec3 vNormal;
+in vec2 tc;
 
-in TESE_OUT
-{
-  vec3 normal;
-  vec2 uv;
-} frag_in;
+out vec4 color;
 
-layout(location = 0) out vec4 outColor;
+layout(location = 2) uniform sampler2D tex_grass;
+
+layout(std140, binding = 2) uniform Environment {
+    vec3 sun_color;
+    float _pad1;
+    vec3 sun_direction;
+    float wind_speed;
+    vec2 wind_velocity;
+    float time;
+    float delta_time;
+} environment;
 
 void main() {
-  vec3 normal = frag_in.normal;
-  vec2 uv = frag_in.uv;
+    vec3 N = normalize(vNormal);
+    vec3 L = normalize(-environment.sun_direction);
 
-  vec3 upperColor = vec3(0.4,1,0.1);
-  vec3 lowerColor = vec3(0.0,0.2,0.1);
+    float NdotL = max(dot(N, L), 0.0);
 
-  vec3 sunDirection = normalize(vec3(-1.0, 5.0, -3.0));
+//    vec3 baseColor = vec3(0.2, 0.8, 0.2);
+    vec4 baseColor = texture(tex_grass, tc);
+    vec3 lighting  = baseColor.rgb * environment.sun_color * NdotL;
 
-  vec3 upperDarkColor = vec3(0.2,0.75,0.05);
-  vec3 lowerDarkColor = vec3(0.0,0.5,0.05);
-
-  float NoL = clamp(dot(normal, sunDirection), 0.5, 1.0);
-
-  vec3 mixedColor = mix(lowerColor, upperColor, uv.y);
-
-  outColor = vec4(mixedColor*NoL, 1.0);
+    if (baseColor.a < 0.5) discard;
+//
+    color = vec4(lighting * 2.0f, baseColor.a);
 }
