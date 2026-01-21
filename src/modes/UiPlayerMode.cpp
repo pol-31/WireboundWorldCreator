@@ -29,6 +29,9 @@ UiPlayerMode::UiPlayerMode(UiSharedResources& ui_shared_resources,
       mdl_manager_(mdl_manager) {}
 
 void UiPlayerMode::Setup() {
+  ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
+      static_cast<int>(data::TextId::kHp),
+      static_cast<int>(data::TextId::kAttackSpeed) + 1);
   BindDefaultCallbacks();
   ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
   ui_selection_.SetModeForce(SelectionMode::kRectangle);
@@ -48,24 +51,17 @@ void UiPlayerMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-int UiPlayerMode::GetPrerenderTextIdStart() const noexcept {
-  return static_cast<int>(data::TextId::kScaleTerrain);  // todo;
-}
-
-int UiPlayerMode::GetPrerenderTextIdEnd() const noexcept {
-  return static_cast<int>(data::TextId::kStrength) + 1;  // todo;
-}
-
-void UiPlayerMode::RenderWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->Render();
-}
-
-void UiPlayerMode::RenderPickingWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
-}
-
 void UiPlayerMode::Render() {
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
   mdl_manager_.Update();
+
+  auto camera = ui_shared_resources_.glfw_context_.camera;
+  auto map_scale =
+      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+  camera->SetOrigin(mdl_manager_.player_->GetPosition() * map_scale);
+  camera->MoveRotateViewOriginDist(0.0f);  // update camera vectors
+  camera->Update();                        // const pos
+
   mdl_manager_.Render();
 
   ui_selection_.Render();
@@ -77,11 +73,10 @@ void UiPlayerMode::Render() {
   sp_hp_.Render();
   ui_map_.Render(&mdl_manager_);
   ui_shared_resources_.glfw_context_.windows->Render();
-  auto camera = ui_shared_resources_.glfw_context_.camera;
-  camera->Update(1.0f);  // const pos
 }
 
 void UiPlayerMode::RenderPicking() {
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
@@ -100,15 +95,19 @@ void UiPlayerMode::HandleSelection(const std::set<GLuint>& selected_ids) {
   bool friend_selected = false;
   bool neutral_selected = false;
   bool obstacle_selected = false;
+  auto it = selected_ids.find(mdl_manager_.player_->GetId());
+  if (it != selected_ids.end()) {
+    std::cout << "player selected" << std::endl;
+  }
   for (int i = 0; i < mdl_manager_.creatures_.size(); ++i) {
-    auto it = selected_ids.find(details::kIdOffsetObjects + 100 + i);
+    auto it = selected_ids.find(mdl_manager_.creatures_[i].GetId());
     if (it != selected_ids.end()) {
       mdl_manager_.creatures_[i].Select();
       const auto model = mdl_manager_.creatures_[i].GetModelData();
       if (++selected_num == 1) {
         mdl_single_selected = model;
       }
-      if (model->category == ModelData::Category::kEnemy) {
+      /*if (model->category == ModelData::Category::kEnemy) {
         enemy_selected = true;
       } else if (model->category == ModelData::Category::kFriend) {
         friend_selected = true;
@@ -116,7 +115,7 @@ void UiPlayerMode::HandleSelection(const std::set<GLuint>& selected_ids) {
         neutral_selected = true;
       } else {  // kObstacle
         obstacle_selected = true;
-      }
+      }*/
     } else {
       mdl_manager_.creatures_[i].DeSelect();
     }
@@ -171,8 +170,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
       glfwSetCursorPosCallback(gWindow, player::CursorPosCallback_Lmb);
       glfwSetMouseButtonCallback(gWindow,
                                  player::MouseButtonCallback_Selection);
-      player->ui_selection_.Start(
-        glfw_context->cursor_pos_tex_norm_, mod_ctrl, mod_shift);
+      player->ui_selection_.Start(glfw_context->cursor_pos_tex_norm_, mod_ctrl,
+                                  mod_shift);
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
       glfwSetCursorPosCallback(gWindow, CursorPosCallback_Mmb);
     }
@@ -193,8 +192,8 @@ void MouseButtonCallback_Selection(GLFWwindow* window, int button, int action,
   glm::dvec2 cursor_pos = glfw_context->cursor_pos_;
   if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     player->BindDefaultCallbacks();
-    auto selected_ids =player->ui_selection_.StopIntoSet(
-      glfw_context->cursor_pos_tex_norm_);
+    auto selected_ids =
+        player->ui_selection_.StopIntoSet(glfw_context->cursor_pos_tex_norm_);
     player->HandleSelection(selected_ids);
   } else if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_RIGHT) {
     player->ui_selection_.NextMode();
@@ -210,45 +209,39 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
 
   bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
   bool mod_shift = (mods & GLFW_MOD_SHIFT);
-  player->mdl_manager_.player_.UpdateMods(mod_ctrl, mod_shift);
-  if (action == GLFW_PRESS) {
+  if (action != GLFW_PRESS) {
     if (key == GLFW_KEY_ESCAPE) {
       if (mod_shift) {
         glfwSetWindowShouldClose(window, true);
+        return;
       } else if (!glfw_context->windows->GetTopWindow() &&
                  glfw_context->windows->GetSize() == 0) {
         glfw_context->ui_renderer->AskForConfirmation(
             data::TextId::kConfirmationExit,
             []() { glfwSetWindowShouldClose(gWindow, true); });
+        return;
       } else {
         glfw_context->windows->BtnEscape();
+        return;
       }
     } else if (key == GLFW_KEY_ENTER) {
       glfw_context->windows->BtnEnter();
-    } else if (key == GLFW_KEY_W) {
-      player->mdl_manager_.player_.SetMoveForward();
-    } else if (key == GLFW_KEY_A) {
-      player->mdl_manager_.player_.SetMoveLeft();
-    } else if (key == GLFW_KEY_S) {
-      player->mdl_manager_.player_.SetMoveBackward();
-      auto player_pos = player->mdl_manager_.player_.GetPosition();
-      std::cerr << player_pos.x << ' ' << player_pos.y << ' ' << player_pos.z
-                << std::endl;
-    } else if (key == GLFW_KEY_D) {
-      player->mdl_manager_.player_.SetMoveRight();
-    } else if (key == GLFW_KEY_SPACE) {
-      player->mdl_manager_.player_.Jump(5.0f);
+      return;
     }
-  } else if (action == GLFW_RELEASE) {
-    if (key == GLFW_KEY_W) {
-      player->mdl_manager_.player_.ResetMoveForward();
-    } else if (key == GLFW_KEY_A) {
-      player->mdl_manager_.player_.ResetMoveLeft();
-    } else if (key == GLFW_KEY_S) {
-      player->mdl_manager_.player_.ResetMoveBackward();
-    } else if (key == GLFW_KEY_D) {
-      player->mdl_manager_.player_.ResetMoveRight();
-    }
+  }
+  player->mdl_manager_.player_->ProcessMovement(key, action);
+  if (action == GLFW_PRESS && key == GLFW_KEY_1 &&
+      player->mdl_manager_.player_->GetId() ==
+          player->mdl_manager_.player_fpv_.GetId()) {
+    player->mdl_manager_.player_ = &player->mdl_manager_.player_human_;
+    player->mdl_manager_.player_human_.SwitchToHuman();
+    player->mdl_manager_.player_fpv_.SwitchToHuman();
+  } else if (action == GLFW_PRESS && key == GLFW_KEY_2 &&
+             player->mdl_manager_.player_->GetId() ==
+                 player->mdl_manager_.player_human_.GetId()) {
+    player->mdl_manager_.player_ = &player->mdl_manager_.player_fpv_;
+    player->mdl_manager_.player_human_.SwitchToFpv();
+    player->mdl_manager_.player_fpv_.SwitchToFpv();
   }
 }
 

@@ -9,20 +9,7 @@
 #include "UiEdit.h"
 #include "UiEditShared.h"
 #include "UiSharedResources.h"
-
-struct ObjectTraits {
-  std::vector<MapPoint> map_points;  // translation in GLuint id
-  std::vector<glm::uvec2> map_joints;
-  std::vector<glm::quat> rotations;
-  std::vector<glm::vec3> scales;
-
-  float hp = 100.0f;
-  float speed = 1.0f;
-  float attack = 1.0f;
-  float attack_speed = 1.0f;
-
-  static constexpr int GetTraitsSize() noexcept { return 4; }
-};
+#include "traits/ObjectTraits.h"
 
 class UiEditObjects : public IUiEdit {
  public:
@@ -56,13 +43,21 @@ class UiEditObjects : public IUiEdit {
 
   void RenderPicking(float height) override;
 
+  std::vector<ObjectTraits>& Data();
+
+  BaseInstanceData* GetBaseInstanceData(int id) override { return &Data()[id]; }
+
+  int GetInstancesNum() override { return Data().size(); }
+
   [[nodiscard]] ObjectTraits& GetInstanceData() noexcept;
 
+  void SetModels(const std::vector<std::unique_ptr<ModelData>>& models);
+
  private:
-  std::vector<ObjectTraits> instances_;
   std::array<UiEditConfigSlTxt::Trait, ObjectTraits::GetTraitsSize()> traits_;
   UiEditConfigSlTxt& value_config_;
   ModelManager& mdl_manager_;
+  UiSharedResources& ui_shared_resources_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIEDITOBJECTS_H_

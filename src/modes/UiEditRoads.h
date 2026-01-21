@@ -4,28 +4,9 @@
 #include <array>
 #include <vector>
 
-#include "../common/GraphBakeConfig.h"
-#include "../common/MapPoint.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
-
-struct RoadTraits {
-  std::vector<MapPoint> map_points;
-  std::vector<glm::uvec2> map_joints;
-  GraphBakeConfig config;
-
-  // C++ can’t do pointer-to-nested-member directly?
-  float curve_amplitude = 3.0f;
-  float height_drift = 0.01f;
-  float height_raise = 0.0f;
-  float side_sagging = 0.01f;
-  float radius_flat = 1.0f;
-  float radius = 4.0f;
-
-  static constexpr int GetTraitsSize() noexcept { return 6; }
-
-  GraphBakeConfig GetGraphConfig() const noexcept;
-};
+#include "traits/RoadTraits.h"
 
 class UiEditRoads : public IUiEdit {
  public:
@@ -58,10 +39,15 @@ class UiEditRoads : public IUiEdit {
 
   void RenderPicking(float height) override;
 
+  std::vector<RoadTraits>& Data();
+
+  BaseInstanceData* GetBaseInstanceData(int id) override { return &Data()[id]; }
+
+  int GetInstancesNum() override { return Data().size(); }
+
   [[nodiscard]] RoadTraits& GetInstanceData() noexcept;
 
  private:
-  std::vector<RoadTraits> instances_;
   std::array<UiEditConfigSlTxt::Trait, RoadTraits::GetTraitsSize()> traits_;
   UiEditConfigSlTxt& value_config_;
   UiSharedResources& ui_shared_resources_;

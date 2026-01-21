@@ -14,27 +14,27 @@ struct NoiseDataBase {
 
 /// it seems all of this for debug only - we use cast to float* and memcpy
 
-struct NoisePerlinData : public NoiseDataBase {
+struct NoisePerlinData : NoiseDataBase {
   float scale_x;
   float scale_y;
   float seed;
 };
 
-struct NoiseCellularData : public NoiseDataBase {
-  float scale_x;
-  float scale_y;
-  float jitter;
-  float seed;
-};
-
-struct NoiseMetaballsData : public NoiseDataBase {
+struct NoiseCellularData : NoiseDataBase {
   float scale_x;
   float scale_y;
   float jitter;
   float seed;
 };
 
-struct NoiseFbmGridData : public NoiseDataBase {
+struct NoiseMetaballsData : NoiseDataBase {
+  float scale_x;
+  float scale_y;
+  float jitter;
+  float seed;
+};
+
+struct NoiseFbmGridData : NoiseDataBase {
   float scale_x;
   float scale_y;
   float octaves;
@@ -46,7 +46,7 @@ struct NoiseFbmGridData : public NoiseDataBase {
   float seed;
 };
 
-struct NoiseFbmMultiData : public NoiseDataBase {
+struct NoiseFbmMultiData : NoiseDataBase {
   float scale_x;
   float scale_y;
   float lacunarity;
@@ -54,7 +54,7 @@ struct NoiseFbmMultiData : public NoiseDataBase {
   float seed;
 };
 
-struct NoiseFbmdPerlinData : public NoiseDataBase {
+struct NoiseFbmdPerlinData : NoiseDataBase {
   float scale_x;
   float scale_y;
   float octaves;
@@ -65,7 +65,7 @@ struct NoiseFbmdPerlinData : public NoiseDataBase {
   float seed;
 };
 
-struct NoiseFbmWarpData : public NoiseDataBase {
+struct NoiseFbmWarpData : NoiseDataBase {
   float scale_x;
   float scale_y;
   float octaves;
@@ -78,7 +78,7 @@ struct NoiseFbmWarpData : public NoiseDataBase {
   float r;
 };
 
-struct NoiseFbmPerlinWarpData : public NoiseDataBase {
+struct NoiseFbmPerlinWarpData : NoiseDataBase {
   float scale_x;
   float scale_y;
   float octaves;
@@ -92,7 +92,7 @@ struct NoiseFbmPerlinWarpData : public NoiseDataBase {
 };
 
 struct NoiseTerrainData {
-  Texture32F hmap;
+  Texture32F hmap;  // not serialized or parsed, but useful as a cache
   NoisePerlinData perlin;
   NoiseCellularData cellular;
   NoiseMetaballsData metaballs;

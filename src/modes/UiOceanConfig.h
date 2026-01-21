@@ -4,35 +4,15 @@
 #include <random>
 #include <span>
 
+#include "../common/BaseInstanceData.h"
 #include "../common/MapPoint.h"
 #include "../common/Text.h"
-
-/// oceanographic spectra
-struct OceanLayerTraits {
-  float scale{1.0f};
-  float fetch{1.0f};  // TODO: does it related to terrain?
-  float wind{1.0f};
-  float spreadBlend{0.5f};
-  float swell{0.5f};
-  float peakEnhancement{0.5f};
-  float shortWavesFade{0.5f};
-  float lambda{1.0f};
-  bool visible = true;
-  // 3 bytes padding?
-};
-
-struct OceanTraits {
-  std::vector<MapPoint> map_points;
-  OceanLayerTraits near;
-  OceanLayerTraits mid;
-  OceanLayerTraits far;
-};
+#include "traits/OceanTraits.h"
 
 class OceanLayerConfig {
  public:
   OceanLayerConfig(data::TextId layer_name_id, std::array<float, 8> scales)
       : layer_name_id_(layer_name_id),
-        value_{{0.0f}},
         scale_(scales),
         text_id_({data::TextId::kScaleWater, data::TextId::kFetch,
                   data::TextId::kFetch, data::TextId::kSpreadBlend,
@@ -51,9 +31,8 @@ class OceanLayerConfig {
     }
   }
 
-  void SetConfig(const OceanLayerTraits* data) {
-    auto data_ptr = reinterpret_cast<const float*>(data);
-    std::copy(data_ptr, data_ptr + 8, value_.begin());
+  void SetConfig(OceanLayerTraits* data) {
+    value_ = {&data->scale, 8};
     visible_ = data->visible;
   }
 
@@ -69,12 +48,6 @@ class OceanLayerConfig {
             visible_};
   }
 
-  /// store / serialize
-  OceanLayerTraits GetConfigUnscaled() {
-    return {value_[0], value_[1], value_[2], value_[3], value_[4],
-            value_[5], value_[6], value_[7], visible_};
-  }
-
   bool GetVisible() const noexcept { return visible_; }
 
   bool GetVisible2() const noexcept { return visible2_; }
@@ -88,7 +61,7 @@ class OceanLayerConfig {
 
  private:
   data::TextId layer_name_id_;
-  std::array<float, 8> value_;
+  std::span<float> value_;
   std::array<float, 8> scale_;
   std::array<data::TextId, 8> text_id_;
   bool visible_ = true;

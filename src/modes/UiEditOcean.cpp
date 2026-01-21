@@ -26,7 +26,6 @@ UiEditOcean::UiEditOcean(UiEditOcean&& other) noexcept
       value_config_(other.value_config_),
       ocean_layers_(std::move(other.ocean_layers_)),
       ui_shared_resources_(other.ui_shared_resources_),
-      instances_(std::move(other.instances_)),
       ui_ocean_config_(other.ui_ocean_config_) {
   // ocean_layer_config_.AttachToHierarchy(hierarchy_);
 }
@@ -37,18 +36,18 @@ void UiEditOcean::HideAll() {
 }
 
 void UiEditOcean::CreateInstance() {
-  instances_.push_back(OceanTraits{});
+  Data().push_back(OceanTraits{});
   UpdateConfig();
 }
 
 void UiEditOcean::UpdateConfig() {
   ui_shared_resources_.glfw_context_.tile_renderer->water.SetWaterColor(
-      (*ui_.base_instances_)[*ui_.selected_id_].color);
+      Data()[selected_id_].color);
 }
 
 void UiEditOcean::SetInstanceId(int id) {
   ui_.SetInstance(id);
-  const auto& ocean_data = instances_[id];
+  auto& ocean_data = Data()[id];
   ocean_layers_[0].SetConfig(&ocean_data.near);
   ocean_layers_[1].SetConfig(&ocean_data.mid);
   ocean_layers_[2].SetConfig(&ocean_data.far);
@@ -56,26 +55,38 @@ void UiEditOcean::SetInstanceId(int id) {
 }
 
 void UiEditOcean::RemoveInstance(GLuint id) {
-  instances_.erase(instances_.begin() + id);
+  Data().erase(Data().begin() + id);
   UpdateConfig();
 }
 
-void UiEditOcean::Reset() { instances_.clear(); }
+void UiEditOcean::Reset() { Data().clear(); }
 
 void UiEditOcean::Generate() {
-  int id = *ui_.selected_id_;
-  OceanTraits traits{
-      {},
-      ocean_layers_[0].GetConfig(),
-      ocean_layers_[1].GetConfig(),
-      ocean_layers_[2].GetConfig(),
-  };
-  instances_[id].near = ocean_layers_[0].GetConfigUnscaled();
-  instances_[id].mid = ocean_layers_[1].GetConfigUnscaled();
-  instances_[id].far = ocean_layers_[2].GetConfigUnscaled();
+  OceanTraits traits;
+  traits.near = ocean_layers_[0].GetConfig();
+  traits.mid = ocean_layers_[1].GetConfig();
+  traits.far = ocean_layers_[2].GetConfig();
   TileRenderer* tile_renderer =
       ui_shared_resources_.glfw_context_.tile_renderer;
   tile_renderer->water.UpdateOcean(traits);
+}
+
+void UiEditOcean::GenerateAll() {
+  for (int id = 0; id < Data().size(); ++id) {
+    auto& ocean_data = Data()[id];
+    ocean_layers_[0].SetConfig(&ocean_data.near);
+    ocean_layers_[1].SetConfig(&ocean_data.mid);
+    ocean_layers_[2].SetConfig(&ocean_data.far);
+    OceanTraits traits;
+    traits.near = ocean_layers_[0].GetConfig();
+    traits.mid = ocean_layers_[1].GetConfig();
+    traits.far = ocean_layers_[2].GetConfig();
+    TileRenderer* tile_renderer =
+        ui_shared_resources_.glfw_context_.tile_renderer;
+    tile_renderer->water.UpdateOcean(traits);
+    ui_shared_resources_.glfw_context_.tile_renderer->water.SetWaterColor(
+        Data()[id].color);
+  }
 }
 
 void UiEditOcean::RandomGenerate() {
@@ -116,7 +127,7 @@ void UiEditOcean::Release() { value_config_.Release(); }
 
 void UiEditOcean::Render(float height) {
   ui_shared_resources_.glfw_context_.tile_renderer->water.SetWaterColor(
-      (*ui_.base_instances_)[*ui_.selected_id_].color);
+      Data()[selected_id_].color);
   glm::vec2 next_offset = glm::vec2{0.0f};
   float entry_height = height / (ocean_layers_.size() + 5);  // +pads
   for (int i = 0; i < ocean_layers_.size(); ++i) {
@@ -133,5 +144,9 @@ void UiEditOcean::RenderPicking(float height) {
 }
 
 OceanTraits& UiEditOcean::GetInstanceData() noexcept {
-  return instances_[*ui_.selected_id_];
+  return Data()[selected_id_];
+}
+
+std::vector<OceanTraits>& UiEditOcean::Data() {
+  return ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.ocean_data;
 }

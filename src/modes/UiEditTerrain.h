@@ -9,12 +9,12 @@
 #include "../common/TextRenderer.h"
 #include "../core/Tile.h"
 #include "../core/UiConfigWindow.h"
-#include "TerrainInstanceData.h"
 #include "TerrainNoiseData.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
 #include "UiSharedResources.h"
 #include "UiTerrainConfig.h"
+#include "traits/TerrainTraits.h"
 
 class UiEditTerrain final : public IUiEdit {
  public:
@@ -41,6 +41,8 @@ class UiEditTerrain final : public IUiEdit {
 
   void Generate() override;
 
+  void GenerateAll() override;
+
   void RandomGenerate() override;
 
   bool Press(int id, float height) override;
@@ -51,7 +53,13 @@ class UiEditTerrain final : public IUiEdit {
 
   void RenderPicking(float height) override;
 
-  [[nodiscard]] TerrainInstanceData& GetInstanceData() noexcept;
+  std::vector<TerrainTraits>& Data();
+
+  BaseInstanceData* GetBaseInstanceData(int id) override { return &Data()[id]; }
+
+  int GetInstancesNum() override { return Data().size(); }
+
+  [[nodiscard]] TerrainTraits& GetInstanceData() noexcept;
 
   void RenderGraph();
 
@@ -69,9 +77,8 @@ class UiEditTerrain final : public IUiEdit {
   [[nodiscard]] bool IsHmapNan() const noexcept;
 
   void MergeLayers(Texture32F& bottom_layer, Texture32F& top_layer,
-                   const NoiseDataBase* noise);
+                   const NoiseDataBase* noise, ITerrainNoise* noise_gen);
 
-  std::vector<TerrainInstanceData> instances_;
   UiEditConfigSlCfg& value_config_;
   UiConfigWindow& ui_noise_config_;
 
@@ -86,14 +93,14 @@ class UiEditTerrain final : public IUiEdit {
   UiTextModeId text_noise_tiling_;
   UiTextModeId text_noise_strength_;
 
-  TerrainNoisePerlin noise_perlin_;
-  TerrainNoiseCellular noise_cellular_;
-  TerrainNoiseMetaballs noise_metaballs_;
-  TerrainNoiseFbmGrid noise_fbm_grid_;
-  TerrainNoiseFbmMulti noise_fbm_multi_;
-  TerrainNoiseFbmdPerlin noise_fbmd_perlin_;
-  TerrainNoiseFbmWarp noise_fbm_warp_;
-  TerrainNoiseFbmPerlinWarp noise_fmb_perlin_warp_;
+  TerrainNoisePerlin gen_perlin_;
+  TerrainNoiseCellular gen_cellular_;
+  TerrainNoiseMetaballs gen_metaballs_;
+  TerrainNoiseFbmGrid gen_fbm_grid_;
+  TerrainNoiseFbmMulti gen_fbm_multi_;
+  TerrainNoiseFbmdPerlin gen_fbmd_perlin_;
+  TerrainNoiseFbmWarp gen_fbm_warp_;
+  TerrainNoiseFbmPerlinWarp gen_fbm_perlin_warp_;
   std::array<ITerrainNoise*, 8> noises_;
 
   UiSharedResources& ui_shared_resources_;

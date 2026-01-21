@@ -27,7 +27,7 @@ UiSharedResources::UiSharedResources(GlfwContext& global_glfw_callback_data)
       shader_mdl_selected_("../shaders/ModelPicking.vert",
                            "../shaders/ModelSelected.frag"),
       shader_animated_mdl_selected_("../shaders/ModelAnimatedPicking.vert",
-                           "../shaders/ModelSelected.frag") {
+                                    "../shaders/ModelSelected.frag") {
   Init();
 }
 

@@ -21,15 +21,17 @@ class ITerrainNoise {
                          std::uniform_real_distribution<float>& dist_float,
                          std::bernoulli_distribution& dist_bool) noexcept = 0;
 
-  NoiseDataBase* GetBaseData() { return &base_data_; }
+  NoiseDataBase* GetBaseData() { return base_data_; }
 
-  void ToggleDoInvert() { base_data_.do_invert = !base_data_.do_invert; }
+  void ToggleDoInvert() { base_data_->do_invert = !base_data_->do_invert; }
 
-  void ToggleDoTiling() { base_data_.do_tiling = !base_data_.do_tiling; }
+  void ToggleDoTiling() { base_data_->do_tiling = !base_data_->do_tiling; }
+
+  virtual Texture32F Generate() = 0;
 
  protected:
   Shader shader_;
-  NoiseDataBase base_data_;
+  NoiseDataBase* base_data_ = nullptr;
 };
 
 template <size_t gParamNum, data::TextId gTextId>
@@ -38,10 +40,7 @@ class TerrainNoiseBase : public ITerrainNoise {
   TerrainNoiseBase(std::string_view shader_path,
                    std::array<float, gParamNum> scale,
                    std::array<data::TextId, gParamNum> text_id)
-      : ITerrainNoise(shader_path),
-        value_{{0.0f}},
-        scale_(scale),
-        text_id_(text_id) {}
+      : ITerrainNoise(shader_path), scale_(scale), text_id_(text_id) {}
 
   std::span<float> GetValueSpan() noexcept override { return value_; }
 
@@ -54,20 +53,17 @@ class TerrainNoiseBase : public ITerrainNoise {
     for (int i = 0; i < value_.size(); ++i) {
       value_[i] = dist_float(gen) * 0.8f + 0.2f;  // to avoid small values
     }
-    base_data_.strength = dist_float(gen);
-    base_data_.do_tiling = dist_bool(gen);
-    base_data_.do_invert = dist_bool(gen);
+    base_data_->strength = dist_float(gen);
+    base_data_->do_tiling = dist_bool(gen);
+    base_data_->do_invert = dist_bool(gen);
   }
 
-  void SetConfig(const NoiseDataBase* base_data, const float* noise_data) {
-    std::copy(noise_data, noise_data + gParamNum, value_.begin());
-    base_data_.do_invert = base_data->do_invert;
-    base_data_.do_tiling = base_data->do_tiling;
-    base_data_.strength = base_data->strength;
+  void SetConfig(NoiseDataBase* base_data, std::span<float> data) {
+    value_ = data;
+    base_data_ = base_data;
   }
 
-  Texture32F Generate(float* noise_data) {
-    std::copy(value_.begin(), value_.end(), noise_data);
+  Texture32F Generate() override {
     shader_.Bind();
     std::cout << "--- " << static_cast<int>(gTextId) << " ---" << std::endl;
     for (int i = 0; i < value_.size(); ++i) {
@@ -83,7 +79,7 @@ class TerrainNoiseBase : public ITerrainNoise {
   }
 
  private:
-  std::array<float, gParamNum> value_;
+  std::span<float> value_;
   std::array<float, gParamNum> scale_;
   std::array<data::TextId, gParamNum> text_id_;
 };

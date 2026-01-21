@@ -30,14 +30,6 @@ class UiPlacementMode final : public IUiMode {
 
   void BindDefaultCallbacks() override;
 
-  int GetPrerenderTextIdStart() const noexcept override;
-
-  int GetPrerenderTextIdEnd() const noexcept override;
-
-  void RenderWorld() override;
-
-  void RenderPickingWorld() override;
-
   void SetPlacementMode(Texture* tex_placement, int id);
 
   [[nodiscard]] bool IsPreviewMode() const noexcept { return preview_mode_; }
@@ -65,8 +57,6 @@ class UiPlacementMode final : public IUiMode {
   UiSelectedSprite sp_selected_mode_;
 
   UiSlots& ui_slots_;
-
-  std::vector<BaseInstanceData> instances_;
   UiEditRoads ui_edit_;
 
   UiSelection ui_selection_;

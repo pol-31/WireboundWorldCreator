@@ -22,7 +22,11 @@ UiObjectsMode::UiObjectsMode(UiSharedResources& ui_shared_resources,
       mdl_manager_(mdl_manager) {}
 
 void UiObjectsMode::Setup() {
-  ui_slots_.Setup(&models_, &ui_edit_, [this] {
+  ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
+      static_cast<int>(data::TextId::kHp),
+      static_cast<int>(data::TextId::kAttackSpeed) + 1);
+  UpdateModelsList();
+  ui_slots_.Setup(&ui_edit_, [this] {
     std::vector<MapPoint>* points = nullptr;
     std::vector<glm::uvec2>* joints = nullptr;
     std::vector<glm::quat>* rotates = nullptr;
@@ -36,7 +40,6 @@ void UiObjectsMode::Setup() {
     map_points_.SetData(points, joints, rotates, scales);
     map_points_.UpdateJointsBuffer();
   });
-  ui_edit_.SetUp(&models_, &ui_slots_.GetSelectedIdRef());
   BindDefaultCallbacks();
   auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->SetPosition(glm::vec3{5.0f});
@@ -46,7 +49,6 @@ void UiObjectsMode::Setup() {
   camera->MoveRotateViewOrigin(0.0f, 0.0f);  // to update camera vectors
   ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
   ui_selection_.SetModeForce(SelectionMode::kRectangle);
-  UpdateModelsList();
 }
 
 void UiObjectsMode::BindDefaultCallbacks() {
@@ -60,32 +62,18 @@ void UiObjectsMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-int UiObjectsMode::GetPrerenderTextIdStart() const noexcept {
-  return static_cast<int>(data::TextId::kScaleTerrain);
-}
-
-int UiObjectsMode::GetPrerenderTextIdEnd() const noexcept {
-  return static_cast<int>(data::TextId::kLayer3) + 1;
-}
-
-void UiObjectsMode::RenderWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->Render();
-}
-
-void UiObjectsMode::RenderPickingWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
-}
-
 void UiObjectsMode::Render() {
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
   ui_selection_.Render();
   if (ui_slots_.GetSelectedSlotId() != -1) {
-    map_points_.RenderPoints(ui_slots_.GetInstanceBaseData()->color);
+    auto color = ui_slots_.GetInstanceBaseData()->color;
+    map_points_.RenderPoints(color);
+    auto map_scale =
+        ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+    map_points_.RenderJoints(ui_shared_resources_.glfw_context_.tile_renderer
+                                 ->cur_tile_.map_terrain_height,
+                             map_scale, color);
   }
-  auto map_scale =
-      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
-  map_points_.RenderJoints(ui_shared_resources_.glfw_context_.tile_renderer
-                               ->cur_tile_.map_terrain_height,
-                           map_scale);
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
@@ -101,6 +89,7 @@ void UiObjectsMode::Render() {
 }
 
 void UiObjectsMode::RenderPicking() {
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
   map_points_.RenderPickingPoints();
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
@@ -113,11 +102,7 @@ void UiObjectsMode::RenderPicking() {
 
 void UiObjectsMode::UpdateModelsList() {
   ui_slots_.Reset();
-  const auto& models = mdl_manager_.GetLoadedModels();
-  for (const auto& m : models) {
-    BaseInstanceData data(std::to_string(0), glm::vec4(1.0f), true, 0);
-    ui_slots_.AddInstance(std::move(data));
-  }
+  ui_edit_.SetModels(mdl_manager_.GetLoadedModels());
 }
 
 void UiObjectsMode::HandleSelection(const std::set<GLuint>& selected_ids) {

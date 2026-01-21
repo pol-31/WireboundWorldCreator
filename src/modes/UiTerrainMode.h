@@ -30,14 +30,6 @@ class UiTerrainMode final : public IUiMode {
 
   void BindDefaultCallbacks() override;
 
-  int GetPrerenderTextIdStart() const noexcept override;
-
-  int GetPrerenderTextIdEnd() const noexcept override;
-
-  void RenderWorld() override;
-
-  void RenderPickingWorld() override;
-
   void CancelTransform();
 
   void ApplyTransform();
@@ -52,7 +44,6 @@ class UiTerrainMode final : public IUiMode {
   UiToggle4 tg_flatten_;
 
   UiTerrainBake ui_bake_;
-  std::vector<BaseInstanceData> layers_;
   UiSlots& ui_slots_;
   UiEditTerrain ui_edit_;  // ! after ui_slots
   UiSelection ui_selection_;

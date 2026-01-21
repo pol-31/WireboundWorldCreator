@@ -2,13 +2,15 @@
 
 #include "../common/PickingFramebuffer.h"
 #include "../modes/IUiMode.h"
+#include "../renderers/UiRenderer.h"
 #include "TileRenderer.h"
 
 UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
-               WindowQueue& window_queue, IUiMode* terrain_mode,
-               IUiMode* water_mode, IUiMode* placement_mode,
-               IUiMode* objects_mode, IUiMode* biomes_mode, IUiMode* tiles_mode,
-               IUiMode* player_mode, IUiMode*& cur_mode)
+               TextRenderer& text_renderer, WindowQueue& window_queue,
+               IUiMode* terrain_mode, IUiMode* water_mode,
+               IUiMode* placement_mode, IUiMode* objects_mode,
+               IUiMode* biomes_mode, IUiMode* tiles_mode, IUiMode* player_mode,
+               IUiMode*& cur_mode)
     : UiWindowAppear({data::VboIdMain::kMenuDesk}, 1.0f,
                      {{data::VboIdMain::kMenuDeskPinBack, []() {}},
                       {data::VboIdMain::kMenuDeskPinPoint}},
@@ -98,8 +100,19 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
 
       arrow_select_{data::VboIdMain::kMenuArrowSelect},
       arrow_selected_{data::VboIdMain::kMenuArrowSelected},
-      save_data_{data::VboIdMain::kMenuSave},
-      load_data_{data::VboIdMain::kMenuLoad},
+      save_data_{
+          data::VboIdMain::kMenuSave,
+          [this] {
+            this->ui_shared_resources_.glfw_context_.ui_renderer->Serialize();
+          }},
+      load_data_{
+          data::VboIdMain::kMenuLoad,
+          [this] {
+            this->ui_shared_resources_.glfw_context_.ui_renderer->Parse();
+          }},
+      txt_mode_{text_renderer,
+                {data::VboIdMain::kModeModeText},
+                data::TextId::kMenuTerrain},
       ui_event_handler_({
           &pin_,
           &btn_terrain_,
@@ -156,7 +169,8 @@ UiMenu::UiMenu(UiMenu&& other) noexcept
       arrow_selected_(std::move(other.arrow_selected_)),
       save_data_(std::move(other.save_data_)),
       load_data_(std::move(other.load_data_)),
-      cur_mode_((other.cur_mode_)),
+      txt_mode_(std::move(other.txt_mode_)),
+      cur_mode_(other.cur_mode_),
 
       ui_event_handler_({
           &pin_,
@@ -190,10 +204,13 @@ UiMenu::UiMenu(UiMenu&& other) noexcept
 }
 
 void UiMenu::SetMode(int id) {
+  float angle =
+      static_cast<float>(id) * 2.0f * glm::pi<float>() / modes_.size();
+  arrow_selected_angle_ = angle;
+  txt_mode_.SetText(static_cast<data::TextId>(
+      id + static_cast<int>(data::TextId::kMenuTerrain)));
   cur_mode_ = modes_[id];
-  SetSelectedArrow(id);
   cur_mode_->Setup();
-  cur_mode_->PrerenderText();
 }
 
 void UiMenu::BindCallbacks() {
@@ -244,6 +261,7 @@ bool UiMenu::Render() {
   arrow_selected_.Render();
   save_data_.Render();
   load_data_.Render();
+  txt_mode_.Render();
 
   return stop_show;
 }
@@ -280,6 +298,7 @@ void UiMenu::RenderPicking() {
   arrow_selected_.RenderPicking();
   save_data_.RenderPicking();
   load_data_.RenderPicking();
+  txt_mode_.RenderPicking();
 }
 
 bool UiMenu::Press(int id) {
@@ -294,11 +313,6 @@ bool UiMenu::Press(int id) {
 }
 
 void UiMenu::Release() { ui_event_handler_.Release(); }
-
-void UiMenu::SetSelectedArrow(int id) {
-  float angle = static_cast<float>(id) * 2.0f * glm::pi<float>() / 7.0f;
-  arrow_selected_angle_ = angle;
-}
 
 void UiMenu::SetCircleTransform() {
   const float radius_mode = 0.5f;

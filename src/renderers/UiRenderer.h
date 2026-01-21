@@ -3,8 +3,6 @@
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
-#include "GLFW/glfw3.h"
-
 #include "../common/TextRenderer.h"
 #include "../common/UiDebugger.h"
 #include "../common/models/ModelManager.h"  // temp
@@ -19,9 +17,9 @@
 #include "../core/UiWorldOrigin.h"
 #include "../core/WindowQueue.h"
 #include "../modes/AllUiModes.h"
-
 #include "../modes/UiEdit.h"
 #include "../modes/UiEditShared.h"
+#include "GLFW/glfw3.h"
 
 class Camera;
 
@@ -75,13 +73,13 @@ class UiRenderer {
   UiEditConfigSlTxt ui_edit_2_;
 
   IUiMode* cur_mode_{nullptr};
-  UiTerrainMode terrain_;  //
-  UiWaterMode water_;      //
-  UiBiomesMode biomes_;    //
-  UiObjectsMode objects_;  // mdl each with specified instances OR map_placement
-  UiPlacementMode placement_;  // mdl with map_placement
-  UiTilesMode tiles_;          //
-  UiPlayerMode player_;        // play the game
+  UiTerrainMode terrain_;
+  UiWaterMode water_;
+  UiBiomesMode biomes_;
+  UiObjectsMode objects_;
+  UiPlacementMode placement_;
+  UiTilesMode tiles_;
+  UiPlayerMode player_;
 
   UiMenu ui_menu_;
   UiSettings ui_settings_;

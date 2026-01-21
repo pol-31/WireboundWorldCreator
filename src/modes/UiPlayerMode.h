@@ -28,14 +28,6 @@ class UiPlayerMode final : public IUiMode {
 
   void BindDefaultCallbacks() override;
 
-  int GetPrerenderTextIdStart() const noexcept override;
-
-  int GetPrerenderTextIdEnd() const noexcept override;
-
-  void RenderWorld() override;
-
-  void RenderPickingWorld() override;
-
   void HandleSelection(const std::set<GLuint>& selected_ids);
 
   UiDynamicSprite sp_hp_;

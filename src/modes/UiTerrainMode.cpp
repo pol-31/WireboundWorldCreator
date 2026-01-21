@@ -50,7 +50,6 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
                {text_renderer,
                 {data::VboIdMain::kTerrainBakeWeatheringStepInputText},
                 {data::VboIdMain::kTerrainBakeWeatheringStepInputBack}}),
-      layers_{},
       ui_slots_(ui_slots),
       ui_edit_(cur_tile, ui_shared_resources, text_renderer, ui_edit_slots,
                value_config, ui_config_window),
@@ -60,9 +59,10 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
                          &btn_bake_ /*, &ui_slots_*/}) {}
 
 void UiTerrainMode::Setup() {
-  ui_slots_.Setup(&layers_, &ui_edit_,
-                  [this] { this->ui_edit_.UpdateConfig(); });
-  ui_edit_.SetUp(&layers_, &ui_slots_.GetSelectedIdRef());
+  ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
+      static_cast<int>(data::TextId::kScaleTerrain),
+      static_cast<int>(data::TextId::kStrength) + 1);
+  ui_slots_.Setup(&ui_edit_, [this] { this->ui_edit_.UpdateConfig(); });
   BindDefaultCallbacks();
   auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->SetPosition(glm::vec3{5.0f});
@@ -86,28 +86,13 @@ void UiTerrainMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-int UiTerrainMode::GetPrerenderTextIdStart() const noexcept {
-  return static_cast<int>(data::TextId::kScaleTerrain);
-}
-
-int UiTerrainMode::GetPrerenderTextIdEnd() const noexcept {
-  return static_cast<int>(data::TextId::kStrength) + 1;
-}
-
-void UiTerrainMode::RenderWorld() {
+void UiTerrainMode::Render() {
   if (ui_slots_.GetSelectedSlotId() == -1) {
     ui_shared_resources_.glfw_context_.tile_renderer->Render();
   } else {
     ui_shared_resources_.glfw_context_.tile_renderer->RenderUiTerrain(
         ui_edit_.GetInstanceData().data.hmap);
   }
-}
-
-void UiTerrainMode::RenderPickingWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
-}
-
-void UiTerrainMode::Render() {
   // TODO: should we call it RenderUi() and RenderTerrain()?
   ui_edit_.RenderGraph();  // should be first (terrain render before ui render)
   ui_selection_.Render();
@@ -137,6 +122,7 @@ void UiTerrainMode::Render() {
 }
 
 void UiTerrainMode::RenderPicking() {
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
@@ -421,7 +407,7 @@ void KeyCallbackTransform(GLFWwindow* window, int key, int scancode, int action,
   } else if (key == GLFW_KEY_ENTER) {
     return terrain->ApplyTransform();
   }
-  if (terrain->ui_slots_.GetSlotId() == -1) {
+  if (terrain->ui_slots_.GetHoveredSlotId() == -1) {
     return;
   }
   if (key == GLFW_KEY_G) {
@@ -441,7 +427,7 @@ void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos) {
   auto glfw_context = reinterpret_cast<GlfwContext*>(global_data_void_ptr);
   auto terrain = dynamic_cast<UiTerrainMode*>(*glfw_context->cur_mode);
   terrain->mouse_transform_.TranslateSelectedVerticesUp(
-      xpos, ypos, terrain->ui_edit_.GetInstanceData().data.hmap,
+      xpos, ypos, terrain->ui_edit_.GetInstanceData().extra_heights,
       terrain->ui_selection_.GetMask(), terrain->tg_flatten_.TurnedOn());
 }
 

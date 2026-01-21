@@ -16,14 +16,6 @@ class UiTilesMode final : public IUiMode {
 
   void BindDefaultCallbacks() override {}
 
-  int GetPrerenderTextIdStart() const noexcept override { return 0; }
-
-  int GetPrerenderTextIdEnd() const noexcept override { return 0; }
-
-  void RenderWorld() override;
-
-  void RenderPickingWorld() override;
-
  protected:
   static void ScrollCallback(GLFWwindow* window, double xoffset,
                              double yoffset);

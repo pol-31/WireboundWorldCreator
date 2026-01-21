@@ -4,30 +4,9 @@
 #include <array>
 #include <vector>
 
-#include "../common/GraphBakeConfig.h"
-#include "../common/MapPoint.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
-
-struct RiverTraits {
-  std::vector<MapPoint> map_points;
-  std::vector<glm::uvec2> map_joints;
-  GraphBakeConfig config;
-  float transparency = 0.0f;
-  float viscosity = 1.0f;
-
-  // C++ can’t do pointer-to-nested-member directly?
-  float curve_amplitude = 3.0f;
-  float height_drift = 0.01f;
-  float height_raise = 0.0f;
-  float side_sagging = 0.01f;
-  float radius_flat = 1.0f;
-  float radius = 4.0f;
-
-  static constexpr int GetTraitsSize() noexcept { return 8; }
-
-  GraphBakeConfig GetGraphConfig() const noexcept;
-};
+#include "traits/RiverTraits.h"
 
 class UiEditRiver : public IUiEdit {
  public:
@@ -60,10 +39,15 @@ class UiEditRiver : public IUiEdit {
 
   void RenderPicking(float height) override;
 
+  std::vector<RiverTraits>& Data();
+
+  BaseInstanceData* GetBaseInstanceData(int id) override { return &Data()[id]; }
+
+  int GetInstancesNum() override { return Data().size(); }
+
   [[nodiscard]] RiverTraits& GetInstanceData() noexcept;
 
  private:
-  std::vector<RiverTraits> instances_;
   std::array<UiEditConfigSlTxt::Trait, RiverTraits::GetTraitsSize()> traits_;
   UiEditConfigSlTxt& value_config_;
   UiSharedResources& ui_shared_resources_;

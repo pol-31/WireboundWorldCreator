@@ -40,27 +40,20 @@ UiEditSlots::UiEditSlots(UiEditSlots&& other) noexcept
       ui_event_handler_({&pin_, &accept_, &name_, &color_palette_,
                          &color_brightness_, &random_generate_}),
       ui_shared_resources_(other.ui_shared_resources_),
-      base_instances_(other.base_instances_),
-      selected_id_(other.selected_id_),
       random_generator_(other.random_generator_) {
   hierarchy_ =
       UiHierarchy(&sprite_, &pin_, &accept_, &name_, &color_palette_,
                   &color_brightness_, &color_indicator_, &random_generate_);
 }
 
-void UiEditSlots::SetUp(IUiEdit* ui_edit,
-                        std::vector<BaseInstanceData>* base_instances,
-                        const int* selected_id) {
-  ui_edit_ = ui_edit;
-  base_instances_ = base_instances;
-  selected_id_ = selected_id;
-}
+void UiEditSlots::SetUp(IUiEdit* ui_edit) { ui_edit_ = ui_edit; }
 
 void UiEditSlots::SetInstance(int id) {
-  glm::vec3 hsb = RGBtoHSB((*base_instances_)[id].color);
+  auto data = ui_edit_->GetBaseInstanceData(id);
+  glm::vec3 hsb = RGBtoHSB(data->color);
   color_palette_.SetValue({hsb.x, hsb.y});
   color_brightness_.SetValue(hsb.z);
-  name_.SetText((*base_instances_)[id].name);
+  name_.SetText(data->name);
 }
 
 bool UiEditSlots::Press(int id) {
@@ -94,12 +87,13 @@ bool UiEditSlots::Render() {
   color_palette_.Render(mouse_pos);
   color_brightness_.Render(mouse_pos);
 
-  auto& model_data = (*base_instances_)[*selected_id_];
+  auto model_data =
+      ui_edit_->GetBaseInstanceData(*ui_edit_->GetSelectedIdPtr());
 
-  model_data.color =
+  model_data->color =
       HSBtoRGB(color_palette_.GetProgressX() * 0.85f,
                color_palette_.GetProgressY(), color_brightness_.GetProgress());
-  glUniform4fv(7, 1, glm::value_ptr(model_data.color));
+  glUniform4fv(7, 1, glm::value_ptr(model_data->color));
   color_indicator_.Render();
   auto color = glm::vec4{1.0f};
   glUniform4fv(7, 1, glm::value_ptr(color));
@@ -108,7 +102,7 @@ bool UiEditSlots::Render() {
   name_.RenderBack();
   ui_edit_->Render(sprite_.GetHeight());
 
-  model_data.name = name_.GetText();
+  model_data->name = name_.GetText();
   name_.RenderText();
   return false;
 }

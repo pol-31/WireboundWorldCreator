@@ -8,10 +8,10 @@ class UiMenu final : public UiWindowAppear {
  public:
   using Base = UiWindowAppear;
 
-  UiMenu(UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
-         IUiMode* terrain_mode, IUiMode* water_mode, IUiMode* placement_mode,
-         IUiMode* objects_mode, IUiMode* biomes_mode, IUiMode* tiles_mode,
-         IUiMode* player_mode, IUiMode*& cur_mode);
+  UiMenu(UiSharedResources& ui_shared_resources, TextRenderer& text_renderer,
+         WindowQueue& window_queue, IUiMode* terrain_mode, IUiMode* water_mode,
+         IUiMode* placement_mode, IUiMode* objects_mode, IUiMode* biomes_mode,
+         IUiMode* tiles_mode, IUiMode* player_mode, IUiMode*& cur_mode);
 
   UiMenu(UiMenu&& other) noexcept;
   UiMenu(const UiMenu& other) = delete;
@@ -26,8 +26,6 @@ class UiMenu final : public UiWindowAppear {
   bool Press(int id) override;
 
   void Release() override;
-
-  void SetSelectedArrow(int id);
 
   void SetMode(int id);
 
@@ -65,14 +63,16 @@ class UiMenu final : public UiWindowAppear {
   UiDynamicSprite save_data_;
   UiDynamicSprite load_data_;
 
-  UiEventHandler<static_cast<int>(data::VboIdMain::kMenuLoad) -
+  UiEventHandler<static_cast<int>(data::VboIdMain::kModeModeText) -
                  static_cast<int>(data::VboIdMain::kMenuTerrain) + 1>
       ui_event_handler_;
 
   float arrow_selected_angle_ = 0;
 
+  UiTextMenuId txt_mode_;
+
   IUiMode*& cur_mode_;
-  std::array<IUiMode*, 9> modes_;
+  std::array<IUiMode*, 7> modes_;
 };
 
 namespace menu {

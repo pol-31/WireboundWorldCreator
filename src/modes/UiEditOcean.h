@@ -34,6 +34,8 @@ class UiEditOcean : public IUiEdit {
 
   void Generate() override;
 
+  void GenerateAll() override;
+
   void RandomGenerate() override;
 
   bool Press(int id, float height) override;
@@ -44,15 +46,18 @@ class UiEditOcean : public IUiEdit {
 
   void RenderPicking(float height) override;
 
+  std::vector<OceanTraits>& Data();
+
+  BaseInstanceData* GetBaseInstanceData(int id) override { return &Data()[id]; }
+
+  int GetInstancesNum() override { return Data().size(); }
+
   [[nodiscard]] OceanTraits& GetInstanceData() noexcept;
 
  private:
-  std::vector<OceanTraits> instances_;
   UiEditConfigSlCfg& value_config_;
   UiConfigWindow& ui_ocean_config_;
-
   std::array<OceanLayerConfig, 3> ocean_layers_;
-
   UiSharedResources& ui_shared_resources_;
 };
 

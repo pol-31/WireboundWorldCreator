@@ -7,13 +7,31 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../common/GraphBakeConfig.h"
-#include "../common/MapPoint.h"
 #include "../common/Texture.h"
+#include "../modes/traits/BiomeTraits.h"
+#include "../modes/traits/ObjectTraits.h"
+#include "../modes/traits/OceanTraits.h"
+#include "../modes/traits/RiverTraits.h"
+#include "../modes/traits/RoadTraits.h"
+#include "../modes/traits/TerrainTraits.h"
 
-class RiverTraits;
-class RoadTraits;
-class ObjGraphTraits;
+static std::vector<TerrainTraits> ReadTerrain(std::istream& in);
+void WriteTerrain(std::ostream& out, const std::vector<TerrainTraits>& terrain);
+
+static std::vector<BiomeTraits> ReadBiomes(std::istream& in);
+void WriteBiomes(std::ostream& out, const std::vector<BiomeTraits>& biomes);
+
+static std::vector<RoadTraits> ReadRoads(std::istream& in);
+void WriteRoads(std::ostream& out, const std::vector<RoadTraits>& roads);
+
+static std::vector<RiverTraits> ReadRivers(std::istream& in);
+void WriteRivers(std::ostream& out, const std::vector<RiverTraits>& rivers);
+
+static std::vector<OceanTraits> ReadOceans(std::istream& in);
+void WriteOceans(std::ostream& out, const std::vector<OceanTraits>& oceans);
+
+static std::vector<ObjectTraits> ReadObjects(std::istream& in);
+void WriteObjects(std::ostream& out, const std::vector<ObjectTraits>& objects);
 
 /// contains all data for current tile
 struct Tile {
@@ -24,61 +42,62 @@ struct Tile {
   int pos_x = 0;
   int pos_y = 0;
 
-  Texture32F map_terrain_height{};  // r32f
+  /// --- in ---
+  std::vector<TerrainTraits> terrain_data;
+  std::vector<BiomeTraits> biomes_data;
+  std::vector<RoadTraits> roads_data;
+  std::vector<RiverTraits> rivers_data;
+  std::vector<OceanTraits> ocean_data;
+  std::vector<ObjectTraits> objects_data;
 
-  Texture map_terrain_normal{};  // rg8
-  Texture map_terrain_slope{};   // r8
-  Texture map_terrain_ao{};      // r8
-  Texture map_terrain_splat{};   // rgba8
+  Texture tex_placement_trees_;
+  Texture tex_placement_bushes_;
+  Texture tex_placement_tall_grass_;
+  Texture tex_placement_undergrowth_;
+
+  Texture32F map_ocean_surface_;
+
+  /// --- out ---
+  Texture32F map_terrain_height{};  // r32f
+  Texture map_terrain_normal{};     // rg8
+  Texture map_terrain_slope{};      // r8
+  Texture map_terrain_ao{};         // r8
+  Texture map_terrain_splat{};      // rgba8
 
   Texture32F map_terrain_erosion_thermal{};    // r32f
   Texture32F map_terrain_erosion_hydraulic{};  // r32f
   Texture32F map_water_accum{};                // r32f
   Texture map_water_flow{};                    // rg8
 
-  Texture map_river_mask;  // temp
-
-  /// placement
-  Texture tex_placement_trees_;
-  Texture tex_placement_bushes_;
-  Texture tex_placement_tall_grass_;
-  Texture tex_placement_undergrowth_;
+  // placement
   Texture tex_vegetation_mask;
-
   std::vector<GLuint> placement_trees_;
   std::vector<GLuint> placement_bushes_;
   std::vector<GLuint> placement_tall_grass_;
   std::vector<GLuint> placement_undergrowth_;
-  // TODO:
-  //  - density constants: 0.001, 0.01, 0.1, 0.2
-  //  - seeds: 0 1 2 3
 
-  /// roads
+  // roads
   Texture32F tex_roads_deform_;
   Texture32F tex_roads_df_;
   Texture tex_roads_mask_;
-  std::vector<RoadTraits>* roads_ = nullptr;
 
-  /// rivers
+  // rivers
   Texture32F tex_rivers_deform_;
   Texture32F tex_rivers_df_;
   Texture tex_rivers_mask_;
-  std::vector<RiverTraits>* rivers_ = nullptr;
 
   Texture32F map_terrain_height_raw_;  // before UpdatePipeline() to revert
-  Texture map_water_height{};          // rg8
-
-  Texture32F map_ocean_surface_;
+  Texture32F map_water_height{};
 
   std::vector<float> terrain_heights_;
-  std::vector<uint8_t> water_heights_;
+  std::vector<float> water_heights_;
 
   /// we need this at the beginning of working with each tile, so we could
   /// remove all last point sets and thus restore water height map to its
   /// initial state (input map_water_height + water from external tiles)
-  std::vector<uint8_t> water_heights_init_;
+  // std::vector<uint8_t> water_heights_init_;
 
-  std::vector<ObjGraphTraits>* objects_ = nullptr;
+  // std::vector<ObjGraphTraits>* objects_ = nullptr;
 
   Tile();
 
@@ -94,7 +113,12 @@ struct Tile {
   void ResetTerrain();
 
   float GetPositionY(float fx, float fy);
+
   float GetPositionY32(float fx, float fy);
+
+  void Parse(std::string_view path);
+
+  void Serialize(std::string_view path);
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_TILE_H_

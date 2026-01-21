@@ -26,13 +26,13 @@ void TileRenderer::Render() {
     water.Render();
   }
   if (show_placement_) {
-   //vegetation.Render(cur_tile_.map_scale, cur_tile_.map_terrain_height);
+    // vegetation.Render(cur_tile_.map_scale, cur_tile_.map_terrain_height);
   }
 }
 
 void TileRenderer::RenderUiTerrain(const Texture& tex_subtract) {
   environment_.Update();
-  //vegetation.Update(cur_tile_.map_scale);
+  // vegetation.Update(cur_tile_.map_scale);
   if (show_terrain_) {
     terrain.RenderSubtract(tex_subtract);
   }
@@ -40,7 +40,7 @@ void TileRenderer::RenderUiTerrain(const Texture& tex_subtract) {
     water.Render();
   }
   if (show_placement_) {
-    //vegetation.Render(cur_tile_.map_scale, cur_tile_.map_terrain_height);
+    // vegetation.Render(cur_tile_.map_scale, cur_tile_.map_terrain_height);
   }
 }
 
@@ -51,13 +51,10 @@ void TileRenderer::RenderPicking() {
 }
 
 void TileRenderer::BakeRivers(const std::vector<float>& heights_in) {
-  if (!cur_tile_.rivers_) {
-    return;
-  }
   int size = details::gTerrainSize;
   std::vector<uint8_t> distances(size * size, 0);  // now it's mask, not df
   std::vector<float> heights_out(size * size, 0.0f);
-  for (const auto& r : *cur_tile_.rivers_) {
+  for (const auto& r : cur_tile_.rivers_data) {
     BakeGraphs(r.GetGraphConfig(), heights_in, heights_out, distances,
                r.map_points, r.map_joints);
   }
@@ -69,13 +66,10 @@ void TileRenderer::BakeRivers(const std::vector<float>& heights_in) {
 }
 
 void TileRenderer::BakeRoads(const std::vector<float>& heights_in) {
-  if (!cur_tile_.roads_) {
-    return;
-  }
   int size = details::gTerrainSize;
   std::vector<uint8_t> distances(size * size, 0);  // now it's mask, not df
   std::vector<float> heights_out(size * size, 0.0f);
-  for (const auto& r : *cur_tile_.roads_) {
+  for (const auto& r : cur_tile_.roads_data) {
     BakeGraphs(r.GetGraphConfig(), heights_in, heights_out, distances,
                r.map_points, r.map_joints);
   }
@@ -87,16 +81,7 @@ void TileRenderer::BakeRoads(const std::vector<float>& heights_in) {
 }
 
 void TileRenderer::UpdatePipeline() {
-  // TODO:
-  //  - bake rivers
-  //  - bake roads
-  //  - add terrain + rivers + roads * river_mask
-  //  - place trees - mask(rivers, + roads)
-  //  - place bushes - mask(rivers, roads, + trees)
-  //  - place tall_grass - mask(rivers, roads, + bushes)
-  //  - place undergrowth - mask(rivers, roads, + tall_grass)
-
-  // splatmask (?)
+  // TODO: splatmask (?)
 
   int size = details::gTerrainSize;
   std::vector<float> heights_in(size * size, 0.0f);
@@ -125,6 +110,7 @@ void TileRenderer::UpdatePipeline() {
   glGetTextureImage(cur_tile_.tex_vegetation_mask.GetId(), 0, GL_RED,
                     GL_UNSIGNED_BYTE, size * size, vegetation_mask_data.data());
 
+  // vegetation.UpdatePipeline() uses same pipeline, the last win
   cur_tile_.placement_trees_ = vegetation.UpdatePipeline(
       vegetation_mask_data, cur_tile_.tex_placement_trees_, 0.001f, 0);
   cur_tile_.placement_bushes_ = vegetation.UpdatePipeline(

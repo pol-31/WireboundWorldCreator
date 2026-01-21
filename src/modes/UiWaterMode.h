@@ -12,7 +12,6 @@
 #include "UiEditOcean.h"
 #include "UiEditRiver.h"
 
-/// two modes: ocean (Ifft), river (Swelbm)
 class UiWaterMode final : public IUiMode {
  public:
   UiWaterMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
@@ -28,14 +27,6 @@ class UiWaterMode final : public IUiMode {
   void Setup() override;
 
   void BindDefaultCallbacks() override;
-
-  int GetPrerenderTextIdStart() const noexcept override;
-
-  int GetPrerenderTextIdEnd() const noexcept override;
-
-  void RenderWorld() override;
-
-  void RenderPickingWorld() override;
 
   void HandleSelection(const std::set<GLuint>& selected_ids);
 
@@ -53,9 +44,6 @@ class UiWaterMode final : public IUiMode {
   UiSelectedSprite sp_selected_mode_;
 
   UiSlots& ui_slots_;
-
-  std::vector<BaseInstanceData> instances_ocean_;
-  std::vector<BaseInstanceData> instances_river_;
   UiEditOcean ui_edit_ocean_;
   UiEditRiver ui_edit_river_;
 

@@ -80,9 +80,10 @@ void UiPlacementMode::OnSelectedSlotChanged() {
 }
 
 void UiPlacementMode::Setup() {
-  ui_slots_.Setup(&instances_, &ui_edit_,
-                  [this] { this->OnSelectedSlotChanged(); });
-  ui_edit_.SetUp(&instances_, &ui_slots_.GetSelectedIdRef());
+  ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
+      static_cast<int>(data::TextId::kPlacementCurveAmplitude),
+      static_cast<int>(data::TextId::kPlacementRadiusFlat) + 1);
+  ui_slots_.Setup(&ui_edit_, [this] { this->OnSelectedSlotChanged(); });
   BindDefaultCallbacks();
   btn_trees_.Press();
   auto camera = ui_shared_resources_.glfw_context_.camera;
@@ -101,23 +102,8 @@ void UiPlacementMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-int UiPlacementMode::GetPrerenderTextIdStart() const noexcept {
-  return static_cast<int>(data::TextId::kScaleTerrain);
-}
-
-int UiPlacementMode::GetPrerenderTextIdEnd() const noexcept {
-  return static_cast<int>(data::TextId::kStrength) + 1;
-}
-
-void UiPlacementMode::RenderWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->Render();
-}
-
-void UiPlacementMode::RenderPickingWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
-}
-
 void UiPlacementMode::Render() {
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
   if (!IsPreviewMode()) {
     ui_selection_.Render();
     ui_selection_.RenderOnSurface(
@@ -125,13 +111,14 @@ void UiPlacementMode::Render() {
              .map_terrain_height);
   }
   if (ui_slots_.GetSelectedSlotId() != -1) {
-    map_points_.RenderPoints(ui_slots_.GetInstanceBaseData()->color);
+    auto color = ui_slots_.GetInstanceBaseData()->color;
+    map_points_.RenderPoints(color);
+    auto map_scale =
+        ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+    map_points_.RenderJoints(ui_shared_resources_.glfw_context_.tile_renderer
+                                 ->cur_tile_.map_terrain_height,
+                             map_scale, color);
   }
-  auto map_scale =
-      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
-  map_points_.RenderJoints(ui_shared_resources_.glfw_context_.tile_renderer
-                               ->cur_tile_.map_terrain_height,
-                           map_scale);
 
   mdl_manager_.RenderPlacement();
 
@@ -157,6 +144,7 @@ void UiPlacementMode::Render() {
 }
 
 void UiPlacementMode::RenderPicking() {
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
   map_points_.RenderPickingPoints();
 
   glActiveTexture(GL_TEXTURE0);

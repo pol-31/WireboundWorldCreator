@@ -22,14 +22,16 @@ UiBiomesMode::UiBiomesMode(UiSharedResources& ui_shared_resources,
       map_points_(mdl_manager) {}
 
 void UiBiomesMode::Setup() {
-  ui_slots_.Setup(&biomes_, &ui_edit_, [this] {
+  ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
+      static_cast<int>(data::TextId::kWindAngle),
+      static_cast<int>(data::TextId::kSunColorB) + 1);
+  ui_slots_.Setup(&ui_edit_, [this] {
     std::vector<MapPoint>* points = nullptr;
     if (ui_slots_.GetSelectedSlotId() != -1) {
       points = &ui_edit_.GetInstanceData().map_points;
     }
     map_points_.SetData(points, nullptr);
   });
-  ui_edit_.SetUp(&biomes_, &ui_slots_.GetSelectedIdRef());
   BindDefaultCallbacks();
   auto camera = ui_shared_resources_.glfw_context_.camera;
   camera->SetPosition(glm::vec3{5.0f});
@@ -52,23 +54,8 @@ void UiBiomesMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-int UiBiomesMode::GetPrerenderTextIdStart() const noexcept {
-  return static_cast<int>(data::TextId::kScaleTerrain);
-}
-
-int UiBiomesMode::GetPrerenderTextIdEnd() const noexcept {
-  return static_cast<int>(data::TextId::kSunB) + 1;
-}
-
-void UiBiomesMode::RenderWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->Render();
-}
-
-void UiBiomesMode::RenderPickingWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
-}
-
 void UiBiomesMode::Render() {
+  ui_shared_resources_.glfw_context_.tile_renderer->Render();
   ui_selection_.Render();
   if (ui_slots_.GetSelectedSlotId() != -1) {
     map_points_.RenderPoints(ui_slots_.GetInstanceBaseData()->color);
@@ -90,6 +77,7 @@ void UiBiomesMode::Render() {
 }
 
 void UiBiomesMode::RenderPicking() {
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
   map_points_.RenderPickingPoints();
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();

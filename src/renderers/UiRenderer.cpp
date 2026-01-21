@@ -19,22 +19,23 @@ UiRenderer::UiRenderer(GlfwContext& global_glfw_data_,
       ui_edit_1_(ui_shared_resources_, text_renderer_),
       ui_edit_2_(ui_shared_resources_, text_renderer_),
       terrain_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
-               ui_edit_slots_, ui_edit_1_,
-               tile_renderer.cur_tile_, ui_config_window_),
+               ui_edit_slots_, ui_edit_1_, tile_renderer.cur_tile_,
+               ui_config_window_),
       water_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
-      ui_edit_slots_, ui_edit_1_, ui_edit_2_,
-             ui_config_window_, mdl_manager_),
+             ui_edit_slots_, ui_edit_1_, ui_edit_2_, ui_config_window_,
+             mdl_manager_),
       biomes_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
-        ui_edit_slots_, ui_edit_2_, mdl_manager_),
+              ui_edit_slots_, ui_edit_2_, mdl_manager_),
       objects_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
-      ui_edit_slots_, ui_edit_2_, mdl_manager_),
-      placement_(ui_shared_resources_, ui_slots_, windows_,
-        ui_edit_slots_, ui_edit_2_, mdl_manager_),
+               ui_edit_slots_, ui_edit_2_, mdl_manager_),
+      placement_(ui_shared_resources_, ui_slots_, windows_, ui_edit_slots_,
+                 ui_edit_2_, mdl_manager_),
       tiles_(ui_shared_resources_, windows_),
       player_(ui_shared_resources_, windows_, text_renderer_,
               tile_renderer.cur_tile_, mdl_manager_),
-      ui_menu_(ui_shared_resources_, windows_, &terrain_, &water_, &placement_,
-               &objects_, &biomes_, &tiles_, &player_, cur_mode_),
+      ui_menu_(ui_shared_resources_, text_renderer_, windows_, &terrain_,
+               &water_, &placement_, &objects_, &biomes_, &tiles_, &player_,
+               cur_mode_),
       ui_settings_({data::VboIdMain::kSettingsDesk}, 2.0f,
                    {{data::VboIdMain::kSettingsDeskPinBack, []() {}},
                     {data::VboIdMain::kSettingsDeskPinPoint}},
@@ -113,7 +114,6 @@ UiRenderer::UiRenderer(GlfwContext& global_glfw_data_,
 }
 
 void UiRenderer::Render() {
-  cur_mode_->RenderWorld();
   cur_mode_->Render();
 #ifndef NDEBUG
   debug::gUiAltMode = glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS;
@@ -163,14 +163,13 @@ void UiRenderer::Render() {
 }
 
 void UiRenderer::RenderPicking() {
-  cur_mode_->RenderPickingWorld();
+  cur_mode_->RenderPicking();
+
   glBindVertexArray(ui_shared_resources_.vao_ui_);
 
   ui_shared_resources_.tex_ui_.Bind();
   ui_shared_resources_.shader_sp_picking_.Bind();
   ui_compass_.RenderPicking();
-
-  cur_mode_->RenderPicking();
 
   // because mode changes vao (3d model render)
   glActiveTexture(GL_TEXTURE0);
@@ -184,23 +183,20 @@ void UiRenderer::RenderPicking() {
 void UiRenderer::Press(int key, int action) { ui_buttons_.Press(key, action); }
 
 void UiRenderer::Parse() {
-  // ui_menu_.Parse();
-  terrain_.Parse();
-  water_.Parse();
-  biomes_.Parse();
-  objects_.Parse();
-  placement_.Parse();
-  tiles_.Parse();
+  // TODO: GenerateAll() for all (maybe)
+  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.Parse("");
+  terrain_.ui_edit_.GenerateAll();
+  water_.ui_edit_river_.Generate();
+  water_.ui_edit_ocean_.GenerateAll();
+  biomes_.ui_edit_.Generate();
+  objects_.ui_edit_.Generate();
+  placement_.ui_edit_.Generate();
+  ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline();
+  terrain_.ui_bake_.Bake(1000.0f, 1000.0f, 0.1f);
 }
 
 void UiRenderer::Serialize() {
-  // ui_menu_.Serialize();
-  terrain_.Serialize();
-  water_.Serialize();
-  biomes_.Serialize();
-  objects_.Serialize();
-  placement_.Serialize();
-  tiles_.Serialize();
+  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.Serialize("");
 }
 
 void UiRenderer::Init() {

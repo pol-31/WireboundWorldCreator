@@ -58,14 +58,6 @@ void UiTilesMode::Render() {
   btn_right_.Render();
 }
 
-void UiTilesMode::RenderWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->Render();
-}
-
-void UiTilesMode::RenderPickingWorld() {
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
-}
-
 void UiTilesMode::RenderPicking() {
   glActiveTexture(GL_TEXTURE0);
   ui_shared_resources_.tex_ui_.Bind();

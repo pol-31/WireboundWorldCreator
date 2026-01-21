@@ -24,14 +24,6 @@ class UiBiomesMode final : public IUiMode {
 
   void BindDefaultCallbacks() override;
 
-  int GetPrerenderTextIdStart() const noexcept override;
-
-  int GetPrerenderTextIdEnd() const noexcept override;
-
-  void RenderWorld() override;
-
-  void RenderPickingWorld() override;
-
   void HandleSelection(const std::set<GLuint>& selected_ids);
 
   void CancelTransform();
@@ -41,7 +33,6 @@ class UiBiomesMode final : public IUiMode {
   UiDynamicSprite sp_biome_;
 
   UiSlots& ui_slots_;
-  std::vector<BaseInstanceData> biomes_;
   UiEditBiomes ui_edit_;
 
   UiSelection ui_selection_;

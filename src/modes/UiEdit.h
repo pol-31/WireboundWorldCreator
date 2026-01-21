@@ -16,8 +16,7 @@ class UiEditSlots final : public UiWindowAppear {
 
   UiEditSlots(UiEditSlots&& other) noexcept;
 
-  void SetUp(IUiEdit* ui_edit, std::vector<BaseInstanceData>* base_instances,
-             const int* selected_id);
+  void SetUp(IUiEdit* ui_edit);
 
   void SetInstance(int id);
 
@@ -32,8 +31,6 @@ class UiEditSlots final : public UiWindowAppear {
   void RenderPicking() override;
 
   IUiEdit* ui_edit_ = nullptr;
-  const int* selected_id_ = nullptr;
-  std::vector<BaseInstanceData>* base_instances_ = nullptr;
 
   std::mt19937 random_generator_;
 
@@ -60,13 +57,15 @@ class IUiEdit {
 
   virtual void HideAll() = 0;
   virtual void CreateInstance() = 0;
-  virtual void UpdateConfig() = 0;         // e.g. UpdateHmap()
-  virtual void SetInstanceId(int id) = 0;  // insctances_[id]
+  virtual void UpdateConfig() = 0;
+  virtual void SetInstanceId(int id) = 0;
+  virtual int GetInstancesNum() = 0;
 
-  virtual void RemoveInstance(GLuint id) {}
+  virtual void RemoveInstance(GLuint id) = 0;
   virtual void Reset() = 0;
 
   virtual void Generate() = 0;
+  virtual void GenerateAll() {}
   virtual void RandomGenerate() = 0;
 
   virtual bool Press(int id, float height) = 0;
@@ -74,14 +73,16 @@ class IUiEdit {
   virtual void Render(float height) = 0;
   virtual void RenderPicking(float height) = 0;
 
-  void SetUp(std::vector<BaseInstanceData>* base_instances,
-             const int* selected_id) {
-    ui_.SetUp(this, base_instances, selected_id);
-  }
+  virtual BaseInstanceData* GetBaseInstanceData(int id) = 0;
+
+  void SetUp() { ui_.SetUp(this); }
 
   void Show() { ui_.Show(); }
 
+  int* GetSelectedIdPtr() { return &selected_id_; }
+
   UiEditSlots& ui_;
+  int selected_id_ = -1;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIEDIT_H_

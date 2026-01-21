@@ -27,37 +27,37 @@ UiEditTerrain::UiEditTerrain(Tile& cur_tile,
       shader_flatten_step_("../shaders/generate_shaders/FlattenStep.comp"),
       shader_flatten_merge_("../shaders/generate_shaders/FlattenMerge.comp"),
 
-      noise_perlin_("../shaders/noise_shaders/Perlin.comp",
-                    {{10.0f, 10.0f, 20.0f}},
+      gen_perlin_("../shaders/noise_shaders/Perlin.comp",
+                  {{10.0f, 10.0f, 20.0f}},
+                  {{data::TextId::kScaleX, data::TextId::kScaleY,
+                    data::TextId::kSeed}}),
+      gen_cellular_("../shaders/noise_shaders/Cellular.comp",
+                    {{10.0f, 10.0f, 1.0f, 20.0f}},
                     {{data::TextId::kScaleX, data::TextId::kScaleY,
-                      data::TextId::kSeed}}),
-      noise_cellular_("../shaders/noise_shaders/Cellular.comp",
-                      {{10.0f, 10.0f, 1.0f, 20.0f}},
-                      {{data::TextId::kScaleX, data::TextId::kScaleY,
-                        data::TextId::kJitter, data::TextId::kSeed}}),
-      noise_metaballs_("../shaders/noise_shaders/Metaballs.comp",
-                       {{10.0f, 10.0f, 1.0f, 20.0f}},
-                       {{data::TextId::kScaleX, data::TextId::kScaleY,
-                         data::TextId::kJitter, data::TextId::kSeed}}),
-      noise_fbm_grid_(
+                      data::TextId::kJitter, data::TextId::kSeed}}),
+      gen_metaballs_("../shaders/noise_shaders/Metaballs.comp",
+                     {{10.0f, 10.0f, 1.0f, 20.0f}},
+                     {{data::TextId::kScaleX, data::TextId::kScaleY,
+                       data::TextId::kJitter, data::TextId::kSeed}}),
+      gen_fbm_grid_(
           "../shaders/noise_shaders/FbmGrid.comp",
           {{10.0f, 10.0f, 3.0f, 20.0f, 2.0f, 32.0f, 10.0f, 1.0f, 20.0f}},
           {{data::TextId::kScaleX, data::TextId::kScaleY,
             data::TextId::kOctaves, data::TextId::kShift, data::TextId::kGain,
             data::TextId::kLacunarity, data::TextId::kWarpStrength,
             data::TextId::kOctaveFactor, data::TextId::kSeed}}),
-      noise_fbm_multi_("../shaders/noise_shaders/FbmMulti.comp",
-                       {{10.0f, 10.0f, 32.0f, 3.0f, 20.0f}},
+      gen_fbm_multi_("../shaders/noise_shaders/FbmMulti.comp",
+                     {{10.0f, 10.0f, 32.0f, 3.0f, 20.0f}},
+                     {{data::TextId::kScaleX, data::TextId::kScaleY,
+                       data::TextId::kLacunarity, data::TextId::kOctaves,
+                       data::TextId::kSeed}}),
+      gen_fbmd_perlin_("../shaders/noise_shaders/FbmdPerlin.comp",
+                       {{10.0f, 10.0f, 3.0f, 2.0f, 32.0f, 1.0f, 1.0f, 20.0f}},
                        {{data::TextId::kScaleX, data::TextId::kScaleY,
-                         data::TextId::kLacunarity, data::TextId::kOctaves,
-                         data::TextId::kSeed}}),
-      noise_fbmd_perlin_("../shaders/noise_shaders/FbmdPerlin.comp",
-                         {{10.0f, 10.0f, 3.0f, 2.0f, 32.0f, 1.0f, 1.0f, 20.0f}},
-                         {{data::TextId::kScaleX, data::TextId::kScaleY,
-                           data::TextId::kOctaves, data::TextId::kGain,
-                           data::TextId::kLacunarity, data::TextId::kSlopeness,
-                           data::TextId::kOctaveFactor, data::TextId::kSeed}}),
-      noise_fbm_warp_(
+                         data::TextId::kOctaves, data::TextId::kGain,
+                         data::TextId::kLacunarity, data::TextId::kSlopeness,
+                         data::TextId::kOctaveFactor, data::TextId::kSeed}}),
+      gen_fbm_warp_(
           "../shaders/noise_shaders/FbmWarp.comp",
           {{10.0f, 10.0f, 3.0f, 2.0f, 32.0f, 1.0f, 1.0f, 20.0f, 5.0f, 5.0f}},
           {{data::TextId::kScaleX, data::TextId::kScaleY,
@@ -65,7 +65,7 @@ UiEditTerrain::UiEditTerrain(Tile& cur_tile,
             data::TextId::kLacunarity, data::TextId::kSlopeness,
             data::TextId::kOctaveFactor, data::TextId::kSeed, data::TextId::kQ,
             data::TextId::kR}}),
-      noise_fmb_perlin_warp_(
+      gen_fbm_perlin_warp_(
           "../shaders/noise_shaders/FbmPerlinWarp.comp",
           {{10.0f, 10.0f, 3.0f, 2.0f, 32.0f, 1.0f, 1.0f, 20.0f, 5.0f, 5.0f}},
           {{data::TextId::kScaleX, data::TextId::kScaleY,
@@ -73,9 +73,9 @@ UiEditTerrain::UiEditTerrain(Tile& cur_tile,
             data::TextId::kLacunarity, data::TextId::kSlopeness,
             data::TextId::kOctaveFactor, data::TextId::kSeed, data::TextId::kQ,
             data::TextId::kR}}),
-      noises_({&noise_perlin_, &noise_cellular_, &noise_metaballs_,
-               &noise_fbm_grid_, &noise_fbm_multi_, &noise_fbmd_perlin_,
-               &noise_fbm_warp_, &noise_fmb_perlin_warp_}),
+      noises_({&gen_perlin_, &gen_cellular_, &gen_metaballs_, &gen_fbm_grid_,
+               &gen_fbm_multi_, &gen_fbmd_perlin_, &gen_fbm_warp_,
+               &gen_fbm_perlin_warp_}),
 
       ui_shared_resources_(ui_shared_resources),
       ui_noise_config_(ui_noise_config) {
@@ -96,19 +96,18 @@ UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
 
       value_config_(other.value_config_),
 
-      noise_perlin_(std::move(other.noise_perlin_)),
-      noise_cellular_(std::move(other.noise_cellular_)),
-      noise_metaballs_(std::move(other.noise_metaballs_)),
-      noise_fbm_grid_(std::move(other.noise_fbm_grid_)),
-      noise_fbm_multi_(std::move(other.noise_fbm_multi_)),
-      noise_fbmd_perlin_(std::move(other.noise_fbmd_perlin_)),
-      noise_fbm_warp_(std::move(other.noise_fbm_warp_)),
-      noise_fmb_perlin_warp_(std::move(other.noise_fmb_perlin_warp_)),
-      noises_({&noise_perlin_, &noise_cellular_, &noise_metaballs_,
-               &noise_fbm_grid_, &noise_fbm_multi_, &noise_fbmd_perlin_,
-               &noise_fbm_warp_, &noise_fmb_perlin_warp_}),
+      gen_perlin_(std::move(other.gen_perlin_)),
+      gen_cellular_(std::move(other.gen_cellular_)),
+      gen_metaballs_(std::move(other.gen_metaballs_)),
+      gen_fbm_grid_(std::move(other.gen_fbm_grid_)),
+      gen_fbm_multi_(std::move(other.gen_fbm_multi_)),
+      gen_fbmd_perlin_(std::move(other.gen_fbmd_perlin_)),
+      gen_fbm_warp_(std::move(other.gen_fbm_warp_)),
+      gen_fbm_perlin_warp_(std::move(other.gen_fbm_perlin_warp_)),
+      noises_({&gen_perlin_, &gen_cellular_, &gen_metaballs_, &gen_fbm_grid_,
+               &gen_fbm_multi_, &gen_fbmd_perlin_, &gen_fbm_warp_,
+               &gen_fbm_perlin_warp_}),
       ui_shared_resources_(other.ui_shared_resources_),
-      instances_(std::move(other.instances_)),
       ui_noise_config_(other.ui_noise_config_) {
   // value_config_.AttachToHierarchy(hierarchy_);
 }
@@ -119,76 +118,87 @@ void UiEditTerrain::HideAll() {
 }
 
 void UiEditTerrain::CreateInstance() {
-  instances_.push_back(TerrainInstanceData{});
-  instances_.back().data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
-  glClearTexImage(instances_.back().data.hmap.GetId(), 0, GL_RED, GL_FLOAT,
+  Data().push_back(TerrainTraits{});
+  Data().back().data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
+  glClearTexImage(Data().back().data.hmap.GetId(), 0, GL_RED, GL_FLOAT,
+                  nullptr);
+  Data().back().extra_heights = Texture32F(details::gTerrainSize, GL_R32F);
+  glClearTexImage(Data().back().extra_heights.GetId(), 0, GL_RED, GL_FLOAT,
                   nullptr);
   UpdateConfig();
 }
 
 void UiEditTerrain::UpdateConfig() {
   using namespace utility;
-  float color_black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+  int size = details::gTerrainSize;
   Texture32F hmap(details::gTerrainSize, GL_R32F);
   glBindTexture(GL_TEXTURE_2D, hmap.GetId());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+  float color_black[] = {0.0f, 0.0f, 0.0f, 0.0f};
   glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color_black);
+  glClearTexImage(hmap.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
 
-  int size = details::gTerrainSize;
-  hmap.Bind();
-  glClearTexImage(hmap.GetId(), 0, GL_RED, GL_FLOAT, color_black);
   Texture32F tex_mesh(details::gTerrainSize, GL_R32F);
-  for (int i = 0; i < instances_.size(); ++i) {
-    if (!(*ui_.base_instances_)[i].do_show) {
+  for (int i = 0; i < Data().size(); ++i) {
+    if (!Data()[i].do_show) {
       continue;
     }
-    glClearTexImage(tex_mesh.GetId(), 0, GL_RED, GL_FLOAT, color_black);
+    glClearTexImage(tex_mesh.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
     shader_flatten_prep_.Bind();
     glm::mat4 model = glm::mat4{1.0f};
     // scale to -512;512 I guess... (without it translation's wrong)
-    model = glm::translate(model, instances_[i].translate * 16.0f);
-    model *= glm::mat4_cast(instances_[i].rotate);
-    model = glm::scale(model, instances_[i].scale);
+    model = glm::translate(model, Data()[i].translate * 16.0f);
+    model *= glm::mat4_cast(Data()[i].rotate);
+    model = glm::scale(model, Data()[i].scale);
 
     glm::mat4 inverseTransform = glm::inverse(model);
     glUniformMatrix4fv(4, 1, false, glm::value_ptr(inverseTransform));
 
-    BindImageTexture(0, instances_[i].data.hmap, GL_READ_ONLY);
+    BindImageTexture(0, Data()[i].data.hmap, GL_READ_ONLY);
     BindImageTexture(1, tex_mesh, GL_WRITE_ONLY);
     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
-    UnBindImageTexture(0, instances_[i].data.hmap, GL_READ_ONLY);
-    UnBindImageTexture(1, tex_mesh, GL_WRITE_ONLY);
 
     /// --- flattening section ---
-    /*int gradient_id = CalculateGradientId(instances_[i].rotate);
-    if (false && gradient_id != -1) {
-      shader_flatten_step_.Bind();
-      GLuint changed_prev = -1;
-      GLuint changed = 0;
-      BindImageTexture(0, tex_mesh, GL_READ_WRITE);
-      glUniform1i(3, gradient_id);
-      glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_atomic_modified_);
-      while (changed_prev != changed) {
-        glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        changed_prev = changed;
-        glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(GLuint),
-    &changed); std::cout << changed << " __" << std::endl;
-      }
-      glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-      UnBindImageTexture(0, tex_mesh, GL_READ_WRITE);
-    }*/
+    // int gradient_id = CalculateGradientId(Data()[i].rotate);
+    // if (false && gradient_id != -1) {
+    //   shader_flatten_step_.Bind();
+    //   GLuint changed_prev = -1;
+    //   GLuint changed = 0;
+    //   BindImageTexture(0, tex_mesh, GL_READ_WRITE);
+    //   glUniform1i(3, gradient_id);
+    //   glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_atomic_modified_);
+    //   while (changed_prev != changed) {
+    //     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
+    //     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    //     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    //     changed_prev = changed;
+    //     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(GLuint),
+    // &changed); std::cout << changed << " __" << std::endl;
+    //   }
+    //   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    //   UnBindImageTexture(0, tex_mesh, GL_READ_WRITE);
+    // }
 
     shader_flatten_merge_.Bind();
     BindImageTexture(0, hmap, GL_READ_WRITE);
     BindImageTexture(1, tex_mesh, GL_READ_ONLY);
     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-    UnBindImageTexture(0, hmap, GL_READ_WRITE);
-    UnBindImageTexture(1, tex_mesh, GL_READ_ONLY);
+
+    std::vector<float> heights_in(size * size, 0.0f);
+    glGetTextureImage(hmap.GetId(), 0, GL_RED,  // valid data
+                      GL_FLOAT, size * size * sizeof(float), heights_in.data());
+
+    auto& extra_heights = Data()[i].extra_heights;
+
+    shader_merge_noises_.Bind();
+    glUniform1f(2, 1.0f);
+    BindImageTexture(0, hmap, GL_READ_WRITE);
+    BindImageTexture(1, extra_heights, GL_READ_ONLY);
+    glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   }
 
   ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
@@ -201,103 +211,80 @@ void UiEditTerrain::UpdateConfig() {
 
 void UiEditTerrain::SetInstanceId(int id) {
   ui_.SetInstance(id);
-  const auto& noise_data = instances_[id].data;
-  noise_perlin_.SetConfig(
-      &noise_data.perlin,
-      reinterpret_cast<const float*>(
-          static_cast<const NoisePerlinData*>(&noise_data.perlin)));
-  noise_cellular_.SetConfig(
-      &noise_data.cellular,
-      reinterpret_cast<const float*>(
-          static_cast<const NoiseCellularData*>(&noise_data.cellular)));
-  noise_metaballs_.SetConfig(
-      &noise_data.metaballs,
-      reinterpret_cast<const float*>(
-          static_cast<const NoiseMetaballsData*>(&noise_data.metaballs)));
-  noise_fbm_grid_.SetConfig(
-      &noise_data.fbm_grid,
-      reinterpret_cast<const float*>(
-          static_cast<const NoiseFbmGridData*>(&noise_data.fbm_grid)));
-  noise_fbm_multi_.SetConfig(
-      &noise_data.fbm_multi,
-      reinterpret_cast<const float*>(
-          static_cast<const NoiseFbmMultiData*>(&noise_data.fbm_multi)));
-  noise_fbmd_perlin_.SetConfig(
-      &noise_data.fbmd_perlin,
-      reinterpret_cast<const float*>(
-          static_cast<const NoiseFbmdPerlinData*>(&noise_data.fbmd_perlin)));
-  noise_fbm_warp_.SetConfig(
-      &noise_data.fbm_warp,
-      reinterpret_cast<const float*>(
-          static_cast<const NoiseFbmWarpData*>(&noise_data.fbm_warp)));
-  noise_fmb_perlin_warp_.SetConfig(
-      &noise_data.fbm_perlin_warp,
-      reinterpret_cast<const float*>(static_cast<const NoiseFbmPerlinWarpData*>(
-          &noise_data.fbm_perlin_warp)));
-  UpdateConfig();
+  auto& noise_data = Data()[id].data;
+  gen_perlin_.SetConfig(&noise_data.perlin, {&noise_data.perlin.scale_x, 3});
+  gen_cellular_.SetConfig(&noise_data.cellular,
+                          {&noise_data.cellular.scale_x, 4});
+  gen_metaballs_.SetConfig(&noise_data.metaballs,
+                           {&noise_data.metaballs.scale_x, 4});
+  gen_fbm_grid_.SetConfig(&noise_data.fbm_grid,
+                          {&noise_data.fbm_grid.scale_x, 9});
+  gen_fbm_multi_.SetConfig(&noise_data.fbm_multi,
+                           {&noise_data.fbm_multi.scale_x, 5});
+  gen_fbmd_perlin_.SetConfig(&noise_data.fbmd_perlin,
+                             {&noise_data.fbmd_perlin.scale_x, 8});
+  gen_fbm_warp_.SetConfig(&noise_data.fbm_warp,
+                          {&noise_data.fbm_warp.scale_x, 10});
+  gen_fbm_perlin_warp_.SetConfig(&noise_data.fbm_perlin_warp,
+                                 {&noise_data.fbm_perlin_warp.scale_x, 10});
 }
 
 void UiEditTerrain::RemoveInstance(GLuint id) {
-  instances_.erase(instances_.begin() + id);
+  Data().erase(Data().begin() + id);
   UpdateConfig();
 }
 
 void UiEditTerrain::Reset() {
-  instances_.clear();
+  Data().clear();
   UpdateConfig();
 }
 
 void UiEditTerrain::Generate() {
-  glm::vec2 resolution = glm::vec2{details::gTerrainSize};
-  NoiseTerrainData terrain_data;
-  terrain_data.hmap = Texture32F(resolution.x, GL_R32F);
-  float color_black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-  glClearTexImage(terrain_data.hmap.GetId(), 0, GL_RED, GL_FLOAT, color_black);
-
+  auto& data = Data()[selected_id_].data;
+  data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
+  glClearTexImage(data.hmap.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
   Texture32F tex_noise;
-  glClearTexImage(tex_noise.GetId(), 0, GL_RED, GL_FLOAT, color_black);
-  if (noises_[0]->GetBaseData()->strength != 0.0f) {
-    tex_noise = noise_perlin_.Generate(reinterpret_cast<float*>(
-        static_cast<NoisePerlinData*>(&terrain_data.perlin)));
-    MergeLayers(terrain_data.hmap, tex_noise, noises_[0]->GetBaseData());
-  }
-  if (noises_[1]->GetBaseData()->strength != 0.0f) {
-    tex_noise = noise_cellular_.Generate(reinterpret_cast<float*>(
-        static_cast<NoiseCellularData*>(&terrain_data.cellular)));
-    MergeLayers(terrain_data.hmap, tex_noise, noises_[1]->GetBaseData());
-  }
-  if (noises_[2]->GetBaseData()->strength != 0.0f) {
-    tex_noise = noise_metaballs_.Generate(reinterpret_cast<float*>(
-        static_cast<NoiseMetaballsData*>(&terrain_data.metaballs)));
-    MergeLayers(terrain_data.hmap, tex_noise, noises_[2]->GetBaseData());
-  }
-  if (noises_[3]->GetBaseData()->strength != 0.0f) {
-    tex_noise = noise_fbm_grid_.Generate(reinterpret_cast<float*>(
-        static_cast<NoiseFbmGridData*>(&terrain_data.fbm_grid)));
-    MergeLayers(terrain_data.hmap, tex_noise, noises_[3]->GetBaseData());
-  }
-  if (noises_[4]->GetBaseData()->strength != 0.0f) {
-    tex_noise = noise_fbm_multi_.Generate(reinterpret_cast<float*>(
-        static_cast<NoiseFbmMultiData*>(&terrain_data.fbm_multi)));
-    MergeLayers(terrain_data.hmap, tex_noise, noises_[4]->GetBaseData());
-  }
-  if (noises_[5]->GetBaseData()->strength != 0.0f) {
-    tex_noise = noise_fbmd_perlin_.Generate(reinterpret_cast<float*>(
-        static_cast<NoiseFbmdPerlinData*>(&terrain_data.fbmd_perlin)));
-    MergeLayers(terrain_data.hmap, tex_noise, noises_[5]->GetBaseData());
-  }
-  if (noises_[6]->GetBaseData()->strength != 0.0f) {
-    tex_noise = noise_fbm_warp_.Generate(reinterpret_cast<float*>(
-        static_cast<NoiseFbmWarpData*>(&terrain_data.fbm_warp)));
-    MergeLayers(terrain_data.hmap, tex_noise, noises_[6]->GetBaseData());
-  }
-  if (noises_[7]->GetBaseData()->strength != 0.0f) {
-    tex_noise = noise_fmb_perlin_warp_.Generate(reinterpret_cast<float*>(
-        static_cast<NoiseFbmPerlinWarpData*>(&terrain_data.fbm_perlin_warp)));
-    MergeLayers(terrain_data.hmap, tex_noise, noises_[7]->GetBaseData());
-  }
+  glClearTexImage(tex_noise.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
+  MergeLayers(data.hmap, tex_noise, &data.perlin, &gen_perlin_);
+  MergeLayers(data.hmap, tex_noise, &data.cellular, &gen_cellular_);
+  MergeLayers(data.hmap, tex_noise, &data.metaballs, &gen_metaballs_);
+  MergeLayers(data.hmap, tex_noise, &data.fbm_grid, &gen_fbm_grid_);
+  MergeLayers(data.hmap, tex_noise, &data.fbm_multi, &gen_fbm_multi_);
+  MergeLayers(data.hmap, tex_noise, &data.fbmd_perlin, &gen_fbmd_perlin_);
+  MergeLayers(data.hmap, tex_noise, &data.fbm_warp, &gen_fbm_warp_);
+  MergeLayers(data.hmap, tex_noise, &data.fbm_perlin_warp,
+              &gen_fbm_perlin_warp_);
   std::cout << "Generation :: DONE" << std::endl;
-  instances_[*ui_.selected_id_].data = std::move(terrain_data);
+  UpdateConfig();
+}
+
+void UiEditTerrain::GenerateAll() {
+  auto& all_data = Data();
+  for (int i = 0; i < all_data.size(); ++i) {
+    auto& data = all_data[i].data;
+    gen_perlin_.SetConfig(&data.perlin, {&data.perlin.scale_x, 3});
+    gen_cellular_.SetConfig(&data.cellular, {&data.cellular.scale_x, 4});
+    gen_metaballs_.SetConfig(&data.metaballs, {&data.metaballs.scale_x, 4});
+    gen_fbm_grid_.SetConfig(&data.fbm_grid, {&data.fbm_grid.scale_x, 9});
+    gen_fbm_multi_.SetConfig(&data.fbm_multi, {&data.fbm_multi.scale_x, 5});
+    gen_fbmd_perlin_.SetConfig(&data.fbmd_perlin,
+                               {&data.fbmd_perlin.scale_x, 8});
+    gen_fbm_warp_.SetConfig(&data.fbm_warp, {&data.fbm_warp.scale_x, 10});
+    gen_fbm_perlin_warp_.SetConfig(&data.fbm_perlin_warp,
+                                   {&data.fbm_perlin_warp.scale_x, 10});
+    data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
+    glClearTexImage(data.hmap.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
+    Texture32F tex_noise;
+    MergeLayers(data.hmap, tex_noise, &data.perlin, &gen_perlin_);
+    MergeLayers(data.hmap, tex_noise, &data.cellular, &gen_cellular_);
+    MergeLayers(data.hmap, tex_noise, &data.metaballs, &gen_metaballs_);
+    MergeLayers(data.hmap, tex_noise, &data.fbm_grid, &gen_fbm_grid_);
+    MergeLayers(data.hmap, tex_noise, &data.fbm_multi, &gen_fbm_multi_);
+    MergeLayers(data.hmap, tex_noise, &data.fbmd_perlin, &gen_fbmd_perlin_);
+    MergeLayers(data.hmap, tex_noise, &data.fbm_warp, &gen_fbm_warp_);
+    MergeLayers(data.hmap, tex_noise, &data.fbm_perlin_warp,
+                &gen_fbm_perlin_warp_);
+  }
   UpdateConfig();
 }
 
@@ -365,19 +352,18 @@ void UiEditTerrain::RenderPicking(float height) {
   text_noise_strength_.RenderPicking();
 }
 
-TerrainInstanceData& UiEditTerrain::GetInstanceData() noexcept {
-  return instances_[*ui_.selected_id_];
+TerrainTraits& UiEditTerrain::GetInstanceData() noexcept {
+  return Data()[selected_id_];
 }
 
 void UiEditTerrain::RenderGraph() {
-  int id = *ui_.selected_id_;
-  if (id == -1) {
+  if (selected_id_ == -1) {
     return;
   }
   /// selected layer wireframe
   ui_shared_resources_.glfw_context_.tile_renderer->terrain.RenderWireframe(
-      &instances_[id], &(*ui_.base_instances_)[id]);
-  auto color_invert = glm::vec4(1.0f) - (*ui_.base_instances_)[id].color;
+      &Data()[selected_id_]);
+  auto color_invert = glm::vec4(1.0f) - Data()[selected_id_].color;
   color_invert.w = 1.0f;
 
   glm::vec4 pivot_pos = GetLayerCentre() - pivot_offset_;
@@ -391,12 +377,11 @@ void UiEditTerrain::RenderGraph() {
   /// wireframe left bottom
   auto& ui_layer_wireframe =
       ui_shared_resources_.glfw_context_.ui_renderer->GetUiLayerWireframe();
-  ui_layer_wireframe.RenderLayerWireframe(&instances_[id],
-                                          &(*ui_.base_instances_)[id]);
+  ui_layer_wireframe.RenderLayerWireframe(&Data()[selected_id_]);
 }
 
 void UiEditTerrain::SetPivotPosition(GLuint pressed_id) {
-  if (pressed_id >= details::kIdOffsetWater || *ui_.selected_id_ == -1) {
+  if (pressed_id >= details::kIdOffsetWater || selected_id_ == -1) {
     return;
   }
   glm::vec4 position(1.0f);
@@ -451,9 +436,8 @@ void UiEditTerrain::Init() {
 void UiEditTerrain::DeInit() { glDeleteBuffers(1, &ssbo_atomic_modified_); }
 
 glm::vec4 UiEditTerrain::GetLayerCentre() {
-  int id = *ui_.selected_id_;
-  return {instances_[id].translate.x, instances_[id].translate.y,
-          instances_[id].translate.z, 1.0f};
+  return {Data()[selected_id_].translate.x, Data()[selected_id_].translate.y,
+          Data()[selected_id_].translate.z, 1.0f};
 }
 
 bool UiEditTerrain::IsHmapNan() const noexcept {
@@ -466,23 +450,29 @@ bool UiEditTerrain::IsHmapNan() const noexcept {
 }
 
 void UiEditTerrain::MergeLayers(Texture32F& bottom_layer, Texture32F& top_layer,
-                                const NoiseDataBase* config) {
+                                const NoiseDataBase* config,
+                                ITerrainNoise* noise_gen) {
+  if (config->strength == 0) {
+    return;
+  }
+  top_layer = noise_gen->Generate();
   std::cout << "merged with " << config->strength << ' ' << std::boolalpha
             << config->do_invert << ' ' << config->do_tiling << std::endl;
   shader_merge_noises_.Bind();
   //  glUniform1i(0, static_cast<int>(config->do_invert));
   // TODO: as well as transform_matrix:
   //  glUniform1i(1, static_cast<int>(noise_data->do_tiling));
-  //  glUniform1f(2, config->strength / 8.0f);
   glUniform1f(2, config->strength);
-  //  glUniform1f(2, .0f);
 
-  glBindImageTexture(0, bottom_layer.GetId(), 0, GL_FALSE, 0, GL_READ_WRITE,
-                     bottom_layer.GetFormat());
-  glBindImageTexture(1, top_layer.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY,
-                     top_layer.GetFormat());
-
+  using namespace utility;
+  BindImageTexture(0, bottom_layer, GL_READ_WRITE);
+  BindImageTexture(1, top_layer, GL_READ_ONLY);
   int size = details::gTerrainSize;
   glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+}
+
+std::vector<TerrainTraits>& UiEditTerrain::Data() {
+  return ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+      .terrain_data;
 }

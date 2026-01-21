@@ -24,14 +24,6 @@ class UiObjectsMode final : public IUiMode {
 
   void BindDefaultCallbacks() override;
 
-  int GetPrerenderTextIdStart() const noexcept override;
-
-  int GetPrerenderTextIdEnd() const noexcept override;
-
-  void RenderWorld() override;
-
-  void RenderPickingWorld() override;
-
   void HandleSelection(const std::set<GLuint>& selected_ids);
 
   void CancelTransform();
@@ -40,7 +32,6 @@ class UiObjectsMode final : public IUiMode {
 
   void UpdateModelsList();
 
-  std::vector<BaseInstanceData> models_;
   UiSlots& ui_slots_;
   UiEditObjects ui_edit_;
 

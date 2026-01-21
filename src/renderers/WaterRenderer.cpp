@@ -32,6 +32,7 @@ void WaterRenderer::Render() {
     glUniform1i(1, 1);
     glUniform1i(2, 2);
     glUniform1i(4, 4);
+    glUniform1i(5, 5);
     glUniform1i(15, 15);
     glm::vec4 albedo = glm::vec4(0.6f, 0.7f, 0.9f, 1.0f);
     glUniform4fv(17, 1, glm::value_ptr(albedo));
@@ -47,6 +48,8 @@ void WaterRenderer::Render() {
   ocean_->BindRenderData();
   glActiveTexture(GL_TEXTURE4);
   tex_foam_.Bind();
+  glActiveTexture(GL_TEXTURE5);
+  tile_.map_ocean_surface_.Bind();
   glActiveTexture(GL_TEXTURE15);
   tile_.map_terrain_height.Bind();
 
@@ -101,6 +104,7 @@ void WaterRenderer::Init() {
   glUniform1i(1, 1);
   glUniform1i(2, 2);
   glUniform1i(4, 4);
+  glUniform1i(5, 5);
   glUniform1i(15, 15);
   glm::vec4 albedo = glm::vec4(0.6f, 0.7f, 0.9f, 1.0f);
   glUniform4fv(17, 1, glm::value_ptr(albedo));

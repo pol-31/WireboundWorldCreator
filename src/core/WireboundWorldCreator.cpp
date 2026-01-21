@@ -67,7 +67,7 @@ void WireboundWorldCreator::Init() {
   global_data_.menu->SetMode(0);
 }
 
-void WireboundWorldCreator::DeInit() { ui_renderer_.Serialize(); }
+void WireboundWorldCreator::DeInit() { /* ui_renderer_.Serialize(); */ }
 
 void WireboundWorldCreator::CheckGlobalData() {
   if (!global_data_.camera || !global_data_.tile_renderer ||

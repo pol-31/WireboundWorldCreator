@@ -7,8 +7,9 @@
 #include <string_view>
 #include <vector>
 
-#include "../renderers/Vegetation.h"
+#include "../common/GraphBakeConfig.h"
 #include "../renderers/TerrainRenderer.h"
+#include "../renderers/Vegetation.h"
 #include "../renderers/WaterRenderer.h"
 #include "Environment.h"
 #include "Tile.h"

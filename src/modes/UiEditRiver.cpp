@@ -3,12 +3,12 @@
 #include "../core/TileRenderer.h"
 
 GraphBakeConfig RiverTraits::GetGraphConfig() const noexcept {
-  return {.curve_amplitude = curve_amplitude,
-          .height_drift = height_drift,
-          .height_raise = height_raise,
-          .side_sagging = side_sagging,
-          .radius_flat = radius_flat,
-          .radius = radius};
+  return {.curve_amplitude = config.curve_amplitude,
+          .height_drift = config.height_drift,
+          .height_raise = config.height_raise,
+          .side_sagging = config.side_sagging,
+          .radius = config.radius,
+          .radius_flat = config.radius_flat};
 }
 
 UiEditRiver::UiEditRiver(UiSharedResources& ui_shared_resources,
@@ -22,7 +22,6 @@ UiEditRiver::UiEditRiver(UiSharedResources& ui_shared_resources,
 
 UiEditRiver::UiEditRiver(UiEditRiver&& other) noexcept
     : IUiEdit(std::move(*this)),
-      instances_(std::move(other.instances_)),
       value_config_(other.value_config_),
       ui_shared_resources_(other.ui_shared_resources_) {
   // river_layer_config_.AttachToHierarchy(hierarchy_);
@@ -31,28 +30,25 @@ UiEditRiver::UiEditRiver(UiEditRiver&& other) noexcept
 void UiEditRiver::HideAll() { ui_.ForceHide(); }
 
 void UiEditRiver::CreateInstance() {
-  instances_.push_back(RiverTraits{});
+  Data().push_back(RiverTraits{});
   UpdateConfig();
 }
 
 void UiEditRiver::UpdateConfig() {
-  int id = *ui_.selected_id_;
-  if (id == -1) {
+  if (selected_id_ == -1) {
     return;
   }
-  auto& inst = instances_[id];
+  auto& inst = Data()[selected_id_];
   traits_ = {{
-      {&inst.transparency, data::TextId::kStrength},
-      {&inst.viscosity, data::TextId::kStrength},
-      {&inst.curve_amplitude, data::TextId::kStrength},
-      {&inst.height_drift, data::TextId::kStrength},
-      {&inst.height_raise, data::TextId::kStrength},
-      {&inst.side_sagging, data::TextId::kStrength},
-      {&inst.radius_flat, data::TextId::kStrength},
-      {&inst.radius, data::TextId::kStrength},
+      {&inst.transparency, data::TextId::kWaterTransparency},
+      {&inst.viscosity, data::TextId::kWaterViscosity},
+      {&inst.config.curve_amplitude, data::TextId::kWaterCurveAmplitude},
+      {&inst.config.height_drift, data::TextId::kWaterHeightDrift},
+      {&inst.config.height_raise, data::TextId::kWaterHeightRaise},
+      {&inst.config.side_sagging, data::TextId::kWaterSideSagging},
+      {&inst.config.radius, data::TextId::kWaterRadius},
+      {&inst.config.radius_flat, data::TextId::kWaterRadiusFlat},
   }};
-  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.rivers_ =
-      &instances_;
   ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline();
 }
 
@@ -62,12 +58,12 @@ void UiEditRiver::SetInstanceId(int id) {
 }
 
 void UiEditRiver::RemoveInstance(GLuint id) {
-  instances_.erase(instances_.begin() + id);
+  Data().erase(Data().begin() + id);
   UpdateConfig();
 }
 
 void UiEditRiver::Reset() {
-  instances_.clear();
+  Data().clear();
   UpdateConfig();
 }
 
@@ -76,16 +72,15 @@ void UiEditRiver::Generate() { UpdateConfig(); }
 void UiEditRiver::RandomGenerate() {
   std::uniform_real_distribution<float> dist_float(0.0f, 1.0f);
   std::bernoulli_distribution dist_bool(0.5f);
-  int id = *ui_.selected_id_;
   auto& gen = ui_.random_generator_;
-  instances_[id].transparency = dist_float(gen);
-  instances_[id].viscosity = dist_float(gen);
-  instances_[id].curve_amplitude = dist_float(gen) * 10.0f;
-  instances_[id].height_drift = dist_float(gen) * 0.5f;
-  instances_[id].height_raise = dist_float(gen) - 1.0f;
-  instances_[id].side_sagging = dist_float(gen) * 0.5f;
-  instances_[id].radius_flat = dist_float(gen) * 5.0f;
-  instances_[id].radius = dist_float(gen) * 10.0f;
+  Data()[selected_id_].transparency = dist_float(gen);
+  Data()[selected_id_].viscosity = dist_float(gen);
+  Data()[selected_id_].config.curve_amplitude = dist_float(gen) * 10.0f;
+  Data()[selected_id_].config.height_drift = dist_float(gen) * 0.5f;
+  Data()[selected_id_].config.height_raise = dist_float(gen) - 1.0f;
+  Data()[selected_id_].config.side_sagging = dist_float(gen) * 0.5f;
+  Data()[selected_id_].config.radius = dist_float(gen) * 10.0f;
+  Data()[selected_id_].config.radius_flat = dist_float(gen) * 5.0f;
   Generate();
 }
 
@@ -104,5 +99,10 @@ void UiEditRiver::RenderPicking(float height) {
 }
 
 RiverTraits& UiEditRiver::GetInstanceData() noexcept {
-  return instances_[*ui_.selected_id_];
+  return Data()[selected_id_];
+}
+
+std::vector<RiverTraits>& UiEditRiver::Data() {
+  return ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+      .rivers_data;
 }
