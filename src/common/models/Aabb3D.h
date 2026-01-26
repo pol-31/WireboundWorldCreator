@@ -3,6 +3,12 @@
 
 #include <glm/glm.hpp>
 
+struct Obb3D {
+  glm::vec3 center;
+  glm::vec3 halfSize;     // half extents
+  glm::mat3 orientation;  // rotation only (local axes)
+};
+
 // local space (rel to 0;0;0 centre)
 struct Aabb3D {
   glm::vec3 min = glm::vec3(FLT_MAX);
@@ -14,6 +20,10 @@ struct Aabb3D {
 
   int LongestAxis();
 };
+
+Obb3D AabbToObb(const Aabb3D& aabb, const glm::mat4& transform);
+
+float GetObbBottomY(const Obb3D& obb);
 
 struct BVHNode {
   Aabb3D bounds;

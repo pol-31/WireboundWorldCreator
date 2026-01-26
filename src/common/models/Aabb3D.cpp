@@ -42,3 +42,36 @@ int Aabb3D::LongestAxis() {
     return 2;
   }
 }
+
+Obb3D AabbToObb(const Aabb3D& aabb, const glm::mat4& transform) {
+  Obb3D obb;
+
+  // center in local space
+  glm::vec3 localCenter = (aabb.min + aabb.max) * 0.5f;
+  glm::vec3 half = (aabb.max - aabb.min) * 0.5f;
+
+  // transform center
+  obb.center = glm::vec3(transform * glm::vec4(localCenter, 1.0f));
+
+  // orientation = rotation part of matrix
+  obb.orientation = glm::mat3(transform);
+
+  // scale the halfSize by matrix scale
+  obb.halfSize = glm::vec3(glm::length(obb.orientation[0]) * half.x,
+                           glm::length(obb.orientation[1]) * half.y,
+                           glm::length(obb.orientation[2]) * half.z);
+
+  // normalize orientation axes
+  obb.orientation[0] = glm::normalize(obb.orientation[0]);
+  obb.orientation[1] = glm::normalize(obb.orientation[1]);
+  obb.orientation[2] = glm::normalize(obb.orientation[2]);
+
+  return obb;
+}
+
+float GetObbBottomY(const Obb3D& obb) {
+  glm::vec3 up = obb.orientation[1];  // local up axis
+  return obb.center.y - obb.halfSize.y * fabs(up.y) -
+         obb.halfSize.x * fabs(obb.orientation[0].y) -
+         obb.halfSize.z * fabs(obb.orientation[2].y);
+}

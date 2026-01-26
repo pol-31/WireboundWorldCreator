@@ -1,10 +1,12 @@
-#include "Animation.h"
+#include "Animator.h"
 
 #include <functional>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
 #include "../../io/Window.h"
+
+const int Animator::gMaxBones = 100;
 
 int FindFrame(int count, const float* times, float t) {
   if (t <= times[0]) return 0;
@@ -16,7 +18,7 @@ int FindFrame(int count, const float* times, float t) {
   return count - 2;  // last valid segment
 }
 
-glm::mat4 LocalMatrix(const HumanAnimator::NodePose& p) {
+glm::mat4 LocalMatrix(const Animator::NodePose& p) {
   return glm::translate(glm::mat4(1), p.t) * glm::mat4_cast(p.r) *
          glm::scale(glm::mat4(1), p.s);
 }
@@ -41,10 +43,10 @@ float WrapTime(float t, const float* times, int count) {
   return start + std::fmod(t - start, duration);
 }
 
-HumanAnimator::HumanAnimator(tinygltf::TinyGLTF& loader)
-    : loader_(loader), speed_(0.5f) {}
+Animator::Animator(tinygltf::TinyGLTF& loader, const GLuint& ubo)
+    : loader_(loader), speed_(0.5f), ubo_(ubo) {}
 
-void HumanAnimator::Load(std::string_view path) {
+void Animator::Load(std::string_view path) {
   std::string err, warn;
   bool res = loader_.LoadASCIIFromFile(&model_, &err, &warn, path.data());
   if (!warn.empty()) std::cout << "WARN: " << warn << std::endl;
@@ -70,19 +72,11 @@ void HumanAnimator::Load(std::string_view path) {
   glm::mat4 meshGlobal{1.0f};  // TODO: wrong
   BuildJointMatrices(skin_, globalPose, meshGlobal, jointMatrices);
 
-  glGenBuffers(1, &ubo_);
-  glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
-  int MAX_BONES = 100;
-  glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4) * MAX_BONES, nullptr,
-               GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_UNIFORM_BUFFER, 10, ubo_);
-  glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-  joints_zero_ = std::vector(MAX_BONES, glm::mat4(1.0f));
+  joints_zero_ = std::vector(gMaxBones, glm::mat4(1.0f));
   SetZeroUbo();
 }
 
-void HumanAnimator::SetZeroUbo() {
+void Animator::SetZeroUbo() {
   glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
   glBufferSubData(GL_UNIFORM_BUFFER, 0, joints_zero_.size() * sizeof(glm::mat4),
                   joints_zero_.data());
@@ -90,11 +84,7 @@ void HumanAnimator::SetZeroUbo() {
 }
 
 /// throw data to ubo, buffer, so need to call Render() afterwards
-bool HumanAnimator::UpdateUbo(Type type, float& time) {
-  if (type == Type::kNone) {
-    SetZeroUbo();
-    return false;
-  }
+bool Animator::UpdateUbo(int id, float& time) {
   // buffers
   std::vector<NodePose> localPose;
   std::vector<glm::mat4> globalPose;
@@ -102,8 +92,7 @@ bool HumanAnimator::UpdateUbo(Type type, float& time) {
 
   time += gDeltaTime * speed_;
   InitLocalPose(model_, localPose);
-  float mod_time =
-      ApplyAnimation(model_, static_cast<int>(type), time, localPose);
+  float mod_time = ApplyAnimation(model_, id, time, localPose);
   bool started_over = time > mod_time;
   if (started_over) {
     time = mod_time;
@@ -119,7 +108,7 @@ bool HumanAnimator::UpdateUbo(Type type, float& time) {
   return started_over;
 }
 
-void HumanAnimator::LoadSkin(const tinygltf::Model& model, Skin& skin) {
+void Animator::LoadSkin(const tinygltf::Model& model, Skin& skin) {
   const tinygltf::Skin& gltfSkin = model.skins[0];
 
   skin.skeletonRoot = gltfSkin.skeleton;
@@ -140,8 +129,8 @@ void HumanAnimator::LoadSkin(const tinygltf::Model& model, Skin& skin) {
   }
 }
 
-void HumanAnimator::InitLocalPose(const tinygltf::Model& model,
-                                  std::vector<NodePose>& localPose) {
+void Animator::InitLocalPose(const tinygltf::Model& model,
+                             std::vector<NodePose>& localPose) {
   localPose.resize(model.nodes.size());
 
   for (size_t i = 0; i < model.nodes.size(); ++i) {
@@ -173,9 +162,8 @@ void HumanAnimator::InitLocalPose(const tinygltf::Model& model,
   }
 }
 
-float HumanAnimator::ApplyAnimation(const tinygltf::Model& model, int animIndex,
-                                    float time,
-                                    std::vector<NodePose>& localPose) {
+float Animator::ApplyAnimation(const tinygltf::Model& model, int animIndex,
+                               float time, std::vector<NodePose>& localPose) {
   const auto& anim = model.animations[animIndex];
 
   for (const auto& channel : anim.channels) {
@@ -216,9 +204,9 @@ float HumanAnimator::ApplyAnimation(const tinygltf::Model& model, int animIndex,
   return time;
 }
 
-void HumanAnimator::ComputeGlobals(const tinygltf::Model& model,
-                                   std::vector<NodePose>& localPose,
-                                   std::vector<glm::mat4>& globalPose) {
+void Animator::ComputeGlobals(const tinygltf::Model& model,
+                              std::vector<NodePose>& localPose,
+                              std::vector<glm::mat4>& globalPose) {
   globalPose.resize(model.nodes.size());
 
   std::function<void(int, const glm::mat4&)> dfs =
@@ -235,10 +223,10 @@ void HumanAnimator::ComputeGlobals(const tinygltf::Model& model,
     dfs(root, glm::mat4(1));
 }
 
-void HumanAnimator::BuildJointMatrices(const Skin& skin,
-                                       const std::vector<glm::mat4>& globalPose,
-                                       const glm::mat4& meshGlobal,
-                                       std::vector<glm::mat4>& out) {
+void Animator::BuildJointMatrices(const Skin& skin,
+                                  const std::vector<glm::mat4>& globalPose,
+                                  const glm::mat4& meshGlobal,
+                                  std::vector<glm::mat4>& out) {
   out.resize(skin.joints.size());
 
   glm::mat4 invMesh = glm::inverse(meshGlobal);

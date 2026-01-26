@@ -1,5 +1,5 @@
-#ifndef WIREBOUNDWORLDCREATOR_ANIMATION_H
-#define WIREBOUNDWORLDCREATOR_ANIMATION_H
+#ifndef WIREBOUNDWORLDCREATOR_ANIMATOR_H
+#define WIREBOUNDWORLDCREATOR_ANIMATOR_H
 
 #include <glad/glad.h>
 #include <tiny_gltf.h>
@@ -8,22 +8,39 @@
 #include <glm/gtc/quaternion.hpp>
 #include <vector>
 
-// class Animation {};
+enum class HumanAnimation {
+  kCrouch,
+  kFall,
+  kIdle,
+  kIdleSitting,
+  kJump,
+  kKick,
+  kRun,
+  kStunned,
+  kT,
+  kThrow,
+  kWalk,
+  kNone,
+};
 
-class HumanAnimator {
+enum class FpvAnimation {
+  kCrouch,
+  kFall,
+  kIdle,
+  kIdleSitting,
+  kJump,
+  kKick,
+  kRun,
+  kStunned,
+  kT,
+  kThrow,
+  kWalk,
+  kNone,
+};
+
+class Animator {
  public:
-  enum class Type {
-    kCrouch,
-    kFall,
-    kIdle,
-    kJump,
-    kKick,
-    kRun,
-    kStunned,
-    kT,
-    kWalk,
-    kNone,
-  };
+  static const int gMaxBones;
 
   struct Joint {
     int node;               // index into model.nodes
@@ -41,13 +58,29 @@ class HumanAnimator {
     glm::vec3 s;
   };
 
-  HumanAnimator(tinygltf::TinyGLTF& loader);
+  Animator(tinygltf::TinyGLTF& loader, const GLuint& ubo);
 
   void Load(std::string_view path);
 
   /// throw data to ubo, buffer, so need to call Render() after.
   /// returns was_looped
-  bool UpdateUbo(Type type, float& time);
+  bool UpdateUbo(int id, float& time);
+
+  bool UpdateUbo(HumanAnimation animation, float& time) {
+    if (animation == HumanAnimation::kNone) {
+      SetZeroUbo();
+      return false;
+    }
+    return UpdateUbo(static_cast<int>(animation), time);
+  }
+
+  bool UpdateUbo(FpvAnimation animation, float& time) {
+    if (animation == FpvAnimation::kNone) {
+      SetZeroUbo();
+      return false;
+    }
+    return UpdateUbo(static_cast<int>(animation), time);
+  }
 
   void LoadSkin(const tinygltf::Model& model, Skin& skin);
 
@@ -75,8 +108,8 @@ class HumanAnimator {
 
   float speed_ = 1.0f;
 
-  GLuint ubo_ = 0;
+  const GLuint& ubo_;
   Skin skin_;
 };
 
-#endif  // WIREBOUNDWORLDCREATOR_ANIMATION_H
+#endif  // WIREBOUNDWORLDCREATOR_ANIMATOR_H

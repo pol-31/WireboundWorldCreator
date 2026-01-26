@@ -1,11 +1,14 @@
-#ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_PLAYERHUMAN_H_
-#define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_PLAYERHUMAN_H_
+#ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_HUMAN_H_
+#define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_HUMAN_H_
+
+#include <glm/glm.hpp>
 
 #include "../../modes/UiSharedResources.h"
-#include "PlayerBase.h"
-#include "PlayerFpv.h"
+#include "RigidBody.h"
 
-class PlayerHuman : public PlayerBase {
+struct ModelData;
+
+class Human : public RigidBody {
  public:
   enum class State {
     kIdle,
@@ -15,33 +18,8 @@ class PlayerHuman : public PlayerBase {
     kJumping,
     kFalling,
     kAttacking,
-    kStunned,
-    kOnFpv
+    kStunned
   };
-
-  enum class PlayerEventType {
-    None,
-    DealDamage,
-    OpenUI,
-    EnterIdle,
-    EnterIdleSitting,
-  };
-
-  void FireEvent(PlayerEventType e);
-
-  void DealDamage();
-
-  void EnterIdle();
-
-  void EnterIdleSitting();
-
-  struct Event {
-    float time = 0.f;
-    PlayerEventType type = PlayerEventType::None;
-    bool done = true;
-  };
-
-  Event next_event_;
 
   [[nodiscard]] bool IsOnGround() const noexcept {
     return state_ != State::kJumping && state_ != State::kFalling;
@@ -52,17 +30,14 @@ class PlayerHuman : public PlayerBase {
            state_ != State::kAttacking && state_ != State::kStunned;
   }
 
-  [[nodiscard]] bool IsReadyToSwitch() const noexcept {
-    return IsRelaxed() || (state_ == State::kOnFpv && next_event_.done);
-  }
+  Human() = default;
 
-  PlayerHuman(UiSharedResources& ui_shared_resources, PlayerFpv& fpv);
+  void UpdatePosition(UiSharedResources& ui_shared_resources,
+                      glm::vec3 position_diff);
 
   void Jump(float strength);
 
   void Kick();
-
-  void Rest();
 
   void Stunned() override;
 
@@ -83,17 +58,17 @@ class PlayerHuman : public PlayerBase {
 
   void Update(UiSharedResources& ui_shared_resources);
 
-  void ProcessMovement(int key, int action) override;
+  void Select() { selected_ = true; }
 
-  void SwitchToHuman();
+  void DeSelect() { selected_ = false; }
 
-  void SwitchToFpv();
+  [[nodiscard]] bool IsSelected() const noexcept { return selected_; }
 
  private:
   State state_ = State::kIdle;
   HumanAnimation animation_id_ =
       HumanAnimation::kIdle;  // TODO: merge with state_
-  PlayerFpv& fpv_;
+  bool selected_ = false;
 };
 
-#endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_PLAYERHUMAN_H_
+#endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_HUMAN_H_

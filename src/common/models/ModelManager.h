@@ -5,28 +5,30 @@
 
 #include "../../modes/UiSharedResources.h"
 #include "../MapPoint.h"
-#include "Animation.h"
+#include "Animator.h"
 #include "AttackEvent.h"
-#include "Creature.h"
+#include "Fpv.h"
+#include "Human.h"
+#include "MapMarker.h"
 #include "ModelLoader.h"
 #include "Obstacle.h"
 #include "PlayerFpv.h"
 #include "PlayerHuman.h"
-#include "MapMarker.h"
 
-class UiDynamicSprite;
+class UiSprite;
 
 class ModelManager {
  public:
   ModelManager(UiSharedResources& ui_shared_resources);
 
+  ~ModelManager() { DeInit(); }
+
   void Render();
 
   void RenderPlacement();
 
-  void RenderOnMap(UiDynamicSprite* sp_player, UiDynamicSprite* sp_enemy,
-                   UiDynamicSprite* sp_friend, UiDynamicSprite* sp_neutral,
-                   UiDynamicSprite* sp_obstacle);
+  void RenderOnMap(UiSprite* sp_player, UiSprite* sp_enemy, UiSprite* sp_friend,
+                   UiSprite* sp_neutral, UiSprite* sp_obstacle);
 
   void RenderMapPoints(const std::vector<MapPoint>& map_points,
                        glm::vec4 color);
@@ -68,17 +70,28 @@ class ModelManager {
   Aabb3D ComputeBounds(const std::vector<Collider>& colliders, int start,
                        int end);
 
+ private:
+  void Init();
+
+  void DeInit();
+
+  GLuint animation_ubo_ = 0;
+  GLuint player_ubo_ = 0;
+
+ public:
   UiSharedResources& ui_shared_resources_;
   tinygltf::TinyGLTF loader_;
   ModelLoader mdl_loader_;
-  HumanAnimator animator_;
+  Animator animator_fpv_;
+  Animator animator_human_;
   std::vector<AttackEvent> attack_queue_;
 
   PlayerFpv player_fpv_;
   PlayerHuman player_human_;
   PlayerBase* player_ = nullptr;
 
-  std::vector<Creature> creatures_;
+  std::vector<Human> creatures_;
+  std::vector<Fpv> fpvs_;
 
   //// N set of models randomely sparsed on Terrain (non even ID...)... let's...
   Obstacle tree_;
@@ -87,8 +100,6 @@ class ModelManager {
   Obstacle undergrowth_;
 
   MapMarker map_point_;
-
-  GLuint player_ubo_ = 0;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELMANAGER_H_

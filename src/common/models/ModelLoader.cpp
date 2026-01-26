@@ -114,6 +114,7 @@ ModelData* ModelLoader::Load(std::string_view path, int id) {
 
   BindModel(model_data->model, model_data->primitives);
   model_data->aabb = GetAabb(model_data->model);
+  model_data->name = std::filesystem::path(path).stem().string();
 
   // (important) extra rebind, otherwise messed triangles
   for (auto& p : model_data->primitives) {

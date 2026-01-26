@@ -3,19 +3,17 @@
 
 #include <glm/glm.hpp>
 
+#include "../../modes/UiSharedResources.h"
 #include "RigidBody.h"
 
 class PlayerBase : public RigidBody {
  public:
-  PlayerBase(UiSharedResources& ui_shared_resources);
+  PlayerBase(UiSharedResources& ui_shared_resources)
+      : ui_shared_resources_(ui_shared_resources) {}
 
   virtual ~PlayerBase() = default;
 
-  virtual void Update(UiSharedResources& ui_shared_resources) = 0;
-
   virtual void ProcessMovement(int key, int action) = 0;
-
-  virtual void Render(UiSharedResources& ui_shared_resources);
 
   void SetMoveForward(bool pressed) { move_forward_ = pressed; }
   void SetMoveBackward(bool pressed) { move_backward_ = pressed; }

@@ -34,6 +34,7 @@ struct ModelData {
   tinygltf::Model model;
   Material material;
   Aabb3D aabb;
+  std::string name;
 
   float hp = 100.0f;
   float speed = 1.0f;

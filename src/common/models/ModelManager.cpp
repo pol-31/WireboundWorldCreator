@@ -11,45 +11,52 @@
 ModelManager::ModelManager(UiSharedResources& ui_shared_resources)
     : ui_shared_resources_(ui_shared_resources),
       mdl_loader_(ui_shared_resources, loader_),
-      animator_(loader_),
+      animator_human_(loader_, animation_ubo_),
+      animator_fpv_(loader_, animation_ubo_),
       player_fpv_(ui_shared_resources),
-      player_human_(ui_shared_resources),
+      player_human_(ui_shared_resources, player_fpv_),
       player_(&player_human_) {
+  Init();
+}
 
+void ModelManager::Init() {
   glCreateBuffers(1, &player_ubo_);
-  glNamedBufferStorage(player_ubo_, sizeof(glm::vec3), nullptr, GL_DYNAMIC_STORAGE_BIT);
+  glNamedBufferStorage(player_ubo_, sizeof(glm::vec3), nullptr,
+                       GL_DYNAMIC_STORAGE_BIT);
   glBindBufferBase(GL_UNIFORM_BUFFER, 4, player_ubo_);
-  //TODO: delete ubo
+
+  glGenBuffers(1, &animation_ubo_);
+  glBindBuffer(GL_UNIFORM_BUFFER, animation_ubo_);
+  glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4) * Animator::gMaxBones,
+               nullptr, GL_DYNAMIC_DRAW);
+  glBindBufferBase(GL_UNIFORM_BUFFER, 10, animation_ubo_);
+  glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
   loader_.SetImageLoader(LoadImageData, nullptr);
-  // auto mdl_musca =
-  // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Musca.gltf", 1);
-  // auto mdl_snowman =
-  // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Horse.gltf", 2);
 
-  animator_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\EnemyFixed.gltf");
+  animator_human_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf");
+  animator_fpv_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\FpvRest.gltf");
+
   auto mdl_tree =
-      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Tree.gltf", 1);
+      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\MapMarker.gltf", 1);
   auto mdl_human =
-      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\EnemyFixed.gltf", 2);
-  auto mdl_fpv = mdl_loader_.Load(
-      "C:\\Users\\Pavlo\\Desktop\\assets\\AnimatedFpv3.gltf", 3);
-  // auto mdl_tree =
-  // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\TreeNew.gltf", 3);
-  // auto mdl_bush =
-  // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Bush.gltf", 4);
-  // auto mdl_tall_grass =
-  // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\TallGrass.gltf", 5);
-  // auto mdl_undergrowth = mdl_loader_.Load(
-  // "C:\\Users\\Pavlo\\Desktop\\assets\\Undergrowth.gltf", 6);
+      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf", 2);
+  auto mdl_fpv =
+      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\FpvRest.gltf", 3);
 
-  player_human_.SetModelData(mdl_human, &animator_, &attack_queue_);
-  player_fpv_.SetModelData(mdl_fpv, &animator_, &attack_queue_);
+  player_human_.SetModelData(mdl_human, &animator_human_, &attack_queue_);
+  player_fpv_.SetModelData(mdl_fpv, &animator_fpv_, &attack_queue_);
   int creatures_num = 3;
   for (int i = 0; i < creatures_num; ++i) {
     creatures_.emplace_back();
-    creatures_[i].SetModelData(mdl_human, &animator_, &attack_queue_);
+    creatures_[i].SetModelData(mdl_human, &animator_human_, &attack_queue_);
     creatures_[i].SetPosition(glm::vec3(i + 1, 0.0f, i));
+  }
+  int fpvs_num = 2;
+  for (int i = 0; i < fpvs_num; ++i) {
+    fpvs_.emplace_back();
+    fpvs_[i].SetModelData(mdl_fpv, &animator_fpv_, &attack_queue_);
+    fpvs_[i].SetPosition(glm::vec3(i - 1, 0.0f, i));
   }
   tree_.SetModelData(mdl_tree);
   bush_.SetModelData(mdl_tree);
@@ -58,8 +65,16 @@ ModelManager::ModelManager(UiSharedResources& ui_shared_resources)
   map_point_.SetModel(mdl_tree);
 }
 
+void ModelManager::DeInit() {
+  glDeleteBuffers(1, &player_ubo_);
+  glDeleteBuffers(1, &animation_ubo_);
+}
+
 void ModelManager::Render() {
   for (auto& c : creatures_) {
+    c.Render(ui_shared_resources_);
+  }
+  for (auto& c : fpvs_) {
     c.Render(ui_shared_resources_);
   }
   tree_.Render(ui_shared_resources_);
@@ -67,10 +82,8 @@ void ModelManager::Render() {
   tall_grass_.Render(ui_shared_resources_);
   undergrowth_.Render(ui_shared_resources_);
 
-  //  for (auto& o : obstacles_) {
-  //    o.Render(ui_shared_resources_);
-  //  }
-  player_->Render(ui_shared_resources_);
+  player_human_.Render(ui_shared_resources_);
+  player_fpv_.Render(ui_shared_resources_);
 }
 
 void ModelManager::RenderPlacement() {
@@ -80,11 +93,9 @@ void ModelManager::RenderPlacement() {
   undergrowth_.Render(ui_shared_resources_);
 }
 
-void ModelManager::RenderOnMap(UiDynamicSprite* sp_player,
-                               UiDynamicSprite* sp_enemy,
-                               UiDynamicSprite* sp_friend,
-                               UiDynamicSprite* sp_neutral,
-                               UiDynamicSprite* sp_obstacle) {
+void ModelManager::RenderOnMap(UiSprite* sp_player, UiSprite* sp_enemy,
+                               UiSprite* sp_friend, UiSprite* sp_neutral,
+                               UiSprite* sp_obstacle) {
   ui_shared_resources_.shader_sp_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
   glActiveTexture(GL_TEXTURE0);
@@ -97,6 +108,16 @@ void ModelManager::RenderOnMap(UiDynamicSprite* sp_player,
       ui_shared_resources_.glfw_context_.camera->GetViewMatrix(map_scale);
   auto projection = ui_shared_resources_.glfw_context_.camera->GetProjMatrix();
   for (auto& c : creatures_) {
+    model = glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));
+    auto mvp = projection * view * model;
+    glm::vec3 position = c.GetPosition();
+    glm::vec4 clipPos =
+        mvp * glm::vec4(position.x, position.y, position.z, 1.0f);
+    glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
+    sp_enemy->SetTranslate(glm::vec2(ndc.x, ndc.y) / 8.0f);
+    sp_enemy->Render();
+  }
+  for (auto& c : fpvs_) {
     model = glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));
     auto mvp = projection * view * model;
     glm::vec3 position = c.GetPosition();
@@ -148,11 +169,13 @@ void ModelManager::RenderCreaturesAsMapPoints(int creature_id,
 void ModelManager::RenderPickingCreaturesAsMapPoints(int creature_id) {
   if (creature_id == -1) {
     for (int i = 0; i < creatures_.size(); ++i) {
-      map_point_.RenderPicking(ui_shared_resources_, i, creatures_[i].GetPosition());
+      map_point_.RenderPicking(ui_shared_resources_, i,
+                               creatures_[i].GetPosition());
     }
   } else {
     const auto& creature = creatures_[creature_id];
-    map_point_.RenderPicking(ui_shared_resources_, creature_id, creature.GetPosition());
+    map_point_.RenderPicking(ui_shared_resources_, creature_id,
+                             creature.GetPosition());
   }
 }
 
@@ -165,8 +188,9 @@ void ModelManager::RenderPickingMapPoints(
     } else {
       map_point_.DeSelect();
     }
-    map_point_.RenderPicking(ui_shared_resources_, details::kIdOffsetObjects + i,
-      map_points[i].position);
+    map_point_.RenderPicking(ui_shared_resources_,
+                             details::kIdOffsetObjects + i,
+                             map_points[i].position);
   }
 }
 
@@ -181,8 +205,8 @@ void ModelManager::RenderMapPoints(const std::vector<MapPoint>& map_points,
     } else {
       map_point_.DeSelect();
     }
-    map_point_.Render(ui_shared_resources_, color,
-      map_points[i].position, rotates[i], scales[i]);
+    map_point_.Render(ui_shared_resources_, color, map_points[i].position,
+                      rotates[i], scales[i]);
   }
 }
 
@@ -197,8 +221,9 @@ void ModelManager::RenderPickingMapPoints(
     } else {
       map_point_.DeSelect();
     }
-    map_point_.RenderPicking(ui_shared_resources_, details::kIdOffsetObjects + i,
-      map_points[i].position, rotates[i], scales[i]);
+    map_point_.RenderPicking(ui_shared_resources_,
+                             details::kIdOffsetObjects + i,
+                             map_points[i].position, rotates[i], scales[i]);
   }
 }
 
@@ -206,23 +231,31 @@ void ModelManager::RenderPicking() {
   for (auto& c : creatures_) {
     c.RenderPicking(ui_shared_resources_);
   }
-  player_->RenderPicking(ui_shared_resources_);
+  for (auto& c : fpvs_) {
+    c.RenderPicking(ui_shared_resources_);
+  }
+  player_human_.RenderPicking(ui_shared_resources_);
+  player_fpv_.RenderPicking(ui_shared_resources_);
 }
 
 void ModelManager::Update() {
   for (auto& c : creatures_) {
     c.Update(ui_shared_resources_);
   }
-  //  for (auto& o : obstacles_) {
-  //    o.Update(ui_shared_resources_);
-  //  }
-  player_->Update(ui_shared_resources_);
-  glNamedBufferSubData(player_ubo_, 0, sizeof(glm::vec3),
-    glm::value_ptr(player_->GetPosition()));
+  for (auto& c : fpvs_) {
+    c.Update(ui_shared_resources_);
+  }
+  player_human_.Update(ui_shared_resources_);
+  player_fpv_.Update(ui_shared_resources_);
 
+  glNamedBufferSubData(player_ubo_, 0, sizeof(glm::vec3),
+                       glm::value_ptr(player_->GetPosition()));
 
   std::unordered_map<uint32_t, RigidBody*> entities;
   for (auto& c : creatures_) {
+    entities[c.GetId()] = &c;
+  }
+  for (auto& c : fpvs_) {
     entities[c.GetId()] = &c;
   }
   entities[player_human_.GetId()] = &player_human_;
