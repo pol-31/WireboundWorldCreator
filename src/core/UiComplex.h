@@ -1,6 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_
 #define WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_
 
+#include "../modes/UiSharedResources.h"
 #include "Ui.h"
 #include "UiText.h"
 #include "WindowQueue.h"
@@ -11,17 +12,16 @@ class ModelManager;
 
 class UiWindowSlider final : public UiBase {
  public:
-  UiWindowSlider(UiDynamicSprite&& sp_track, UiDynamicSprite&& sp_handle,
-                 int slots_num, float track_length_factor,
-                 float slots_length_factor);
+  UiWindowSlider(UiSprite&& sp_track, UiSprite&& sp_handle, int slots_num,
+                 float track_length_factor, float slots_length_factor);
 
-  UiWindowSlider(UiWindowSlider&& other) noexcept;
+  UiWindowSlider(UiWindowSlider&& other) = delete;
   UiWindowSlider(const UiWindowSlider& other) = delete;
 
   UiWindowSlider& operator=(UiWindowSlider&& other) = delete;
   UiWindowSlider& operator=(const UiWindowSlider& other) = delete;
 
-  void SetSlotPtr(const UiDynamicSprite* sp_slot) { sp_slot_ = sp_slot; }
+  void SetSlotPtr(const UiSprite* sp_slot) { sp_slot_ = sp_slot; }
 
   void Render(glm::vec2 mouse_pos);
 
@@ -64,12 +64,12 @@ class UiWindowSlider final : public UiBase {
 
   int entry_num_ = 0;
 
-  UiDynamicSprite* slot_ = nullptr;
+  UiSprite* slot_ = nullptr;
 
  private:
-  const UiDynamicSprite* sp_slot_ = nullptr;
-  UiDynamicSprite sp_track_;
-  UiDynamicSprite sp_handle_;
+  const UiSprite* sp_slot_ = nullptr;
+  UiSprite sp_track_;
+  UiSprite sp_handle_;
 
   float centre_ = 0.0f;
   float length_ = 0.0f;
@@ -88,81 +88,15 @@ class UiWindowSlider final : public UiBase {
   glm::vec2 start_slot_translate_ = glm::vec2(0.0f);
 };
 
-// NEVER just std::move it, recreate it in all ctors
-/// hierarchy blocks; should be created at most derived ui components
-class UiHierarchy final : public UiBase {
- public:
-  UiBase* parent_;
-  std::vector<UiBase*> components_;
-
-  /// due to base class UiBase
-  UiHierarchy() = delete;
-
-  /// parent hold id of the first component
-  // TODO: UiBase ctor params !!!
-  template <typename... Args>
-  UiHierarchy(UiBase* parent, Args... components)
-      : UiBase(*parent), parent_(parent), components_{components...} {
-    auto parent_id = parent_->GetId();
-    for (auto component : components_) {
-      auto child_id = component->GetId();
-      gUiComponents[child_id - details::kIdOffsetUi].parent_id_ = parent_id;
-    }
-    gUiComponents[parent_id - details::kIdOffsetUi].ui = this;
-    UpdateTransform();
-  }
-
-  UiHierarchy(UiHierarchy&& other)
-      : UiBase(std::move(*this)),
-        parent_(other.parent_),
-        components_(std::move(other.components_)) {
-    gUiComponents[parent_->GetId() - details::kIdOffsetUi].ui = this;
-  }
-
-  // cannot remove it: Base class store ::hierarchy_, but
-  // can be initialized only from derived (not init list)
-  UiHierarchy& operator=(UiHierarchy&& other) {
-    parent_ = other.parent_;
-    components_ = std::move(other.components_);
-    gUiComponents[parent_->GetId() - details::kIdOffsetUi].ui = this;
-    return *this;
-  }
-
-  template <typename... Args>
-  void AddNested(UiBase* parent, Args... components) {
-    auto parent_id = parent->GetId();
-    int prev_size = components_.size();
-    components_.push_back(parent);
-    (components_.push_back(components), ...);
-    for (int i = prev_size; i < components_.size(); ++i) {
-      auto child_id = components_[i]->GetId();
-      gUiComponents[child_id - details::kIdOffsetUi].parent_id_ = parent_id;
-    }
-    gUiComponents[parent_id - details::kIdOffsetUi].parent_id_ =
-        parent_->GetId();
-    gUiComponents[parent_id - details::kIdOffsetUi].ui = this;
-    UpdateTransform();
-  }
-
-  void UpdateTransform() override {
-    parent_->UpdateTransform();
-    for (auto component : components_) {
-      component->UpdateTransform();
-    }
-  }
-};
-
 /// loading only on the bottom of the screen (so use UiDynamicSprite)
 class UiLoading {
  public:
-  UiLoading(UiDynamicSprite&& sprite0, UiDynamicSprite&& sprite10,
-            UiDynamicSprite&& sprite20, UiDynamicSprite&& sprite30,
-            UiDynamicSprite&& sprite40, UiDynamicSprite&& sprite50,
-            UiDynamicSprite&& sprite60, UiDynamicSprite&& sprite70,
-            UiDynamicSprite&& sprite80, UiDynamicSprite&& sprite90,
-            UiDynamicSprite&& sprite100);
+  UiLoading(UiSprite&& sprite0, UiSprite&& sprite10, UiSprite&& sprite20,
+            UiSprite&& sprite30, UiSprite&& sprite40, UiSprite&& sprite50,
+            UiSprite&& sprite60, UiSprite&& sprite70, UiSprite&& sprite80,
+            UiSprite&& sprite90, UiSprite&& sprite100);
 
-  UiLoading(UiLoading&& other) noexcept;
+  UiLoading(UiLoading&& other) = delete;
   UiLoading(const UiLoading& other) = delete;
 
   UiLoading& operator=(UiLoading&& other) = delete;
@@ -173,18 +107,17 @@ class UiLoading {
   void RenderPicking() const;
 
  private:
-  std::array<UiDynamicSprite, 11> sprites_;
+  std::array<UiSprite, 11> sprites_;
   UiHierarchy hierarchy_;
 };
 
 /// loading only on the bottom of the screen (so use UiDynamicSprite)
 class UiCompass {
  public:
-  UiCompass(const Camera* camera, UiDynamicSprite&& sp_compass,
-            UiDynamicSprite&& sp_north, UiDynamicSprite&& sp_south,
-            UiDynamicSprite&& sp_east, UiDynamicSprite&& sp_west);
+  UiCompass(const Camera* camera, UiSprite&& sp_compass, UiSprite&& sp_north,
+            UiSprite&& sp_south, UiSprite&& sp_east, UiSprite&& sp_west);
 
-  UiCompass(UiCompass&& other) noexcept;
+  UiCompass(UiCompass&& other) = delete;
   UiCompass(const UiCompass& other) = delete;
 
   UiCompass& operator=(UiCompass&& other) = delete;
@@ -196,20 +129,19 @@ class UiCompass {
 
  private:
   const Camera* camera_;
-  UiDynamicSprite sp_compass_;
-  UiDynamicSprite sp_north_;
-  UiDynamicSprite sp_south_;
-  UiDynamicSprite sp_east_;
-  UiDynamicSprite sp_west_;
+  UiSprite sp_compass_;
+  UiSprite sp_north_;
+  UiSprite sp_south_;
+  UiSprite sp_east_;
+  UiSprite sp_west_;
   UiHierarchy hierarchy_;
 };
 
 class UiSelectedSprite {
  public:
-  UiSelectedSprite(UiDynamicSprite&& sp_selected,
-                   const UiDynamicSprite* sp_ptr_top);
+  UiSelectedSprite(UiSprite&& sp_selected, const UiSprite* sp_ptr_top);
 
-  UiSelectedSprite(UiSelectedSprite&& other) noexcept;
+  UiSelectedSprite(UiSelectedSprite&& other) = delete;
   UiSelectedSprite(const UiSelectedSprite& other) = delete;
 
   UiSelectedSprite& operator=(UiSelectedSprite&& other) = delete;
@@ -220,164 +152,19 @@ class UiSelectedSprite {
   void SetSelected(int id);
 
  private:
-  UiDynamicSprite sp_selected_;
-  const UiDynamicSprite* sp_ptr_top_ = nullptr;
-};
-
-// cannot be pinned, cannot be hovered above,
-// single to interact - on very top; shadow all other
-class UiTopWindowBase {
- public:
-  UiTopWindowBase(UiDynamicSprite&& desk, float size_scale,
-                  UiSharedResources& ui_shared_resources,
-                  WindowQueue& window_queue);
-
-  UiTopWindowBase(UiTopWindowBase&& other) noexcept;
-  UiTopWindowBase(const UiTopWindowBase& other) = delete;
-
-  UiTopWindowBase& operator=(UiTopWindowBase&& other) = delete;
-  UiTopWindowBase& operator=(const UiTopWindowBase& other) = delete;
-
-  void Show();
-
-  void Hide();
-
-  virtual bool Render() = 0;
-
-  virtual void RenderPicking() = 0;
-
-  virtual void Press(int id) = 0;
-
-  // no override
-  virtual void Release() = 0;
-
-  virtual void BtnEnter() {}
-
-  virtual void BtnEscape() {}
-
- protected:
-  UiDynamicSprite desk_;
-  // Cancel() if not important; otherwise skip
-
-  float size_scale_{1.0f};
-
-  // for shader bindings, mask texture
-  UiSharedResources& ui_shared_resources_;
-  WindowQueue& window_queue_;
-  UiHierarchy hierarchy_;
-};
-
-class UiCaution final : public UiTopWindowBase {
- public:
-  using Base = UiTopWindowBase;
-
-  UiCaution(UiDynamicSprite&& desk, float size_scale,
-            UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
-            UiDynamicSprite&& text);
-
-  UiCaution(UiCaution&& other) noexcept;
-  UiCaution(const UiCaution& other) = delete;
-
-  UiCaution& operator=(UiCaution&& other) = delete;
-  UiCaution& operator=(const UiCaution& other) = delete;
-
-  bool Render() override;
-
-  void RenderPicking() override;
-
-  void Press(int id) override;
-
-  void Release() override;
-
- private:
-  UiDynamicSprite text_;
-};
-
-class UiConfirmation final : public UiTopWindowBase {
- public:
-  using Base = UiTopWindowBase;
-
-  UiConfirmation(UiDynamicSprite&& desk, float size_scale,
-                 UiSharedResources& ui_shared_resources,
-                 WindowQueue& window_queue, UiDynamicSprite&& btn_accept,
-                 UiDynamicSprite&& btn_decline, UiTextMenuId&& text);
-
-  UiConfirmation(UiConfirmation&& other) noexcept;
-  UiConfirmation(const UiConfirmation& other) = delete;
-
-  UiConfirmation& operator=(UiConfirmation&& other) = delete;
-  UiConfirmation& operator=(const UiConfirmation& other) = delete;
-
-  bool Render() override;
-
-  void RenderPicking() override;
-
-  void Press(int id) override;
-
-  void Release() override;
-
-  void SetText(data::TextId text_id);
-
-  void SetCallable(std::function<void()>&& callable);
-
-  void BtnEnter() override;
-
-  void BtnEscape() override;
-
- private:
-  UiTextMenuId text_;
-  UiDynamicSprite btn_accept_;
-  UiDynamicSprite btn_decline_;
-
-  UiEventHandler<static_cast<int>(data::VboIdMain::kConfirmationDecline) -
-                 static_cast<int>(data::VboIdMain::kConfirmationDesk) + 1>
-      ui_event_handler_;
-
-  std::function<void()> callable_;
-};
-
-class UiFile final : public UiTopWindowBase {
- public:
-  using Base = UiTopWindowBase;
-
-  UiFile(UiDynamicSprite&& desk, float size_scale,
-         UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
-         UiDynamicSprite&& btn_accept, UiDynamicSprite&& btn_decline,
-         UiText&& label, UiTextInput&& text);
-
-  UiFile(UiFile&& other) noexcept;
-  UiFile(const UiFile& other) = delete;
-
-  UiFile& operator=(UiFile&& other) = delete;
-  UiFile& operator=(const UiFile& other) = delete;
-
-  bool Render() override;
-
-  void RenderPicking() override;
-
-  void Press(int id) override;
-
-  void Release() override;
-
- private:
-  UiDynamicSprite btn_accept_;
-  UiDynamicSprite btn_decline_;  // TODO: appears in case of overwrite
-  UiText label_;
-  UiTextInput text_;
-
-  UiEventHandler<static_cast<int>(data::VboIdMain::kFileAccept) -
-                 static_cast<int>(data::VboIdMain::kFileDesk) + 1>
-      ui_event_handler_;
+  UiSprite sp_selected_;
+  const UiSprite* sp_ptr_top_ = nullptr;
 };
 
 // single interactable window; can add few
 class UiWindowBase {
  public:
-  UiWindowBase(UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+  virtual ~UiWindowBase() = default;
+  UiWindowBase(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
                UiSharedResources& ui_shared_resources,
                WindowQueue& window_queue);
 
-  UiWindowBase(UiWindowBase&& other) noexcept;
+  UiWindowBase(UiWindowBase&& other) = delete;
   UiWindowBase(const UiWindowBase& other) = delete;
 
   UiWindowBase& operator=(UiWindowBase&& other) = delete;
@@ -406,18 +193,8 @@ class UiWindowBase {
 
   [[nodiscard]] bool BackIsReady() const { return back_ready_; }
 
-  virtual void BtnEnter() {
-    std::cout << "enter" << std::endl;
-    Hide();
-  }
-
-  virtual void BtnEscape() {
-    std::cout << "escape" << std::endl;
-    Hide();
-  }
-
  protected:
-  UiDynamicSprite sprite_;
+  UiSprite background_;
   // how it differs from the nested components
   float size_scale_{1.0f};
   UiToggle2 pin_;
@@ -432,17 +209,15 @@ class UiWindowBase {
   float speed_{0.5f};
   float progress_{0.0f};
   bool back_ready_{false};
-
-  UiHierarchy hierarchy_;
 };
 
 class UiWindowAppear : public UiWindowBase {
  public:
-  UiWindowAppear(UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+  UiWindowAppear(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
                  UiSharedResources& ui_shared_resources,
                  WindowQueue& window_queue);
 
-  UiWindowAppear(UiWindowAppear&& other) noexcept;
+  UiWindowAppear(UiWindowAppear&& other) = delete;
   UiWindowAppear(const UiWindowAppear& other) = delete;
 
   UiWindowAppear& operator=(UiWindowAppear&& other) = delete;
@@ -460,16 +235,15 @@ class UiObjectInfo final : public UiWindowAppear {
   using Base = UiWindowAppear;
   using Base::Show;
 
-  UiObjectInfo(UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+  UiObjectInfo(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
                UiSharedResources& ui_shared_resources,
                WindowQueue& window_queue,
 
-               UiDynamicSprite&& sp_enemy, UiDynamicSprite&& sp_friend,
-               UiDynamicSprite&& sp_neutral, UiDynamicSprite&& sp_obstacle,
-               UiText&& txt_name, UiText&& txt_characteristic,
-               UiText&& txt_value);
+               UiSprite&& sp_enemy, UiSprite&& sp_friend, UiSprite&& sp_neutral,
+               UiSprite&& sp_obstacle, UiText&& txt_name,
+               UiText&& txt_characteristic, UiText&& txt_value);
 
-  UiObjectInfo(UiObjectInfo&& other) noexcept;
+  UiObjectInfo(UiObjectInfo&& other) = delete;
   UiObjectInfo(const UiObjectInfo& other) = delete;
 
   UiObjectInfo& operator=(UiObjectInfo&& other) = delete;
@@ -500,16 +274,14 @@ class UiObjectInfo final : public UiWindowAppear {
 
   void RenderPickingParams();
 
-  UiDynamicSprite sp_enemy_;
-  UiDynamicSprite sp_friend_;
-  UiDynamicSprite sp_neutral_;
-  UiDynamicSprite sp_obstacle_;
+  UiSprite sp_enemy_;
+  UiSprite sp_friend_;
+  UiSprite sp_neutral_;
+  UiSprite sp_obstacle_;
   UiText txt_name_;
   UiText txt_characteristic_;
   UiText txt_value_;
-  UiEventHandler<static_cast<int>(data::VboIdMain::kPlayerGameObjInfoValue) -
-                 static_cast<int>(data::VboIdMain::kPlayerGameObjInfoDesk) + 1>
-      ui_event_handler_;
+  UiEventHandler ui_event_handler_;
 
   bool enemy_selected_ = false;
   bool friend_selected_ = false;
@@ -520,17 +292,18 @@ class UiObjectInfo final : public UiWindowAppear {
   const ModelData* mdl_data_ = nullptr;
 
   std::vector<ObjParam> render_params_;
+  UiHierarchy hierarchy_;
 };
 
 class UiTipWindow final : public UiWindowAppear {
  public:
   using Base = UiWindowAppear;
 
-  UiTipWindow(UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+  UiTipWindow(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
               UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
-              UiDynamicSprite&& text);
+              UiSprite&& text);
 
-  UiTipWindow(UiTipWindow&& other) noexcept;
+  UiTipWindow(UiTipWindow&& other) = delete;
   UiTipWindow(const UiTipWindow& other) = delete;
 
   UiTipWindow& operator=(UiTipWindow&& other) = delete;
@@ -549,20 +322,21 @@ class UiTipWindow final : public UiWindowAppear {
   void UpdateHoverState(int id);
 
  private:
-  UiDynamicSprite text_;
+  UiSprite text_;
   bool hovered_ = false;
+  UiHierarchy hierarchy_;
 };
 
 // -
 /// only one scale allowed (no x or y scale)
 class UiWindowPopUp : public UiWindowBase {
  public:
-  UiWindowPopUp(UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+  UiWindowPopUp(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
                 UiSharedResources& ui_shared_resources,
                 WindowQueue& window_queue, LocalTransform start_transform,
                 LocalTransform end_transform);
 
-  UiWindowPopUp(UiWindowPopUp&& other) noexcept;
+  UiWindowPopUp(UiWindowPopUp&& other) = delete;
   UiWindowPopUp(const UiWindowPopUp& other) = delete;
 
   UiWindowPopUp& operator=(UiWindowPopUp&& other) = delete;
@@ -592,18 +366,17 @@ class UiSettings final : public UiWindowPopUp {
  public:
   using Base = UiWindowPopUp;
 
-  UiSettings(UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+  UiSettings(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
              UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
              LocalTransform start_transform, LocalTransform end_transform,
-             UiDynamicSprite&& resolution_label,
-             UiDynamicSprite&& resolution_left,
-             UiDynamicSprite&& resolution_right, UiDynamicSprite&& resolution,
+             UiSprite&& resolution_label, UiSprite&& resolution_left,
+             UiSprite&& resolution_right, UiSprite&& resolution,
              UiToggle4&& toggle_fullscreen, UiSliderH2 sensitivity,
              UiSliderH2&& sound, UiToggle4&& toggle_sound, UiSliderH2&& music,
-             UiToggle4&& toggle_music, UiDynamicSprite&& tip_info_label,
-             UiDynamicSprite&& tip_info, UiToggle4&& toggle_tip_info);
+             UiToggle4&& toggle_music, UiSprite&& tip_info_label,
+             UiSprite&& tip_info, UiToggle4&& toggle_tip_info);
 
-  UiSettings(UiSettings&& other) noexcept;
+  UiSettings(UiSettings&& other) = delete;
   UiSettings(const UiSettings& other) = delete;
 
   UiSettings& operator=(UiSettings&& other) = delete;
@@ -624,11 +397,11 @@ class UiSettings final : public UiWindowPopUp {
 
  private:
   // todo; replace by component
-  UiDynamicSprite resolution_label_;
-  UiDynamicSprite resolution_left_;
-  UiDynamicSprite resolution_right_;
+  UiSprite resolution_label_;
+  UiSprite resolution_left_;
+  UiSprite resolution_right_;
 
-  UiDynamicSprite resolution_;
+  UiSprite resolution_;
   UiToggle4 toggle_fullscreen_;
 
   UiSliderH2 sensitivity_;
@@ -639,13 +412,11 @@ class UiSettings final : public UiWindowPopUp {
   UiSliderH2 music_;
   UiToggle4 toggle_music_;
 
-  UiDynamicSprite tip_info_label_;
-  UiDynamicSprite tip_info_;
+  UiSprite tip_info_label_;
+  UiSprite tip_info_;
   UiToggle4 toggle_tip_info_;
-
-  UiEventHandler<static_cast<int>(data::VboIdMain::kSettingsTipInfoOn3) -
-                 static_cast<int>(data::VboIdMain::kSettingsDesk) + 1>
-      ui_event_handler_;
+  UiEventHandler ui_event_handler_;
+  UiHierarchy hierarchy_;
 };
 
 class UiPlayerMap final : public UiWindowPopUp {
@@ -655,7 +426,7 @@ class UiPlayerMap final : public UiWindowPopUp {
   UiPlayerMap(UiSharedResources& ui_shared_resources,
               WindowQueue& window_queue);
 
-  UiPlayerMap(UiPlayerMap&& other) noexcept;
+  UiPlayerMap(UiPlayerMap&& other) = delete;
   UiPlayerMap(const UiPlayerMap& other) = delete;
 
   UiPlayerMap& operator=(UiPlayerMap&& other) = delete;
@@ -676,11 +447,12 @@ class UiPlayerMap final : public UiWindowPopUp {
   void UpdateHoverState(int id);
 
  private:
-  UiDynamicSprite sp_player_;
-  UiDynamicSprite sp_enemy_;
-  UiDynamicSprite sp_friend_;
-  UiDynamicSprite sp_neutral_;
-  UiDynamicSprite sp_obstacle_;
+  UiSprite sp_player_;
+  UiSprite sp_enemy_;
+  UiSprite sp_friend_;
+  UiSprite sp_neutral_;
+  UiSprite sp_obstacle_;
+  UiHierarchy hierarchy_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_

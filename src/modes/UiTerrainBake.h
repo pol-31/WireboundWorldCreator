@@ -10,18 +10,12 @@ class UiTerrainBake final : public UiWindowAppear {
  public:
   using Base = UiWindowAppear;
 
-  UiTerrainBake(Tile& cur_tile, UiDynamicSprite&& sprite, float size_scale,
+  UiTerrainBake(Tile& cur_tile, UiSprite&& sprite, float size_scale,
                 UiToggle2&& pin, UiSharedResources& ui_shared_resources,
                 WindowQueue& window_queue, TextRenderer& text_renderer,
-                UiDynamicSprite&& accept, UiTextModeId&& erosion_label,
+                UiSprite&& accept, UiTextModeId&& erosion_label,
                 UiTextInput&& erosion_input, UiTextModeId&& weathering_label,
                 UiTextInput&& weathering_input);
-
-  UiTerrainBake(UiTerrainBake&& other) noexcept;
-  UiTerrainBake(const UiTerrainBake& other) = delete;
-
-  UiTerrainBake& operator=(UiTerrainBake&& other) = delete;
-  UiTerrainBake& operator=(const UiTerrainBake& other) = delete;
 
   bool Press(int id) override;
 
@@ -79,7 +73,7 @@ class UiTerrainBake final : public UiWindowAppear {
   void GenerateFlowMap(std::vector<std::vector<glm::vec2>>& flow_dir,
                        std::vector<std::vector<float>>& flow_accum);
 
-  UiDynamicSprite accept_;
+  UiSprite accept_;
 
   //  UiTextInput erosion_input_;
   //  UiTextInput weathering_input_;
@@ -88,9 +82,11 @@ class UiTerrainBake final : public UiWindowAppear {
   UiTextModeId weathering_label_;
   UiTextInput weathering_input_;
 
-  UiEventHandler<static_cast<int>(data::VboIdMain::kTerrainBakeHmap) -
-                 static_cast<int>(data::VboIdMain::kTerrainBakeDesk) + 1>
-      ui_event_handler_;
+  // TODO: bind from TileRenderer, same with UiEditTerrain
+  UiSprite sprite_hmap_;
+
+  UiEventHandler ui_event_handler_;
+  UiHierarchy hierarchy_;
 
   UiSharedResources& ui_shared_resources_;
 
@@ -112,9 +108,6 @@ class UiTerrainBake final : public UiWindowAppear {
   Texture32F& tex_erosion_hydraulic_map_;
   Texture32F& tex_water_accum_;
   Texture& tex_water_flow_;
-
-  // TODO: bind from TileRenderer, same with UiEditTerrain
-  UiDynamicSprite sprite_hmap_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_UITERRAINBAKE_H

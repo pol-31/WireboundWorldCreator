@@ -110,96 +110,40 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
           [this] {
             this->ui_shared_resources_.glfw_context_.ui_renderer->Parse();
           }},
+      text_filename_(text_renderer, {data::VboIdMain::kFileTextLabel},
+                     {data::VboIdMain::kFileTextBack}),
       txt_mode_{text_renderer,
                 {data::VboIdMain::kModeModeText},
                 data::TextId::kMenuTerrain},
       ui_event_handler_({
-          &pin_,
-          &btn_terrain_,
-          &btn_water_,
-          &btn_placement_,
-          &btn_objects_,
-          &btn_biomes_,
-          &btn_tiles_,
-          &btn_player_,
-
-          &tg_terrain_,
-          &tg_water_,
-          &tg_placement_,
-          &tg_objects_,
-          &tg_biomes_,
-          &tg_tiles_,
-
-          &btn_shader_wirebound_,
-          &toggle_shaders_,
-          &save_data_,
-          &load_data_,
-      }) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &btn_terrain_, &btn_water_, &btn_placement_,
-      &btn_objects_, &btn_biomes_, &btn_tiles_, &btn_player_, &tg_terrain_,
-      &tg_water_, &tg_placement_, &tg_objects_, &tg_biomes_, &tg_tiles_,
-      &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_,
-      &arrow_selected_, &save_data_, &load_data_);
+          &pin_, &btn_terrain_, &btn_water_, &btn_placement_, &btn_objects_,
+          &btn_biomes_, &btn_tiles_, &btn_player_, &tg_terrain_, &tg_water_,
+          &tg_placement_, &tg_objects_, &tg_biomes_, &tg_tiles_,
+          &btn_shader_wirebound_, &toggle_shaders_, &save_data_,
+          &load_data_ /*, &text_filename_*/
+      }),
+      hierarchy_(&background_, {&pin_,
+                                &btn_terrain_,
+                                &btn_water_,
+                                &btn_placement_,
+                                &btn_objects_,
+                                &btn_biomes_,
+                                &btn_tiles_,
+                                &btn_player_,
+                                &tg_terrain_,
+                                &tg_water_,
+                                &tg_placement_,
+                                &tg_objects_,
+                                &tg_biomes_,
+                                &tg_tiles_,
+                                &btn_shader_wirebound_,
+                                &toggle_shaders_,
+                                &arrow_select_,
+                                &arrow_selected_,
+                                &save_data_,
+                                &load_data_,
+                                &text_filename_}) {
   speed_ = 2.0f;
-  SetCircleTransform();
-}
-
-UiMenu::UiMenu(UiMenu&& other) noexcept
-    : Base(std::move(other)),
-      btn_terrain_(std::move(other.btn_terrain_)),
-      btn_water_(std::move(other.btn_water_)),
-      btn_placement_(std::move(other.btn_placement_)),
-      btn_objects_(std::move(other.btn_objects_)),
-      btn_biomes_(std::move(other.btn_biomes_)),
-      btn_tiles_(std::move(other.btn_tiles_)),
-      btn_player_(std::move(other.btn_player_)),
-
-      tg_terrain_(std::move(other.tg_terrain_)),
-      tg_water_(std::move(other.tg_water_)),
-      tg_placement_(std::move(other.tg_placement_)),
-      tg_objects_(std::move(other.tg_objects_)),
-      tg_biomes_(std::move(other.tg_biomes_)),
-      tg_tiles_(std::move(other.tg_tiles_)),
-
-      btn_shader_wirebound_(std::move(other.btn_shader_wirebound_)),
-      toggle_shaders_(std::move(other.toggle_shaders_)),
-
-      arrow_select_(std::move(other.arrow_select_)),
-      arrow_selected_(std::move(other.arrow_selected_)),
-      save_data_(std::move(other.save_data_)),
-      load_data_(std::move(other.load_data_)),
-      txt_mode_(std::move(other.txt_mode_)),
-      cur_mode_(other.cur_mode_),
-
-      ui_event_handler_({
-          &pin_,
-          &btn_terrain_,
-          &btn_water_,
-          &btn_placement_,
-          &btn_objects_,
-          &btn_biomes_,
-          &btn_tiles_,
-          &btn_player_,
-
-          &tg_terrain_,
-          &tg_water_,
-          &tg_placement_,
-          &tg_objects_,
-          &tg_biomes_,
-          &tg_tiles_,
-
-          &btn_shader_wirebound_,
-          &toggle_shaders_,
-          &save_data_,
-          &load_data_,
-      }) {
-  hierarchy_ = UiHierarchy(
-      &sprite_, &pin_, &btn_terrain_, &btn_water_, &btn_placement_,
-      &btn_objects_, &btn_biomes_, &btn_tiles_, &btn_player_, &tg_terrain_,
-      &tg_water_, &tg_placement_, &tg_objects_, &tg_biomes_, &tg_tiles_,
-      &btn_shader_wirebound_, &toggle_shaders_, &arrow_select_,
-      &arrow_selected_, &save_data_, &load_data_);
   SetCircleTransform();
 }
 
@@ -261,6 +205,7 @@ bool UiMenu::Render() {
   arrow_selected_.Render();
   save_data_.Render();
   load_data_.Render();
+  text_filename_.Render();
   txt_mode_.Render();
 
   return stop_show;
@@ -298,6 +243,7 @@ void UiMenu::RenderPicking() {
   arrow_selected_.RenderPicking();
   save_data_.RenderPicking();
   load_data_.RenderPicking();
+  text_filename_.RenderPicking();
   txt_mode_.RenderPicking();
 }
 
@@ -333,8 +279,7 @@ void UiMenu::SetCircleTransform() {
   SetTg4Transform(tg_tiles_, 5, total_modes, radius_checkbox);
 }
 
-void UiMenu::SetSpTransform(UiDynamicSprite& sp, int id, int total_num,
-                            float radius) {
+void UiMenu::SetSpTransform(UiSprite& sp, int id, int total_num, float radius) {
   float angle =
       (2.0f * glm::pi<float>() / total_num) * id + glm::half_pi<float>();
   glm::vec2 translate = {cos(angle) * radius, sin(angle) * radius};

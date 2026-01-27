@@ -3,11 +3,13 @@
 
 #include <glad/glad.h>
 
+#include <set>
+
 #include "../common/Shader.h"
 #include "../modes/UiSharedResources.h"
 #include "Ui.h"
 
-class TerrainInstanceData;
+class TerrainTraits;
 
 enum class SelectionMode { kRectangle, kCircle, kLasso, kTweak };
 
@@ -97,7 +99,7 @@ class UiSelection {
 
   std::set<GLuint> ApplySelectionIntoSet();
 
-  UiDynamicSprite sp_circle_;
+  UiSprite sp_circle_;
   UiSharedResources& ui_shared_resources_;
   Shader shader_;
   Shader shader_area_;
@@ -108,7 +110,7 @@ class UiSelection {
   /// .comp shader + fbo
   GLuint selection_fbo_ = 0;
   Texture selection_tex_;
-  UiDynamicSprite sp_selection_;
+  UiSprite sp_selection_;
 
   Texture selection_tex_surface_;
 

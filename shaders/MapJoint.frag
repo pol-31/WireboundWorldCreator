@@ -2,7 +2,8 @@
 
 out vec4 FragColor;
 
+layout (location = 2) uniform vec4 color;
+
 void main() {
-    vec3 joint_color = vec3(1.0f);
-    FragColor = vec4(joint_color, 1.0f);
+    FragColor = vec4(color.rgb, 1.0f);
 }

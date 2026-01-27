@@ -49,11 +49,11 @@ class UiPlacementMode final : public IUiMode {
   Texture* GetPlacementTallGrass();
   Texture* GetPlacementUndergrowth();
 
-  UiDynamicSprite btn_trees_;
-  UiDynamicSprite btn_bushes_;
-  UiDynamicSprite btn_tall_grass;
-  UiDynamicSprite btn_undergrowth_;
-  UiDynamicSprite btn_change_mode_;  /// toggle/swap
+  UiSprite btn_trees_;
+  UiSprite btn_bushes_;
+  UiSprite btn_tall_grass;
+  UiSprite btn_undergrowth_;
+  UiSprite btn_change_mode_;  /// toggle/swap
   UiSelectedSprite sp_selected_mode_;
 
   UiSlots& ui_slots_;
@@ -63,9 +63,7 @@ class UiPlacementMode final : public IUiMode {
   bool anything_selected_ = false;
   ModelManager& mdl_manager_;
 
-  UiEventHandler<static_cast<int>(data::VboIdMain::kPlacementChangeMode) -
-                 static_cast<int>(data::VboIdMain::kPlacementPlacementMode) + 1>
-      ui_event_handler_;
+  UiEventHandler ui_event_handler_;
 
   Texture* tex_cur_placement_ = nullptr;
   bool preview_mode_ = false;

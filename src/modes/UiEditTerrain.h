@@ -25,8 +25,6 @@ class UiEditTerrain final : public IUiEdit {
 
   ~UiEditTerrain() override { DeInit(); }
 
-  UiEditTerrain(UiEditTerrain&& other) noexcept;
-
   void HideAll() override;
 
   void CreateInstance() override;

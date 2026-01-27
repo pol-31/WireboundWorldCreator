@@ -38,9 +38,9 @@ class UiWaterMode final : public IUiMode {
 
   void OnSelectedSlotChanged(bool is_ocean);
 
-  UiDynamicSprite btn_bake_ocean_;
-  UiDynamicSprite btn_bake_river_;
-  UiDynamicSprite btn_update_;
+  UiSprite btn_bake_ocean_;
+  UiSprite btn_bake_river_;
+  UiSprite btn_update_;
   UiSelectedSprite sp_selected_mode_;
 
   UiSlots& ui_slots_;
@@ -51,12 +51,8 @@ class UiWaterMode final : public IUiMode {
   bool anything_selected_ = false;
 
   MouseTransform mouse_transform_;
-
   MapPoints map_points_;
-
-  UiEventHandler<static_cast<int>(data::VboIdMain::kWaterRiver) -
-                 static_cast<int>(data::VboIdMain::kWaterUpdate) + 1>
-      ui_event_handler_;
+  UiEventHandler ui_event_handler_;
 };
 
 namespace water {

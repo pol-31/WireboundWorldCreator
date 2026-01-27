@@ -44,9 +44,9 @@ class MouseTransform {
   void ScaleSelectedMapPointsBack(const std::vector<MapPoint>& map_points,
                                   std::vector<glm::vec3>& scales);
 
-  void TranslateSelectedVerticesUp(double xpos, double ypos,
-                                   const Texture& hmap,
-                                   const Texture& selection_mask, bool smooth);
+  void TranslateSelectedVerticesUp(
+    double xpos, double ypos,
+    const Texture& hmap, const Texture& selection_mask);
 
   void Reset(glm::vec3 translate = glm::vec3(0.0f),
              glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),

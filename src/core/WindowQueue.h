@@ -5,14 +5,11 @@
 
 #include <array>
 
-#include "../common/Text.h"
-
 class UiWindowBase;
-class UiTopWindowBase;
 
 class WindowQueue {
  public:
-  using DataType = std::array<UiWindowBase*, 20>;
+  using DataType = std::array<UiWindowBase*, 5>;
   using SizeType = DataType::size_type;
 
   WindowQueue();
@@ -28,14 +25,6 @@ class WindowQueue {
 
   [[nodiscard]] int GetSize() const noexcept;
 
-  // ---
-
-  void BtnEnter();
-
-  void BtnEscape();
-
-  // ---
-
   bool Render();
 
   void RenderPicking();
@@ -46,19 +35,8 @@ class WindowQueue {
 
   bool Scroll(GLuint id, float yoffset);
 
-  void SetTopWindow(UiTopWindowBase* window) { top_window_ = window; }
-
-  [[nodiscard]] UiTopWindowBase* GetTopWindow() const noexcept {
-    return top_window_;
-  }
-
  private:
   DataType windows_;
-
-  // edit, bake, settings, tips - can be pinned
-  // confirmation, file - cannot be pinned
-  UiTopWindowBase* top_window_ = nullptr;
-
   int selected_id_ = -1;
 };
 

@@ -2,9 +2,11 @@
 
 #include <stb_image.h>
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include "../common/OpenGLUtility.h"
 #include "../common/PickingFramebuffer.h"
-#include "../modes/TerrainInstanceData.h"
+#include "../modes/traits/TerrainTraits.h"
 #include "TileRenderer.h"
 
 int UiSelection::gMaxPoints = 1000;

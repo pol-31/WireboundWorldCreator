@@ -17,22 +17,11 @@ UiConfigWindow::UiConfigWindow(UiSharedResources& ui_shared_resources,
       config_slider_(data::VboIdMain::kConfigWindowSliderArea,
                      data::VboIdMain::kConfigWindowSliderIcon),
       config_text_(text_renderer, data::VboIdMain::kConfigWindowSliderText,
-                   data::TextId::kSeed) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_, &sl_data_);
-  hierarchy_.AddNested(&config_slider_, &config_text_);
+                   data::TextId::kSeed),
+      hierarchy_(&background_, {&pin_, &name_, &btn_save_, &sl_data_}) {
+  UiBase* comps[] = {&config_text_};
+  hierarchy_.AddNested(&config_slider_, comps);
   sl_data_.SetSlotPtr(config_slider_.GetTrackPtr());
-  SetupUiHierarchy();
-}
-
-UiConfigWindow::UiConfigWindow(UiConfigWindow&& other) noexcept
-    : UiWindowAppear(std::move(other)),
-      name_(std::move(other.name_)),
-      btn_save_(std::move(other.btn_save_)),
-      sl_data_(std::move(other.sl_data_)),
-      config_slider_(std::move(other.config_slider_)),
-      config_text_(std::move(other.config_text_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &name_, &btn_save_, &sl_data_);
-  hierarchy_.AddNested(&config_slider_, &config_text_);
   SetupUiHierarchy();
 }
 
@@ -168,14 +157,14 @@ void UiConfigWindow::SetNoise(std::span<float> value,
 
 void UiConfigWindow::SetupUiHierarchy() {
   LocalTransform transform;
-  float half_width = sprite_.GetWidth() / 2.0f;
-  float quat_width = sprite_.GetWidth() / 4.0f;
+  float half_width = background_.GetWidth() / 2.0f;
+  float quat_width = background_.GetWidth() / 4.0f;
   transform.translate.x = half_width;
   sl_data_.SetParentTransform(transform);
   transform.scale = 0.1f;
   transform.translate.x = -quat_width;
   transform.translate.y = .0f;
-  transform.translate.y = sprite_.GetHeight() / 4.0f;
+  transform.translate.y = background_.GetHeight() / 4.0f;
   //  transform.translate.x = sprite_.GetRightBorder();
   //  transform.translate.y = sprite_.GetTopBorder();
   config_text_.SetParentTransform(transform);

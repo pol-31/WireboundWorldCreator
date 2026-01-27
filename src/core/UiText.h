@@ -9,8 +9,8 @@
 
 class UiTextInput final : public UiBase {
  public:
-  UiTextInput(TextRenderer& text_renderer, UiDynamicSprite&& back,
-              UiDynamicSprite&& text, float extra_width = 0.0f);
+  UiTextInput(TextRenderer& text_renderer, UiSprite&& back, UiSprite&& text,
+              float extra_width = 0.0f);
 
   UiTextInput(UiTextInput&& other) noexcept;
   UiTextInput(const UiTextInput& other) = delete;
@@ -52,8 +52,8 @@ class UiTextInput final : public UiBase {
 
  private:
   friend class TextRenderer;
-  UiDynamicSprite sp_back_;  // clickable area
-  UiDynamicSprite sp_text_;  // print text
+  UiSprite sp_back_;  // clickable area
+  UiSprite sp_text_;  // print text
 
   std::string text_input_;
   TextRenderer& text_renderer_;
@@ -67,7 +67,7 @@ class UiTextInput final : public UiBase {
 
 class UiTextLabelBase : public UiBase {
  public:
-  UiTextLabelBase(TextRenderer& text_renderer, UiDynamicSprite&& text);
+  UiTextLabelBase(TextRenderer& text_renderer, UiSprite&& text);
 
   UiTextLabelBase(UiTextLabelBase&& other) noexcept;
   UiTextLabelBase(const UiTextLabelBase& other) = delete;
@@ -90,7 +90,7 @@ class UiTextLabelBase : public UiBase {
   void SetTranslate(glm::vec2 translate);
 
  protected:
-  UiDynamicSprite sp_text_;
+  UiSprite sp_text_;
   TextRenderer& text_renderer_;
 };
 
@@ -98,7 +98,7 @@ class UiTextLabelBase : public UiBase {
 class UiText final : public UiTextLabelBase {
  public:
   /// no text arg; text in the class supposed to change from time to time
-  UiText(TextRenderer& text_renderer, UiDynamicSprite&& text);
+  UiText(TextRenderer& text_renderer, UiSprite&& text);
 
   UiText(UiText&& other) noexcept = default;
   UiText(const UiText& other) = delete;
@@ -129,7 +129,7 @@ class UiText final : public UiTextLabelBase {
 /// prerendered menu text
 class UiTextMenuId final : public UiTextLabelBase {
  public:
-  UiTextMenuId(TextRenderer& text_renderer, UiDynamicSprite&& text,
+  UiTextMenuId(TextRenderer& text_renderer, UiSprite&& text,
                data::TextId text_id = data::TextId::kLoading);
 
   UiTextMenuId(UiTextMenuId&& other) noexcept = default;
@@ -155,7 +155,7 @@ class UiTextMenuId final : public UiTextLabelBase {
 /// prerendered menu text
 class UiTextModeId final : public UiTextLabelBase {
  public:
-  UiTextModeId(TextRenderer& text_renderer, UiDynamicSprite&& text,
+  UiTextModeId(TextRenderer& text_renderer, UiSprite&& text,
                data::TextId text_id);
 
   UiTextModeId(UiTextModeId&& other) noexcept = default;

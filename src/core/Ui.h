@@ -3,27 +3,13 @@
 
 #include <array>
 #include <functional>
-#include <iostream>
-#include <limits>
-#include <memory>
-#include <tuple>
+#include <glm/glm.hpp>
+#include <span>
 #include <vector>
 
-#ifndef NDEBUG
-#include <set>
-#endif
-
-#include <glm/glm.hpp>
-
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/matrix_transform_2d.hpp>
-
 #include "../common/LocalTransform.h"
-#include "../common/Shader.h"
 #include "../common/Vbos.h"
 #include "../io/Window.h"
-#include "../modes/UiSharedResources.h"
 
 /// dbg serializing - stored without rotation
 LocalTransformLinear GetParentDbgTransform(size_t id);
@@ -38,15 +24,12 @@ class UiBase {
 
   UiBase(size_t ui_data_id, CallableType&& action);
 
-  //  UiBase(UiBase* other) noexcept {
-  //    ui_data_id_ = other->ui_data_id_;
-  //  }
-
   UiBase(UiBase&& other) noexcept = default;
   UiBase(const UiBase& other) = default;
-
   UiBase& operator=(UiBase&& other) = default;
   UiBase& operator=(const UiBase& other) = default;
+
+  virtual ~UiBase() = default;
 
   /// different components have different params and shaders for Render()
   /// and RenderPicking(), therefore now we can't provide enough support
@@ -73,102 +56,73 @@ class UiBase {
   std::function<void()> action_;
 };
 
-class UiBasePad final : public UiBase {
- public:
-  UiBasePad() : UiBase(data::VboIdMain::kMenuTerrain, {}) {}
-  void Press() { std::cerr << "Pad was called, smt went wrong" << std::endl; }
-
-  void UpdateTransform() {}
-};
-
-class IUiEventHandler {
- public:
-  virtual bool Press(int id) = 0;
-
-  virtual void Release() = 0;
-
-  virtual bool IsInRange(int id) = 0;
-};
-
-/// Creates ptr for each alive and UiBasePad for each missing:
-/// IDs 1 2 3 4 5 6 100 creates 93 padding components (inneficient).
-/// for ui components, located close by IDs with trivial handling;
-/// for unrelated by ID sprites, simply use switch/if-else
-template <std::size_t MaxSize>
-class UiEventHandler final : public IUiEventHandler {
+/// fills with nullptr between ids, so may be inefficient in some cases
+class UiEventHandler {
  public:
   UiEventHandler() = default;
 
-  UiEventHandler(std::initializer_list<UiBase*> widgets) { Init(widgets); }
+  UiEventHandler(std::initializer_list<UiBase*> widgets)
+      : UiEventHandler(std::span{widgets}) {}
 
-  UiEventHandler(UiEventHandler&& other) = default;
-  UiEventHandler(const UiEventHandler& other) = default;
+  explicit UiEventHandler(std::span<UiBase* const> widgets) { Init(widgets); }
 
-  UiEventHandler& operator=(UiEventHandler&& other) = default;
-  UiEventHandler& operator=(const UiEventHandler& other) = default;
+  UiEventHandler(UiEventHandler&& other) = delete;
+  UiEventHandler(const UiEventHandler& other) = delete;
+  UiEventHandler& operator=(UiEventHandler&& other) = delete;
+  UiEventHandler& operator=(const UiEventHandler& other) = delete;
 
-  bool Press(int id) {
-    if (id < start_ || id > end_) {
-      return false;
-    }
-    /// performance over the memory:
-    ///   creates dumps if ids empty, but hit exactly by id on Press()
-    widgets_[id - start_]->Press();
-    return true;
+  bool Press(int id);
+
+  void Release();
+
+  [[nodiscard]] bool IsInRange(int id) const {
+    return id >= start_ && id <= end_;
   }
-
-  void Release() {
-    for (auto widget : widgets_) {
-      widget->Release();
-    }
-  }
-
-  bool IsInRange(int id) { return id >= start_ && id <= end_; }
 
  private:
-  void Init(std::initializer_list<UiBase*> widgets) {
-    start_ = std::numeric_limits<int>::max();
-    end_ = std::numeric_limits<int>::min();
-
-    for (UiBase* widget : widgets) {
-      int id = widget->GetId();
-      start_ = std::min(start_, id);
-      end_ = std::max(end_, id);
-    }
-
-    // Bounds check
-    if ((end_ - start_ + 1) > MaxSize) {
-      throw std::runtime_error("EventHandler array size exceeded MaxSize");
-    }
-
-    widgets_.fill(&ui_callable_pad_);
-
-    for (UiBase* widget : widgets) {
-      int index = widget->GetId() - start_;
-#ifndef NDEBUG
-      // if exception is here - indices aren't conseq... maybe
-      widgets_.at(index) = widget;
-#else
-      widgets_.[index] = widget;
-#endif
-    }
-  }
+  void Init(std::span<UiBase* const> widgets);
 
   int start_ = 0;
-  int end_ = 0;
-  std::array<UiBase*, MaxSize> widgets_;
-  inline static UiBasePad ui_callable_pad_{};
+  int end_ = -1;
+  std::vector<UiBase*> widgets_;
 };
 
-class UiDynamicSprite : public UiBase {
+class UiHierarchy final : public UiBase {
  public:
-  UiDynamicSprite(data::VboIdMain vbo_texture, CallableType action = {});
+  UiBase* parent_;
+  std::vector<UiBase*> components_;
 
-  UiDynamicSprite(UiDynamicSprite&& other) noexcept;
-  UiDynamicSprite(const UiDynamicSprite& other) = delete;
+  UiHierarchy(UiBase* parent, std::initializer_list<UiBase*> components)
+      : UiHierarchy(parent, std::span{components}) {}
 
-  UiDynamicSprite& operator=(UiDynamicSprite&& other) noexcept = default;
-  UiDynamicSprite& operator=(const UiDynamicSprite& other) = delete;
+  UiHierarchy(UiBase* parent, std::span<UiBase* const> components)
+      : UiBase(*parent),
+        parent_(parent),
+        components_(components.begin(), components.end()) {
+    Bind();
+  }
+
+  UiHierarchy(UiHierarchy&& other) = delete;
+  UiHierarchy(const UiHierarchy& other) = delete;
+  UiHierarchy& operator=(UiHierarchy&& other) = delete;
+  UiHierarchy& operator=(const UiHierarchy& other) = delete;
+
+  void AddNested(UiBase* parent, std::span<UiBase* const> components);
+
+  void UpdateTransform() override;
+
+ private:
+  void Bind();
+};
+
+class UiSprite : public UiBase {
+ public:
+  UiSprite(data::VboIdMain vbo_texture, CallableType action = {});
+
+  UiSprite(UiSprite&& other) noexcept;
+  UiSprite(const UiSprite& other) = delete;
+  UiSprite& operator=(UiSprite&& other) noexcept = delete;
+  UiSprite& operator=(const UiSprite& other) = delete;
 
   void Render();
 
@@ -251,44 +205,13 @@ class UiDynamicSprite : public UiBase {
   /// collected from gUiTransform & gUiComponents, so dbg - no rotation
   LocalTransformLinear final_dbg_transform_;
 
-  // TODO: affects only x or y, kostyl
+  /// how x differs from y (useful for text or special resolution)
   float extra_scale_{1.0f};
-};
-
-class UiStaticSprite : public UiBase {
- public:
-  UiStaticSprite(data::VboIdMain vbo_texture, CallableType action = {});
-
-  UiStaticSprite(UiStaticSprite&& other) noexcept;
-  UiStaticSprite(const UiStaticSprite& other) = delete;
-
-  UiStaticSprite& operator=(UiStaticSprite&& other) noexcept = default;
-  UiStaticSprite& operator=(const UiStaticSprite& other) = delete;
-
-  void Render();
-
-  /// when we operate on arrays of buttons we don't want
-  /// bind the same shader 20 times, so this function don't bind shader
-  // TODO: inilne
-  void RenderPicking() const;
-
-  void UpdateTransform() override;
-
-  [[nodiscard]] float GetLeftBorder() const;
-
-  [[nodiscard]] float GetRightBorder() const;
-
-  [[nodiscard]] float GetTopBorder() const;
-
-  [[nodiscard]] float GetBottomBorder() const;
-
- private:
-  glm::mat3 final_transform_;
 };
 
 class UiSpriteTransformation {
  public:
-  UiSpriteTransformation(UiDynamicSprite& sprite, LocalTransform start,
+  UiSpriteTransformation(UiSprite& sprite, LocalTransform start,
                          LocalTransform end);
 
   void Render();
@@ -320,7 +243,7 @@ class UiSpriteTransformation {
   void UpdateAnimation();
 
   // take by ref to avoid UpdateTransform / parent dependency issues
-  UiDynamicSprite& sprite_;
+  UiSprite& sprite_;
   LocalTransform start_;
   LocalTransform end_;
   LocalTransform cur_;
@@ -332,8 +255,8 @@ class UiSpriteTransformation {
 
 class UiSliderV3 final : public UiBase {
  public:
-  UiSliderV3(UiDynamicSprite&& sp_fill, UiDynamicSprite&& sp_track,
-             UiDynamicSprite&& sp_handle, float scale = 1.0f);
+  UiSliderV3(UiSprite&& sp_fill, UiSprite&& sp_track, UiSprite&& sp_handle,
+             float scale = 1.0f);
 
   UiSliderV3(UiSliderV3&& other) noexcept;
   UiSliderV3(const UiSliderV3& other) = delete;
@@ -366,9 +289,9 @@ class UiSliderV3 final : public UiBase {
 
   void Set(float progress);
 
-  UiDynamicSprite sp_fill_;
-  UiDynamicSprite sp_track_;
-  UiDynamicSprite sp_handle_;
+  UiSprite sp_fill_;
+  UiSprite sp_track_;
+  UiSprite sp_handle_;
 
   float progress_{0.0f};
   bool pressed_ = false;
@@ -380,8 +303,8 @@ class UiSliderV3 final : public UiBase {
 
 class UiSliderH3 final : public UiBase {
  public:
-  UiSliderH3(UiDynamicSprite&& sp_fill, UiDynamicSprite&& sp_track,
-             UiDynamicSprite&& sp_handle, float scale = 1.0f);
+  UiSliderH3(UiSprite&& sp_fill, UiSprite&& sp_track, UiSprite&& sp_handle,
+             float scale = 1.0f);
 
   UiSliderH3(UiSliderH3&& other) noexcept;
   UiSliderH3(const UiSliderH3& other) = delete;
@@ -412,9 +335,9 @@ class UiSliderH3 final : public UiBase {
 
   void Set(float progress);
 
-  UiDynamicSprite sp_fill_;
-  UiDynamicSprite sp_track_;
-  UiDynamicSprite sp_handle_;
+  UiSprite sp_fill_;
+  UiSprite sp_track_;
+  UiSprite sp_handle_;
 
   float progress_{0.0f};
   bool pressed_{false};
@@ -426,8 +349,7 @@ class UiSliderH3 final : public UiBase {
 
 class UiSliderH2 final : public UiBase {
  public:
-  UiSliderH2(UiDynamicSprite&& sp_track, UiDynamicSprite&& sp_handle,
-             float scale = 1.0f);
+  UiSliderH2(UiSprite&& sp_track, UiSprite&& sp_handle, float scale = 1.0f);
 
   UiSliderH2(UiSliderH2&& other) noexcept;
   UiSliderH2(const UiSliderH2& other) = delete;
@@ -456,7 +378,7 @@ class UiSliderH2 final : public UiBase {
   void SetValue(float value);
 
   // used for UiWindowSlider (UiComplex.h) as a slot height
-  [[nodiscard]] const UiDynamicSprite* GetTrackPtr() const noexcept {
+  [[nodiscard]] const UiSprite* GetTrackPtr() const noexcept {
     return &sp_track_;
   }
   // used for UiWindowSlider (UiComplex.h) do setup a group of sliders
@@ -470,8 +392,8 @@ class UiSliderH2 final : public UiBase {
 
   void Set(float progress);
 
-  UiDynamicSprite sp_track_;
-  UiDynamicSprite sp_handle_;
+  UiSprite sp_track_;
+  UiSprite sp_handle_;
 
   float progress_ = 0.0f;
   bool pressed_ = false;
@@ -484,7 +406,7 @@ class UiSliderH2 final : public UiBase {
 /// used for ui palette, so X-axis is Hue, Y-axis is Saturation
 class UiSlider2D final : public UiBase {
  public:
-  UiSlider2D(UiDynamicSprite&& sp_palette, UiDynamicSprite&& sp_handle,
+  UiSlider2D(UiSprite&& sp_palette, UiSprite&& sp_handle,
              glm::vec2 scale = glm::vec2{1.0f});
 
   UiSlider2D(UiSlider2D&& other) noexcept;
@@ -520,8 +442,8 @@ class UiSlider2D final : public UiBase {
 
   void SetProgress(glm::vec2 progress);
 
-  UiDynamicSprite sp_track_;
-  UiDynamicSprite sp_handle_;
+  UiSprite sp_track_;
+  UiSprite sp_handle_;
 
   glm::vec2 progress_ = glm::vec2{0.0f};
   bool pressed_ = false;
@@ -536,8 +458,7 @@ class UiSlider2D final : public UiBase {
 /// You should pass action to off_ sprite (see Press());
 class UiToggle4 final : public UiBase {
  public:
-  UiToggle4(UiDynamicSprite&& off, UiDynamicSprite&& on1, UiDynamicSprite&& on2,
-            UiDynamicSprite&& on3);
+  UiToggle4(UiSprite&& off, UiSprite&& on1, UiSprite&& on2, UiSprite&& on3);
 
   UiToggle4(UiToggle4&& other) noexcept;
   UiToggle4(const UiToggle4& other) = delete;
@@ -566,22 +487,22 @@ class UiToggle4 final : public UiBase {
  private:
   void UpdateState();
 
-  UiDynamicSprite off_;
-  UiDynamicSprite on1_;
-  UiDynamicSprite on2_;
-  UiDynamicSprite on3_;
+  UiSprite sp_off_;
+  UiSprite sp_on1_;
+  UiSprite sp_on2_;
+  UiSprite sp_on3_;
 
-  UiDynamicSprite* state_{nullptr};
+  UiSprite* state_ = nullptr;
 
-  bool turned_off_{true};
+  bool turned_off_ = true;
 
-  float speed_{0.2f};
-  float progress_{0.0f};
+  float speed_ = 0.2f;
+  float progress_ = 0.0f;
 };
 
 class UiToggle2 final : public UiBase {
  public:
-  UiToggle2(UiDynamicSprite&& off, UiDynamicSprite&& on);
+  UiToggle2(UiSprite&& off, UiSprite&& on);
 
   UiToggle2(UiToggle2&& other) noexcept;
   UiToggle2(const UiToggle2& other) = delete;
@@ -606,9 +527,9 @@ class UiToggle2 final : public UiBase {
   void Set(bool value);
 
  private:
-  UiDynamicSprite off_;
-  UiDynamicSprite on_;
-  bool turned_off_{true};
+  UiSprite sp_off_;
+  UiSprite sp_on_;
+  bool turned_off_ = true;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_UI_H_

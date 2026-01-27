@@ -11,10 +11,9 @@ class IUiEdit;
 class UiEditSlots final : public UiWindowAppear {
  public:
   using Base = UiWindowAppear;
+
   UiEditSlots(UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
               TextRenderer& text_renderer);
-
-  UiEditSlots(UiEditSlots&& other) noexcept;
 
   void SetUp(IUiEdit* ui_edit);
 
@@ -34,18 +33,15 @@ class UiEditSlots final : public UiWindowAppear {
 
   std::mt19937 random_generator_;
 
-  UiDynamicSprite accept_;
+  UiSprite accept_;
   UiTextInput name_;
   UiSlider2D color_palette_;
   UiSliderH2 color_brightness_;
-  UiDynamicSprite color_indicator_;
-  UiDynamicSprite random_generate_;
+  UiSprite color_indicator_;
+  UiSprite random_generate_;
 
-  UiEventHandler<static_cast<int>(
-                     data::VboIdMain::kBiomesEditNoiseStrengthIcon) -
-                 static_cast<int>(data::VboIdMain::kBiomesEditDesk) + 1>
-      ui_event_handler_;
-
+  UiEventHandler ui_event_handler_;
+  UiHierarchy hierarchy_;
   UiSharedResources& ui_shared_resources_;
 };
 

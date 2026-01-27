@@ -56,17 +56,19 @@ void MapPointsBase::UpdateJointsBuffer() {
     buffer[i * 4 + 3] = position2;
   }
   glBindBuffer(GL_ARRAY_BUFFER, vbo_joints_);
-  glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(glm::vec2), buffer.data(),
-               GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(glm::vec2),
+               buffer.data(), GL_DYNAMIC_DRAW);
 }
 
-void MapPointsBase::RenderJoints(const Texture& hmap, float map_scale) {
+void MapPointsBase::RenderJoints(const Texture& hmap, float map_scale,
+                                 glm::vec4 color) {
   if (!map_joints_) {
     return;
   }
   auto map_model = glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));
   shader_joints_.Bind();
   glUniform1i(0, 0);
+  glUniform4fv(2, false, glm::value_ptr(color));
   glActiveTexture(GL_TEXTURE0);
   hmap.Bind();
   glUniformMatrix4fv(1, 1, false, glm::value_ptr(map_model));
@@ -94,7 +96,8 @@ MapPoints::MapPoints(ModelManager& mdl_manager) : MapPointsBase(mdl_manager) {}
 
 void MapPoints::AddPoint(GLuint pos_id) {
   if (map_points_) {
-    map_points_->push_back({glm::vec2{pos_id >> 10, pos_id & 1023} / 16.0f - 32.0f, false});
+    map_points_->push_back(
+        {glm::vec2{pos_id >> 10, pos_id & 1023} / 16.0f - 32.0f, false});
   }
 }
 
@@ -121,7 +124,8 @@ MapObjects::MapObjects(ModelManager& mdl_manager)
 
 void MapObjects::AddPoint(GLuint pos_id) {
   if (map_points_) {
-    map_points_->push_back({glm::vec2{pos_id >> 10, pos_id & 1023} / 16.0f - 32.0f, false});
+    map_points_->push_back(
+        {glm::vec2{pos_id >> 10, pos_id & 1023} / 16.0f - 32.0f, false});
     rotates_->emplace_back(1.0f, 0.0f, 0.0f, 0.0f);
     scales_->emplace_back(1.0f, 1.0f, 1.0f);
   }

@@ -34,30 +34,6 @@ int WindowQueue::GetSize() const noexcept {
   return counter;
 }
 
-// ---
-
-void WindowQueue::BtnEnter() {
-  if (top_window_) {
-    top_window_->BtnEnter();
-    return;
-  }
-  if (selected_id_ != -1) {
-    windows_[selected_id_]->BtnEnter();
-  }
-}
-
-void WindowQueue::BtnEscape() {
-  if (top_window_) {
-    top_window_->BtnEscape();
-    return;
-  }
-  if (selected_id_ != -1) {
-    windows_[selected_id_]->BtnEscape();
-  }
-}
-
-// ---
-
 bool WindowQueue::Render() {
   bool result = false;
   for (auto window : windows_) {
@@ -65,17 +41,10 @@ bool WindowQueue::Render() {
       /*result |= */ window->Render();
     }
   }
-  if (top_window_) {
-    top_window_->Render();
-  }
   return result;
 }
 
 void WindowQueue::RenderPicking() {
-  if (top_window_) {
-    top_window_->RenderPicking();
-    return;
-  }
   for (auto window : windows_) {
     if (window) {
       window->RenderPicking();
@@ -84,10 +53,6 @@ void WindowQueue::RenderPicking() {
 }
 
 bool WindowQueue::Press(int id) {
-  if (top_window_) {
-    top_window_->Press(id);
-    return true;
-  }
   bool result = false;
   /// this way we won't Hide() new created
   auto windows_copy = windows_;
@@ -112,9 +77,6 @@ void WindowQueue::Release() {
     if (window) {
       window->Release();
     }
-  }
-  if (top_window_) {
-    top_window_->Release();
   }
 }
 

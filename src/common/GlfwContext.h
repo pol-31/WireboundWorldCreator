@@ -14,6 +14,8 @@ class UiMenu;
 class PickingFramebuffer;
 class UiSharedResources;
 class TextRenderer;
+class UiConfirmation;
+class UiWarning;
 class UiRenderer;
 class WindowQueue;
 struct GLFWwindow;
@@ -29,17 +31,19 @@ class UiDebugger;
  * So we use provided by GLFW pointer void* GLFWwindow
  * */
 struct GlfwContext {
-  Camera* camera{nullptr};
-  TileRenderer* tile_renderer{nullptr};
-  IUiMode** cur_mode{nullptr};
+  Camera* camera = nullptr;
+  TileRenderer* tile_renderer = nullptr;
+  IUiMode** cur_mode = nullptr;
   UiMenu* menu;
-  PickingFramebuffer* picking_fbo{nullptr};
-  debug::UiDebugger* ui_debugger{nullptr};
-  UiSharedResources* ui_shared_resources{nullptr};
-  TextRenderer* text_renderer{nullptr};
-  UiRenderer* ui_renderer{nullptr};
+  PickingFramebuffer* picking_fbo = nullptr;
+  debug::UiDebugger* ui_debugger = nullptr;
+  UiSharedResources* ui_shared_resources = nullptr;
+  TextRenderer* text_renderer = nullptr;
+  UiRenderer* ui_renderer = nullptr;
+  UiConfirmation* ui_confirmation = nullptr;
+  UiWarning* ui_warning = nullptr;
 
-  WindowQueue* windows{nullptr};
+  WindowQueue* windows = nullptr;
 
   glm::dvec2 cursor_pos_{0.0};
   glm::vec2 cursor_pos_tex_norm_{0.0f};

@@ -9,7 +9,7 @@
 #include "../core/UiText.h"
 #include "UiSharedResources.h"
 
-class UiDynamicSprite;
+class UiSprite;
 
 int GetUiEditEntryId(float height, float size, glm::vec2 mouse_pos,
                      float start_height);
@@ -26,12 +26,6 @@ class UiEditConfigSlCfg {
   UiEditConfigSlCfg(UiSharedResources& ui_shared_resources,
                     TextRenderer& text_renderer);
 
-  UiEditConfigSlCfg(UiEditConfigSlCfg&& other) noexcept = default;
-  UiEditConfigSlCfg(const UiEditConfigSlCfg& other) = delete;
-
-  UiEditConfigSlCfg& operator=(UiEditConfigSlCfg&& other) = delete;
-  UiEditConfigSlCfg& operator=(const UiEditConfigSlCfg& other) = delete;
-
   void Release();
 
   void Render(float& strength, bool do_invert, bool do_tiling,
@@ -43,7 +37,7 @@ class UiEditConfigSlCfg {
 
   void ResetTransform();
 
-  UiDynamicSprite btn_config_;
+  UiSprite btn_config_;
   UiTextModeId txt_name_;
   UiToggle4 tg1_;
   UiToggle4 tg2_;
@@ -65,12 +59,6 @@ class UiEditConfigSlTxt {
 
   UiEditConfigSlTxt(UiSharedResources& ui_shared_resources,
                     TextRenderer& text_renderer);
-
-  UiEditConfigSlTxt(UiEditConfigSlTxt&& other) noexcept = default;
-  UiEditConfigSlTxt(const UiEditConfigSlTxt& other) = delete;
-
-  UiEditConfigSlTxt& operator=(UiEditConfigSlTxt&& other) = delete;
-  UiEditConfigSlTxt& operator=(const UiEditConfigSlTxt& other) = delete;
 
   bool Press(int id, float height, int num);
 

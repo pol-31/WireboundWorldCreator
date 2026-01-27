@@ -16,8 +16,6 @@ class UiEditBiomes : public IUiEdit {
   UiEditBiomes(UiSharedResources& ui_shared_resources,
                UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
 
-  UiEditBiomes(UiEditBiomes&& other) noexcept;
-
   void HideAll() override;
 
   void CreateInstance() override;

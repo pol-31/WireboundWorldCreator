@@ -13,8 +13,6 @@ class UiEditRoads : public IUiEdit {
   UiEditRoads(UiSharedResources& ui_shared_resources,
               UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
 
-  UiEditRoads(UiEditRoads&& other) noexcept;
-
   void HideAll() override;
 
   void CreateInstance() override;

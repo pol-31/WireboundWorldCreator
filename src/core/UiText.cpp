@@ -1,12 +1,11 @@
 #include "UiText.h"
 
-UiTextInput::UiTextInput(TextRenderer& text_renderer, UiDynamicSprite&& back,
-                         UiDynamicSprite&& text, float extra_width)
+UiTextInput::UiTextInput(TextRenderer& text_renderer, UiSprite&& back,
+                         UiSprite&& text, float extra_width)
     : UiBase(back.GetId(), {}),
       text_renderer_(text_renderer),
       sp_back_(std::move(back)),
       sp_text_(std::move(text)),
-      text_input_(),
       extra_width_(extra_width /* + 0.1f*/) {
   gUiComponents[sp_text_.GetId() - details::kIdOffsetUi].parent_id_ =
       sp_back_.GetId();
@@ -93,8 +92,7 @@ void UiTextInput::SetScissorArea() {
   glScissor(x_start, 0, x_length, 4000);
 }
 
-UiTextLabelBase::UiTextLabelBase(TextRenderer& text_renderer,
-                                 UiDynamicSprite&& text)
+UiTextLabelBase::UiTextLabelBase(TextRenderer& text_renderer, UiSprite&& text)
     : UiBase(text.GetId(), {}),
       text_renderer_(text_renderer),
       sp_text_(std::move(text)) {
@@ -122,7 +120,7 @@ void UiTextLabelBase::SetTranslate(glm::vec2 translate) {
   sp_text_.SetTranslate(translate);
 }
 
-UiText::UiText(TextRenderer& text_renderer, UiDynamicSprite&& text)
+UiText::UiText(TextRenderer& text_renderer, UiSprite&& text)
     : UiTextLabelBase(text_renderer, std::move(text)), text_() {
   UpdateTransform();
 }
@@ -146,7 +144,7 @@ void UiText::RenderPicking(std::string_view text, float scale,
   text_renderer_.RenderTextPicking(sp_text_, text, scale, translate, alignment);
 }
 
-UiTextMenuId::UiTextMenuId(TextRenderer& text_renderer, UiDynamicSprite&& text,
+UiTextMenuId::UiTextMenuId(TextRenderer& text_renderer, UiSprite&& text,
                            data::TextId text_id)
     : UiTextLabelBase(text_renderer, std::move(text)), text_id_(text_id) {
   UpdateTransform();
@@ -160,7 +158,7 @@ void UiTextMenuId::RenderPicking() {
   text_renderer_.RenderMenuTextPicking(sp_text_);
 }
 
-UiTextModeId::UiTextModeId(TextRenderer& text_renderer, UiDynamicSprite&& text,
+UiTextModeId::UiTextModeId(TextRenderer& text_renderer, UiSprite&& text,
                            data::TextId text_id)
     : UiTextLabelBase(text_renderer, std::move(text)), text_id_(text_id) {
   UpdateTransform();

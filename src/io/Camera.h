@@ -25,10 +25,9 @@ class Camera {
 
   [[nodiscard]] glm::mat4 GetProjMatrix() const noexcept;
 
-  // TODO: map_scale param deprecated, always 1.0f
-  void Update(float map_scale);
+  void Update();
 
-  void UpdateViewMatrix(float map_scale) const;
+  void UpdateViewMatrix() const;
 
   void UpdateProjectionMatrix() const;
 
@@ -64,16 +63,6 @@ class Camera {
     return direction_front_;
   }
 
-  void ProcessInspectCameraMovement(float xoffset, float yoffset) {
-    float sensitivity_ = 1.0f;
-    yaw_ += xoffset * sensitivity_;
-    pitch_ += yoffset * sensitivity_;
-
-    /// constrained pitch
-    pitch_ = glm::clamp(pitch_, -89.0f, 89.0f);
-    UpdateCameraVectors();
-  }
-
   void SetYaw(float yaw) { yaw_ = yaw; }
 
   void SetPitch(float pitch) { pitch_ = pitch; }
@@ -89,6 +78,8 @@ class Camera {
   [[nodiscard]] float GetPitch() const noexcept { return pitch_; }
 
   [[nodiscard]] glm::vec3 GetPosition() const noexcept { return position_; }
+
+  [[nodiscard]] glm::vec3 GetOrigin() const noexcept { return origin_; }
 
  protected:
   void Init();
@@ -111,6 +102,8 @@ class Camera {
 
   float origin_dist_ = 10.0f;  // dist to origin
   glm::vec3 origin_ = glm::vec3(0.0f);
+
+  float fovy_ = glm::radians(45.0f);
 
   float yaw_;
   float pitch_;

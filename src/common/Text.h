@@ -10,12 +10,11 @@ enum class TextId {
   /// --- menu prerender (common for each mode) ---
   kMenuTerrain,
   kMenuWater,
-  kMenuRoads,
-  kMenuFences,
   kMenuPlacement,
   kMenuObjects,
   kMenuBiomes,
   kMenuTiles,
+  kMenuPlayer,
   kMenu,
 
   kResolution,
@@ -68,7 +67,7 @@ enum class TextId {
   kStrength,
 
   /// --- kWaterMode prerender ---
-  kScaleWater,  // scale for each mode to prerender section together
+  kScaleWater,
   kFetch,
   kSpreadBlend,
   kSwell,
@@ -78,16 +77,40 @@ enum class TextId {
   kLayer1,
   kLayer2,
   kLayer3,
+  kWaterTransparency,
+  kWaterViscosity,
+  kWaterCurveAmplitude,
+  kWaterHeightDrift,
+  kWaterHeightRaise,
+  kWaterSideSagging,
+  kWaterRadius,
+  kWaterRadiusFlat,
+
+  /// --- kObjectsMode ---
+  kHp,
+  kSpeed,
+  kAttack,
+  kAttackSpeed,
 
   /// --- kBiomeMode prerender ---
-  kWindSpeed,
   kWindAngle,
-  kSunX,
-  kSunY,
-  kSunZ,
-  kSunR,
-  kSunG,
-  kSunB,
+  kWindSpeed,
+  kSunOffsetX,
+  kSunOffsetY,
+  kSunOffsetZ,
+  kSunColorR,
+  kSunColorG,
+  kSunColorB,
+
+  /// --- kPlacementMode ---
+  kPlacementCurveAmplitude,
+  kPlacementHeightDrift,
+  kPlacementHeightRaise,
+  kPlacementSideSagging,
+  kPlacementRadius,
+  kPlacementRadiusFlat,
+
+  /// --- kPlayerMode ---
 
   /// ---
 

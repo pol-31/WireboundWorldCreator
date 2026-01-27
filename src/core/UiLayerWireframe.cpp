@@ -1,7 +1,7 @@
 #include "UiLayerWireframe.h"
 
 #include "../io/Camera.h"
-#include "../modes/TerrainInstanceData.h"
+#include "../modes/traits/TerrainTraits.h"
 #include "../renderers/UiRenderer.h"
 #include "TileRenderer.h"
 
@@ -25,26 +25,12 @@ UiLayerWireframe::UiLayerWireframe(UiSharedResources& ui_shared_resources)
           {0.0f, 0.0f, -8.0f, 1.0f},
           {0.0f, 0.0f, 8.0f, 1.0f},
       }),
-      hierarchy_(&sp_frame_) {
-  hierarchy_ = UiHierarchy(&sp_frame_, &sp_layer_);
+      hierarchy_(&sp_frame_, {&sp_layer_}) {
   Init();
 }
 
-UiLayerWireframe::UiLayerWireframe(UiLayerWireframe&& other) noexcept
-    : ui_shared_resources_(other.ui_shared_resources_),
-      sp_layer_(std::move(other.sp_layer_)),
-      sp_frame_(std::move(other.sp_frame_)),
-      sp_points_(std::move(other.sp_points_)),
-      layer_tex_(std::move(other.layer_tex_)),
-      layer_fbo_(other.layer_fbo_),
-      hierarchy_(std::move(other.hierarchy_)) {
-  other.layer_fbo_ = 0;
-  hierarchy_ = UiHierarchy(&sp_frame_, &sp_layer_);
-}
-
-void UiLayerWireframe::RenderLayerWireframe(TerrainInstanceData* terrain,
-                                            BaseInstanceData* data) {
-  UpdateLayerWireframe(terrain, data);
+void UiLayerWireframe::RenderLayerWireframe(TerrainTraits* terrain) {
+  UpdateLayerWireframe(terrain);
   ui_shared_resources_.shader_sp_.Bind();
   glBindVertexArray(ui_shared_resources_.vao_ui_);
   glActiveTexture(GL_TEXTURE0);
@@ -60,15 +46,14 @@ void UiLayerWireframe::RenderPickingLayerWireframe() {
   sp_layer_.RenderPicking();
 }
 
-void UiLayerWireframe::UpdateLayerWireframe(TerrainInstanceData* terrain,
-                                            BaseInstanceData* data) {
+void UiLayerWireframe::UpdateLayerWireframe(TerrainTraits* terrain) {
   glBindFramebuffer(GL_FRAMEBUFFER, layer_fbo_);
   glViewport(0, 0, gWindowWidth / 4, gWindowHeight / 4);
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   ui_shared_resources_.glfw_context_.tile_renderer->terrain.RenderWireframe(
-      terrain, data);
+      terrain);
   ui_shared_resources_.glfw_context_.ui_renderer->RenderAxis(5.0f);
 
   ui_shared_resources_.shader_sp_.Bind();

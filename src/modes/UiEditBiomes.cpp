@@ -5,16 +5,7 @@ UiEditBiomes::UiEditBiomes(UiSharedResources& ui_shared_resources,
                            UiEditConfigSlTxt& value_config)
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),
-      ui_shared_resources_(ui_shared_resources) {
-  // value_config_.AttachToHierarchy(ui_.hierarchy_);
-}
-
-UiEditBiomes::UiEditBiomes(UiEditBiomes&& other) noexcept
-    : IUiEdit(std::move(*this)),
-      ui_shared_resources_(other.ui_shared_resources_),
-      value_config_(other.value_config_) {
-  // value_config_.AttachToHierarchy(ui_.hierarchy_);
-}
+      ui_shared_resources_(ui_shared_resources) {}
 
 void UiEditBiomes::HideAll() { ui_.ForceHide(); }
 

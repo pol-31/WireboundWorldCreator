@@ -2,10 +2,13 @@
 
 layout(location = 0) in vec3 in_position;
 
-layout(binding = 0) uniform CameraBufferObject {
+layout(std140, binding = 0) uniform Camera {
+    vec3 pos;       float _pad0;
+    vec3 forward;   float _pad1;
+    vec3 right;     float _pad2;
+    vec3 up;        float cos_half_fov;
     mat4 view;
     mat4 proj;
-    vec3 pos;
 } camera;
 
 out vec3 world_pos;

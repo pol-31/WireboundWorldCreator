@@ -218,16 +218,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
   if (key == GLFW_KEY_ESCAPE) {
     if (mod_shift) {
       glfwSetWindowShouldClose(window, true);
-    } else if (!glfw_context->windows->GetTopWindow() &&
-               glfw_context->windows->GetSize() == 0) {
-      glfw_context->ui_renderer->AskForConfirmation(
-          data::TextId::kConfirmationExit,
-          []() { glfwSetWindowShouldClose(gWindow, true); });
-    } else {
-      glfw_context->windows->BtnEscape();
+    } else if (glfw_context->windows->GetSize() == 0) {
+      glfw_context->ui_confirmation->Show(data::TextId::kConfirmationExit, [] {
+        glfwSetWindowShouldClose(gWindow, true);
+      });
     }
-  } else if (key == GLFW_KEY_ENTER) {
-    glfw_context->windows->BtnEnter();
   } else if (key == GLFW_KEY_1) {
     objects->ui_selection_.SetMode(SelectionMode::kRectangle);
   } else if (key == GLFW_KEY_2) {

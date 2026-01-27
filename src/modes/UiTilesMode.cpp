@@ -1,5 +1,7 @@
 #include "UiTilesMode.h"
 
+#include <iostream>
+
 #include "../common/PickingFramebuffer.h"
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"

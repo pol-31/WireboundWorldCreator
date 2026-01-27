@@ -30,7 +30,7 @@ class UiBiomesMode final : public IUiMode {
 
   void ApplyTransform();
 
-  UiDynamicSprite sp_biome_;
+  UiSprite sp_biome_;
 
   UiSlots& ui_slots_;
   UiEditBiomes ui_edit_;

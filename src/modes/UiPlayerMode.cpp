@@ -52,16 +52,15 @@ void UiPlayerMode::BindDefaultCallbacks() {
 }
 
 void UiPlayerMode::Render() {
-  ui_shared_resources_.glfw_context_.tile_renderer->Render();
-  mdl_manager_.Update();
-
   auto camera = ui_shared_resources_.glfw_context_.camera;
   auto map_scale =
       ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   camera->SetOrigin(mdl_manager_.player_->GetPosition() * map_scale);
-  camera->MoveRotateViewOriginDist(0.0f);  // update camera vectors
-  camera->Update();                        // const pos
+  camera->MoveRotateViewOriginDist(0.0f);  // update camera vectors after origin
+  camera->Update();
 
+  ui_shared_resources_.glfw_context_.tile_renderer->RenderInGame(camera);
+  mdl_manager_.Update();
   mdl_manager_.Render();
 
   ui_selection_.Render();
@@ -214,34 +213,33 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
       if (mod_shift) {
         glfwSetWindowShouldClose(window, true);
         return;
-      } else if (!glfw_context->windows->GetTopWindow() &&
-                 glfw_context->windows->GetSize() == 0) {
-        glfw_context->ui_renderer->AskForConfirmation(
+      }
+      if (glfw_context->windows->GetSize() == 0) {
+        glfw_context->ui_confirmation->Show(
             data::TextId::kConfirmationExit,
-            []() { glfwSetWindowShouldClose(gWindow, true); });
-        return;
-      } else {
-        glfw_context->windows->BtnEscape();
+            [] { glfwSetWindowShouldClose(gWindow, true); });
         return;
       }
-    } else if (key == GLFW_KEY_ENTER) {
-      glfw_context->windows->BtnEnter();
-      return;
     }
   }
-  player->mdl_manager_.player_->ProcessMovement(key, action);
+  auto& human = player->mdl_manager_.player_human_;
+  auto& fpv = player->mdl_manager_.player_fpv_;
+  auto& player_ = player->mdl_manager_.player_;
+  player_->ProcessMovement(key, action);
   if (action == GLFW_PRESS && key == GLFW_KEY_1 &&
-      player->mdl_manager_.player_->GetId() ==
-          player->mdl_manager_.player_fpv_.GetId()) {
-    player->mdl_manager_.player_ = &player->mdl_manager_.player_human_;
-    player->mdl_manager_.player_human_.SwitchToHuman();
-    player->mdl_manager_.player_fpv_.SwitchToHuman();
+      player_->GetId() == fpv.GetId()) {
+    if (fpv.IsReadyToSwitch() && human.IsReadyToSwitch()) {
+      player_ = &human;
+      human.SwitchToHuman();
+      fpv.SwitchToHuman();
+    }
   } else if (action == GLFW_PRESS && key == GLFW_KEY_2 &&
-             player->mdl_manager_.player_->GetId() ==
-                 player->mdl_manager_.player_human_.GetId()) {
-    player->mdl_manager_.player_ = &player->mdl_manager_.player_fpv_;
-    player->mdl_manager_.player_human_.SwitchToFpv();
-    player->mdl_manager_.player_fpv_.SwitchToFpv();
+             player_->GetId() == human.GetId()) {
+    if (fpv.IsReadyToSwitch() && human.IsReadyToSwitch()) {
+      player_ = &fpv;
+      human.SwitchToFpv();
+      fpv.SwitchToFpv();
+    }
   }
 }
 

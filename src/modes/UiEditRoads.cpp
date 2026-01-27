@@ -16,16 +16,7 @@ UiEditRoads::UiEditRoads(UiSharedResources& ui_shared_resources,
                          UiEditConfigSlTxt& value_config)
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),
-      ui_shared_resources_(ui_shared_resources) {
-  // river_layer_config_.AttachToHierarchy(hierarchy_);
-}
-
-UiEditRoads::UiEditRoads(UiEditRoads&& other) noexcept
-    : IUiEdit(std::move(*this)),
-      value_config_(other.value_config_),
-      ui_shared_resources_(other.ui_shared_resources_) {
-  // river_layer_config_.AttachToHierarchy(hierarchy_);
-}
+      ui_shared_resources_(ui_shared_resources) {}
 
 void UiEditRoads::HideAll() { ui_.ForceHide(); }
 

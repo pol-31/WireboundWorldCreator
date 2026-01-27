@@ -29,7 +29,7 @@ class UiButtons {
 
   void UpdateKeyText();
 
-  UiDynamicSprite sp_key_;
+  UiSprite sp_key_;
   UiText txt_mods_;
   UiText txt_keys_;
   // we could add shift_r_, shift_l_ to handle both sides,

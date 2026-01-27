@@ -38,10 +38,9 @@ class UiTerrainMode final : public IUiMode {
 
   void Reset();
 
-  UiDynamicSprite btn_update_;
-  UiDynamicSprite btn_reset_;
-  UiDynamicSprite btn_bake_;
-  UiToggle4 tg_flatten_;
+  UiSprite btn_update_;
+  UiSprite btn_reset_;
+  UiSprite btn_bake_;
 
   UiTerrainBake ui_bake_;
   UiSlots& ui_slots_;
@@ -53,10 +52,7 @@ class UiTerrainMode final : public IUiMode {
   bool nothing_selected_ = true;
 
   MouseTransform mouse_transform_;
-
-  UiEventHandler<static_cast<int>(data::VboIdMain::kTerrainEditNoiseHmap) -
-                 static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1>
-      ui_event_handler_;
+  UiEventHandler ui_event_handler_;
 };
 
 namespace terrain {

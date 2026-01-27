@@ -112,7 +112,8 @@ void UiEditConfigSlCfg::RenderPickingEntry(glm::vec2 translate) {
 }
 
 void UiEditConfigSlCfg::AttachToHierarchy(UiHierarchy& hierarchy) {
-  hierarchy.AddNested(&btn_config_, &tg1_, &txt_name_, &tg2_, &sl_strength_);
+  UiBase* comps[] = {&txt_name_, &tg1_, &tg2_, &sl_strength_};
+  hierarchy.AddNested(&btn_config_, comps);
 }
 
 UiEditConfigSlTxt::UiEditConfigSlTxt(UiSharedResources& ui_shared_resources,
@@ -198,7 +199,8 @@ void UiEditConfigSlTxt::RenderPickingEntry(glm::vec2 translate) {
 }
 
 void UiEditConfigSlTxt::AttachToHierarchy(UiHierarchy& hierarchy) {
-  hierarchy.AddNested(&sl_strength_, &txt_name_);
+  UiBase* comps[] = {&txt_name_};
+  hierarchy.AddNested(&sl_strength_, comps);
 }
 
 void UiEditConfigSlTxt::ResetTransform() {

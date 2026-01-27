@@ -26,11 +26,6 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
                    std::cerr << "-- reset --" << std::endl;
                    this->Reset();
                  }),
-      tg_flatten_({data::VboIdMain::kTerrainFlattenOff,
-                   [this]() { std::cout << "toggle smoothness" << std::endl; }},
-                  {data::VboIdMain::kTerrainFlattenOn1},
-                  {data::VboIdMain::kTerrainFlattenOn2},
-                  {data::VboIdMain::kTerrainFlattenOn3}),
       btn_bake_(data::VboIdMain::kTerrainBake,
                 [this]() { this->ui_bake_.Show(); }),
       ui_bake_(cur_tile, {data::VboIdMain::kTerrainBakeDesk}, 1.0f,
@@ -55,8 +50,7 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
                value_config, ui_config_window),
       ui_selection_(ui_shared_resources),
       mouse_transform_(ui_shared_resources),
-      ui_event_handler_({&btn_update_, &btn_reset_, &tg_flatten_,
-                         &btn_bake_ /*, &ui_slots_*/}) {}
+      ui_event_handler_({&btn_update_, &btn_reset_, &btn_bake_}) {}
 
 void UiTerrainMode::Setup() {
   ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
@@ -111,8 +105,6 @@ void UiTerrainMode::Render() {
   btn_update_.Render();
   btn_bake_.Render();
 
-  tg_flatten_.Render();
-
   auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
   ui_slots_.Render(mouse_pos);
 
@@ -133,8 +125,6 @@ void UiTerrainMode::RenderPicking() {
 
   btn_update_.RenderPicking();
   btn_bake_.RenderPicking();
-
-  tg_flatten_.RenderPicking();
 
   ui_slots_.RenderPicking();
   auto& ui_layer_wireframe =
@@ -298,16 +288,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
   if (key == GLFW_KEY_ESCAPE) {
     if (mod_shift) {
       glfwSetWindowShouldClose(window, true);
-    } else if (!glfw_context->windows->GetTopWindow() &&
-               glfw_context->windows->GetSize() == 0) {
-      glfw_context->ui_renderer->AskForConfirmation(
-          data::TextId::kConfirmationExit,
-          []() { glfwSetWindowShouldClose(gWindow, true); });
-    } else {
-      glfw_context->windows->BtnEscape();
+    } else if (glfw_context->windows->GetSize() == 0) {
+      glfw_context->ui_confirmation->Show(data::TextId::kConfirmationExit, [] {
+        glfwSetWindowShouldClose(gWindow, true);
+      });
     }
-  } else if (key == GLFW_KEY_ENTER) {
-    glfw_context->windows->BtnEnter();
   } else if (key == GLFW_KEY_1) {
     terrain->ui_selection_.SetMode(SelectionMode::kRectangle);
   } else if (key == GLFW_KEY_2) {
@@ -428,7 +413,7 @@ void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos) {
   auto terrain = dynamic_cast<UiTerrainMode*>(*glfw_context->cur_mode);
   terrain->mouse_transform_.TranslateSelectedVerticesUp(
       xpos, ypos, terrain->ui_edit_.GetInstanceData().extra_heights,
-      terrain->ui_selection_.GetMask(), terrain->tg_flatten_.TurnedOn());
+      terrain->ui_selection_.GetMask());
 }
 
 void CursorPosCallback_G_NonSelected(GLFWwindow* window, double xpos,

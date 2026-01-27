@@ -20,7 +20,7 @@ class MapPointsBase {
 
   void UpdateJointsBuffer();
 
-  void RenderJoints(const Texture& hmap, float map_scale);
+  void RenderJoints(const Texture& hmap, float map_scale, glm::vec4 color);
 
  protected:
   void Init();

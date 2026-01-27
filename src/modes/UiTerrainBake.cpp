@@ -1,11 +1,13 @@
 #include "UiTerrainBake.h"
 
+#include <iostream>
+
 #include "../core/TileRenderer.h"
 
 UiTerrainBake::UiTerrainBake(
-    Tile& cur_tile, UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+    Tile& cur_tile, UiSprite&& sprite, float size_scale, UiToggle2&& pin,
     UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
-    TextRenderer& text_renderer, UiDynamicSprite&& accept,
+    TextRenderer& text_renderer, UiSprite&& accept,
     UiTextModeId&& erosion_label, UiTextInput&& erosion_input,
     UiTextModeId&& weathering_label, UiTextInput&& weathering_input)
     : Base(std::move(sprite), size_scale, std::move(pin), ui_shared_resources,
@@ -36,46 +38,11 @@ UiTerrainBake::UiTerrainBake(
       tex_erosion_thermal_map_(cur_tile.map_terrain_erosion_thermal),
       tex_erosion_hydraulic_map_(cur_tile.map_terrain_erosion_hydraulic),
       tex_water_accum_(cur_tile.map_water_accum),
-      tex_water_flow_(cur_tile.map_water_flow) {
-  hierarchy_ =
-      UiHierarchy(&sprite_, &pin_, &accept_, &erosion_label_, &erosion_input_,
-                  &weathering_label_, &weathering_input_, &sprite_hmap_);
+      tex_water_flow_(cur_tile.map_water_flow),
+      hierarchy_(&background_,
+                 {&pin_, &accept_, &erosion_label_, &erosion_input_,
+                  &weathering_label_, &weathering_input_, &sprite_hmap_}) {
   speed_ = 2.0f;
-}
-
-UiTerrainBake::UiTerrainBake(UiTerrainBake&& other) noexcept
-    : Base(std::move(other)),
-      accept_(std::move(other.accept_)),
-      erosion_label_(std::move(other.erosion_label_)),
-      erosion_input_(std::move(other.erosion_input_)),
-      weathering_label_(std::move(other.weathering_label_)),
-      weathering_input_(std::move(other.weathering_input_)),
-      sprite_hmap_(std::move(other.sprite_hmap_)),
-      ui_event_handler_({&pin_, &accept_, &erosion_input_, &weathering_input_}),
-      ui_shared_resources_(other.ui_shared_resources_),
-
-      shader_gen_nmap_(std::move(other.shader_gen_nmap_)),
-      shader_gen_slope_map_(std::move(other.shader_gen_slope_map_)),
-      shader_gen_splat_map_(std::move(other.shader_gen_splat_map_)),
-      shader_gen_ao_map_(std::move(other.shader_gen_ao_map_)),
-      shader_perturbate_(std::move(other.shader_perturbate_)),
-
-      hmap_heights_(other.hmap_heights_),
-
-      tex_hmap_(other.tex_hmap_),
-      tex_nmap_(other.tex_hmap_),
-      tex_slope_map_(other.tex_hmap_),
-      tex_ao_map_(other.tex_ao_map_),
-      tex_splat_map_(other.tex_splat_map_),
-
-      tex_erosion_thermal_map_(other.tex_erosion_thermal_map_),
-      tex_erosion_hydraulic_map_(other.tex_erosion_hydraulic_map_),
-
-      tex_water_accum_(other.tex_water_accum_),
-      tex_water_flow_(other.tex_water_flow_) {
-  hierarchy_ =
-      UiHierarchy(&sprite_, &pin_, &accept_, &erosion_label_, &erosion_input_,
-                  &weathering_label_, &weathering_input_, &sprite_hmap_);
 }
 
 bool UiTerrainBake::Press(int id) { return ui_event_handler_.Press(id); }
@@ -454,7 +421,7 @@ void UiTerrainBake::GenerateNmap() {
                      tex_nmap_.GetFormat());
   glDispatchCompute(details::gTerrainSize / 8, details::gTerrainSize / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  // tex_nmap_.Store("normal_map.png", 2, GL_RG, 1);
+  tex_nmap_.Store("normal_map.png", 2, GL_RG, 1);
 }
 
 void UiTerrainBake::GenerateSlope() {
@@ -476,7 +443,7 @@ void UiTerrainBake::GenerateAo() {
                      tex_ao_map_.GetFormat());
   glDispatchCompute(details::gTerrainSize / 8, details::gTerrainSize / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  // tex_ao_map_.Store("ao_map.png", 1, GL_RED);
+  tex_ao_map_.Store("ao_map.png", 1, GL_RED);
 }
 
 void UiTerrainBake::Perturbate() {

@@ -1,8 +1,12 @@
 #include "TextRenderer.h"
 
+#include <iostream>
+
+#define GLM_ENABLE_EXPERIMENTAL
 #include <stb_image_write.h>
 
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
 
 #include "../common/Font.h"
 #include "../common/Text.h"
@@ -16,8 +20,8 @@
 //  due to sprite tex coords in Vbos.cpp (auto-generated)
 
 TextRenderer::TextRenderer(UiSharedResources& ui_shared_resources,
-                           UiDynamicSprite&& prerender_text_slot,
-                           UiDynamicSprite&& sprite_cursor)
+                           UiSprite&& prerender_text_slot,
+                           UiSprite&& sprite_cursor)
     : tex_bitmap_("../assets/tex_ascii.png", GL_RED),
       prerender_text_slot_(std::move(prerender_text_slot)),
       sprite_cursor_(std::move(sprite_cursor)),
@@ -50,7 +54,7 @@ void TextRenderer::DeInit() {
   glDeleteFramebuffers(2, fbos);
 }
 
-void TextRenderer::RenderTextSelected(UiDynamicSprite& text_slot,
+void TextRenderer::RenderTextSelected(UiSprite& text_slot,
                                       std::string_view text,
                                       glm::vec2 translate) {
   float symbol_height = font::gFullHeight / 1024.0f;
@@ -106,7 +110,7 @@ void TextRenderer::RenderTextSelected(UiDynamicSprite& text_slot,
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderText(UiDynamicSprite& text_slot, std::string_view text,
+void TextRenderer::RenderText(UiSprite& text_slot, std::string_view text,
                               float scale, glm::vec2 position,
                               Alignment alignment) {
   float symbol_height = font::gFullHeight * scale / 1024.0f;
@@ -180,9 +184,9 @@ void TextRenderer::RenderText(UiDynamicSprite& text_slot, std::string_view text,
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderTextPicking(UiDynamicSprite& text_slot,
-                                     std::string_view text, float scale,
-                                     glm::vec2 position, Alignment alignment) {
+void TextRenderer::RenderTextPicking(UiSprite& text_slot, std::string_view text,
+                                     float scale, glm::vec2 position,
+                                     Alignment alignment) {
   // picking for the first line is enough
   float symbol_height = font::gFullHeight * scale / 1024.0f;
   text_slot.SetScale(scale);
@@ -238,21 +242,19 @@ void TextRenderer::RenderTextPicking(UiDynamicSprite& text_slot,
   }
 }
 
-void TextRenderer::RenderMenuText(UiDynamicSprite& text_slot, data::TextId id) {
+void TextRenderer::RenderMenuText(UiSprite& text_slot, data::TextId id) {
   RenderMenuModeText(tex_menu_, coords_menu_, text_slot, static_cast<int>(id));
 }
 
-void TextRenderer::RenderModeText(UiDynamicSprite& text_slot, data::TextId id) {
-  int id_offset =
-      (*ui_shared_resources_.glfw_context_.cur_mode)->GetPrerenderTextIdStart();
+void TextRenderer::RenderModeText(UiSprite& text_slot, data::TextId id) {
   RenderMenuModeText(tex_mode_, coords_mode_, text_slot,
-                     static_cast<int>(id) - id_offset);
+                     static_cast<int>(id) - cur_mode_start_);
 }
 
 void TextRenderer::RenderMenuModeText(
     const Texture& tex_prerender,
-    const std::vector<TextRenderer::Aabb>& tex_coords,
-    UiDynamicSprite& text_slot, int id) {
+    const std::vector<TextRenderer::Aabb>& tex_coords, UiSprite& text_slot,
+    int id) {
   text_slot_ = &text_slot;
   glActiveTexture(GL_TEXTURE0);
   tex_prerender.Bind();
@@ -271,16 +273,16 @@ void TextRenderer::RenderMenuModeText(
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void TextRenderer::RenderModeTextPicking(UiDynamicSprite& text_slot) {
+void TextRenderer::RenderModeTextPicking(UiSprite& text_slot) {
   RenderMenuModeTextPicking(tex_mode_, text_slot);
 }
 
-void TextRenderer::RenderMenuTextPicking(UiDynamicSprite& text_slot) {
+void TextRenderer::RenderMenuTextPicking(UiSprite& text_slot) {
   RenderMenuModeTextPicking(tex_menu_, text_slot);
 }
 
 void TextRenderer::RenderMenuModeTextPicking(const Texture& tex_prerender,
-                                             UiDynamicSprite& text_slot) {
+                                             UiSprite& text_slot) {
   text_slot_ = &text_slot;
   text_slot_->RenderPicking();
 }
@@ -291,6 +293,8 @@ void TextRenderer::PrerenderMenuText(int start, int end) {
 }
 
 void TextRenderer::PrerenderModeText(int start, int end) {
+  cur_mode_start_ = start;
+  cur_mode_end_ = end;
   text_slot_ = &prerender_text_slot_;
   PrerenderImpl(start, end, tex_mode_, coords_mode_);
 }
@@ -386,13 +390,9 @@ void TextRenderer::StartInput(UiTextInput* input_data) {
 
 void TextRenderer::StopInput() {
   glfwSetCharCallback(gWindow, nullptr);
-  (*ui_shared_resources_.glfw_context_.cur_mode)->Setup();
   input_data_->SetText(buffer_input_);
   input_data_->SetTextTranslate(glm::vec2(0.0f));
   input_data_ = nullptr;
-  // NOTE: it could be only UiMode callbacks, so we could remember them (not
-  // menu, etc...)
-
   (*ui_shared_resources_.glfw_context_.cur_mode)->Setup();
   input_in_progress_ = false;
 }
@@ -498,7 +498,7 @@ int TextRenderer::CursorFromMousePos() {
   return i;
 }
 
-void TextRenderer::CalculateCursorPos(UiDynamicSprite& text_slot,
+void TextRenderer::CalculateCursorPos(UiSprite& text_slot,
                                       const std::string& text) {
   float symbol_height = font::gFullHeight / 1024.0f;
   float ui_scale =
@@ -586,8 +586,71 @@ int TextRenderer::RightCtrlDistance() {
 void TextRenderer::BindCallbacks() {
   glfwSetCharCallback(gWindow, TextRenderer::CharCallback);
   glfwSetScrollCallback(gWindow, nullptr);
-  glfwSetKeyCallback(gWindow, KeyCallback);
+  glfwSetKeyCallback(gWindow, TextRenderer::KeyCallback);
   glfwSetMouseButtonCallback(gWindow, TextRenderer::MouseButtonCallback);
+}
+
+void TextRenderer::SetupFramebuffer(GLuint fbo_id, Texture& texture,
+                                    bool clear) {
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         texture.GetId(), 0);
+
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    throw std::runtime_error("Framebuffer is not complete!");
+  }
+
+  if (clear) {
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+  }
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+int TextRenderer::GetWidth(int code) {
+  float comp_width;
+  if (code & 1) {
+    comp_width = static_cast<float>((font::gWidths[code >> 1]) >> 4);
+  } else {
+    comp_width = static_cast<float>((font::gWidths[code >> 1]) & 0x0F);
+  }
+  auto result =
+      static_cast<int>(comp_width * font::gWidthFactor) + font::gWidthMin;
+  return result;
+}
+
+float TextRenderer::CalculateLineLength(std::string_view text,
+                                        const UiSprite& text_slot) {
+  int total_length = 0;
+  for (auto ch : text) {
+    if (ch == '\n') {
+      break;
+    }
+    total_length += GetWidth(static_cast<int>(ch) - 32);
+  }
+  float ui_scale =
+      debug::gUiTransforms[4 * (text_slot.GetId() - details::kIdOffsetUi)]
+          .scale;
+  return static_cast<float>(total_length) * ui_scale * 1024.0f / 78.0f;
+}
+
+bool TextRenderer::IsCursorOnInputLine() {
+  auto cursor_pos_y = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_.y;
+  return cursor_pos_y < input_data_->sp_back_.GetTopBorder() &&
+         cursor_pos_y > input_data_->sp_back_.GetBottomBorder();
+}
+
+void TextRenderer::TextInsert(std::string& buffer, char ch, int pos) {
+  buffer.insert(buffer.begin() + pos, ch);
+}
+
+void TextRenderer::TextErase(std::string& buffer, int pos_start, int pos_end) {
+  if (pos_start < pos_end) {
+    buffer.erase(buffer.begin() + pos_start, buffer.begin() + pos_end);
+  } else {
+    buffer.erase(buffer.begin() + pos_end, buffer.begin() + pos_start);
+  }
 }
 
 void TextRenderer::CharCallback(GLFWwindow* window, unsigned int codepoint) {
@@ -597,9 +660,6 @@ void TextRenderer::CharCallback(GLFWwindow* window, unsigned int codepoint) {
     glfw_context->text_renderer->AppendChar(codepoint);
   }
 }
-
-void TextRenderer::ScrollCallback(GLFWwindow* window, double xoffset,
-                                  double yoffset) {}
 
 void TextRenderer::KeyCallback(GLFWwindow* window, int key, int scancode,
                                int action, int mods) {
@@ -646,68 +706,5 @@ void TextRenderer::MouseButtonCallback(GLFWwindow* window, int button,
     }
   } else {  // GLFW_RELEASE
     glfw_context->text_renderer->mouse_selection_ = false;
-  }
-}
-
-void TextRenderer::SetupFramebuffer(GLuint fbo_id, Texture& texture,
-                                    bool clear) {
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         texture.GetId(), 0);
-
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    throw std::runtime_error("Framebuffer is not complete!");
-  }
-
-  if (clear) {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-  }
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-int TextRenderer::GetWidth(int code) {
-  float comp_width;
-  if (code & 1) {
-    comp_width = static_cast<float>((font::gWidths[code >> 1]) >> 4);
-  } else {
-    comp_width = static_cast<float>((font::gWidths[code >> 1]) & 0x0F);
-  }
-  auto result =
-      static_cast<int>(comp_width * font::gWidthFactor) + font::gWidthMin;
-  return result;
-}
-
-float TextRenderer::CalculateLineLength(std::string_view text,
-                                        const UiDynamicSprite& text_slot) {
-  int total_length = 0;
-  for (auto ch : text) {
-    if (ch == '\n') {
-      break;
-    }
-    total_length += GetWidth(static_cast<int>(ch) - 32);
-  }
-  float ui_scale =
-      debug::gUiTransforms[4 * (text_slot.GetId() - details::kIdOffsetUi)]
-          .scale;
-  return static_cast<float>(total_length) * ui_scale * 1024.0f / 78.0f;
-}
-
-bool TextRenderer::IsCursorOnInputLine() {
-  auto cursor_pos_y = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_.y;
-  return cursor_pos_y < input_data_->sp_back_.GetTopBorder() &&
-         cursor_pos_y > input_data_->sp_back_.GetBottomBorder();
-}
-
-void TextRenderer::TextInsert(std::string& buffer, char ch, int pos) {
-  buffer.insert(buffer.begin() + pos, ch);
-}
-
-void TextRenderer::TextErase(std::string& buffer, int pos_start, int pos_end) {
-  if (pos_start < pos_end) {
-    buffer.erase(buffer.begin() + pos_start, buffer.begin() + pos_end);
-  } else {
-    buffer.erase(buffer.begin() + pos_end, buffer.begin() + pos_start);
   }
 }

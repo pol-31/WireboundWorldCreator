@@ -30,18 +30,13 @@ class UiPlayerMode final : public IUiMode {
 
   void HandleSelection(const std::set<GLuint>& selected_ids);
 
-  UiDynamicSprite sp_hp_;
+  UiSprite sp_hp_;
 
   UiObjectInfo ui_obj_info_;
   UiPlayerMap ui_map_;
 
   UiSelection ui_selection_;
   ModelManager& mdl_manager_;
-
-  /*  UiEventHandler<
-        static_cast<int>(data::VboIdMain::kTerrainSlotsCreate) -
-        static_cast<int>(data::VboIdMain::kTerrainFlatten) + 1
-        > ui_event_handler_;*/
 };
 
 namespace player {

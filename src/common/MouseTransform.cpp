@@ -103,7 +103,7 @@ void MouseTransform::TranslateSelectedMapPoints(
     std::vector<MapPoint>& map_points, double xpos, double ypos) {
   auto value = GetWorldOffsetTranslate(xpos, ypos);
   cur_translate_ = glm::clamp(glm::vec3(value.x, -value.y, value.z),
-    glm::vec3(-200.0f), glm::vec3(200.0f));
+                              glm::vec3(-200.0f), glm::vec3(200.0f));
 
   float min_x = 32.0f;
   float min_y = 32.0f;
@@ -196,10 +196,9 @@ void MouseTransform::ScaleSelectedMapPointsBack(
   }
 }
 
-void MouseTransform::TranslateSelectedVerticesUp(double xpos, double ypos,
-                                                 const Texture& hmap,
-                                                 const Texture& selection_mask,
-                                                 bool smooth) {
+void MouseTransform::TranslateSelectedVerticesUp(
+    double xpos, double ypos,
+    const Texture& hmap, const Texture& selection_mask) {
   auto value = GetWorldOffsetTranslate(xpos, ypos);
 
   auto value_y = value.y - prev_value_y_;
@@ -217,10 +216,8 @@ void MouseTransform::TranslateSelectedVerticesUp(double xpos, double ypos,
   utility::BindImageTexture(0, hmap, GL_READ_WRITE);
   utility::BindImageTexture(1, selection_mask, GL_READ_ONLY);
   glUniform1f(0, value_y);
-  float falloff = 1.0f;
-  if (smooth) {
-    falloff = 10.0f;
-  }
+  // always smoothing, so affect "in-between" vertices too
+  float falloff = 10.0f;
   glUniform1f(1, falloff);
   GLuint workGroupSizeX = (1024 + 15) / 16;
   GLuint workGroupSizeY = (1024 + 15) / 16;

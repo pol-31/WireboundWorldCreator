@@ -13,8 +13,6 @@ class UiEditRiver : public IUiEdit {
   UiEditRiver(UiSharedResources& ui_shared_resources,
               UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
 
-  UiEditRiver(UiEditRiver&& other) noexcept;
-
   void HideAll() override;
 
   void CreateInstance() override;

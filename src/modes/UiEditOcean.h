@@ -18,8 +18,6 @@ class UiEditOcean : public IUiEdit {
               TextRenderer& text_renderer, UiEditSlots& ui_edit_slots,
               UiEditConfigSlCfg& value_config, UiConfigWindow& ui_ocean_config);
 
-  UiEditOcean(UiEditOcean&& other) noexcept;
-
   void HideAll() override;
 
   void CreateInstance() override;

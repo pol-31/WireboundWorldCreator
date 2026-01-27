@@ -1,5 +1,7 @@
 #include "UiEditTerrain.h"
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include "../common/OpenGlUtility.h"
 #include "../core/TileRenderer.h"
 #include "../renderers/UiRenderer.h"
@@ -80,36 +82,6 @@ UiEditTerrain::UiEditTerrain(Tile& cur_tile,
       ui_shared_resources_(ui_shared_resources),
       ui_noise_config_(ui_noise_config) {
   Init();
-  // value_config_.AttachToHierarchy(hierarchy_);
-}
-
-UiEditTerrain::UiEditTerrain(UiEditTerrain&& other) noexcept
-    : IUiEdit(std::move(*this)),
-      text_noise_invert_(std::move(other.text_noise_invert_)),
-      text_noise_tiling_(std::move(other.text_noise_tiling_)),
-      text_noise_strength_(std::move(other.text_noise_strength_)),
-
-      shader_merge_noises_(std::move(other.shader_merge_noises_)),
-      shader_flatten_prep_(std::move(other.shader_flatten_prep_)),
-      shader_flatten_step_(std::move(other.shader_flatten_step_)),
-      shader_flatten_merge_(std::move(other.shader_flatten_merge_)),
-
-      value_config_(other.value_config_),
-
-      gen_perlin_(std::move(other.gen_perlin_)),
-      gen_cellular_(std::move(other.gen_cellular_)),
-      gen_metaballs_(std::move(other.gen_metaballs_)),
-      gen_fbm_grid_(std::move(other.gen_fbm_grid_)),
-      gen_fbm_multi_(std::move(other.gen_fbm_multi_)),
-      gen_fbmd_perlin_(std::move(other.gen_fbmd_perlin_)),
-      gen_fbm_warp_(std::move(other.gen_fbm_warp_)),
-      gen_fbm_perlin_warp_(std::move(other.gen_fbm_perlin_warp_)),
-      noises_({&gen_perlin_, &gen_cellular_, &gen_metaballs_, &gen_fbm_grid_,
-               &gen_fbm_multi_, &gen_fbmd_perlin_, &gen_fbm_warp_,
-               &gen_fbm_perlin_warp_}),
-      ui_shared_resources_(other.ui_shared_resources_),
-      ui_noise_config_(other.ui_noise_config_) {
-  // value_config_.AttachToHierarchy(hierarchy_);
 }
 
 void UiEditTerrain::HideAll() {

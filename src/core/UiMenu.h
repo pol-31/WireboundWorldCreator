@@ -13,12 +13,6 @@ class UiMenu final : public UiWindowAppear {
          IUiMode* placement_mode, IUiMode* objects_mode, IUiMode* biomes_mode,
          IUiMode* tiles_mode, IUiMode* player_mode, IUiMode*& cur_mode);
 
-  UiMenu(UiMenu&& other) noexcept;
-  UiMenu(const UiMenu& other) = delete;
-
-  UiMenu& operator=(UiMenu&& other) = delete;
-  UiMenu& operator=(const UiMenu& other) = delete;
-
   bool Render() override;
 
   void RenderPicking() override;
@@ -34,19 +28,18 @@ class UiMenu final : public UiWindowAppear {
  private:
   void SetCircleTransform();
 
-  static void SetSpTransform(UiDynamicSprite& sp, int id, int total_num,
-                             float radius);
+  static void SetSpTransform(UiSprite& sp, int id, int total_num, float radius);
 
   static void SetTg4Transform(UiToggle4& sp, int id, int total_num,
                               float radius);
 
-  UiDynamicSprite btn_terrain_;
-  UiDynamicSprite btn_water_;
-  UiDynamicSprite btn_placement_;
-  UiDynamicSprite btn_objects_;
-  UiDynamicSprite btn_biomes_;
-  UiDynamicSprite btn_tiles_;
-  UiDynamicSprite btn_player_;
+  UiSprite btn_terrain_;
+  UiSprite btn_water_;
+  UiSprite btn_placement_;
+  UiSprite btn_objects_;
+  UiSprite btn_biomes_;
+  UiSprite btn_tiles_;
+  UiSprite btn_player_;
 
   UiToggle4 tg_terrain_;
   UiToggle4 tg_water_;
@@ -55,17 +48,18 @@ class UiMenu final : public UiWindowAppear {
   UiToggle4 tg_biomes_;
   UiToggle4 tg_tiles_;
 
-  UiDynamicSprite btn_shader_wirebound_;
+  UiSprite btn_shader_wirebound_;
   UiToggle4 toggle_shaders_;
 
-  UiDynamicSprite arrow_select_;
-  UiDynamicSprite arrow_selected_;
-  UiDynamicSprite save_data_;
-  UiDynamicSprite load_data_;
+  UiSprite arrow_select_;
+  UiSprite arrow_selected_;
+  UiSprite save_data_;
+  UiSprite load_data_;
 
-  UiEventHandler<static_cast<int>(data::VboIdMain::kModeModeText) -
-                 static_cast<int>(data::VboIdMain::kMenuTerrain) + 1>
-      ui_event_handler_;
+  UiTextInput text_filename_;
+
+  UiEventHandler ui_event_handler_;
+  UiHierarchy hierarchy_;
 
   float arrow_selected_angle_ = 0;
 

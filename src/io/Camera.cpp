@@ -8,6 +8,21 @@
 #include "../common/OpenGlUtility.h"
 #include "Window.h"  // for frame rate (gDeltaTime)
 
+struct CameraUBO {
+  glm::vec3 camPos;
+  float _pad0;
+  glm::vec3 camForward;
+  float _pad1;
+  glm::vec3 camRight;
+  float _pad2;
+  glm::vec3 camUp;
+  float cosHalfFov;
+  glm::mat4 view;
+  glm::mat4 proj;
+};
+
+// map scale to shaders? or just get from transform mat
+
 Camera::Camera()
     : speed_(1.0f),
       yaw_(-90.0f),
@@ -20,23 +35,20 @@ Camera::Camera()
   Init();
 }
 
-void Camera::Init() {
+/*void Camera::Init() {
   InitUbo();
   UpdateCameraVectors();
-  UpdateViewMatrix(1.0f);
-  UpdateProjectionMatrix();
-  UpdateUboPos();
-}
+  Update();
+}*/
 
 void Camera::InitUbo() {
-  glGenBuffers(1, &ubo_);
-  glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
-  // mat4 + mat4 + vec3
-  glBufferData(GL_UNIFORM_BUFFER, 140, nullptr, GL_DYNAMIC_DRAW);
+  glCreateBuffers(1, &ubo_);
+  glNamedBufferStorage(ubo_, sizeof(CameraUBO), nullptr,
+                       GL_DYNAMIC_STORAGE_BIT);
   glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo_);
 }
 
-void Camera::DeInitUbo() { glDeleteBuffers(GL_UNIFORM_BUFFER, &ubo_); }
+void Camera::DeInitUbo() { glDeleteBuffers(1, &ubo_); }
 
 glm::mat4 Camera::GetViewMatrix(float map_scale) const noexcept {
   auto scaled_position = map_scale * position_;
@@ -46,21 +58,40 @@ glm::mat4 Camera::GetViewMatrix(float map_scale) const noexcept {
 
 glm::mat4 Camera::GetProjMatrix() const noexcept {
   return glm::perspective(
-      glm::radians(45.0f),
+      fovy_,
       static_cast<float>(gWindowWidth) / static_cast<float>(gWindowHeight),
       0.01f, 1000.0f);
 }
 
-void Camera::Update(float map_scale) {
-  UpdateViewMatrix(map_scale);
-  UpdateUboPos();
-  direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
+void Camera::Init() {
+  InitUbo();
+  UpdateCameraVectors();
+  Update();
 }
 
-void Camera::UpdateViewMatrix(float map_scale) const {
-  auto scaled_position = map_scale * position_;
-  glm::mat4 view_mat = glm::lookAt(
-      scaled_position, scaled_position + direction_front_, direction_up_);
+void Camera::Update() {
+  CameraUBO data{};
+
+  // TODO: not "position_", but world_pos, so map_scale'd
+
+  data.camPos = position_;
+  data.camForward = glm::normalize(direction_front_);
+  data.camUp = glm::normalize(direction_up_);
+  data.camRight = glm::normalize(direction_right_);
+
+  data.cosHalfFov = std::cos(fovy_ * 0.5f);
+
+  data.view =
+      glm::lookAt(position_, position_ + direction_front_, direction_up_);
+
+  data.proj = glm::perspective(
+      fovy_, float(gWindowWidth) / float(gWindowHeight), 0.01f, 1000.0f);
+  glNamedBufferSubData(ubo_, 0, sizeof(CameraUBO), &data);
+}
+
+void Camera::UpdateViewMatrix() const {
+  glm::mat4 view_mat =
+      glm::lookAt(position_, position_ + direction_front_, direction_up_);
   utility::UpdateUbo(ubo_, 0, 64, glm::value_ptr(view_mat));
 }
 
@@ -87,6 +118,7 @@ void Camera::UpdateCameraVectors(float radius) {
       glm::normalize(glm::cross(direction_front_, direction_world_up_));
   direction_up_ =
       glm::normalize(glm::cross(direction_right_, direction_front_));
+  direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
 }
 
 void Camera::MovePanView(float xoffset, float yoffset) {
@@ -142,6 +174,7 @@ void Camera::MoveRotateViewOrigin(float xoffset, float yoffset) {
   direction_right_ =
       glm::normalize(glm::cross(direction_front_, direction_world_up_));
   direction_up_ = glm::cross(direction_right_, direction_front_);
+  direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
 }
 
 void Camera::MoveRotateViewOriginDist(float xoffset) {
@@ -164,4 +197,5 @@ void Camera::MoveRotateViewOriginDist(float xoffset) {
   direction_right_ =
       glm::normalize(glm::cross(direction_front_, direction_world_up_));
   direction_up_ = glm::cross(direction_right_, direction_front_);
+  direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
 }

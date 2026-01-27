@@ -1,39 +1,39 @@
 #include "UiSlots.h"
 
+#include <glm/gtc/type_ptr.hpp>
+#include <iostream>
+
 #include "../common/OpenGlUtility.h"
 #include "../common/TextRenderer.h"
 #include "../common/UiDebugger.h"
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"
-#include "../modes/UiTerrainWindows.h"
+#include "../modes/UiEdit.h"
 
 /// parent is back_ BUT UiSlots is taken from slider, so
 /// outside is's shown as a slider area
 UiSlots::UiSlots(UiSharedResources& ui_shared_resources,
-                 TextRenderer& text_renderer)
+                 TextRenderer& text_renderer,
+                 std::function<void()> on_selection)
     : UiBase(static_cast<int>(data::VboIdMain::kSlotsBack), {}),
+      on_selection_(on_selection),
       ui_shared_resources_(ui_shared_resources),
-      sl_data_({{data::VboIdMain::kSlotsSlider},
-                {data::VboIdMain::kSlotsHandler},
-                6,
-                0.75f,
-                0.8f}),
+      sl_data_({data::VboIdMain::kSlotsSlider},
+               {data::VboIdMain::kSlotsHandler}, 6, 0.75f, 0.8f),
       back_(data::VboIdMain::kSlotsBack),
       create_(data::VboIdMain::kSlotsCreate, [this]() { this->CreateGraph(); }),
       slot_name_(text_renderer, data::VboIdMain::kSlotsName),
       slot_config_(data::VboIdMain::kSlotsConfig,
                    [this]() {
-                     SelectGraph(GetSlotId());
+                     SelectGraph(GetHoveredSlotId());
                      ui_edit_->Show();
                    }),
       toggle_slot_visible_({data::VboIdMain::kSlotsVisibleOff,
                             [this]() {
-                              auto slot_id = GetSlotId();
-                              (*entries_)[slot_id].do_show =
-                                  !(*entries_)[slot_id].do_show;
-                              bool cur = (*entries_)[slot_id].do_show;
-                              std::cout << "now state for " << slot_id << " is "
-                                        << cur << std::endl;
+                              auto slot_id = GetHoveredSlotId();
+                              auto instance =
+                                  ui_edit_->GetBaseInstanceData(slot_id);
+                              instance->do_show = !instance->do_show;
                               ui_edit_->UpdateConfig();
                             }},
                            {data::VboIdMain::kSlotsVisibleOn1},
@@ -41,18 +41,19 @@ UiSlots::UiSlots(UiSharedResources& ui_shared_resources,
                            {data::VboIdMain::kSlotsVisibleOn3}),
       slot_back_(data::VboIdMain::kSlotsSlot,
                  [this]() {
-                   auto cursor_slot_id = GetSlotId();
-                   if (selected_slot_id_ == cursor_slot_id) {
-                     selected_slot_id_ = -1;
+                   auto cursor_slot_id = GetHoveredSlotId();
+                   if (*selected_id_ == cursor_slot_id) {
+                     *selected_id_ = -1;
                      ui_edit_->UpdateConfig();
-                   } else {
-                     SelectGraph(cursor_slot_id);
+                     on_selection_();
+                     return;
                    }
+                   SelectGraph(cursor_slot_id);
                  }),
       slot_color_(data::VboIdMain::kSlotsSlotColor),
       slot_remove_(data::VboIdMain::kSlotsRemove,
                    [this]() {
-                     auto slot_id = GetSlotId();
+                     auto slot_id = GetHoveredSlotId();
                      std::cout << "graph removed " << slot_id << std::endl;
                      if (slot_id == GetSelectedSlotId()) {
                        ui_edit_->HideAll();
@@ -62,61 +63,35 @@ UiSlots::UiSlots(UiSharedResources& ui_shared_resources,
       slot_selected_(data::VboIdMain::kSlotsSelected),
       ui_event_handler_({&create_, &slot_config_, &toggle_slot_visible_,
                          &slot_back_, &slot_remove_}),
-      hierarchy_(&back_) {
-  hierarchy_ = UiHierarchy(&back_, &create_, &sl_data_);
-  hierarchy_.AddNested(&slot_back_, &slot_name_, &slot_config_,
-                       &toggle_slot_visible_, &slot_color_, &slot_remove_,
-                       &slot_selected_);
+      hierarchy_(&back_, {&create_, &sl_data_}) {
+  UiBase* comps[] = {&slot_name_,  &slot_config_, &toggle_slot_visible_,
+                     &slot_color_, &slot_remove_, &slot_selected_};
+  hierarchy_.AddNested(&slot_back_, comps);
   //  gUiComponents[hierarchy_.parent_->GetId() - details::kIdOffsetUi].ui =
   //      static_cast<UiBase*>(this);
   sl_data_.SetSlotPtr(&slot_back_);
   SetupUiHierarchy();
 }
 
-UiSlots::UiSlots(UiSlots&& other) noexcept
-    : UiBase(std::move(other)),
-      sl_data_(std::move(other.sl_data_)),
-      //      handler_(std::move(other.handler_)),
-      //      slider_(std::move(other.slider_)),
-      back_(std::move(other.back_)),
-      create_(std::move(other.create_)),
-      slot_name_(std::move(other.slot_name_)),
-      slot_config_(std::move(other.slot_config_)),
-      toggle_slot_visible_(std::move(other.toggle_slot_visible_)),
-      slot_back_(std::move(other.slot_back_)),
-      slot_color_(std::move(other.slot_color_)),
-      slot_remove_(std::move(other.slot_remove_)),
-      slot_selected_(std::move(other.slot_selected_)),
-      ui_edit_(other.ui_edit_),
-      selected_slot_id_(other.selected_slot_id_),
-      ui_event_handler_({&create_, &slot_config_, &toggle_slot_visible_,
-                         &slot_back_, &slot_remove_}),
-      ui_shared_resources_(other.ui_shared_resources_),
-      hierarchy_(std::move(other.hierarchy_)) {
-  hierarchy_ =
-      UiHierarchy(&back_, /*&handler_, &slider_, */ &create_, &sl_data_);
-  hierarchy_.AddNested(&slot_back_, &slot_name_, &slot_config_,
-                       &toggle_slot_visible_, &slot_color_, &slot_remove_,
-                       &slot_selected_);
-  sl_data_.SetSlotPtr(&slot_back_);
-  SetupUiHierarchy();
-}
-
-void UiSlots::Setup(std::vector<BaseInstanceData>* entries, IUiEdit* ui_edit) {
-  entries_ = entries;
+void UiSlots::Setup(IUiEdit* ui_edit, std::function<void()> on_selection) {
+  if (ui_edit) {
+    ui_edit->HideAll();
+  }
   ui_edit_ = ui_edit;
-  sl_data_.SetEntryNum(entries_->size());
-  selected_slot_id_ = -1;
+  ui_edit_->SetUp();
+  sl_data_.SetEntryNum(GetSize());
+  selected_id_ = ui_edit->GetSelectedIdPtr();
+  on_selection_ = std::move(on_selection);
+  on_selection_();
 }
 
 void UiSlots::AddInstance(BaseInstanceData&& data) {
-  if (entries_->size() >= gMaxLayers) {
+  if (GetSize() >= gMaxLayers) {
     std::cerr << "Unable to add more graphs (data overflow)" << std::endl;
   } else {
     ui_edit_->CreateInstance();
-    entries_->push_back(data);
   }
-  sl_data_.SetEntryNum(entries_->size());
+  sl_data_.SetEntryNum(GetSize());
 }
 
 bool UiSlots::Press(int pressed_id) {
@@ -130,11 +105,11 @@ void UiSlots::Release() {
 
 void UiSlots::RenderSlotsSprites() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render =
-      std::min(sl_data_.slots_num_, static_cast<int>(entries_->size()));
+  int slots_to_render = std::min(sl_data_.slots_num_, GetSize());
   glm::vec4 color_reset = glm::vec4{1.0f};
   for (int i = 0; i < slots_to_render; ++i) {
-    auto graph_base_data = &(*entries_)[i + sl_data_.cur_slots_offset_];
+    auto graph_base_data =
+        ui_edit_->GetBaseInstanceData(i + sl_data_.cur_slots_offset_);
     slot_back_.SetTranslate(next_offset);
     slot_remove_.SetTranslate(next_offset);
     slot_config_.SetTranslate(next_offset);
@@ -161,11 +136,11 @@ void UiSlots::RenderSlotsSprites() {
 
 void UiSlots::RenderSlotsText() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render =
-      std::min(sl_data_.slots_num_, static_cast<int>(entries_->size()));
+  int slots_to_render = std::min(sl_data_.slots_num_, GetSize());
   for (int i = 0; i < slots_to_render; ++i) {
-    auto graph_name = &(*entries_)[i + sl_data_.cur_slots_offset_].name;
-    slot_name_.Render(*graph_name, 1.0f, next_offset,
+    const auto& graph_name =
+        ui_edit_->GetBaseInstanceData(i + sl_data_.cur_slots_offset_)->name;
+    slot_name_.Render(graph_name, 1.0f, next_offset,
                       TextRenderer::Alignment::kCentre);
     next_offset.y -= sl_data_.slot_height_;
   }
@@ -190,8 +165,7 @@ void UiSlots::Render(glm::vec2 mouse_pos) {  // done
 
 void UiSlots::RenderPickingSlotsSprites() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render =
-      std::min(sl_data_.slots_num_, static_cast<int>(entries_->size()));
+  int slots_to_render = std::min(sl_data_.slots_num_, GetSize());
   for (int i = 0; i < slots_to_render; ++i) {
     slot_back_.SetTranslate(next_offset);
     slot_remove_.SetTranslate(next_offset);
@@ -216,11 +190,11 @@ void UiSlots::RenderPickingSlotsSprites() {
 
 void UiSlots::RenderPickingSlotsText() {
   glm::vec2 next_offset = sl_data_.start_slot_translate_;
-  int slots_to_render =
-      std::min(sl_data_.slots_num_, static_cast<int>(entries_->size()));
+  int slots_to_render = std::min(sl_data_.slots_num_, GetSize());
   for (int i = 0; i < slots_to_render; ++i) {
-    auto graph_name = &(*entries_)[i + sl_data_.cur_slots_offset_].name;
-    slot_name_.RenderPicking(*graph_name, 1.0f, next_offset,
+    const auto& graph_name =
+        ui_edit_->GetBaseInstanceData(i + sl_data_.cur_slots_offset_)->name;
+    slot_name_.RenderPicking(graph_name, 1.0f, next_offset,
                              TextRenderer::Alignment::kCentre);
     next_offset.y -= sl_data_.slot_height_;
   }
@@ -242,43 +216,41 @@ void UiSlots::RenderPicking() {  // done
 }
 
 void UiSlots::CreateGraph() {
-  if (entries_->size() >= gMaxLayers) {
+  if (GetSize() >= gMaxLayers) {
     std::cerr << "Unable to add more graphs (data overflow)" << std::endl;
   } else {
     ui_edit_->CreateInstance();
-    entries_->emplace_back();
-    entries_->back().name = std::to_string(entries_->size());
-    SelectGraph(entries_->size() - 1);
-    sl_data_.SetEntryNum(entries_->size());
+    SelectGraph(GetSize() - 1);
+    sl_data_.SetEntryNum(GetSize());
   }
 }
 
 void UiSlots::SelectGraph(GLuint id) {
-  if (id >= entries_->size()) {
+  if (id >= GetSize()) {
     throw "select non-existent slot id";
   }
-  selected_slot_id_ = static_cast<int>(id);
+  *selected_id_ = static_cast<int>(id);
   sl_data_.FocusOnSelected(id);
   ui_edit_->SetInstanceId(id);
+  on_selection_();
 }
 
 void UiSlots::RemoveGraph(GLuint id) {
-  if (id >= entries_->size()) {
+  if (id >= GetSize()) {
     throw "remove non-existent graph id";
   }
   auto int_id = static_cast<int>(id);
-  if (selected_slot_id_ > int_id) {
-    --selected_slot_id_;
-  } else if (selected_slot_id_ == int_id) {
-    selected_slot_id_ = -1;
+  if (*selected_id_ > int_id) {
+    --selected_id_;
+  } else if (*selected_id_ == int_id) {
+    *selected_id_ = -1;
   }
-  entries_->erase(entries_->begin() + id);
   ui_edit_->RemoveInstance(id);
-  std::cout << "*slot removed " << id << std::endl;
-  sl_data_.SetEntryNum(entries_->size());
+  sl_data_.SetEntryNum(GetSize());
+  on_selection_();
 }
 
-int UiSlots::GetSize() const noexcept { return entries_->size(); }
+int UiSlots::GetSize() const noexcept { return ui_edit_->GetInstancesNum(); }
 
 void UiSlots::UpdateTransform() {
   /*sl_data_.length_ = sl_data_.track_length_factor *
@@ -306,22 +278,28 @@ slot_back_.GetBottomBorder(), graph_.GetSize()); return true;*/
   return false;
 }
 
-int UiSlots::GetSlotId() {
+int UiSlots::GetHoveredSlotId() {
   return sl_data_.GetSlotId(
-      ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_);
+      ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_);
 }
 
-int UiSlots::GetSelectedSlotId() { return selected_slot_id_; }
+int UiSlots::GetSelectedSlotId() { return *selected_id_; }
+
+void UiSlots::DeSelect() {
+  ui_edit_->HideAll();
+  *selected_id_ = -1;
+  on_selection_();
+}
 
 void UiSlots::Reset() {
   sl_data_.SetEntryNum(0);
-  ui_edit_->ForceHide();
-  entries_->clear();  // for some reason doesn't work
-  selected_slot_id_ = -1;
+  ui_edit_->HideAll();
+  *selected_id_ = -1;
+  on_selection_();
 }
 
 BaseInstanceData* UiSlots::GetInstanceBaseData() {
-  return &(*entries_)[selected_slot_id_];
+  return ui_edit_->GetBaseInstanceData(*selected_id_);
 }
 
 void UiSlots::SetupUiHierarchy() {

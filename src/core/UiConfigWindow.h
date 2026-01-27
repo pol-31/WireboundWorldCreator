@@ -17,8 +17,6 @@ class UiConfigWindow final : public UiWindowAppear {
   UiConfigWindow(UiSharedResources& ui_shared_resources,
                  WindowQueue& window_queue, TextRenderer& text_renderer);
 
-  UiConfigWindow(UiConfigWindow&& other) noexcept;
-
   bool Render() override;
 
   void RenderPicking() override;
@@ -44,7 +42,7 @@ class UiConfigWindow final : public UiWindowAppear {
   void SetupUiHierarchy();
 
   UiTextModeId name_;
-  UiDynamicSprite btn_save_;
+  UiSprite btn_save_;
 
   //  UiDynamicSprite sp_sl_track_;
   //  UiDynamicSprite sp_sl_handle_;
@@ -58,8 +56,7 @@ class UiConfigWindow final : public UiWindowAppear {
   std::span<data::TextId> text_id_;
 
   int sl_pressed_config_ = -1;
-
-  //  UiEventHandler<gWidgetsNum> ui_event_handler_;
+  UiHierarchy hierarchy_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UICONFIGWINDOW_H_

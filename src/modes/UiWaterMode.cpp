@@ -405,16 +405,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
   if (key == GLFW_KEY_ESCAPE) {
     if (mod_shift) {
       glfwSetWindowShouldClose(window, true);
-    } else if (!glfw_context->windows->GetTopWindow() &&
-               glfw_context->windows->GetSize() == 0) {
-      glfw_context->ui_renderer->AskForConfirmation(
-          data::TextId::kConfirmationExit,
-          []() { glfwSetWindowShouldClose(gWindow, true); });
-    } else {
-      glfw_context->windows->BtnEscape();
+    } else if (glfw_context->windows->GetSize() == 0) {
+      glfw_context->ui_confirmation->Show(data::TextId::kConfirmationExit, [] {
+        glfwSetWindowShouldClose(gWindow, true);
+      });
     }
-  } else if (key == GLFW_KEY_ENTER) {
-    glfw_context->windows->BtnEnter();
   } else if (key == GLFW_KEY_1) {
     water->ui_selection_.SetMode(SelectionMode::kRectangle);
   } else if (key == GLFW_KEY_2) {
@@ -514,7 +509,7 @@ void CursorPosCallback_G(GLFWwindow* window, double xpos, double ypos) {
   auto water = dynamic_cast<UiWaterMode*>(*glfw_context->cur_mode);
   water->mouse_transform_.TranslateSelectedVerticesUp(
       xpos, ypos, glfw_context->tile_renderer->cur_tile_.map_ocean_surface_,
-      water->ui_selection_.GetMask(), true);
+      water->ui_selection_.GetMask());
 }
 
 void MouseButtonCallbackTransform(GLFWwindow* window, int button, int action,

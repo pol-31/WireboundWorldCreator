@@ -7,17 +7,7 @@ UiEditObjects::UiEditObjects(UiSharedResources& ui_shared_resources,
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),
       mdl_manager_(mdl_manager),
-      ui_shared_resources_(ui_shared_resources) {
-  // value_config_.AttachToHierarchy(hierarchy_);
-}
-
-UiEditObjects::UiEditObjects(UiEditObjects&& other) noexcept
-    : IUiEdit(std::move(*this)),
-      ui_shared_resources_(other.ui_shared_resources_),
-      value_config_(other.value_config_),
-      mdl_manager_(other.mdl_manager_) {
-  // value_config_.AttachToHierarchy(hierarchy_);
-}
+      ui_shared_resources_(ui_shared_resources) {}
 
 void UiEditObjects::HideAll() { ui_.ForceHide(); }
 

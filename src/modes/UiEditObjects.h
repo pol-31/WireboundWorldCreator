@@ -17,8 +17,6 @@ class UiEditObjects : public IUiEdit {
                 UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
                 ModelManager& mdl_manager);
 
-  UiEditObjects(UiEditObjects&& other) noexcept;
-
   void HideAll() override;
 
   void CreateInstance() override;

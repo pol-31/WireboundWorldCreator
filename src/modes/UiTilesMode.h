@@ -26,14 +26,12 @@ class UiTilesMode final : public IUiMode {
   static void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
                           int mods);
 
-  UiStaticSprite btn_up_;
-  UiStaticSprite btn_down_;
-  UiStaticSprite btn_left_;
-  UiStaticSprite btn_right_;
+  UiSprite btn_up_;
+  UiSprite btn_down_;
+  UiSprite btn_left_;
+  UiSprite btn_right_;
 
-  UiEventHandler<static_cast<int>(data::VboIdMain::kTilesDown) -
-                 static_cast<int>(data::VboIdMain::kTilesTilesMode) + 1>
-      ui_event_handler_;
+  UiEventHandler ui_event_handler_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UITILESMODE_H_

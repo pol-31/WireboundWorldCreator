@@ -9,13 +9,13 @@
 #include "UiComplex.h"
 
 struct BaseInstanceData;
-struct TerrainInstanceData;
+struct TerrainTraits;
 
 class UiLayerWireframe {
  public:
   UiLayerWireframe(UiSharedResources& ui_shared_resources);
 
-  UiLayerWireframe(UiLayerWireframe&& other) noexcept;
+  UiLayerWireframe(UiLayerWireframe&& other) = delete;
   UiLayerWireframe(const UiLayerWireframe& other) = delete;
 
   UiLayerWireframe& operator=(UiLayerWireframe&& other) = delete;
@@ -23,13 +23,11 @@ class UiLayerWireframe {
 
   ~UiLayerWireframe() { DeInit(); }
 
-  void RenderLayerWireframe(TerrainInstanceData* terrain,
-                            BaseInstanceData* data);
+  void RenderLayerWireframe(TerrainTraits* terrain);
 
   void RenderPickingLayerWireframe();
 
-  void UpdateLayerWireframe(TerrainInstanceData* terrain,
-                            BaseInstanceData* data);
+  void UpdateLayerWireframe(TerrainTraits* terrain);
 
  private:
   void Init();
@@ -47,11 +45,11 @@ class UiLayerWireframe {
   glm::mat4 GetPointMvpMatrix();
 
   UiSharedResources& ui_shared_resources_;
-  UiDynamicSprite sp_layer_;
-  UiDynamicSprite sp_frame_;
+  UiSprite sp_layer_;
+  UiSprite sp_frame_;
 
   /// order: x_pos, x_neg, y_pox, y_neg, z_pos, z_neg
-  std::array<UiDynamicSprite, 6> sp_points_;
+  std::array<UiSprite, 6> sp_points_;
   std::array<glm::vec4, 6> pos_points_;
 
   Texture layer_tex_;

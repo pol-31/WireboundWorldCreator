@@ -1,5 +1,7 @@
 #include "UiEdit.h"
 
+#include <glm/gtc/type_ptr.hpp>
+
 UiEditSlots::UiEditSlots(UiSharedResources& ui_shared_resources,
                          WindowQueue& window_queue, TextRenderer& text_renderer)
     : Base({data::VboIdMain::kBiomesEditDesk, [] {}}, 1.0f,
@@ -20,30 +22,13 @@ UiEditSlots::UiEditSlots(UiSharedResources& ui_shared_resources,
                        [this] { ui_edit_->RandomGenerate(); }),
       ui_event_handler_({&pin_, &accept_, &name_, &color_palette_,
                          &color_brightness_, &random_generate_}),
+      hierarchy_(&background_,
+                 {&pin_, &accept_, &name_, &color_palette_, &color_brightness_,
+                  &color_indicator_, &random_generate_}),
       ui_shared_resources_(ui_shared_resources),
       random_generator_(std::random_device{}()) {
-  hierarchy_ =
-      UiHierarchy(&sprite_, &pin_, &accept_, &name_, &color_palette_,
-                  &color_brightness_, &color_indicator_, &random_generate_);
   speed_ = 2.0f;
   color_brightness_.SetValue(1.0f);
-}
-
-UiEditSlots::UiEditSlots(UiEditSlots&& other) noexcept
-    : Base(std::move(other)),
-      accept_(std::move(other.accept_)),
-      name_(std::move(other.name_)),
-      color_palette_(std::move(other.color_palette_)),
-      color_brightness_(std::move(other.color_brightness_)),
-      color_indicator_(std::move(other.color_indicator_)),
-      random_generate_(std::move(other.random_generate_)),
-      ui_event_handler_({&pin_, &accept_, &name_, &color_palette_,
-                         &color_brightness_, &random_generate_}),
-      ui_shared_resources_(other.ui_shared_resources_),
-      random_generator_(other.random_generator_) {
-  hierarchy_ =
-      UiHierarchy(&sprite_, &pin_, &accept_, &name_, &color_palette_,
-                  &color_brightness_, &color_indicator_, &random_generate_);
 }
 
 void UiEditSlots::SetUp(IUiEdit* ui_edit) { ui_edit_ = ui_edit; }
@@ -57,7 +42,7 @@ void UiEditSlots::SetInstance(int id) {
 }
 
 bool UiEditSlots::Press(int id) {
-  if (ui_edit_->Press(id, sprite_.GetHeight())) {
+  if (ui_edit_->Press(id, background_.GetHeight())) {
     return true;
   }
   return ui_event_handler_.Press(id);
@@ -100,7 +85,7 @@ bool UiEditSlots::Render() {
 
   random_generate_.Render();
   name_.RenderBack();
-  ui_edit_->Render(sprite_.GetHeight());
+  ui_edit_->Render(background_.GetHeight());
 
   model_data->name = name_.GetText();
   name_.RenderText();
@@ -118,7 +103,7 @@ void UiEditSlots::RenderPicking() {
   color_indicator_.RenderPicking();
   random_generate_.RenderPicking();
 
-  ui_edit_->RenderPicking(sprite_.GetHeight());
+  ui_edit_->RenderPicking(background_.GetHeight());
 
   ui_shared_resources_.shader_sp_picking_.Bind();
   name_.RenderPicking();

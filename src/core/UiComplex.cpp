@@ -9,9 +9,8 @@
 #include "../common/models/ModelManager.h"
 #include "../io/Camera.h"
 
-UiWindowSlider::UiWindowSlider(UiDynamicSprite&& sp_track,
-                               UiDynamicSprite&& sp_handle, int slots_num,
-                               float track_length_factor,
+UiWindowSlider::UiWindowSlider(UiSprite&& sp_track, UiSprite&& sp_handle,
+                               int slots_num, float track_length_factor,
                                float slots_length_factor)
     : UiBase(sp_track.GetId(), {}),
       sp_track_(std::move(sp_track)),
@@ -28,29 +27,6 @@ UiWindowSlider::UiWindowSlider(UiDynamicSprite&& sp_track,
       sp_track_.GetId();
   gUiComponents[GetId() - details::kIdOffsetUi].ui = static_cast<UiBase*>(this);
   UpdateTransform();
-}
-
-UiWindowSlider::UiWindowSlider(UiWindowSlider&& other) noexcept
-    : UiBase(std::move(other)),
-      sp_track_(std::move(other.sp_track_)),
-      sp_handle_(std::move(other.sp_handle_)),
-      track_length_factor_(other.track_length_factor_),
-      slots_length_factor_(other.slots_length_factor_),
-      slots_num_(other.slots_num_),
-      entry_num_(other.entry_num_),
-      slot_(other.slot_),
-      centre_(other.centre_),
-      length_(other.length_),
-      length_slots_(other.length_slots_),
-      progress_(other.progress_),
-      pressed_(other.pressed_),
-      slot_height_(other.slot_height_),
-      scissors_start_(other.scissors_start_),
-      scissors_length_(other.scissors_length_),
-      cur_slots_offset_(other.cur_slots_offset_),
-      start_slot_translate_(other.start_slot_translate_) {
-  gUiComponents[sp_track_.GetId() - details::kIdOffsetUi].ui =
-      static_cast<UiBase*>(this);
 }
 
 void UiWindowSlider::SetParentTransform(LocalTransform transform) {
@@ -114,10 +90,6 @@ void UiWindowSlider::UpdateTransform() {
   sp_handle_.UpdateTransform();
 }
 
-// ---
-// ---
-// ---
-
 void UiWindowSlider::SetEntryNum(int entry_num) {
   entry_num_ = entry_num;
   Set(1.0f);
@@ -136,7 +108,8 @@ void UiWindowSlider::UpdateRenderData() {
                  (sp_slot_->GetTopBorder() - sp_slot_->GetBottomBorder());
   auto scrollable_slots =
       static_cast<float>(std::max(entry_num_ - slots_num_ + 1, 0));
-  float float_index = scrollable_slots * progress_;
+  // issue at progress_==1. so ui_slots::Render() call rener entry_num+1 times
+  float float_index = scrollable_slots * progress_ * 0.99f;
   cur_slots_offset_ = (int)float_index;
   float fractional_part = float_index - cur_slots_offset_;
   float offset_y = fractional_part * slot_height_;
@@ -201,31 +174,20 @@ void UiWindowSlider::FocusOnSelected(int slot_id) {
   Set(progress_);
 }
 
-UiLoading::UiLoading(UiDynamicSprite&& sprite0, UiDynamicSprite&& sprite10,
-                     UiDynamicSprite&& sprite20, UiDynamicSprite&& sprite30,
-                     UiDynamicSprite&& sprite40, UiDynamicSprite&& sprite50,
-                     UiDynamicSprite&& sprite60, UiDynamicSprite&& sprite70,
-                     UiDynamicSprite&& sprite80, UiDynamicSprite&& sprite90,
-                     UiDynamicSprite&& sprite100)
+UiLoading::UiLoading(UiSprite&& sprite0, UiSprite&& sprite10,
+                     UiSprite&& sprite20, UiSprite&& sprite30,
+                     UiSprite&& sprite40, UiSprite&& sprite50,
+                     UiSprite&& sprite60, UiSprite&& sprite70,
+                     UiSprite&& sprite80, UiSprite&& sprite90,
+                     UiSprite&& sprite100)
     : sprites_{{std::move(sprite0), std::move(sprite10), std::move(sprite20),
                 std::move(sprite30), std::move(sprite40), std::move(sprite50),
                 std::move(sprite60), std::move(sprite70), std::move(sprite80),
                 std::move(sprite90), std::move(sprite100)}},
-      hierarchy_(&sprites_[0]) {
-  hierarchy_ =
-      UiHierarchy(&sprites_[0], &sprites_[1], &sprites_[2], &sprites_[3],
-                  &sprites_[4], &sprites_[5], &sprites_[6], &sprites_[7],
-                  &sprites_[8], &sprites_[9], &sprites_[10]);
-}
-
-UiLoading::UiLoading(UiLoading&& other) noexcept
-    : sprites_(std::move(other.sprites_)),
-      hierarchy_(std::move(other.hierarchy_)) {
-  hierarchy_ =
-      UiHierarchy(&sprites_[0], &sprites_[1], &sprites_[2], &sprites_[3],
-                  &sprites_[4], &sprites_[5], &sprites_[6], &sprites_[7],
-                  &sprites_[8], &sprites_[9], &sprites_[10]);
-}
+      hierarchy_(&sprites_[0],
+                 {&sprites_[1], &sprites_[2], &sprites_[3], &sprites_[4],
+                  &sprites_[5], &sprites_[6], &sprites_[7], &sprites_[8],
+                  &sprites_[9], &sprites_[10]}) {}
 
 void UiLoading::Render(float progress) {
   int idx = static_cast<int>(std::round(progress * 10.0f));
@@ -235,15 +197,9 @@ void UiLoading::Render(float progress) {
 
 void UiLoading::RenderPicking() const { sprites_[0].RenderPicking(); }
 
-UiSelectedSprite::UiSelectedSprite(UiDynamicSprite&& sp_selected,
-                                   const UiDynamicSprite* sp_ptr_top)
+UiSelectedSprite::UiSelectedSprite(UiSprite&& sp_selected,
+                                   const UiSprite* sp_ptr_top)
     : sp_selected_(std::move(sp_selected)), sp_ptr_top_(sp_ptr_top) {
-  SetSelected(0);
-}
-
-UiSelectedSprite::UiSelectedSprite(UiSelectedSprite&& other) noexcept
-    : sp_selected_(std::move(other.sp_selected_)),
-      sp_ptr_top_(other.sp_ptr_top_) {
   SetSelected(0);
 }
 
@@ -255,30 +211,16 @@ void UiSelectedSprite::SetSelected(int id) {
   sp_selected_.SetTranslate(centre);
 }
 
-UiCompass::UiCompass(const Camera* camera, UiDynamicSprite&& sp_compass,
-                     UiDynamicSprite&& sp_north, UiDynamicSprite&& sp_south,
-                     UiDynamicSprite&& sp_east, UiDynamicSprite&& sp_west)
+UiCompass::UiCompass(const Camera* camera, UiSprite&& sp_compass,
+                     UiSprite&& sp_north, UiSprite&& sp_south,
+                     UiSprite&& sp_east, UiSprite&& sp_west)
     : camera_(camera),
       sp_compass_(std::move(sp_compass)),
       sp_north_(std::move(sp_north)),
       sp_south_(std::move(sp_south)),
       sp_east_(std::move(sp_east)),
       sp_west_(std::move(sp_west)),
-      hierarchy_(&sp_compass_) {
-  hierarchy_ =
-      UiHierarchy(&sp_compass_, &sp_north_, &sp_south_, &sp_east_, &sp_west_);
-}
-
-UiCompass::UiCompass(UiCompass&& other) noexcept
-    : camera_(other.camera_),
-      sp_compass_(std::move(other.sp_compass_)),
-      sp_north_(std::move(other.sp_north_)),
-      sp_south_(std::move(other.sp_south_)),
-      sp_east_(std::move(other.sp_east_)),
-      sp_west_(std::move(other.sp_west_)),
-      hierarchy_(std::move(other.hierarchy_)) {
-  hierarchy_ =
-      UiHierarchy(&sp_compass_, &sp_north_, &sp_south_, &sp_east_, &sp_west_);
+      hierarchy_(&sp_compass_, {&sp_north_, &sp_south_, &sp_east_, &sp_west_}) {
 }
 
 void UiCompass::Render() {
@@ -320,211 +262,17 @@ void UiCompass::Render() {
 
 void UiCompass::RenderPicking() const { sp_compass_.RenderPicking(); }
 
-UiTopWindowBase::UiTopWindowBase(UiDynamicSprite&& desk, float size_scale,
-                                 UiSharedResources& ui_shared_resources,
-                                 WindowQueue& window_queue)
-    : desk_(std::move(desk)),
-      size_scale_(size_scale),
-      ui_shared_resources_(ui_shared_resources),
-      window_queue_(window_queue),
-      hierarchy_(&desk_) {
-  desk_.SetScale(size_scale);
-}
-
-UiTopWindowBase::UiTopWindowBase(UiTopWindowBase&& other) noexcept
-    : desk_(std::move(other.desk_)),
-      size_scale_(other.size_scale_),
-      ui_shared_resources_(other.ui_shared_resources_),
-      window_queue_(other.window_queue_),
-      hierarchy_(std::move(other.hierarchy_)) {}
-
-void UiTopWindowBase::Show() { window_queue_.SetTopWindow(this); }
-
-void UiTopWindowBase::Hide() { window_queue_.SetTopWindow(nullptr); }
-
-UiCaution::UiCaution(UiDynamicSprite&& desk, float size_scale,
-                     UiSharedResources& ui_shared_resources,
-                     WindowQueue& window_queue, UiDynamicSprite&& text)
-    : UiTopWindowBase(std::move(desk), size_scale, ui_shared_resources,
-                      window_queue),
-      text_(std::move(text)) {
-  hierarchy_ = UiHierarchy(&desk_, &text_);
-}
-
-UiCaution::UiCaution(UiCaution&& other) noexcept
-    : Base(std::move(other)), text_(std::move(other.text_)) {
-  hierarchy_ = UiHierarchy(&desk_, &text_);
-}
-
-bool UiCaution::Render() {
-  ui_shared_resources_.shader_sp_.Bind();
-  desk_.Render();
-  //  text_.Render();
-  return false;
-}
-
-void UiCaution::RenderPicking() {
-  ui_shared_resources_.shader_sp_picking_.Bind();
-  desk_.RenderPicking();
-  //  text_.RenderPicking();
-}
-
-void UiCaution::Press(int id) { Hide(); }
-
-void UiCaution::Release() {}
-
-UiConfirmation::UiConfirmation(UiDynamicSprite&& desk, float size_scale,
-                               UiSharedResources& ui_shared_resources,
-                               WindowQueue& window_queue,
-                               UiDynamicSprite&& btn_accept,
-                               UiDynamicSprite&& btn_decline,
-                               UiTextMenuId&& text)
-    : UiTopWindowBase(std::move(desk), size_scale, ui_shared_resources,
-                      window_queue),
-      btn_accept_(std::move(btn_accept)),
-      btn_decline_(std::move(btn_decline)),
-      text_(std::move(text)),
-      ui_event_handler_({&btn_accept_, &btn_decline_}) {
-  hierarchy_ = UiHierarchy(&desk_, &btn_accept_, &btn_decline_, &text_);
-}
-
-UiConfirmation::UiConfirmation(UiConfirmation&& other) noexcept
-    : Base(std::move(other)),
-      btn_accept_(std::move(other.btn_accept_)),
-      btn_decline_(std::move(other.btn_decline_)),
-      text_(std::move(other.text_)),
-      ui_event_handler_({&btn_accept_, &btn_decline_}) {
-  hierarchy_ = UiHierarchy(&desk_, &btn_accept_, &btn_decline_, &text_);
-}
-
-bool UiConfirmation::Render() {
-  ui_shared_resources_.shader_sp_.Bind();
-  desk_.Render();
-  btn_accept_.Render();
-  btn_decline_.Render();
-  text_.Render();
-  return false;
-}
-
-void UiConfirmation::RenderPicking() {
-  ui_shared_resources_.shader_sp_picking_.Bind();
-  desk_.RenderPicking();
-  btn_accept_.RenderPicking();
-  btn_decline_.RenderPicking();
-  text_.RenderPicking();
-}
-
-void UiConfirmation::Press(int id) {
-  //  ui_event_handler_.Press(id);
-  if (id == btn_accept_.GetId()) {
-    callable_();  // TODO: but... why not bth_accept_.Press()... should do smt
-  } else if (id != desk_.GetId()) {
-    Hide();
-  }
-}
-
-void UiConfirmation::Release() { ui_event_handler_.Release(); }
-
-void UiConfirmation::SetText(data::TextId text_id) { text_.SetText(text_id); }
-
-void UiConfirmation::SetCallable(std::function<void()>&& callable) {
-  callable_ = std::move(callable);
-}
-
-void UiConfirmation::BtnEnter() { callable_(); }
-
-void UiConfirmation::BtnEscape() {
-  btn_decline_.Press();
-  Hide();
-}
-
-UiFile::UiFile(UiDynamicSprite&& desk, float size_scale,
-               UiSharedResources& ui_shared_resources,
-               WindowQueue& window_queue, UiDynamicSprite&& btn_accept,
-               UiDynamicSprite&& btn_decline, UiText&& label,
-               UiTextInput&& text)
-    : UiTopWindowBase(std::move(desk), size_scale, ui_shared_resources,
-                      window_queue),
-      btn_accept_(std::move(btn_accept)),
-      btn_decline_(std::move(btn_decline)),
-      label_(std::move(label)),
-      text_(std::move(text)),
-      ui_event_handler_({&btn_accept_ /*, &btn_decline_*/}) {
-  hierarchy_ =
-      UiHierarchy(&desk_, &btn_accept_, &btn_decline_, &label_, &text_);
-  label_.SetText("label");
-}
-
-UiFile::UiFile(UiFile&& other) noexcept
-    : Base(std::move(other)),
-      btn_accept_(std::move(other.btn_accept_)),
-      btn_decline_(std::move(other.btn_decline_)),
-      label_(std::move(other.label_)),
-      text_(std::move(other.text_)),
-      ui_event_handler_({&btn_accept_ /*, &btn_decline_*/}) {
-  hierarchy_ =
-      UiHierarchy(&desk_, &btn_accept_, &btn_decline_, &label_, &text_);
-}
-
-bool UiFile::Render() {
-  ui_shared_resources_.shader_sp_.Bind();
-  desk_.Render();
-  btn_accept_.Render();
-  btn_decline_.Render();
-  label_.Render();
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
-  text_.Render();
-  return false;
-}
-
-void UiFile::RenderPicking() {
-  ui_shared_resources_.shader_sp_picking_.Bind();
-  desk_.RenderPicking();
-  btn_accept_.RenderPicking();
-  btn_decline_.RenderPicking();
-  label_.RenderPicking();
-  ui_shared_resources_.shader_sp_picking_.Bind();
-  text_.RenderPicking();
-}
-
-void UiFile::Press(int id) {
-  ui_event_handler_.Press(id);
-  if (id == text_.GetId()) {
-    text_.Press();
-    return;
-  }
-  if (id == btn_accept_.GetId() || id == btn_decline_.GetId()) {
-    Hide();
-  }
-}
-
-void UiFile::Release() { ui_event_handler_.Release(); }
-
-UiWindowBase::UiWindowBase(UiDynamicSprite&& sprite, float size_scale,
-                           UiToggle2&& pin,
+UiWindowBase::UiWindowBase(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
                            UiSharedResources& ui_shared_resources,
                            WindowQueue& window_queue)
-    : sprite_(std::move(sprite)),
+    : background_(std::move(sprite)),
       size_scale_(size_scale),
       pin_(std::move(pin)),
       ui_shared_resources_(ui_shared_resources),
       window_queue_(window_queue),
-      speed_(4.0f),
-      hierarchy_(&sprite_) {
-  sprite_.SetScale(size_scale);
+      speed_(4.0f) {
+  background_.SetScale(size_scale);
 }
-
-UiWindowBase::UiWindowBase(UiWindowBase&& other) noexcept
-    : sprite_(std::move(other.sprite_)),
-      size_scale_(other.size_scale_),
-      pin_(std::move(other.pin_)),
-      ui_shared_resources_(other.ui_shared_resources_),
-      window_queue_(other.window_queue_),
-      speed_(other.speed_),
-      progress_(other.progress_),
-      back_ready_(other.back_ready_),
-      hierarchy_(std::move(other.hierarchy_)) {}
 
 UiWindowBase* UiWindowBase::GetWindowPtr() { return this; }
 
@@ -562,15 +310,12 @@ void UiWindowBase::ForceHide() {
 
 bool UiWindowBase::Pinned() const noexcept { return pin_.TurnedOn(); }
 
-UiWindowAppear::UiWindowAppear(UiDynamicSprite&& sprite, float size_scale,
+UiWindowAppear::UiWindowAppear(UiSprite&& sprite, float size_scale,
                                UiToggle2&& pin,
                                UiSharedResources& ui_shared_resources,
                                WindowQueue& window_queue)
     : UiWindowBase(std::move(sprite), size_scale, std::move(pin),
                    ui_shared_resources, window_queue) {}
-
-UiWindowAppear::UiWindowAppear(UiWindowAppear&& other) noexcept
-    : UiWindowBase(std::move(other)) {}
 
 /// back_ready_==false when appearing or disappearing animation
 /// returs false when disappearing fading is over
@@ -594,7 +339,7 @@ bool UiWindowAppear::RenderBack(bool show) {
   ui_shared_resources_.shader_sp_mask_.Bind();
   ui_shared_resources_.tex_ui_mask_.Bind();
   glUniform1f(4, progress_);
-  sprite_.Render();
+  background_.Render();
   ui_shared_resources_.shader_sp_.Bind();
   glActiveTexture(GL_TEXTURE0);  // go back to default
   pin_.Render();
@@ -603,17 +348,18 @@ bool UiWindowAppear::RenderBack(bool show) {
 
 void UiWindowAppear::RenderPickingBack() {
   ui_shared_resources_.shader_sp_picking_.Bind();
-  sprite_.RenderPicking();
+  background_.RenderPicking();
   pin_.RenderPicking();
 }
 
-UiObjectInfo::UiObjectInfo(
-    UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+UiObjectInfo::UiObjectInfo(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
+                           UiSharedResources& ui_shared_resources,
+                           WindowQueue& window_queue,
 
-    UiDynamicSprite&& sp_enemy, UiDynamicSprite&& sp_friend,
-    UiDynamicSprite&& sp_neutral, UiDynamicSprite&& sp_obstacle,
-    UiText&& txt_name, UiText&& txt_characteristic, UiText&& txt_value)
+                           UiSprite&& sp_enemy, UiSprite&& sp_friend,
+                           UiSprite&& sp_neutral, UiSprite&& sp_obstacle,
+                           UiText&& txt_name, UiText&& txt_characteristic,
+                           UiText&& txt_value)
     : UiWindowAppear(std::move(sprite), size_scale, std::move(pin),
                      ui_shared_resources, window_queue),
       sp_enemy_(std::move(sp_enemy)),
@@ -623,26 +369,11 @@ UiObjectInfo::UiObjectInfo(
       txt_name_(std::move(txt_name)),
       txt_characteristic_(std::move(txt_characteristic)),
       txt_value_(std::move(txt_value)),
-      ui_event_handler_({&pin_}) {
-  hierarchy_ =
-      UiHierarchy(&sprite_, &pin_, &sp_enemy_, &sp_friend_, &sp_neutral_,
-                  &sp_obstacle_, &txt_name_, &txt_characteristic_, &txt_value_);
+      ui_event_handler_({&pin_}),
+      hierarchy_(&background_,
+                 {&pin_, &sp_enemy_, &sp_friend_, &sp_neutral_, &sp_obstacle_,
+                  &txt_name_, &txt_characteristic_, &txt_value_}) {
   speed_ = 2.0f;
-}
-
-UiObjectInfo::UiObjectInfo(UiObjectInfo&& other) noexcept
-    : Base(std::move(other)),
-      sp_enemy_(std::move(other.sp_enemy_)),
-      sp_friend_(std::move(other.sp_friend_)),
-      sp_neutral_(std::move(other.sp_neutral_)),
-      sp_obstacle_(std::move(other.sp_obstacle_)),
-      txt_name_(std::move(other.txt_name_)),
-      txt_characteristic_(std::move(other.txt_characteristic_)),
-      txt_value_(std::move(other.txt_value_)),
-      ui_event_handler_({&pin_}) {
-  hierarchy_ =
-      UiHierarchy(&sprite_, &pin_, &sp_enemy_, &sp_friend_, &sp_neutral_,
-                  &sp_obstacle_, &txt_name_, &txt_characteristic_, &txt_value_);
 }
 
 bool UiObjectInfo::Render() {
@@ -678,7 +409,7 @@ bool UiObjectInfo::Render() {
 
 void UiObjectInfo::RenderParams() {
   float entry_height =
-      sprite_.GetHeight() / (render_params_.size() + 5);  // +pads
+      background_.GetHeight() / (render_params_.size() + 5);  // +pads
   LocalTransform transform;
   for (const auto& p : render_params_) {
     txt_characteristic_.SetParentTransform(transform);
@@ -694,7 +425,7 @@ void UiObjectInfo::RenderParams() {
 void UiObjectInfo::RenderPickingParams() {
   glm::vec2 next_offset = glm::vec2{0.0f};
   float entry_height =
-      sprite_.GetHeight() / (render_params_.size() + 5);  // +pads
+      background_.GetHeight() / (render_params_.size() + 5);  // +pads
   LocalTransform transform;
   for (const auto& p : render_params_) {
     txt_characteristic_.SetParentTransform(transform);
@@ -766,24 +497,18 @@ void UiObjectInfo::Show(bool enemy_selected, bool friend_selected,
   Show();
 }
 
-UiTipWindow::UiTipWindow(UiDynamicSprite&& sprite, float size_scale,
-                         UiToggle2&& pin,
+UiTipWindow::UiTipWindow(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
                          UiSharedResources& ui_shared_resources,
-                         WindowQueue& window_queue, UiDynamicSprite&& text)
+                         WindowQueue& window_queue, UiSprite&& text)
     : UiWindowAppear(std::move(sprite), size_scale, std::move(pin),
                      ui_shared_resources, window_queue),
-      text_(std::move(text)) {                        // 1
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &text_);  // 2
+      text_(std::move(text)),
+      hierarchy_(&background_, {&pin_, &text_}) {
   speed_ = 2.0f;
 }
 
-UiTipWindow::UiTipWindow(UiTipWindow&& other) noexcept
-    : Base(std::move(other)), text_(std::move(other.text_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &text_);
-}
-
 bool UiTipWindow::Render() {
-  UpdateHoverState(ui_shared_resources_.gltf_context_.hovered_id);
+  UpdateHoverState(ui_shared_resources_.glfw_context_.hovered_id);
   bool stop_show = Base::RenderBack(hovered_);
   if (!Base::BackIsReady()) {
     return stop_show;
@@ -796,8 +521,8 @@ bool UiTipWindow::Render() {
 void UiTipWindow::RenderPicking() { Base::RenderPickingBack(); }
 
 bool UiTipWindow::Press(int id) {
-  if (id == sprite_.GetId()) {
-    sprite_.Press();
+  if (id == background_.GetId()) {
+    background_.Press();
   } else if (id == pin_.GetId()) {
     pin_.Press();
   } else {
@@ -812,14 +537,14 @@ bool UiTipWindow::Press(int id) {
 void UiTipWindow::Release() {}
 
 void UiTipWindow::UpdateHoverState(int id) {
-  hovered_ = (id >= sprite_.GetId() && id <= text_.GetId());
+  hovered_ = (id >= background_.GetId() && id <= text_.GetId());
 }
 
 void UiTipWindow::SetText(data::TextId text_id) {
   std::cout << "text id is " << static_cast<int>(text_id);
 }
 
-UiWindowPopUp::UiWindowPopUp(UiDynamicSprite&& sprite, float size_scale,
+UiWindowPopUp::UiWindowPopUp(UiSprite&& sprite, float size_scale,
                              UiToggle2&& pin,
                              UiSharedResources& ui_shared_resources,
                              WindowQueue& window_queue,
@@ -829,12 +554,6 @@ UiWindowPopUp::UiWindowPopUp(UiDynamicSprite&& sprite, float size_scale,
                    ui_shared_resources, window_queue),
       start_transform_(start_transform),
       end_transform_(end_transform) {}
-
-UiWindowPopUp::UiWindowPopUp(UiWindowPopUp&& other) noexcept
-    : UiWindowBase(std::move(other)),
-      cur_transform_(other.cur_transform_),
-      start_transform_(other.start_transform_),
-      end_transform_(other.end_transform_) {}
 
 bool UiWindowPopUp::RenderBack(bool show) {
   ui_shared_resources_.shader_sp_.Bind();
@@ -848,9 +567,9 @@ bool UiWindowPopUp::RenderBack(bool show) {
   }
   progress_ = std::clamp(progress_, 0.0f, 1.0f);
   CubicInterpolation();
-  sprite_.SetParentTransform(cur_transform_);
+  background_.SetParentTransform(cur_transform_);
   pin_.SetParentTransform(cur_transform_);
-  sprite_.Render();
+  background_.Render();
   pin_.Render();
   if (progress_ == 0.0f) {
     return false;
@@ -861,7 +580,7 @@ bool UiWindowPopUp::RenderBack(bool show) {
 
 void UiWindowPopUp::RenderPickingBack() {
   ui_shared_resources_.shader_sp_picking_.Bind();
-  sprite_.RenderPicking();
+  background_.RenderPicking();
   pin_.RenderPicking();
 }
 
@@ -878,15 +597,14 @@ void UiWindowPopUp::CubicInterpolation() {
 }
 
 UiSettings::UiSettings(
-    UiDynamicSprite&& sprite, float size_scale, UiToggle2&& pin,
+    UiSprite&& sprite, float size_scale, UiToggle2&& pin,
     UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
     LocalTransform start_transform, LocalTransform end_transform,
-    UiDynamicSprite&& resolution_label, UiDynamicSprite&& resolution_left,
-    UiDynamicSprite&& resolution_right, UiDynamicSprite&& resolution,
+    UiSprite&& resolution_label, UiSprite&& resolution_left,
+    UiSprite&& resolution_right, UiSprite&& resolution,
     UiToggle4&& toggle_fullscreen, UiSliderH2 sensitivity, UiSliderH2&& sound,
     UiToggle4&& toggle_sound, UiSliderH2&& music, UiToggle4&& toggle_music,
-    UiDynamicSprite&& tip_info_label, UiDynamicSprite&& tip_info,
-    UiToggle4&& toggle_tip_info)
+    UiSprite&& tip_info_label, UiSprite&& tip_info, UiToggle4&& toggle_tip_info)
     : UiWindowPopUp(std::move(sprite), size_scale, std::move(pin),
                     ui_shared_resources, window_queue, start_transform,
                     end_transform),
@@ -906,43 +624,17 @@ UiSettings::UiSettings(
       ui_event_handler_({&pin_, &resolution_left_, &resolution_right_,
                          &toggle_fullscreen_, &sensitivity_, &sound_,
                          &toggle_sound_, &music_, &toggle_music_, &tip_info_,
-                         &toggle_tip_info_}) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &resolution_label_,
-                           &resolution_left_, &resolution_right_, &resolution_,
-                           &toggle_fullscreen_, &sensitivity_, &sound_,
-                           &toggle_sound_, &music_, &toggle_music_,
-                           &tip_info_label_, &tip_info_, &toggle_tip_info_);
-}
-
-UiSettings::UiSettings(UiSettings&& other) noexcept
-    : Base(std::move(other)),
-      resolution_label_(std::move(other.resolution_label_)),
-      resolution_left_(std::move(other.resolution_left_)),
-      resolution_right_(std::move(other.resolution_right_)),
-      resolution_(std::move(other.resolution_)),
-      toggle_fullscreen_(std::move(other.toggle_fullscreen_)),
-      sensitivity_(std::move(other.sensitivity_)),
-      sound_(std::move(other.sound_)),
-      toggle_sound_(std::move(other.toggle_sound_)),
-      music_(std::move(other.music_)),
-      toggle_music_(std::move(other.toggle_music_)),
-      tip_info_label_(std::move(other.tip_info_label_)),
-      tip_info_(std::move(other.tip_info_)),
-      toggle_tip_info_(std::move(other.toggle_tip_info_)),
-      ui_event_handler_({&pin_, &resolution_left_, &resolution_right_,
-                         &toggle_fullscreen_, &sensitivity_, &sound_,
-                         &toggle_sound_, &music_, &toggle_music_, &tip_info_,
-                         &toggle_tip_info_}) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &resolution_label_,
-                           &resolution_left_, &resolution_right_, &resolution_,
-                           &toggle_fullscreen_, &sensitivity_, &sound_,
-                           &toggle_sound_, &music_, &toggle_music_,
-                           &tip_info_label_, &tip_info_, &toggle_tip_info_);
-}
+                         &toggle_tip_info_}),
+      hierarchy_(
+          &background_,
+          {&pin_, &resolution_label_, &resolution_left_, &resolution_right_,
+           &resolution_, &toggle_fullscreen_, &sensitivity_, &sound_,
+           &toggle_sound_, &music_, &toggle_music_, &tip_info_label_,
+           &tip_info_, &toggle_tip_info_}) {}
 
 // returns "stop render"
 bool UiSettings::Render() {
-  UpdateHoverState(ui_shared_resources_.gltf_context_.hovered_id);
+  UpdateHoverState(ui_shared_resources_.glfw_context_.hovered_id);
   ui_shared_resources_.tex_ui_.Bind();
   bool stop_show = Base::RenderBack(hovered_);
   //  if (!Base::BackIsReady()) {
@@ -964,7 +656,7 @@ bool UiSettings::Render() {
   tip_info_.SetParentTransform(Base::cur_transform_);
   toggle_tip_info_.SetParentTransform(Base::cur_transform_);
 
-  auto mouse_pos = ui_shared_resources_.gltf_context_.cursor_pos_tex_norm_;
+  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
 
   resolution_left_.Render();
   resolution_right_.Render();
@@ -980,9 +672,9 @@ bool UiSettings::Render() {
 
   ui_shared_resources_.shader_sp_.Bind();
 
-  ui_shared_resources_.gltf_context_.text_renderer->RenderText(
+  ui_shared_resources_.glfw_context_.text_renderer->RenderText(
       resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
-  ui_shared_resources_.gltf_context_.text_renderer->RenderText(
+  ui_shared_resources_.glfw_context_.text_renderer->RenderText(
       tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
 
   return stop_show;
@@ -1009,14 +701,14 @@ void UiSettings::RenderPicking() {
 
   ui_shared_resources_.shader_sp_picking_.Bind();
 
-  ui_shared_resources_.gltf_context_.text_renderer->RenderTextPicking(
+  ui_shared_resources_.glfw_context_.text_renderer->RenderTextPicking(
       resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
-  ui_shared_resources_.gltf_context_.text_renderer->RenderTextPicking(
+  ui_shared_resources_.glfw_context_.text_renderer->RenderTextPicking(
       tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
 }
 
 void UiSettings::UpdateHoverState(int id) {
-  hovered_ = (id >= sprite_.GetId() && id <= toggle_tip_info_.GetId());
+  hovered_ = (id >= background_.GetId() && id <= toggle_tip_info_.GetId());
 }
 
 bool UiSettings::Press(int id) {
@@ -1049,21 +741,9 @@ UiPlayerMap::UiPlayerMap(UiSharedResources& ui_shared_resources,
       sp_enemy_(data::VboIdMain::kPlayerMapEnemy),
       sp_friend_(data::VboIdMain::kPlayerMapFriend),
       sp_neutral_(data::VboIdMain::kPlayerMapNeutral),
-      sp_obstacle_(data::VboIdMain::kPlayerMapObstacle) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &sp_player_, &sp_enemy_,
-                           &sp_friend_, &sp_neutral_, &sp_obstacle_);
-}
-
-UiPlayerMap::UiPlayerMap(UiPlayerMap&& other) noexcept
-    : Base(std::move(other)),
-      sp_player_(std::move(other.sp_player_)),
-      sp_enemy_(std::move(other.sp_enemy_)),
-      sp_friend_(std::move(other.sp_friend_)),
-      sp_neutral_(std::move(other.sp_neutral_)),
-      sp_obstacle_(std::move(other.sp_obstacle_)) {
-  hierarchy_ = UiHierarchy(&sprite_, &pin_, &sp_player_, &sp_enemy_,
-                           &sp_friend_, &sp_neutral_, &sp_obstacle_);
-}
+      sp_obstacle_(data::VboIdMain::kPlayerMapObstacle),
+      hierarchy_(&background_, {&pin_, &sp_player_, &sp_enemy_, &sp_friend_,
+                                &sp_neutral_, &sp_obstacle_}) {}
 
 // TODO: remove? but how...
 bool UiPlayerMap::Render() {
@@ -1072,7 +752,7 @@ bool UiPlayerMap::Render() {
 }
 
 void UiPlayerMap::Render(ModelManager* mdl_manager) {
-  UpdateHoverState(ui_shared_resources_.gltf_context_.hovered_id);
+  UpdateHoverState(ui_shared_resources_.glfw_context_.hovered_id);
   ui_shared_resources_.tex_ui_.Bind();
   bool stop_show = Base::RenderBack(hovered_);
   ui_shared_resources_.shader_sp_.Bind();
@@ -1085,15 +765,16 @@ void UiPlayerMap::Render(ModelManager* mdl_manager) {
 
   glEnable(GL_SCISSOR_TEST);
   float centre_height =
-      (sprite_.GetTopBorder() + sprite_.GetBottomBorder()) / 2.0f + 0.025f;
-  float length_y = sprite_.GetHeight() / 2.3f;
+      (background_.GetTopBorder() + background_.GetBottomBorder()) / 2.0f +
+      0.025f;
+  float length_y = background_.GetHeight() / 2.3f;
   float y_ndc = centre_height - length_y / 2;
   int y_px = int((y_ndc + 1.0f) * 0.5f * gWindowHeight);
   int height_py = int(length_y * 0.5f * gWindowHeight);
 
   float centre_width =
-      (sprite_.GetRightBorder() + sprite_.GetLeftBorder()) / 2.0f;
-  float length_x = sprite_.GetWidth() * 0.84f;
+      (background_.GetRightBorder() + background_.GetLeftBorder()) / 2.0f;
+  float length_x = background_.GetWidth() * 0.84f;
   float x_ndc = centre_width - length_x / 2;
   int x_px = int((x_ndc + 1.0f) * 0.5f * gWindowWidth);
   int width_px = int(length_x * 0.5f * gWindowWidth);
@@ -1107,7 +788,7 @@ void UiPlayerMap::Render(ModelManager* mdl_manager) {
 void UiPlayerMap::RenderPicking() { Base::RenderPickingBack(); }
 
 void UiPlayerMap::UpdateHoverState(int id) {
-  hovered_ = (id >= sprite_.GetId() && id <= sp_obstacle_.GetId());
+  hovered_ = (id >= background_.GetId() && id <= sp_obstacle_.GetId());
 }
 
 bool UiPlayerMap::Press(int id) {

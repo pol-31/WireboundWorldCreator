@@ -1,6 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UITERRAINCONFIG_H_
 
+#include <iostream>
 #include <random>
 #include <span>
 #include <string_view>

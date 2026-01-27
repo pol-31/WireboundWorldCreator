@@ -14,7 +14,7 @@ class UiWorldOrigin {
 
  private:
   UiSharedResources& ui_shared_resources_;
-  UiDynamicSprite sp_origin_;
+  UiSprite sp_origin_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UIWORLDORIGIN_H_

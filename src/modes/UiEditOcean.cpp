@@ -17,18 +17,7 @@ UiEditOcean::UiEditOcean(UiSharedResources& ui_shared_resources,
            {data::TextId::kLayer3,
             {100.0f, 20'000.0f, 1'0000, 0.6f, 0.7f, 5.0f, 0.7f, 1.1f}}}),
       ui_shared_resources_(ui_shared_resources),
-      ui_ocean_config_(ui_ocean_config) {
-  // ocean_layer_config_.AttachToHierarchy(hierarchy_);
-}
-
-UiEditOcean::UiEditOcean(UiEditOcean&& other) noexcept
-    : IUiEdit(std::move(*this)),
-      value_config_(other.value_config_),
-      ocean_layers_(std::move(other.ocean_layers_)),
-      ui_shared_resources_(other.ui_shared_resources_),
-      ui_ocean_config_(other.ui_ocean_config_) {
-  // ocean_layer_config_.AttachToHierarchy(hierarchy_);
-}
+      ui_ocean_config_(ui_ocean_config) {}
 
 void UiEditOcean::HideAll() {
   ui_.ForceHide();

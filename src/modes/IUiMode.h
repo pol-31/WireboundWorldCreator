@@ -6,7 +6,7 @@
 
 class IUiMode {
  public:
-  IUiMode(UiSharedResources& ui_shared_resources, UiDynamicSprite&& sp_mode)
+  IUiMode(UiSharedResources& ui_shared_resources, UiSprite&& sp_mode)
       : ui_shared_resources_(ui_shared_resources),
         sp_mode_(std::move(sp_mode)) {}
 
@@ -23,7 +23,7 @@ class IUiMode {
   virtual void BindDefaultCallbacks() = 0;
 
   UiSharedResources& ui_shared_resources_;
-  UiDynamicSprite sp_mode_;
+  UiSprite sp_mode_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_IUIMODE_H_

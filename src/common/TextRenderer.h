@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "../core/Ui.h"
+#include "../modes/UiSharedResources.h"
 #include "Font.h"
 #include "Shader.h"
 #include "Texture.h"
@@ -26,32 +27,31 @@ class TextRenderer {
   enum class Alignment { kLeft, kRight, kCentre };
 
   TextRenderer(UiSharedResources& ui_shared_resources,
-               UiDynamicSprite&& prerender_text_slot,
-               UiDynamicSprite&& sprite_cursor);
+               UiSprite&& prerender_text_slot, UiSprite&& sprite_cursor);
 
   ~TextRenderer();
 
-  void RenderTextSelected(UiDynamicSprite& text_slot, std::string_view text,
+  void RenderTextSelected(UiSprite& text_slot, std::string_view text,
                           glm::vec2 translate);
 
-  void RenderText(UiDynamicSprite& text_slot, std::string_view text,
+  void RenderText(UiSprite& text_slot, std::string_view text,
                   float scale = 1.0f, glm::vec2 position = glm::vec2{0.0f},
                   Alignment alignment = Alignment::kLeft);
 
   /// ALL picking use default dynamic sprite picking, so we don't even set it
 
-  void RenderTextPicking(UiDynamicSprite& text_slot, std::string_view text,
+  void RenderTextPicking(UiSprite& text_slot, std::string_view text,
                          float scale = 1.0f,
                          glm::vec2 position = glm::vec2{0.0f},
                          Alignment alignment = Alignment::kLeft);
 
-  void RenderMenuText(UiDynamicSprite& text_slot, data::TextId id);
+  void RenderMenuText(UiSprite& text_slot, data::TextId id);
 
-  void RenderMenuTextPicking(UiDynamicSprite& text_slot);
+  void RenderMenuTextPicking(UiSprite& text_slot);
 
-  void RenderModeText(UiDynamicSprite& text_slot, data::TextId id);
+  void RenderModeText(UiSprite& text_slot, data::TextId id);
 
-  void RenderModeTextPicking(UiDynamicSprite& text_slot);
+  void RenderModeTextPicking(UiSprite& text_slot);
 
   /// all prerendered text located together in data::TextId
   void PrerenderMenuText(int start, int end);
@@ -79,11 +79,7 @@ class TextRenderer {
   void BindCallbacks();
 
  private:
-  /// --- CALLBACK SECTION ---
   static void CharCallback(GLFWwindow* window, unsigned int codepoint);
-
-  static void ScrollCallback(GLFWwindow* window, double xoffset,
-                             double yoffset);
 
   static void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
                           int mods);
@@ -91,14 +87,12 @@ class TextRenderer {
   static void MouseButtonCallback(GLFWwindow* window, int button, int action,
                                   int mods);
 
-  /// --- PRERENDER SECTION ---
-
   void RenderMenuModeText(const Texture& tex_prerender,
                           const std::vector<TextRenderer::Aabb>& tex_coords,
-                          UiDynamicSprite& text_slot, int id);
+                          UiSprite& text_slot, int id);
 
   void RenderMenuModeTextPicking(const Texture& tex_prerender,
-                                 UiDynamicSprite& text_slot);
+                                 UiSprite& text_slot);
 
   static int GetWidth(int code);
 
@@ -115,11 +109,13 @@ class TextRenderer {
 
   Aabb RenderPhrase(std::string_view);
 
-  float CalculateLineLength(std::string_view text,
-                            const UiDynamicSprite& text_slot);
+  float CalculateLineLength(std::string_view text, const UiSprite& text_slot);
 
   void PrerenderImpl(int start, int end, Texture& texture,
                      std::vector<Aabb>& coords);
+
+  int cur_mode_start_ = 0;
+  int cur_mode_end_ = 0;
 
   // left-top of previous, so start from the top
   glm::ivec2 fbo_cursor_{0, font::gSize};
@@ -137,19 +133,17 @@ class TextRenderer {
   Shader render_shader_picking_;
 
   // where to read & write
-  UiDynamicSprite* text_slot_ = nullptr;
+  UiSprite* text_slot_ = nullptr;
 
-  UiDynamicSprite prerender_text_slot_;
+  UiSprite prerender_text_slot_;
 
-  UiDynamicSprite sprite_cursor_;
-
-  /// --- INPUT SECTION ---
+  UiSprite sprite_cursor_;
 
   int CursorFromMousePos();
 
   bool IsCursorOnInputLine();
 
-  void CalculateCursorPos(UiDynamicSprite& text_slot, const std::string& text);
+  void CalculateCursorPos(UiSprite& text_slot, const std::string& text);
 
   void MoveCursor(int value);
 
@@ -176,8 +170,6 @@ class TextRenderer {
 
   bool smt_selected_ = true;
   bool mouse_selection_ = false;
-
-  /// --- END INPUT SECTION ---
 
   UiSharedResources& ui_shared_resources_;
 };
