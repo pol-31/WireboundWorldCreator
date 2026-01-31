@@ -57,7 +57,6 @@ add_executable(WireboundWorldCreator
         src/renderers/UiRenderer.h
         src/modes/UiSharedResources.cpp
         src/modes/UiSharedResources.h
-        src/modes/AllUiModes.h
         src/core/UiComplex.cpp
         src/core/UiComplex.h
         src/modes/UiTerrainConfig.h
@@ -151,6 +150,15 @@ add_executable(WireboundWorldCreator
         src/common/models/Fpv.h
         src/common/models/Human.cpp
         src/common/models/Human.h
+        src/modes/traits/BiomeTraits.h
+        src/modes/traits/RoadTraits.h
+        src/modes/traits/RiverTraits.h
+        src/modes/traits/ObjectTraits.h
+        src/modes/traits/OceanTraits.h
+        src/core/UiModal.cpp
+        src/core/UiModal.h
+        src/renderers/GeoClipmaps.cpp
+        src/renderers/GeoClipmaps.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

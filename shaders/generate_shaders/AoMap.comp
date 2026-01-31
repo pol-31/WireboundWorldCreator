@@ -9,8 +9,8 @@ layout (binding = 0, r32f) uniform readonly image2D height_map;
 layout (binding = 1, r8) uniform writeonly image2D ao_map;
 
 uniform float radius = 5.0;          // sampling radius in texels
-uniform float intensity = 100000.0;       // strength of AO effect
-uniform float height_scale = 16.0f * 16.0f;    // real world height multiplier
+uniform float intensity = 1.0;       // strength of AO effect
+uniform float height_scale = 1.0f;    // real world height multiplier
 uniform int num_samples = 8;         // number of directions
 
 const float PI = 3.14159265;

@@ -29,15 +29,12 @@ layout(std140, binding = 0) uniform Camera {
 } camera;
 
 layout (location = 4) uniform sampler2D tex_foam;
-
 layout (location = 15) uniform sampler2D tex_terrain_height;
-
+layout(location = 16) uniform mat4 transform;
 layout(location = 17) uniform vec4 water_albedo;
 
 in TES_OUT {
-    vec2 tc;
-    float height;
-    float map_scale;
+    vec3 tc;
 } fs_in;
 
 struct WaveSample {
@@ -72,8 +69,8 @@ vec2 WorldUV(vec2 world_xz, float repeats) {
 }
 
 WaveSample SampleWaves(int layer, float factor) {
-    float map_scale = fs_in.map_scale;
-    vec2 world_pos = fs_in.tc * 1024.0f;
+    float map_scale = transform[0][0];
+    vec2 world_pos = fs_in.tc.xz * 1024.0f;
 
     WaveSample wave;
     wave.turbulence = 0.0f;
@@ -104,7 +101,7 @@ WaveSample SampleWaves(int layer, float factor) {
 }
 
 void main() {
-    vec2 tc = fs_in.tc;
+    vec2 tc = fs_in.tc.xz;
     WaveSample wave_sample = SampleWaves(0, 16.0f);
     WaveSample wave_sample1 = SampleWaves(1, 8.0f);
     WaveSample wave_sample2 = SampleWaves(2, 1.0f);
@@ -112,7 +109,7 @@ void main() {
     wave_sample.derivatives += wave_sample2.derivatives;
     wave_sample.turbulence += wave_sample1.turbulence;
     wave_sample.turbulence += wave_sample2.turbulence;
-//    wave_sample.derivatives /= 6.0f;
+    //    wave_sample.derivatives /= 6.0f;
     wave_sample.turbulence /= 6.0f;
 
     vec2 slope = vec2(wave_sample.derivatives.x / (1 + wave_sample.derivatives.z),
@@ -121,14 +118,15 @@ void main() {
     vec3 normal = normalize(vec3(norml_cadrof * -slope.x, norml_cadrof * -slope.y, 1.0f));
 
 
-    float foamLOD = MapScaleToLod(fs_in.map_scale) / float(kRepeatCount - 1);
+    float map_scale = transform[0][0];
+    float foamLOD = MapScaleToLod(map_scale) / float(kRepeatCount - 1);
     float jacobian = clamp(-wave_sample.turbulence, 0.0, 1.0) * foamLOD;
 
     float diffuse_factor = max(dot(normal.rbg, normalize(-environment.sun_direction)), 0.0);
     vec3 lighting = environment.sun_color * diffuse_factor;
 
     float terrain_height = texture(tex_terrain_height, tc).r;
-    float height_difference = fs_in.height - terrain_height;
+    float height_difference = fs_in.tc.y - terrain_height;
     float shoreWidth = 0.5f;
     float alpha = smoothstep(0.0, shoreWidth, height_difference * 4.0f);
 
@@ -138,9 +136,11 @@ void main() {
     float foam_dyn   = mix(foamNoise, foamJacobian, foamLOD);
     float foam_shore = clamp((1.0 - alpha) * 4.0f, 0.0, 1.0);
     float foam = max(foam_dyn, foam_shore);
-//    foam = 0.0f;
+    //    foam = 0.0f;
 
-    vec3 water = water_albedo.rgb * lighting;
+    vec3 water_albedo = water_albedo.rgb; //todo;
+    water_albedo = vec3(0.0f, 0.0f, 0.8f);
+    vec3 water = water_albedo * lighting;
     vec3 foamColor = vec3(1.0f);
     float foamAlpha = texture(tex_foam, tc * 1024).r;
     vec3 finalColor = mix(water, foamColor, foam);

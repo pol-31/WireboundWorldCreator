@@ -37,7 +37,7 @@ layout(location = 7) uniform mat4 transform;
 layout (location = 0) uniform sampler2D tex_displacement;
 
 in TES_OUT {
-    vec3 tc;
+    vec3 tc;  // Texture coordinates
 } fs_in;
 
 struct TerrainSample {

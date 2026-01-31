@@ -1,5 +1,4 @@
 #version 460 core
-
 layout (quads, equal_spacing, ccw) in;
 
 in TCS_OUT {
@@ -7,15 +6,18 @@ in TCS_OUT {
 } tes_in[];
 
 out TES_OUT {
-    vec2 tc;
+    vec3 tc;
 } tes_out;
 
 layout (location = 0) uniform sampler2D tex_displacement;
 
-layout(binding = 0) uniform CameraBufferObject {
+layout(std140, binding = 0) uniform Camera {
+    vec3 pos;       float _pad0;
+    vec3 forward;   float _pad1;
+    vec3 right;     float _pad2;
+    vec3 up;        float cos_half_fov;
     mat4 view;
     mat4 proj;
-    vec3 pos;
 } camera;
 
 layout(location = 6) uniform sampler2D tex_displacement_subtract;
@@ -30,5 +32,5 @@ void main() {
     vec4 p = mix(p2, p1, gl_TessCoord.y);
     p.y += texture(tex_displacement, tc).r - texture(tex_displacement_subtract, tc).r;
     gl_Position = camera.proj * camera.view * transform * p;
-    tes_out.tc = tc;
+    tes_out.tc = vec3(tc.x, p.y, tc.y);
 }

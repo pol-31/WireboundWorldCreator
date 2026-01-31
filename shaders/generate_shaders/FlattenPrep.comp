@@ -11,7 +11,7 @@ void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
     ivec2 outCoord = ivec2(gl_GlobalInvocationID.xy);
 
-    vec2 worldPos = vec2(outCoord) - vec2(512.0);
+    vec2 worldPos = (vec2(outCoord) - vec2(512.0));
     vec4 local = inverse_transform * vec4(worldPos.x, 0.0, worldPos.y, 1.0);
 
     ivec2 inCoord = ivec2(local.x + 512.0, local.z + 512.0);
@@ -21,5 +21,5 @@ void main() {
       float(inCoord.x < size.x) * float(inCoord.y < size.y);
 
     float height = imageLoad(hmap, inCoord).r;
-    imageStore(mesh, outCoord, vec4(height - inside * local.y / 32.0f));
+    imageStore(mesh, outCoord, vec4(height - inside * local.y / 16.0f));
 }

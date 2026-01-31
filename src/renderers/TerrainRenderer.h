@@ -6,17 +6,18 @@
 #include "../common/Material.h"
 #include "../common/Shader.h"
 #include "../core/Tile.h"
+#include "GeoClipmaps.h"
 
 struct BaseInstanceData;
-struct TerrainInstanceData;
+struct TerrainTraits;
 
 class TerrainRenderer {
  public:
-  TerrainRenderer(Tile& tile);
-
-  ~TerrainRenderer() { DeInit(); }
+  TerrainRenderer(Tile& tile, GeoClipmaps& mesh);
 
   void Render();
+
+  void RenderInGame();
 
   void RenderSubtract(const Texture& tex_subtract);
 
@@ -25,12 +26,12 @@ class TerrainRenderer {
   void RenderSelection(const Texture32F* surface, const Texture& selection_mask,
                        glm::vec3 color);
 
-  void RenderWireframe(TerrainInstanceData* terrain, BaseInstanceData* data);
-
-  void UpdateTransformUniform(glm::mat4 mat);
+  void RenderWireframe(TerrainTraits* terrain);
 
  private:
   static void LoadMaterialTexture(int layer, std::string_view path);
+
+  void InitMaterial();
 
   void InitAlbedo();
 
@@ -38,18 +39,13 @@ class TerrainRenderer {
 
   void InitAo();
 
-  void Init();
+  void UpdateShaders();  // for shader dbg in run-time
 
-  void DeInit();
-
-  const int gGridSize = 64;
-  std::array<GLuint, 64 * 64> patch_grid_;
+  void BindUniforms();
 
   Tile& tile_;
-  GLuint vao_{0};
-  GLuint vbo_quad_{0};
-  GLuint vbo_ids_{0};
   Shader shader_;
+  Shader shader_game_;
   Shader shader_subtract_;
   Shader shader_selection_;
   Shader shader_wireframe_;
@@ -62,6 +58,7 @@ class TerrainRenderer {
   Material mat_sand_;
 
   TerrainMaterial material_;
+  GeoClipmaps& mesh_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_TERRAINRENDERER_H_

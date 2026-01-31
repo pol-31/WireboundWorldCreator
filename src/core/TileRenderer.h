@@ -14,11 +14,15 @@
 #include "Environment.h"
 #include "Tile.h"
 
+class Camera;
+
 class TileRenderer {
  public:
   TileRenderer();
 
   void Render();
+
+  void RenderInGame(const Camera* camera);
 
   void RenderUiTerrain(const Texture& tex_subtract);
 
@@ -49,6 +53,7 @@ class TileRenderer {
   void BakeRoads(const std::vector<float>& heights_in);
 
   Tile cur_tile_;
+  GeoClipmaps mesh_;
 
   Environment environment_;
 

@@ -5,14 +5,15 @@
 
 #include "../core/Tile.h"
 #include "Ocean.h"
+#include "GeoClipmaps.h"
 
 class WaterRenderer {
  public:
-  WaterRenderer(Tile& tile);
-
-  ~WaterRenderer() { DeInit(); }
+  WaterRenderer(Tile& tile, GeoClipmaps& mesh);
 
   void Render();
+
+  void RenderInGame();
 
   void RenderRivers();
 
@@ -21,23 +22,17 @@ class WaterRenderer {
   void SetWaterColor(glm::vec4 color);
 
  private:
-  void Init();
+  void UpdateShaders();
 
-  void DeInit();
+  void BindUniforms();
 
   Tile& tile_;
-  GLuint vao_{0};
   Shader shader_;
-
-  const int gGridSize = 64;
-  std::array<GLuint, 64 * 64> patch_grid_;
-
-  GLuint vbo_quad_{0};
-  GLuint vbo_ids_{0};
+  Shader shader_game_;
 
   Texture tex_foam_;
-
   std::unique_ptr<Ocean> ocean_;
+  GeoClipmaps& mesh_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_WATERRENDERER_H_

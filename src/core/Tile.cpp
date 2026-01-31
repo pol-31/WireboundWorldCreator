@@ -5,18 +5,19 @@
 
 #include "../common/Details.h"
 
-Tile::Tile() : map_scale(10.0f) {
+Tile::Tile() : map_scale(0.1f) {
   int size = details::gTerrainSize;
 
   map_terrain_height = Texture32F(size, GL_R32F);
 
-  map_terrain_normal = Texture(size, size, GL_RG8, GL_LINEAR, GL_CLAMP_TO_EDGE);
-  map_terrain_slope = Texture(size, size, GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+  map_terrain_normal =
+      Texture(size, size, GL_RG8, GL_NEAREST, GL_CLAMP_TO_EDGE);
+  map_terrain_slope = Texture(size, size, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
   glClearTexImage(map_terrain_slope.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
                   nullptr);
   map_terrain_ao = Texture(size, size, GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
   map_terrain_splat =
-      Texture(size, size, GL_RGBA8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+      Texture(size, size, GL_RGBA8, GL_NEAREST, GL_CLAMP_TO_EDGE);
 
   map_terrain_erosion_thermal = Texture32F(size, GL_R32F);
   map_terrain_erosion_hydraulic = Texture32F(size, GL_R32F);

@@ -12,13 +12,13 @@
 #include "../modes/UiEditRoads.h"
 
 TileRenderer::TileRenderer()
-    : terrain(cur_tile_),
-      water(cur_tile_),
+    : terrain(cur_tile_, mesh_),
+      water(cur_tile_, mesh_),
       shader_apply_rivers_roads_("../shaders/Hmap2Deformation.comp") {}
 
 void TileRenderer::Render() {
   environment_.Update();
-  // vegetation.Update(cur_tile_.map_scale);
+  // vegetation.Update(cur_tile_.map_scale); need to update mesh_
   if (show_terrain_) {
     terrain.Render();
   }
@@ -27,6 +27,22 @@ void TileRenderer::Render() {
   }
   if (show_placement_) {
     // vegetation.Render(cur_tile_.map_scale, cur_tile_.map_terrain_height);
+  }
+}
+
+void TileRenderer::RenderInGame(const Camera* camera) {
+  environment_.Update();
+  mesh_.Update(camera, &cur_tile_);
+  const auto& surface = mesh_.GetSurface();
+  if (show_terrain_) {
+    terrain.RenderInGame();
+  }
+  if (show_water_) {
+    water.RenderInGame();
+  }
+  if (show_placement_) {
+    vegetation.Update(cur_tile_.map_scale, &surface);
+    vegetation.Render(cur_tile_.map_scale, cur_tile_.map_terrain_height);
   }
 }
 

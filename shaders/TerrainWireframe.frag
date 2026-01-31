@@ -5,7 +5,7 @@ out vec4 out_color;
 layout(location = 1) uniform vec3 color;
 
 in TES_OUT {
-    vec2 tc;  // Texture coordinates
+    vec3 tc;
 } fs_in;
 
 void main(void) {

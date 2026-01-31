@@ -1,13 +1,20 @@
 #version 460 core
+layout(quads, fractional_even_spacing, ccw) in;
 
-//layout (quads, fractional_odd_spacing) in;
-layout (quads, equal_spacing, ccw) in;
+in TCS_OUT {
+    vec2 tc_patchUV;
+    flat int patchID;
+} tes_in[];
 
-layout(location = 0) uniform sampler2DArray tex_displacement;
-layout(location = 3) uniform vec3 scales;
-layout(location = 16) uniform mat4 transform;
+out TES_OUT {
+    vec3 tc;
+} tes_out;
 
-layout (location = 5) uniform sampler2D tex_water_height;
+struct PatchGPU {
+    vec4 p0;
+    vec4 p1;
+    vec4 heightLod_pad;
+};
 
 layout(std140, binding = 0) uniform Camera {
     vec3 pos;       float _pad0;
@@ -18,16 +25,15 @@ layout(std140, binding = 0) uniform Camera {
     mat4 proj;
 } camera;
 
-in TCS_OUT {
-    vec2 tc;
-} tes_in[];
+layout(std140, binding = 5) readonly buffer Patches {
+    PatchGPU patch_gpu[];
+} patches;
 
-out TES_OUT {
-    vec2 tc;
-    float height;
-    float map_scale;
-} tes_out;
+layout(location = 0) uniform sampler2DArray tex_displacement;
+layout(location = 3) uniform vec3 scales;
+layout(location = 16) uniform mat4 transform;
 
+layout (location = 5) uniform sampler2D tex_water_height;
 const float kRepeats[8] = float[](
 1.0,   // far
 2.0,
@@ -80,23 +86,23 @@ vec3 SampleWaves(int layer, float factor, vec2 tc) {
     return height;
 }
 
-void main(void) {
-    float map_scale = transform[0][0];
-    tes_out.map_scale = map_scale;
-    vec2 tc1 = mix(tes_in[0].tc, tes_in[1].tc, gl_TessCoord.x);
-    vec2 tc2 = mix(tes_in[2].tc, tes_in[3].tc, gl_TessCoord.x);
-    vec2 tc = mix(tc2, tc1, gl_TessCoord.y);
-    vec4 p1 = mix(gl_in[0].gl_Position,  gl_in[1].gl_Position, gl_TessCoord.x);
-    vec4 p2 = mix(gl_in[2].gl_Position, gl_in[3].gl_Position, gl_TessCoord.x);
-    vec4 p = mix(p2, p1, gl_TessCoord.y);
+void main() {
+    PatchGPU patch_ = patches.patch_gpu[tes_in[0].patchID];
+    vec2 uv = gl_TessCoord.xy;
+    vec2 p_xz =
+    mix(
+        mix(patch_.p0.xy, patch_.p1.xy, uv.x),
+        mix(patch_.p0.zw, patch_.p1.zw, uv.x),
+        uv.y
+    );
+    vec2 tc = (p_xz + 32.0) / 64.0;
+    vec4 p = vec4(p_xz.x, 0.0f, p_xz.y, 1.0f);
     for (int i = 0; i < 3; ++i) {
         p.xyz += SampleWaves(i, 16.0f, tc);
         p.xyz += SampleWaves(i, 8.0f, tc);
         p.xyz += SampleWaves(i, 1.0f, tc);
     }
     p.y += texture(tex_water_height, tc).r;
-    tes_out.height = p.y;
-    p = transform * p;
-    gl_Position = camera.proj * camera.view * p;
-    tes_out.tc = tc;
+    gl_Position = camera.proj * camera.view * transform * p;
+    tes_out.tc = vec3(tc.x, p.y, tc.y);
 }

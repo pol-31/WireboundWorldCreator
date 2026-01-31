@@ -6,8 +6,10 @@
 #include "../common/Shader.h"
 #include "../common/Texture.h"
 
+struct GeoSurface;
+
 class Vegetation {
-public:
+ public:
   Vegetation();
 
   ~Vegetation() { DeInit(); }
@@ -15,7 +17,7 @@ public:
   void Render(float map_scale, const Texture& hmap);
 
   /// every frame(!) we generate grass blades and discard wrt placement_map
-  void Update(float map_scale);
+  void Update(float map_scale, const GeoSurface* surface);
 
   /// density: 1.0f - every pixel, 0.0f - never
   /// seed: model / instance / tile id
@@ -27,7 +29,7 @@ public:
   /// MurmurHash3 finalizer
   float PlacementHash(uint32_t x);
 
-private:
+ private:
   void Init();
 
   void DeInit();
