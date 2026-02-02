@@ -15,9 +15,11 @@ layout(std140, binding = 0) uniform Camera {
 
 layout(location = 0) uniform sampler2D tex_displacement;
 layout(location = 1) uniform mat4 world_mat;
+layout(location = 3) uniform float sin_time;
 
 out vec3 vNormal;
 out vec2 tc;
+out float vert_seed;
 
 void main() {
     float map_scale = world_mat[0][0];
@@ -26,54 +28,45 @@ void main() {
 
     vec3 blade_data = pos[bladeID].xyz;
     vec3 base = vec3(blade_data.x, 0.0f, blade_data.z);
-    float phase = pos[bladeID].w;
+    float seed = pos[bladeID].y;
+    vert_seed = seed;
+    float phase = (seed - 0.5f) * sin_time * 2.0f;
 
-    // local blade shape (Y = up)
-    vec3 verts[3] = vec3[](
-    vec3(-0.2, 0.0, 0.0),
-    vec3( 0.0, 0.3, 0.0),
-    vec3( 0.2, 0.0, 0.0)
-    );
     vec2 tcs[3] = vec2[](
     vec2(0.0, 0.0),
     vec2(0.5, 1.0),
     vec2(1.0, 0.0)
     );
-
-
-    vec3 local = verts[v];
-
-    float seed = blade_data.y + 0.01;
-    local *= sqrt(seed);
-//    local *= seed * 2.4f / (0.5f * map_scale);
-//    local *= seed * 1.4f * max(abs(blade_data.x), abs(blade_data.z));
     tc = tcs[v];
+
+    vec3 verts[3] = vec3[](
+    vec3(-0.2, 0.0, 0.0),
+    vec3( 0.0, 0.3, 0.0),
+    vec3( 0.2, 0.0, 0.0)
+    );
+
+//    vec3 local = verts[v] * 1.3 * pos[bladeID].w / map_scale;
+//    vec3 local = verts[v] * (1.5f / map_scale);
+    vec3 local = verts[v] * 1.5f / map_scale;
+//    local *= vec3(1.0f, .2 * pos[bladeID].w, 1.0f);
+
+
 
     // wind
     local.x += sin(phase * local.y * 10.0) * 0.02;
+
+    // billboarding
     vec3 camRight = vec3(camera.view[0][0], camera.view[1][0], camera.view[2][0]);
     vec3 camUp    = vec3(camera.view[0][1], camera.view[1][1], camera.view[2][1]);
 
-    float angle = (seed * 1.0f - 0.5) * 0.4;
-    float s = sin(angle);
-    float c = cos(angle);
-    float angle1 = (seed * 2.0f - 0.5) * 0.4;
-    float s1 = sin(angle1);
-    float c1 = cos(angle1);
-
-    vec3 right = camRight * c + camUp * s;
-    vec3 up    = camUp    * c1 - camRight * s1;
-
     vec3 worldPos =
     base +
-    right * local.x +
-    up    * local.y;
-
-    float terrain_height = texture(tex_displacement, worldPos.xz / 64.0f + 0.5f).r;
-    worldPos.y += terrain_height;
+    camRight * local.x +
+    camUp    * local.y;
 
     vec3 normal = normalize(cross(camUp, camRight));
     vNormal = normal;
 
+    worldPos.y += texture(tex_displacement, worldPos.xz / 64.0f + 0.5f).r;
     gl_Position = camera.proj * camera.view * world_mat * vec4(worldPos, 1.0);
 }

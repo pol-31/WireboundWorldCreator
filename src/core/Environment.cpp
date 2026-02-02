@@ -45,10 +45,10 @@ void Environment::Update() {
   glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void Environment::SetEnvironment(float wind_speed, float wind_angle,
+void Environment::SetEnvironment(float wind_angle, float wind_speed,
                                  glm::vec3 sun_direction, glm::vec3 sun_color) {
-  wind_speed_ = wind_speed;
   wind_angle_ = wind_angle;
+  wind_speed_ = wind_speed;
   sun_direction_ = sun_direction * 4.0f - glm::vec3(2);
   sun_color_ = sun_color;
 }

@@ -2,11 +2,15 @@
 layout(local_size_x = 256) in;
 
 layout(std430, binding = 9) buffer Blades {
-    vec4 pos[]; // xyz = position, w = phase
+    vec4 pos[];
 };
 
-layout(location = 0) uniform float sin_time;
+layout(location = 0) uniform int id_offset;
 layout(location = 1) uniform float map_scale;
+layout(location = 2) uniform vec2 centre;
+layout(location = 3) uniform float width;
+layout(location = 4) uniform float density;
+layout(location = 5) uniform uint blades_num;
 
 layout(std140, binding = 0) uniform Camera {
     vec3 pos;       float _pad0;
@@ -21,89 +25,76 @@ layout(std140, binding = 4) uniform Player {
     vec3 pos;       float _pad0;
 } player;
 
+
 const float WORLD_MIN = -32.0;
 const float WORLD_SIZE = 64.0;
-const float CELL_FACTOR = 20.0;
-const int GRID_SIZE = int(WORLD_SIZE * CELL_FACTOR); // 6400
+float CELL_FACTOR = density * 0.85;
+int GRID_SIZE = int(WORLD_SIZE * CELL_FACTOR); // 6400
 
 
 ivec2 WorldToGrid(vec2 p) {
-    // [-32,32) → [0,64)
     vec2 local = p - vec2(WORLD_MIN);
-    // [0,64) → [0,6400)
-    return ivec2(floor(local * CELL_FACTOR));
+    return ivec2(vec2(local * CELL_FACTOR));
 }
 
 uint GridToID(ivec2 g) {
-    // safety
-    g = clamp(g, ivec2(0), ivec2(GRID_SIZE - 1));
+    g = clamp(g, ivec2(0), ivec2(GRID_SIZE - 1)); //todo; not necessary
     return uint(g.y * GRID_SIZE + g.x);
 }
 
+// now we have 64 by 64 blades
+const uint gBladesRows = 128;
+const uint gBladesColumns = 32;
+
 ivec2 LocalPattern(uint id) {
-    int x = int(id % 32) - 8;   // -16 .. +15
-    int z = int(id / 32) - 8;   // -16 .. +15
-//    x *= x*x / 16;
-//    z *= z*z / 16;
-    return ivec2(x, z);
-}
-ivec2 LocalPattern2(uint id)
-{
-    vec2 uv = vec2(id % 32, id / 32) / 31.0;
-    vec2 p  = uv * 2.0 - 1.0;
-
-    float bias = 2.5;
-    p = sign(p) * vec2(
-    pow(abs(p.x), bias),
-    pow(abs(p.y), bias)
-    );
-//    p = sign(p) * pow(abs(p), bias);
-
-    return ivec2(round(p * 15.5));
+    vec2 xz = vec2(id & (gBladesRows - 1), id >> uint(log2(gBladesRows)));
+    xz = (xz / vec2(gBladesRows, gBladesColumns) - 0.5f) * 2; // -1.0 - 1.0
+    vec2 factor = vec2(width, width / (gBladesRows / gBladesColumns));
+    xz = xz.x * camera.right.xz * factor.x
+      - xz.y * camera.forward.xz * factor.y * 1.4;
+    return ivec2(vec2(xz * CELL_FACTOR));
 }
 
+float hashX(float p) {
+    return fract(sin(p * 127.1) * 43758.5453123);
+}
 
 void main() {
-    const uint bladeCount = 512;
     uint id = gl_GlobalInvocationID.x;
-    if (id >= bladeCount) return;
+    if (id >= blades_num) return;
 
-    ivec2 player_id = WorldToGrid(player.pos.xz);
+    ivec2 player_id = WorldToGrid(centre);
     ivec2 grass_id = LocalPattern(id);
     ivec2 world_blade_id = player_id + grass_id;
-    vec3 p = vec3(map_scale);
+    vec3 p = vec3(0.0f);
     p.x = float(world_blade_id.x) / CELL_FACTOR + WORLD_MIN;
     p.z = float(world_blade_id.y) / CELL_FACTOR + WORLD_MIN;
 
-    float distance_to_player = float(length(grass_id / 16.0f));
-
-
-/**
-
-    vec3 camForward = normalize(-vec3(
-    camera.view[0][2],
-    camera.view[1][2],
-    camera.view[2][2]
-    ));
-
+    // frustrum culling
     vec3 toBlade = p - camera.pos / map_scale;
     float dist = length(toBlade);
     vec3 dir = toBlade / dist;
 
-    float facing = dot(dir, camForward);
+    float facing = dot(dir, camera.forward);
     float fovW = smoothstep(camera.cos_half_fov, 1.0, facing);
     float distW = exp(-dist * 0.15);
 
     float w = fovW * distW;
+    facing = dot(normalize(p - camera.pos / map_scale), camera.forward);
 
-    facing = dot(normalize(p - camera.pos), camera.forward);*/
-
-//    if (facing < camera.cos_half_fov) return;
-    /**if (hash(id + seed) > w) {
-        pos[id].xyz = vec3(1e6);
-        return;
-    }*/
-
-    pos[id] = vec4(p.x, distance_to_player, p.z,
-    float(id) / 100.0f + sin_time * float(id) / 200.0f); // phase = 0
+    // seed range: 0-GRID_SIZE^2
+    ivec2 seed_xz = ivec2(floor((p.xz + 32.0f) * CELL_FACTOR));
+    uint seed_u = seed_xz.x * GRID_SIZE + seed_xz.y;
+    float seed = float(seed_u) / (GRID_SIZE * GRID_SIZE);
+    seed = hashX(seed); // range 0-1.0f
+    float lod = id_offset / blades_num;
+    lod = 1.0f + 1.0f * clamp(float(grass_id.y), 0.0f, 10.0f) / CELL_FACTOR;
+    if (false && facing < camera.cos_half_fov) {
+//        pos[id + id_offset] = vec4(0.0f, seed, 0.0f, lod); // todo; respawn closer to player
+    } else {
+        pos[id + id_offset] = vec4(p.x + 0.5f * (seed - 0.5f), seed, p.z + 0.5f * (hashX(seed) - 0.5f), lod);
+    }
+//    pos[id + id_offset] = vec4(p.x, 0.0, p.z, lod);
 }
+
+//float distance_to_player = float(length(grass_id / 16.0f));

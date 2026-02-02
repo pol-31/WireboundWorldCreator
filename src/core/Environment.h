@@ -15,7 +15,7 @@ class Environment {
 
   void Update();
 
-  void SetEnvironment(float wind_speed, float wind_angle,
+  void SetEnvironment(float wind_angle, float wind_speed,
                       glm::vec3 sun_direction, glm::vec3 sun_color);
 
   [[nodiscard]] float GetFps() const noexcept;
