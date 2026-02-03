@@ -6,8 +6,8 @@
 #include "../../io/Camera.h"
 #include "ModelLoader.h"
 
-PlayerHuman::PlayerHuman(UiSharedResources& ui_shared_resources, PlayerFpv& fpv)
-    : PlayerBase(ui_shared_resources), fpv_(fpv) {
+PlayerHuman::PlayerHuman(UiSharedResources& ui_shared_resources)
+    : fpv_(ui_shared_resources) {
   id_ = gEntityIdManager.PlayerHumanId;
 }
 
@@ -22,13 +22,22 @@ void PlayerHuman::Render(UiSharedResources& ui_shared_resources) {
   }
   ui_shared_resources.shader_animated_mdl_.Bind();
   model_data_->BindTextures();
-  auto model = GenModelMat(ui_shared_resources, 0.1f);
+  auto model = GenModelMat(ui_shared_resources, 1.f);
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
   model_data_->RenderModelNodes();
   glBindVertexArray(0);
+  if (state_ == State::kFpv) {
+    fpv_.Render(ui_shared_resources);
+  } else {
+    fpv_.RenderRigged(ui_shared_resources);
+  }
 }
 
 void PlayerHuman::ProcessMovement(int key, int action) {
+  if (IsFpv()) {
+    fpv_.ProcessMovement(key, action);
+    return;
+  }
   if (action == GLFW_PRESS) {
     if (key == GLFW_KEY_W)
       SetMoveForward(true);
@@ -39,7 +48,7 @@ void PlayerHuman::ProcessMovement(int key, int action) {
     else if (key == GLFW_KEY_D)
       SetMoveRight(true);
     else if (key == GLFW_KEY_SPACE)
-      Jump(5.0f);
+      Jump(3.0f);
     else if (key == GLFW_KEY_EQUAL)
       Kick();
     else if (key == GLFW_KEY_MINUS)
@@ -62,19 +71,31 @@ void PlayerHuman::ProcessMovement(int key, int action) {
 // jump, kick, stunned - after end keep last frame till other anim set
 
 void PlayerHuman::Update(UiSharedResources& ui_shared_resources) {
-  if (state_ == State::kOnFpv) {
+  if (state_ == State::kFpv) {
+    fpv_.Update(ui_shared_resources);
     return;
+  }
+  if (animation_id_ == Animation::kIdleSitting) {
+    return;
+  }
+
+  if (glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+    speed_ = 1.0f;
+  } else if (glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+    speed_ = 0.1f;
+  } else {
+    speed_ = 0.25f;
   }
   acceleration_ = 0.1f;   // tweak for snappier movement
   float friction = 6.0f;  // slows down when no input
 
-  auto camera = ui_shared_resources_.glfw_context_.camera;
+  auto camera = ui_shared_resources.glfw_context_.camera;
   glm::vec3 forward = -camera->GetDirectionWorldFront();
   glm::vec3 right = camera->GetDirectionRight();
 
   // --- Compute input direction ---
   glm::vec3 input_dir(0.0f);
-  if (IsRelaxed()) {
+  if (IsIdle()) {
     if (move_forward_) input_dir += forward;
     if (move_backward_) input_dir -= forward;
     if (move_right_) input_dir += right;
@@ -90,20 +111,23 @@ void PlayerHuman::Update(UiSharedResources& ui_shared_resources) {
   glm::vec3 delta_v = desired_velocity - velocity_;
   float delta_len = glm::length(delta_v);
   float accel_step = acceleration_ * gDeltaTime;
-  if (delta_len <= accel_step)
+  if (delta_len <= accel_step) {
     velocity_ = desired_velocity;
-  else
+  } else {
     velocity_ += delta_v / delta_len * accel_step;
+  }
 
   // --- Friction when no input ---
-  if (input_len == 0.0f) {
-    float vel_len = glm::length(velocity_);
-    if (vel_len > 0.0f) {
-      float decel = friction * gDeltaTime;
-      if (decel >= vel_len) {
-        velocity_ = glm::vec3(0.0f);
-      } else {
-        velocity_ *= (vel_len - decel) / vel_len;
+  if (IsIdle()) {
+    if (input_len == 0.0f) {
+      float vel_len = glm::length(velocity_);
+      if (vel_len > 0.0f) {
+        float decel = friction * gDeltaTime;
+        if (decel >= vel_len) {
+          velocity_ = glm::vec3(0.0f);
+        } else {
+          velocity_ *= (vel_len - decel) / vel_len;
+        }
       }
     }
   }
@@ -115,8 +139,7 @@ void PlayerHuman::Update(UiSharedResources& ui_shared_resources) {
   auto velocity_mag = glm::length(velocity_);
   bool is_moving = velocity_mag > 0.001f;
 
-  State new_state;
-  HumanAnimation new_animationd_id;
+  Animation new_animationd_id;
 
   // --- Update rotation to follow velocity ---
   if (is_moving) {  // avoid jitter
@@ -127,49 +150,26 @@ void PlayerHuman::Update(UiSharedResources& ui_shared_resources) {
     glm::mat3 rotMat(right_vec, corrected_up, move_dir);  // columns: X,Y,Z
     rotation_ =
         glm::slerp(rotation_, glm::quat_cast(rotMat), 5.0f * gDeltaTime);
-    if (glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-      new_state = State::kRunning;
-      new_animationd_id = HumanAnimation::kRun;
-      speed_ = 1.0f;
-    } else if (glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-      new_state = State::kCrouching;
-      new_animationd_id = HumanAnimation::kCrouch;
-      speed_ = 0.1f;
+    if (velocity_mag < .35f) {
+      new_animationd_id = Animation::kWalk;
     } else {
-      new_state = State::kWalking;
-      new_animationd_id = HumanAnimation::kWalk;
-      speed_ = 0.25f;
+      new_animationd_id = Animation::kRun;
     }
+    // new_animationd_id = HumanAnimation::kCrouch;
   } else {
-    new_state = State::kIdle;
-    new_animationd_id = HumanAnimation::kIdle;
+    new_animationd_id = Animation::kIdle;
   }
 
-  if (IsRelaxed() && new_state != state_) {
-    ResetState();
-    state_ = new_state;
+  if (IsIdle() && animation_id_ != new_animationd_id) {
     animation_id_ = new_animationd_id;
     animation_time_ = 0.0f;
     animation_looped_ = true;
-    fpv_.SetAnimation(static_cast<FpvAnimation>(animation_id_), animation_time_,
-                      animation_looped_);
   }
 
   ApplyGravity(ui_shared_resources);
 
   fpv_.SetPosition(position_);
   fpv_.SetRotation(rotation_);
-}
-
-void PlayerHuman::RenderPicking(UiSharedResources& ui_shared_resources) {
-  // TODO: render capsule model instead
-  UpdateAnimation();
-  ui_shared_resources.shader_animated_mdl_picking_.Bind();
-  glUniform1ui(1, static_cast<uint32_t>(details::kIdOffsetObjects + id_));
-  auto model = GenModelMat(ui_shared_resources, 0.1f);
-  glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
-  model_data_->RenderModelNodes();
-  glBindVertexArray(0);
 }
 
 // should be called in Render(), it updates skin ubo
@@ -180,67 +180,42 @@ void PlayerHuman::UpdateAnimation() {
   }
 }
 
-void PlayerHuman::UpdatePositionY(UiSharedResources& ui_shared_resources) {
-  float ground_height =
-      ui_shared_resources.glfw_context_.tile_renderer->cur_tile_.GetPositionY(
-          position_.x * 16.0f + 512.0f, position_.z * 16.0f + 512.0f);
-  if (!IsOnGround()) {
-    const float gravity = -9.81f;
-    const float mass = 4.0f;
-    gravity_velocity_ += gDeltaTime * gravity;
-    position_.y += gravity_velocity_ * gDeltaTime * mass;
-    if (position_.y <= ground_height) {
-      position_.y = ground_height;
-      gravity_velocity_ = 0.0f;
-      ResetState();
-    }
-  } else {
-    position_.y = ground_height;
-  }
-}
-
 void PlayerHuman::Jump(float strength) {
-  if (IsRelaxed()) {
+  if (IsIdle()) {
     gravity_velocity_ = strength;
     state_ = State::kJumping;
     animation_time_ = 0.0f;
-    animation_id_ = HumanAnimation::kJump;
+    animation_id_ = Animation::kJump;
     animation_looped_ = false;
-    fpv_.SetAnimation(static_cast<FpvAnimation>(animation_id_), animation_time_,
-                      animation_looped_);
   }
 }
 
 void PlayerHuman::Kick() {
-  if (IsRelaxed()) {
+  if (IsIdle()) {
     state_ = State::kAttacking;
     animation_time_ = 0.0f;
-    animation_id_ = HumanAnimation::kKick;
+    animation_id_ = Animation::kKick;
     animation_looped_ = false;
     next_event_ = Event(0.7f, PlayerEventType::DealDamage, false);
-    fpv_.SetAnimation(static_cast<FpvAnimation>(animation_id_), animation_time_,
-                      animation_looped_);
   }
 }
 
 void PlayerHuman::Stunned() {
-  if (IsRelaxed()) {
+  if (IsIdle()) {
     state_ = State::kStunned;
     animation_time_ = 0.0f;
-    animation_id_ = HumanAnimation::kStunned;
+    animation_id_ = Animation::kStunned;
     animation_looped_ = false;
-    fpv_.SetAnimation(static_cast<FpvAnimation>(animation_id_), animation_time_,
-                      animation_looped_);
   }
 }
 
 void PlayerHuman::Rest() {
-  if (IsRelaxed()) {
+  if (IsIdle()) {
     state_ = State::kStunned;
     animation_time_ = 0.0f;
-    animation_id_ = HumanAnimation::kIdleSitting;
+    animation_id_ = Animation::kIdleSitting;
     animation_looped_ = false;
-    fpv_.SetAnimation(FpvAnimation::kIdleSitting, animation_time_, true);
+    fpv_.SetPosition(position_ + glm::vec3(0.01f, 0.0f, 0.01f));
   }
 }
 
@@ -248,10 +223,8 @@ void PlayerHuman::Fall() {
   if (state_ != State::kFalling) {
     state_ = State::kFalling;
     animation_time_ = 0.0f;
-    animation_id_ = HumanAnimation::kFall;
+    animation_id_ = Animation::kFall;
     animation_looped_ = true;
-    fpv_.SetAnimation(static_cast<FpvAnimation>(animation_id_), animation_time_,
-                      animation_looped_);
   }
 }
 
@@ -267,9 +240,16 @@ void PlayerHuman::ApplyGravity(UiSharedResources& ui_shared_resources) {
     if (position_.y <= ground_height) {
       position_.y = ground_height;
       gravity_velocity_ = 0.0f;
+      bool hurt = false;
+      if (state_ == State::kFalling) {
+        hurt = true;
+      }
       ResetState();
+      if (hurt) {
+        Stunned();
+      }
     } else {
-      if (gravity_velocity_ <= 0.0f) {
+      if (gravity_velocity_ >= 6.0f) {
         Fall();
       }
     }
@@ -279,24 +259,19 @@ void PlayerHuman::ApplyGravity(UiSharedResources& ui_shared_resources) {
 }
 
 void PlayerHuman::ResetState() {
-  animation_id_ = HumanAnimation::kIdle;
+  animation_id_ = Animation::kIdle;
   animation_time_ = 0.0f;
   animation_looped_ = true;
   state_ = State::kIdle;
-  fpv_.SetAnimation(static_cast<FpvAnimation>(animation_id_), animation_time_,
-                    animation_looped_);
-  // if (state_ != State::kOnFpv) {
-  //   state_ = State::kIdle;
-  //   fpv_.SetAnimation(static_cast<FpvAnimation>(animation_id_),
-  //   animation_time_,
-  //                     animation_looped_);
-  //}
 }
 
 void PlayerHuman::SwitchToFpv() {
-  state_ = State::kOnFpv;
+  if (state_ != State::kIdle) {
+    return;
+  }
+  state_ = State::kFpv;
   animation_time_ = 0.0f;
-  animation_id_ = HumanAnimation::kThrow;
+  animation_id_ = Animation::kThrow;
   animation_looped_ = false;
   next_event_ = Event(100.0f, PlayerEventType::EnterIdleSitting, false);
   fpv_.SetPosition(position_ + glm::vec3(0.0f, 0.01f, 0.0f));
@@ -304,8 +279,11 @@ void PlayerHuman::SwitchToFpv() {
 }
 
 void PlayerHuman::SwitchToHuman() {
+  if (state_ != State::kFpv) {
+    return;
+  }
   animation_time_ = 0.0f;
-  animation_id_ = HumanAnimation::kThrow;
+  animation_id_ = Animation::kThrow;
   animation_looped_ = false;
   next_event_ = Event(100.0f, PlayerEventType::EnterIdle, false);
 }
@@ -337,13 +315,13 @@ void PlayerHuman::DealDamage() {
 void PlayerHuman::EnterIdle() {
   state_ = State::kIdle;
   animation_time_ = 0.0f;
-  animation_id_ = HumanAnimation::kIdle;
+  animation_id_ = Animation::kIdle;
   animation_looped_ = true;
 }
 
 void PlayerHuman::EnterIdleSitting() {
-  state_ = State::kOnFpv;
+  state_ = State::kFpv;
   animation_time_ = 0.0f;
-  animation_id_ = HumanAnimation::kIdleSitting;
+  animation_id_ = Animation::kIdleSitting;
   animation_looped_ = true;
 }

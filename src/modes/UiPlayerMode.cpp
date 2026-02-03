@@ -55,7 +55,13 @@ void UiPlayerMode::Render() {
   auto camera = ui_shared_resources_.glfw_context_.camera;
   auto map_scale =
       ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
-  camera->SetOrigin(mdl_manager_.player_->GetPosition() * map_scale);
+  glm::vec3 camera_pos;
+  if (mdl_manager_.player_.IsFpv()) {
+    camera_pos = mdl_manager_.player_.GetFpv().GetPosition();
+  } else {
+    camera_pos = mdl_manager_.player_.GetPosition();
+  }
+  camera->SetOrigin(camera_pos * map_scale);
   camera->MoveRotateViewOriginDist(0.0f);  // update camera vectors after origin
   camera->Update();
 
@@ -94,7 +100,8 @@ void UiPlayerMode::HandleSelection(const std::set<GLuint>& selected_ids) {
   bool friend_selected = false;
   bool neutral_selected = false;
   bool obstacle_selected = false;
-  auto it = selected_ids.find(mdl_manager_.player_->GetId());
+  auto it = selected_ids.find(
+    mdl_manager_.player_.GetId() || mdl_manager_.player_.GetFpv().GetId());
   if (it != selected_ids.end()) {
     std::cout << "player selected" << std::endl;
   }
@@ -117,6 +124,18 @@ void UiPlayerMode::HandleSelection(const std::set<GLuint>& selected_ids) {
       }*/
     } else {
       mdl_manager_.creatures_[i].DeSelect();
+    }
+  }
+  for (int i = 0; i < mdl_manager_.fpvs_.size(); ++i) {
+    auto it = selected_ids.find(mdl_manager_.fpvs_[i].GetId());
+    if (it != selected_ids.end()) {
+      mdl_manager_.fpvs_[i].Select();
+      const auto model = mdl_manager_.fpvs_[i].GetModelData();
+      if (++selected_num == 1) {
+        mdl_single_selected = model;
+      }
+    } else {
+      mdl_manager_.fpvs_[i].DeSelect();
     }
   }
   if (selected_num == 1) {
@@ -222,24 +241,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
       }
     }
   }
-  auto& human = player->mdl_manager_.player_human_;
-  auto& fpv = player->mdl_manager_.player_fpv_;
   auto& player_ = player->mdl_manager_.player_;
-  player_->ProcessMovement(key, action);
-  if (action == GLFW_PRESS && key == GLFW_KEY_1 &&
-      player_->GetId() == fpv.GetId()) {
-    if (fpv.IsReadyToSwitch() && human.IsReadyToSwitch()) {
-      player_ = &human;
-      human.SwitchToHuman();
-      fpv.SwitchToHuman();
-    }
-  } else if (action == GLFW_PRESS && key == GLFW_KEY_2 &&
-             player_->GetId() == human.GetId()) {
-    if (fpv.IsReadyToSwitch() && human.IsReadyToSwitch()) {
-      player_ = &fpv;
-      human.SwitchToFpv();
-      fpv.SwitchToFpv();
-    }
+  player_.ProcessMovement(key, action);
+  if (action == GLFW_PRESS) {
+    if (key == GLFW_KEY_1) player_.SwitchToHuman();
+    else if (key == GLFW_KEY_2) player_.SwitchToFpv();
   }
 }
 

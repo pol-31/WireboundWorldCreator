@@ -2,21 +2,19 @@
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_PLAYERHUMAN_H_
 
 #include "../../modes/UiSharedResources.h"
-#include "PlayerBase.h"
+#include "RigidBody.h"
 #include "PlayerFpv.h"
+#include "Animator.h"
 
-class PlayerHuman : public PlayerBase {
+class PlayerHuman : public RigidBody {
  public:
   enum class State {
     kIdle,
-    kWalking,
-    kRunning,
-    kCrouching,
     kJumping,
     kFalling,
     kAttacking,
     kStunned,
-    kOnFpv
+    kFpv
   };
 
   enum class PlayerEventType {
@@ -47,16 +45,15 @@ class PlayerHuman : public PlayerBase {
     return state_ != State::kJumping && state_ != State::kFalling;
   }
 
-  [[nodiscard]] bool IsRelaxed() const noexcept {
-    return state_ != State::kJumping && state_ != State::kFalling &&
-           state_ != State::kAttacking && state_ != State::kStunned;
+  [[nodiscard]] bool IsIdle() const noexcept {
+    return state_ == State::kIdle;
   }
 
-  [[nodiscard]] bool IsReadyToSwitch() const noexcept {
-    return IsRelaxed() || (state_ == State::kOnFpv && next_event_.done);
+  [[nodiscard]] bool IsFpv() const noexcept {
+    return state_ == State::kFpv;
   }
 
-  PlayerHuman(UiSharedResources& ui_shared_resources, PlayerFpv& fpv);
+  PlayerHuman(UiSharedResources& ui_shared_resources);
 
   void Jump(float strength);
 
@@ -72,10 +69,6 @@ class PlayerHuman : public PlayerBase {
 
   void ResetState();
 
-  void UpdatePositionY(UiSharedResources& ui_shared_resources);
-
-  void RenderPicking(UiSharedResources& ui_shared_resources);
-
   // should be called in Render(), it updates skin ubo
   void UpdateAnimation();
 
@@ -83,17 +76,45 @@ class PlayerHuman : public PlayerBase {
 
   void Update(UiSharedResources& ui_shared_resources);
 
-  void ProcessMovement(int key, int action) override;
+  void ProcessMovement(int key, int action);
 
   void SwitchToHuman();
 
   void SwitchToFpv();
 
+  PlayerFpv& GetFpv() {
+    return fpv_;
+  }
+
+  void SetAnimator(Animator* animator) {
+    animator_ = animator;
+  }
+
+  void SetMoveForward(bool pressed) { move_forward_ = pressed; }
+  void SetMoveBackward(bool pressed) { move_backward_ = pressed; }
+  void SetMoveLeft(bool pressed) { move_left_ = pressed; }
+  void SetMoveRight(bool pressed) { move_right_ = pressed; }
+
  private:
   State state_ = State::kIdle;
-  HumanAnimation animation_id_ =
-      HumanAnimation::kIdle;  // TODO: merge with state_
-  PlayerFpv& fpv_;
+
+  bool move_forward_ = false;
+  bool move_backward_ = false;
+  bool move_left_ = false;
+  bool move_right_ = false;
+
+  glm::vec3 velocity_ = glm::vec3(0.0f);
+  glm::vec3 desired_direction_ = glm::vec3(0.0f);
+  float desired_magnitude_ = 0.0f;
+  float acceleration_ = 5.0f;
+
+  float animation_time_ = 0.0f;
+  bool animation_looped_ = true;
+  Animator* animator_ = nullptr;
+  Animation animation_id_ =
+      Animation::kIdle;  // todo; merge with state_?
+
+  PlayerFpv fpv_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_PLAYERHUMAN_H_

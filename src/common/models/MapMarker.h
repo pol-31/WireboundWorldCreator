@@ -18,22 +18,21 @@ class MapMarker {
               glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
               glm::vec3 scale = glm::vec3(1.0f));
 
-  void RenderPicking(UiSharedResources& ui_shared_resources, int id,
-                     glm::vec2 position = glm::vec2(0.0f),
-                     glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                     glm::vec3 scale = glm::vec3(1.0f));
-
   void SetModel(ModelData* model_data) { model_data_ = model_data; }
 
   void Select() { selected_ = true; }
 
   void DeSelect() { selected_ = false; }
 
- private:
   glm::mat4 GenModelMat(UiSharedResources& ui_shared_resources,
                         glm::vec2 position, glm::quat rotation,
                         glm::vec3 scale);
 
+  [[nodiscard]] const ModelData* GetModelData() const noexcept {
+    return model_data_;
+  }
+
+ private:
   bool selected_ = false;
   ModelData* model_data_ = nullptr;
 };

@@ -47,6 +47,10 @@ class ModelManager {
 
   void Update();
 
+  void UpdateBvh();
+
+  void ProcessEvents();
+
   const std::vector<std::unique_ptr<ModelData>>& GetLoadedModels() {
     return mdl_loader_.GetLoadedModels();
   }
@@ -75,20 +79,26 @@ class ModelManager {
 
   void DeInit();
 
+  void RenderAabb(RigidBody* entity, const ModelData::Mesh& prim);
+  void RenderAabb(MapMarker* entity, const ModelData::Mesh& prim,
+    glm::vec2 position = glm::vec2(0.0f),
+    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+    glm::vec3 scale = glm::vec3(1.0f));
+
   GLuint animation_ubo_ = 0;
   GLuint player_ubo_ = 0;
+
+  std::vector<BVHNode> bvh_;
+  std::unordered_map<uint32_t, RigidBody*> entities_;
 
  public:
   UiSharedResources& ui_shared_resources_;
   tinygltf::TinyGLTF loader_;
   ModelLoader mdl_loader_;
-  Animator animator_fpv_;
-  Animator animator_human_;
+  Animator animator_;
   std::vector<AttackEvent> attack_queue_;
 
-  PlayerFpv player_fpv_;
-  PlayerHuman player_human_;
-  PlayerBase* player_ = nullptr;
+  PlayerHuman player_;
 
   std::vector<Human> creatures_;
   std::vector<Fpv> fpvs_;
@@ -100,6 +110,10 @@ class ModelManager {
   Obstacle undergrowth_;
 
   MapMarker map_point_;
+
+  Shader shader_aabb_;
+  Shader shader_aabb_picking_;
+  ModelData* mdl_aabb_ = nullptr;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELMANAGER_H_

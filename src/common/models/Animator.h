@@ -8,33 +8,20 @@
 #include <glm/gtc/quaternion.hpp>
 #include <vector>
 
-enum class HumanAnimation {
-  kCrouch,
-  kFall,
+enum class Animation {
   kIdle,
   kIdleSitting,
-  kJump,
-  kKick,
-  kRun,
-  kStunned,
-  kT,
-  kThrow,
   kWalk,
-  kNone,
-};
-
-enum class FpvAnimation {
+  kRun,
   kCrouch,
-  kFall,
-  kIdle,
-  kIdleSitting,
-  kJump,
   kKick,
-  kRun,
   kStunned,
-  kT,
+  kJump,
+  kFall,
+  kSlide,
+  kClimb,
   kThrow,
-  kWalk,
+  kSwim,
   kNone,
 };
 
@@ -66,19 +53,7 @@ class Animator {
   /// returns was_looped
   bool UpdateUbo(int id, float& time);
 
-  bool UpdateUbo(HumanAnimation animation, float& time) {
-    if (animation == HumanAnimation::kNone) {
-      SetZeroUbo();
-      return false;
-    }
-    return UpdateUbo(static_cast<int>(animation), time);
-  }
-
-  bool UpdateUbo(FpvAnimation animation, float& time) {
-    if (animation == FpvAnimation::kNone) {
-      SetZeroUbo();
-      return false;
-    }
+  bool UpdateUbo(Animation animation, float& time) {
     return UpdateUbo(static_cast<int>(animation), time);
   }
 

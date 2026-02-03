@@ -4,9 +4,14 @@
 #include <glm/glm.hpp>
 
 struct Obb3D {
-  glm::vec3 center;
-  glm::vec3 halfSize;     // half extents
-  glm::mat3 orientation;  // rotation only (local axes)
+  glm::vec3 center = glm::vec3(0.0f);
+  glm::vec3 halfSize = glm::vec3(0.0f);
+  glm::mat3 orientation = glm::mat3(1.0f);
+};
+
+struct Aabb2D {
+  glm::vec2 min = glm::vec2(FLT_MAX);
+  glm::vec2 max = glm::vec2(-FLT_MAX);
 };
 
 // local space (rel to 0;0;0 centre)

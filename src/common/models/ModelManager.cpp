@@ -11,11 +11,10 @@
 ModelManager::ModelManager(UiSharedResources& ui_shared_resources)
     : ui_shared_resources_(ui_shared_resources),
       mdl_loader_(ui_shared_resources, loader_),
-      animator_human_(loader_, animation_ubo_),
-      animator_fpv_(loader_, animation_ubo_),
-      player_fpv_(ui_shared_resources),
-      player_human_(ui_shared_resources, player_fpv_),
-      player_(&player_human_) {
+      animator_(loader_, animation_ubo_),
+      player_(ui_shared_resources),
+      shader_aabb_("../shaders/Aabb.vert", "../shaders/Aabb.frag"),
+      shader_aabb_picking_("../shaders/Aabb.vert", "../shaders/ModelPicking.frag") {
   Init();
 }
 
@@ -34,28 +33,31 @@ void ModelManager::Init() {
 
   loader_.SetImageLoader(LoadImageData, nullptr);
 
-  animator_human_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf");
-  animator_fpv_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\FpvRest.gltf");
+  animator_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf");
 
   auto mdl_tree =
       mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\MapMarker.gltf", 1);
   auto mdl_human =
       mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf", 2);
   auto mdl_fpv =
-      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\FpvRest.gltf", 3);
+      mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Fpv.gltf", 3);
+  mdl_aabb_ = mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Cube.gltf", 4);
 
-  player_human_.SetModelData(mdl_human, &animator_human_, &attack_queue_);
-  player_fpv_.SetModelData(mdl_fpv, &animator_fpv_, &attack_queue_);
+  player_.SetModelData(mdl_human, &attack_queue_);
+  player_.SetAnimator(&animator_);
+  player_.GetFpv().SetModelData(mdl_fpv, &attack_queue_);
+
   int creatures_num = 3;
   for (int i = 0; i < creatures_num; ++i) {
     creatures_.emplace_back();
-    creatures_[i].SetModelData(mdl_human, &animator_human_, &attack_queue_);
+    creatures_[i].SetModelData(mdl_human, &attack_queue_);
+    creatures_[i].SetAnimator(&animator_);
     creatures_[i].SetPosition(glm::vec3(i + 1, 0.0f, i));
   }
   int fpvs_num = 2;
   for (int i = 0; i < fpvs_num; ++i) {
     fpvs_.emplace_back();
-    fpvs_[i].SetModelData(mdl_fpv, &animator_fpv_, &attack_queue_);
+    fpvs_[i].SetModelData(mdl_fpv, &attack_queue_);
     fpvs_[i].SetPosition(glm::vec3(i - 1, 0.0f, i));
   }
   tree_.SetModelData(mdl_tree);
@@ -82,8 +84,52 @@ void ModelManager::Render() {
   tall_grass_.Render(ui_shared_resources_);
   undergrowth_.Render(ui_shared_resources_);
 
-  player_human_.Render(ui_shared_resources_);
-  player_fpv_.Render(ui_shared_resources_);
+  player_.Render(ui_shared_resources_);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glEnable(GL_CULL_FACE);
+  shader_aabb_.Bind();
+  const auto& prim = mdl_aabb_->primitives[0];
+  glBindVertexArray(prim.vao);
+  auto color_white = glm::vec4(1.0f, 1.0f, 1.0f, 0.6f);
+  glUniform4fv(4, 1, glm::value_ptr(color_white));
+  for (const auto& entity : entities_) {
+    RenderAabb(entity.second, prim);
+  }
+
+  if (player_.IsFpv()) {
+    const auto& fpv_pos = player_.GetFpv().GetPosition();
+    //TODO: not that velocity, but cur_pos rel to prev_pos
+    //TODO: not that velocity, but cur_pos rel to prev_pos
+    //TODO: not that velocity, but cur_pos rel to prev_pos
+    const auto& fpv_vel = player_.GetFpv().GetVelocity();
+    auto hit = ui_shared_resources_.glfw_context_.tile_renderer
+      ->CastRay(fpv_pos, glm::normalize(fpv_vel), 16.0f);
+    if (hit != glm::vec3(-1000.0f)) {
+      auto map_scale =
+          ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+      glm::mat4 object_model = glm::mat4{1.0f};
+      object_model = glm::translate(object_model, hit);
+      object_model *= glm::mat4_cast(player_.GetFpv().GetRotation());
+      object_model = glm::scale(object_model, player_.GetFpv().GetScale());
+      glm::mat4 map_model =
+          glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));  // upscaled
+      auto model_mat = map_model * object_model;
+
+      glUniformMatrix4fv(0, 1, false, glm::value_ptr(model_mat));
+      const auto& aabb = player_.GetFpv().GetModelData()->aabb;
+      glm::vec3 sizes = (aabb.max - aabb.min) / 2.0f;
+      glm::vec3 center = (aabb.min + aabb.max) / 2.0f;
+      glUniform3fv(2, 1, glm::value_ptr(sizes));
+      glUniform3fv(3, 1, glm::value_ptr(center));
+      auto color_red = glm::vec4(0.8f, 0.0f, 0.0f, 1.0f);
+      glUniform4fv(4, 1, glm::value_ptr(color_red));
+      glDrawElements(
+        prim.mode, prim.indexCount, prim.indexType,
+        reinterpret_cast<void*>(static_cast<std::uintptr_t>(prim.indexOffset)));
+    }
+  }
+  glDisable(GL_CULL_FACE);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void ModelManager::RenderPlacement() {
@@ -167,30 +213,29 @@ void ModelManager::RenderCreaturesAsMapPoints(int creature_id,
 }
 
 void ModelManager::RenderPickingCreaturesAsMapPoints(int creature_id) {
+  shader_aabb_picking_.Bind();
+  const auto& prim = mdl_aabb_->primitives[0];
+  glBindVertexArray(prim.vao);
   if (creature_id == -1) {
     for (int i = 0; i < creatures_.size(); ++i) {
-      map_point_.RenderPicking(ui_shared_resources_, i,
-                               creatures_[i].GetPosition());
+      glUniform1ui(1, static_cast<uint32_t>(i));
+      RenderAabb(&map_point_, prim, creatures_[i].GetPosition());
     }
   } else {
     const auto& creature = creatures_[creature_id];
-    map_point_.RenderPicking(ui_shared_resources_, creature_id,
-                             creature.GetPosition());
+    glUniform1ui(1, static_cast<uint32_t>(creature_id));
+    RenderAabb(&map_point_, prim, creature.GetPosition());
   }
 }
 
 void ModelManager::RenderPickingMapPoints(
-    const std::vector<MapPoint>& map_points) {
+const std::vector<MapPoint>& map_points) {
+  shader_aabb_picking_.Bind();
+  const auto& prim = mdl_aabb_->primitives[0];
+  glBindVertexArray(prim.vao);
   for (int i = 0; i < map_points.size(); ++i) {
-    // not instancesd draw call, but separate class MapPoint
-    if (map_points[i].selected) {
-      map_point_.Select();
-    } else {
-      map_point_.DeSelect();
-    }
-    map_point_.RenderPicking(ui_shared_resources_,
-                             details::kIdOffsetObjects + i,
-                             map_points[i].position);
+    glUniform1ui(1, static_cast<uint32_t>(details::kIdOffsetObjects + i));
+    RenderAabb(&map_point_, prim, map_points[i].position);
   }
 }
 
@@ -199,7 +244,6 @@ void ModelManager::RenderMapPoints(const std::vector<MapPoint>& map_points,
                                    const std::vector<glm::vec3>& scales,
                                    glm::vec4 color) {
   for (int i = 0; i < map_points.size(); ++i) {
-    // not instancesd draw call, but separate class MapPoint
     if (map_points[i].selected) {
       map_point_.Select();
     } else {
@@ -214,28 +258,25 @@ void ModelManager::RenderPickingMapPoints(
     const std::vector<MapPoint>& map_points,
     const std::vector<glm::quat>& rotates,
     const std::vector<glm::vec3>& scales) {
+  shader_aabb_picking_.Bind();
+  const auto& prim = mdl_aabb_->primitives[0];
+  glBindVertexArray(prim.vao);
   for (int i = 0; i < map_points.size(); ++i) {
-    // not instancesd draw call, but separate class MapPoint
-    if (map_points[i].selected) {
-      map_point_.Select();
-    } else {
-      map_point_.DeSelect();
-    }
-    map_point_.RenderPicking(ui_shared_resources_,
-                             details::kIdOffsetObjects + i,
-                             map_points[i].position, rotates[i], scales[i]);
+    glUniform1ui(1, static_cast<uint32_t>(details::kIdOffsetObjects + i));
+    RenderAabb(&map_point_, prim, map_points[i].position, rotates[i], scales[i]);
   }
 }
 
 void ModelManager::RenderPicking() {
-  for (auto& c : creatures_) {
-    c.RenderPicking(ui_shared_resources_);
+  shader_aabb_picking_.Bind();
+  const auto& prim = mdl_aabb_->primitives[0];
+  glBindVertexArray(prim.vao);
+  glEnable(GL_CULL_FACE);
+  for (const auto& entity : entities_) {
+    glUniform1ui(1, static_cast<uint32_t>(details::kIdOffsetObjects + entity.first));
+    RenderAabb(entity.second, prim);
   }
-  for (auto& c : fpvs_) {
-    c.RenderPicking(ui_shared_resources_);
-  }
-  player_human_.RenderPicking(ui_shared_resources_);
-  player_fpv_.RenderPicking(ui_shared_resources_);
+  glDisable(GL_CULL_FACE);
 }
 
 void ModelManager::Update() {
@@ -245,47 +286,83 @@ void ModelManager::Update() {
   for (auto& c : fpvs_) {
     c.Update(ui_shared_resources_);
   }
-  player_human_.Update(ui_shared_resources_);
-  player_fpv_.Update(ui_shared_resources_);
+  player_.Update(ui_shared_resources_);
 
   glNamedBufferSubData(player_ubo_, 0, sizeof(glm::vec3),
-                       glm::value_ptr(player_->GetPosition()));
+                       glm::value_ptr(player_.GetPosition()));
+  UpdateBvh();
+  ProcessEvents();
+}
 
-  std::unordered_map<uint32_t, RigidBody*> entities;
+void ModelManager::UpdateBvh() {
+  entities_.clear();
   for (auto& c : creatures_) {
-    entities[c.GetId()] = &c;
+    entities_[c.GetId()] = &c;
   }
   for (auto& c : fpvs_) {
-    entities[c.GetId()] = &c;
+    entities_[c.GetId()] = &c;
   }
-  entities[player_human_.GetId()] = &player_human_;
-  entities[player_fpv_.GetId()] = &player_fpv_;
+  if (player_.IsFpv()) {
+    entities_[player_.GetFpv().GetId()] = &player_.GetFpv();
+  } else {
+    entities_[player_.GetId()] = &player_;
+  }
 
   std::vector<Collider> colliders;
-  colliders.reserve(entities.size());
-  for (const auto& e : entities) {
+  colliders.reserve(entities_.size());
+  for (const auto& e : entities_) {
     colliders.push_back({e.second->GenWorldAabb(), e.first});
   }
-
-  std::vector<glm::vec3> aabb_centers(entities.size(), glm::vec3(0.0f));
+  std::vector<glm::vec3> aabb_centers(entities_.size(), glm::vec3(0.0f));
   for (int i = 0; i < colliders.size(); ++i) {
     const auto& aabb = colliders[i].aabb;
     aabb_centers[i] = 0.5f * (aabb.min + aabb.max);
   }
 
-  std::vector<BVHNode> bvh;
-  BuildBVH(bvh, aabb_centers, colliders, 0, colliders.size());
+  bvh_.clear();
+  BuildBVH(bvh_, aabb_centers, colliders, 0, colliders.size());
+}
 
+void ModelManager::ProcessEvents() {
   for (const auto& attack : attack_queue_) {
     std::vector<int> hits;
-    QueryBVH(bvh, 0, attack.hitbox, hits);
+    QueryBVH(bvh_, 0, attack.hitbox, hits);
     for (auto hit : hits) {
       if (hit != attack.attacker) {
-        entities[hit]->Stunned();
+        entities_[hit]->Stunned();
       }
     }
   }
   attack_queue_.clear();
+}
+
+void ModelManager::RenderAabb(RigidBody* entity, const ModelData::Mesh& prim) {
+  auto model_mat = entity->GenModelMat(ui_shared_resources_, 1.0f);
+  glUniformMatrix4fv(0, 1, false, glm::value_ptr(model_mat));
+  const auto& aabb = entity->GetModelData()->aabb;
+  glm::vec3 sizes = (aabb.max - aabb.min) / 2.0f;
+  glm::vec3 center = (aabb.min + aabb.max) / 2.0f;
+  glUniform3fv(2, 1, glm::value_ptr(sizes));
+  glUniform3fv(3, 1, glm::value_ptr(center));
+  glDrawElements(
+    prim.mode, prim.indexCount, prim.indexType,
+    reinterpret_cast<void*>(static_cast<std::uintptr_t>(prim.indexOffset)));
+}
+
+void ModelManager::RenderAabb(
+    MapMarker* entity, const ModelData::Mesh& prim,
+    glm::vec2 position, glm::quat rotation,
+    glm::vec3 scale) {
+  auto model_mat = entity->GenModelMat(ui_shared_resources_, position, rotation, scale);
+  glUniformMatrix4fv(0, 1, false, glm::value_ptr(model_mat));
+  const auto& aabb = entity->GetModelData()->aabb;
+  glm::vec3 sizes = (aabb.max - aabb.min) / 2.0f;
+  glm::vec3 center = (aabb.min + aabb.max) / 2.0f;
+  glUniform3fv(2, 1, glm::value_ptr(sizes));
+  glUniform3fv(3, 1, glm::value_ptr(center));
+  glDrawElements(
+    prim.mode, prim.indexCount, prim.indexType,
+    reinterpret_cast<void*>(static_cast<std::uintptr_t>(prim.indexOffset)));
 }
 
 Aabb3D ModelManager::ComputeBounds(const std::vector<Collider>& colliders,

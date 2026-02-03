@@ -246,6 +246,9 @@ void ModelLoader::BindModel(tinygltf::Model& model,
 
 void ModelLoader::LoadTextures(std::string_view path, ModelData* model_data) {
   tinygltf::Model& model = model_data->model;
+  if (model.materials.empty()) {
+    return;
+  }
   auto albedo_tex_id =
       model.materials[0].pbrMetallicRoughness.baseColorTexture.index;
   model_data->material.albedo = LoadTexture(path, model, albedo_tex_id);
@@ -333,6 +336,12 @@ Aabb3D ModelLoader::GetAabb(const tinygltf::Model& model) {
   std::cout << minBounds.x << ' ' << maxBounds.x << std::endl;
   std::cout << minBounds.y << ' ' << maxBounds.y << std::endl;
   std::cout << minBounds.z << ' ' << maxBounds.z << std::endl;
-  Aabb3D aabb = {minBounds / 10.0f, maxBounds / 10.0f};
+  Aabb3D aabb = {minBounds, maxBounds};
+  glm::vec3 sizes = (aabb.max - aabb.min) / 2.0f;
+  glm::vec3 center = (aabb.min + aabb.max) / 2.0f;
+  sizes.x = glm::min(sizes.x, sizes.z);
+  sizes.z = sizes.x;
+  aabb.max = center + sizes;
+  aabb.min = center - sizes;
   return aabb;
 }

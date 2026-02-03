@@ -6,7 +6,6 @@
 
 #include "../../modes/UiSharedResources.h"
 #include "../EntityIdManager.h"
-#include "Animator.h"
 #include "AttackEvent.h"
 
 class ModelData;
@@ -34,10 +33,9 @@ class RigidBody {
     return model_data_;
   }
 
-  void SetModelData(ModelData* model, Animator* animator,
+  void SetModelData(ModelData* model,
                     std::vector<AttackEvent>* attack_queue) {
     model_data_ = model;
-    animator_ = animator;
     attack_queue_ = attack_queue;
   }
 
@@ -61,11 +59,7 @@ class RigidBody {
   float gravity_velocity_ = 0.0f;
   float speed_ = 10.0f;
 
-  float animation_time_ = 0.0f;
-  bool animation_looped_ = true;
-
   ModelData* model_data_ = nullptr;
-  Animator* animator_ = nullptr;
   std::vector<AttackEvent>* attack_queue_ = nullptr;
 };
 

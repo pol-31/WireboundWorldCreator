@@ -85,6 +85,10 @@ void Animator::SetZeroUbo() {
 
 /// throw data to ubo, buffer, so need to call Render() afterwards
 bool Animator::UpdateUbo(int id, float& time) {
+  if (id == static_cast<int>(Animation::kNone)) {
+    SetZeroUbo();
+    return false;
+  }
   // buffers
   std::vector<NodePose> localPose;
   std::vector<glm::mat4> globalPose;

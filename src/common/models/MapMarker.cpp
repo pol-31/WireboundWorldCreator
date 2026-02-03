@@ -13,37 +13,24 @@ void MapMarker::Render(UiSharedResources& ui_shared_resources, glm::vec3 color,
   glUniform3fv(1, 1, glm::value_ptr(color));
   model_data_->BindTextures();
   auto model =
-      GenModelMat(ui_shared_resources, position, rotation, scale * 0.1f);
+      GenModelMat(ui_shared_resources, position, rotation, scale);
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
   if (selected_) {
     glStencilFunc(GL_ALWAYS, 1, 0xFF);
     glStencilMask(0xFF);
-  }
-  model_data_->RenderModelNodes();
-  if (selected_) {
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     glStencilMask(0x00);
     glDisable(GL_DEPTH_TEST);
     ui_shared_resources.shader_mdl_selected_.Bind();
-    model = GenModelMat(ui_shared_resources, position, rotation, scale * 0.11f);
+    model = GenModelMat(ui_shared_resources, position, rotation, scale);
     glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
     model_data_->RenderModelNodes();
     glStencilFunc(GL_ALWAYS, 0, 0xFF);
     glStencilMask(0xFF);
     glEnable(GL_DEPTH_TEST);
+  } else {
+    model_data_->RenderModelNodes();
   }
-  glBindVertexArray(0);
-}
-
-void MapMarker::RenderPicking(UiSharedResources& ui_shared_resources, int id,
-                              glm::vec2 position, glm::quat rotation,
-                              glm::vec3 scale) {
-  ui_shared_resources.shader_mdl_picking_.Bind();
-  glUniform1ui(1, static_cast<uint32_t>(id));
-  auto model =
-      GenModelMat(ui_shared_resources, position, rotation, scale * 0.1f);
-  glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
-  model_data_->RenderModelNodes();
   glBindVertexArray(0);
 }
 
