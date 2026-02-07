@@ -14,14 +14,11 @@ float RigidBody::GetYawFromQuat(const glm::quat& q) {
 
 RigidBody::RigidBody() { id_ = gEntityIdManager.Allocate(); }
 
-glm::mat4 RigidBody::GenModelMat(UiSharedResources& ui_shared_resources,
-                                 float scale) {
-  auto map_scale =
-      ui_shared_resources.glfw_context_.tile_renderer->cur_tile_.map_scale;
+glm::mat4 RigidBody::GenModelMat(float map_scale) {
   glm::mat4 object_model = glm::mat4{1.0f};
   object_model = glm::translate(object_model, position_);
   object_model *= glm::mat4_cast(rotation_);
-  object_model = glm::scale(object_model, scale_ * scale);
+  object_model = glm::scale(object_model, scale_);
   glm::mat4 map_model =
       glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));  // upscaled
   return map_model * object_model;

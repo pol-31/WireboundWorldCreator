@@ -8,12 +8,12 @@
 #include "../core/TileRenderer.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
-#include "UiSharedResources.h"
+#include "../ui/UiRenderData.h"
 #include "traits/ObjectTraits.h"
 
 class UiEditObjects : public IUiEdit {
  public:
-  UiEditObjects(UiSharedResources& ui_shared_resources,
+  UiEditObjects(UiRenderData& render_data,
                 UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
                 ModelManager& mdl_manager);
 
@@ -55,7 +55,7 @@ class UiEditObjects : public IUiEdit {
   std::array<UiEditConfigSlTxt::Trait, ObjectTraits::GetTraitsSize()> traits_;
   UiEditConfigSlTxt& value_config_;
   ModelManager& mdl_manager_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIEDITOBJECTS_H_

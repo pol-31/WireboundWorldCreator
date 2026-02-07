@@ -22,8 +22,6 @@ class WaterRenderer {
   void SetWaterColor(glm::vec4 color);
 
  private:
-  void UpdateShaders();
-
   void BindUniforms();
 
   Tile& tile_;

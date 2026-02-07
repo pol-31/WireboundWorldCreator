@@ -8,10 +8,10 @@
 
 Ifft::Ifft(int size)
     : size_(size),
-      ifft_shader_("../shaders/ocean/Ifft.comp"),
-      permute_shader_("../shaders/ocean/Permute.comp"),
-      precompute_shader_("../shaders/ocean/PrecompIfftData.comp"),
-      precomputed_data_(static_cast<int>(std::log2(size_)), size_, GL_RGBA32F) {
+      ifft_shader_("../shaders/ocean/Ifft.comp", {}),
+      permute_shader_("../shaders/ocean/Permute.comp", {}),
+      precompute_shader_("../shaders/ocean/PrecompIfftData.comp", {}),
+      precomputed_data_(static_cast<int>(std::log2(size_)), size_, GL_RGBA, GL_RGBA32F, GL_FLOAT) {
   Init();
   SetSize(size);
 }
@@ -34,9 +34,9 @@ void Ifft::Compute(Texture32F& input, Texture32F& buffer) const {
   float zeros2[2] = {0.0f, 0.0f};
   glClearTexImage(buffer.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
   ifft_shader_.Bind();
-  BindImageTexture(0, precomputed_data_, GL_READ_ONLY);
-  BindImageTexture(1, input, GL_READ_WRITE);
-  BindImageTexture(2, buffer, GL_READ_WRITE);
+  precomputed_data_.BindImage(0, GL_READ_ONLY);
+  input.BindImage(1, GL_READ_WRITE);
+  buffer.BindImage(2, GL_READ_WRITE);
 
   glUniform1i(9, true);
   for (int i = 0; i < log_size; ++i) {
@@ -55,27 +55,15 @@ void Ifft::Compute(Texture32F& input, Texture32F& buffer) const {
     glUniform1i(4, ping_pong);
     glDispatchCompute(size_ / 8, size_ / 8, 1);
   }
-
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-#ifndef NDEBUG
-  UnBindImageTexture(0, precomputed_data_, GL_READ_ONLY);
-  UnBindImageTexture(1, input, GL_READ_WRITE);
-  UnBindImageTexture(2, buffer, GL_READ_WRITE);
-#endif
-
   if (ping_pong) {
     std::swap(buffer, input);
   }
   permute_shader_.Bind();
   glUniform1ui(0, size_);
-  BindImageTexture(1, input, GL_READ_WRITE);
+  input.BindImage(1, GL_READ_WRITE);
   glDispatchCompute(size_ / 8, size_ / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-#ifndef NDEBUG
-  UnBindImageTexture(1, input, GL_READ_WRITE);
-#endif
 }
 
 void Ifft::SetSize(int size) {
@@ -84,15 +72,10 @@ void Ifft::SetSize(int size) {
   UpdateIndicesSsbo();
   precompute_shader_.Bind();
   glUniform1ui(0, size_);
-  BindImageTexture(0, precomputed_data_, GL_WRITE_ONLY);
-
+  precomputed_data_.BindImage(0, GL_WRITE_ONLY);
   auto log_size = static_cast<int>(std::log2(size_));
   glDispatchCompute(log_size, size_ / 2 / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-#ifndef NDEBUG
-  UnBindImageTexture(0, precomputed_data_, GL_WRITE_ONLY);
-#endif
 }
 
 std::uint32_t Ifft::Reverse(uint32_t x) {

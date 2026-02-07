@@ -5,30 +5,34 @@
 
 #include "../common/MapPoints.h"
 #include "../common/MouseTransform.h"
-#include "../common/Shader.h"
-#include "../common/Texture.h"
+#include "../render/Texture.h"
 #include "../common/Vbos.h"
 #include "../common/models/ModelManager.h"
 #include "../core/Ui.h"
 #include "../core/UiComplex.h"
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
+#include "../render/Shader.h"
 #include "IUiMode.h"
 #include "UiEditRoads.h"
 
 class UiPlacementMode final : public IUiMode {
  public:
-  UiPlacementMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
+  UiPlacementMode(UiRenderData& render_data, UiSlots& ui_slots,
                   WindowQueue& window_queue, UiEditSlots& ui_edit_slots,
                   UiEditConfigSlTxt& value_config, ModelManager& mdl_manager);
 
-  void Render() override;
+  void Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
-  void RenderPicking() override;
+  void RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
   void Setup() override;
 
   void BindDefaultCallbacks() override;
+
+  void PrerenderText(TextRenderer* text_renderer) override;
 
   void SetPlacementMode(Texture* tex_placement, int id);
 
@@ -49,6 +53,7 @@ class UiPlacementMode final : public IUiMode {
   Texture* GetPlacementTallGrass();
   Texture* GetPlacementUndergrowth();
 
+  UiSprite sp_mode_;
   UiSprite btn_trees_;
   UiSprite btn_bushes_;
   UiSprite btn_tall_grass;
@@ -70,6 +75,7 @@ class UiPlacementMode final : public IUiMode {
 
   MapPoints map_points_;
   MouseTransform mouse_transform_;
+  UiRenderData& render_data_; // TODO: temp (need to set placement)
 };
 
 namespace placement {

@@ -81,6 +81,8 @@ class Camera {
 
   [[nodiscard]] glm::vec3 GetOrigin() const noexcept { return origin_; }
 
+  void Reset(); // for all modes except UiPlayerMode
+
  protected:
   void Init();
 

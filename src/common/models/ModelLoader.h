@@ -10,9 +10,9 @@
 #include <memory>
 #include <vector>
 
-#include "../../modes/UiSharedResources.h"
+#include "../../ui/UiRenderData.h"
 #include "../Material.h"
-#include "../Texture.h"
+#include "../../render/Texture.h"
 #include "Aabb3D.h"
 
 bool LoadImageData(tinygltf::Image* image, const int image_idx,
@@ -60,7 +60,7 @@ struct ModelData {
 
 class ModelLoader {
  public:
-  ModelLoader(UiSharedResources& ui_shared_resources,
+  ModelLoader(UiRenderData& render_data,
               tinygltf::TinyGLTF& loader);
 
   ~ModelLoader();
@@ -90,7 +90,7 @@ class ModelLoader {
   Aabb3D GetAabb(const tinygltf::Model& model);
 
   std::vector<std::unique_ptr<ModelData>> models_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
   tinygltf::TinyGLTF& loader_;
 };
 

@@ -4,42 +4,41 @@
 
 UiRenderer::UiRenderer(GlfwContext& global_glfw_data_,
                        TileRenderer& tile_renderer, const Camera* camera)
-    : ui_shared_resources_(global_glfw_data_),
-      mdl_manager_(ui_shared_resources_),
-      ui_debugger_(ui_shared_resources_.vbo_ui_,
-                   ui_shared_resources_.vbo_ui_transform_,
+    : render_data_(global_glfw_data_),
+      mdl_manager_(render_data_),
+      ui_debugger_(render_data_.vbo_ui_,
+                   render_data_.vbo_ui_transform_,
                    global_glfw_data_.cursor_pos_tex_norm_),
-      windows_(),
-      text_renderer_(ui_shared_resources_,
+      text_renderer_(render_data_,
                      {data::VboIdMain::kTextRendererPrerenderSlot},
                      {data::VboIdMain::kTextRendererCursor}),
-      ui_slots_(ui_shared_resources_, text_renderer_),
-      ui_config_window_(ui_shared_resources_, windows_, text_renderer_),
-      ui_edit_slots_(ui_shared_resources_, windows_, text_renderer_),
-      ui_edit_1_(ui_shared_resources_, text_renderer_),
-      ui_edit_2_(ui_shared_resources_, text_renderer_),
-      terrain_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
+      ui_slots_(render_data_, text_renderer_),
+      ui_config_window_(render_data_, windows_, text_renderer_),
+      ui_edit_slots_(render_data_, windows_, text_renderer_),
+      ui_edit_1_(render_data_, text_renderer_),
+      ui_edit_2_(render_data_, text_renderer_),
+      terrain_(render_data_, ui_slots_, windows_, text_renderer_,
                ui_edit_slots_, ui_edit_1_, tile_renderer.cur_tile_,
                ui_config_window_),
-      water_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
+      water_(render_data_, ui_slots_, windows_, text_renderer_,
              ui_edit_slots_, ui_edit_1_, ui_edit_2_, ui_config_window_,
              mdl_manager_),
-      biomes_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
+      biomes_(render_data_, ui_slots_, windows_, text_renderer_,
               ui_edit_slots_, ui_edit_2_, mdl_manager_),
-      objects_(ui_shared_resources_, ui_slots_, windows_, text_renderer_,
+      objects_(render_data_, ui_slots_, windows_, text_renderer_,
                ui_edit_slots_, ui_edit_2_, mdl_manager_),
-      placement_(ui_shared_resources_, ui_slots_, windows_, ui_edit_slots_,
+      placement_(render_data_, ui_slots_, windows_, ui_edit_slots_,
                  ui_edit_2_, mdl_manager_),
-      tiles_(ui_shared_resources_, windows_),
-      player_(ui_shared_resources_, windows_, text_renderer_,
+      tiles_(render_data_, windows_),
+      player_(render_data_, windows_, text_renderer_,
               tile_renderer.cur_tile_, mdl_manager_),
-      ui_menu_(ui_shared_resources_, text_renderer_, windows_, &terrain_,
+      ui_menu_(render_data_, text_renderer_, windows_, &terrain_,
                &water_, &placement_, &objects_, &biomes_, &tiles_, &player_,
                cur_mode_),
       ui_settings_({data::VboIdMain::kSettingsDesk}, 2.0f,
                    {{data::VboIdMain::kSettingsDeskPinBack, []() {}},
                     {data::VboIdMain::kSettingsDeskPinPoint}},
-                   ui_shared_resources_, windows_,
+                   render_data_, windows_,
                    LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f},
                    LocalTransform{glm::vec2{0.2f, 0.0f}, 1.0f, 0.0f},
                    {data::VboIdMain::kSettingsResolutionLabel},
@@ -76,26 +75,14 @@ UiRenderer::UiRenderer(GlfwContext& global_glfw_data_,
                     {data::VboIdMain::kSettingsTipInfoOn1},
                     {data::VboIdMain::kSettingsTipInfoOn2},
                     {data::VboIdMain::kSettingsTipInfoOn3}}),
-      ui_confirmation_({data::VboIdMain::kConfirmationDesk}, 1.0f,
-                       ui_shared_resources_, windows_,
-                       {data::VboIdMain::kConfirmationAccept},
-                       {data::VboIdMain::kConfirmationDecline},
-                       {text_renderer_, data::VboIdMain::kConfirmationText}),
-      ui_caution_({data::VboIdMain::kCautionDesk}, 1.0f, ui_shared_resources_,
-                  windows_, {data::VboIdMain::kCautionText}),
-      ui_file_({data::VboIdMain::kFileDesk}, 1.0f, ui_shared_resources_,
-               windows_, {data::VboIdMain::kFileAccept},
-               {data::VboIdMain::kFileDecline},
-               {text_renderer_, {data::VboIdMain::kFileQuestion}},
-               {text_renderer_,
-                {data::VboIdMain::kFileTextLabel},
-                {data::VboIdMain::kFileTextBack}}),
+      ui_confirmation_(render_data_, text_renderer_),
+      ui_warning_(render_data_, text_renderer_),
       ui_tip_({data::VboIdMain::kTipInfoDesk}, 1.0f,
               {
                   {data::VboIdMain::kTipInfoDeskPinBack, []() {}},
                   {data::VboIdMain::kTipInfoDeskPinPoint},
               },
-              ui_shared_resources_, windows_, {data::VboIdMain::kTipInfoText}),
+              render_data_, windows_, {data::VboIdMain::kTipInfoText}),
       ui_loading_({data::VboIdMain::kLoading0}, {data::VboIdMain::kLoading1},
                   {data::VboIdMain::kLoading2}, {data::VboIdMain::kLoading3},
                   {data::VboIdMain::kLoading4}, {data::VboIdMain::kLoading5},
@@ -106,15 +93,17 @@ UiRenderer::UiRenderer(GlfwContext& global_glfw_data_,
           camera, {data::VboIdMain::kCompass}, {data::VboIdMain::kCompassNorth},
           {data::VboIdMain::kCompassSouth}, {data::VboIdMain::kCompassEast},
           {data::VboIdMain::kCompassWest}),
-      ui_layer_wireframe_(ui_shared_resources_),
-      ui_world_origin_(ui_shared_resources_),
-      ui_buttons_(ui_shared_resources_, text_renderer_),
-      ui_grid_(ui_shared_resources_) {
+      ui_layer_wireframe_(render_data_),
+      ui_world_origin_(render_data_),
+      ui_buttons_(render_data_, text_renderer_),
+      ui_grid_(render_data_) {
+  ui_edit_1_.AttachToHierarchy(ui_edit_slots_.hierarchy_);
+  ui_edit_2_.AttachToHierarchy(ui_edit_slots_.hierarchy_);
   Init();
 }
 
-void UiRenderer::Render() {
-  cur_mode_->Render();
+void UiRenderer::Render(TileRenderer* tile_renderer) {
+  cur_mode_->Render(tile_renderer, this);
 #ifndef NDEBUG
   debug::gUiAltMode = glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS;
   if (debug::gUiAltMode) {
@@ -134,11 +123,11 @@ void UiRenderer::Render() {
   ui_grid_.RenderGrid();
   ui_grid_.RenderBoundary();
 
-  cur_mode_->Render();
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.shader_sp_.Bind();
+  cur_mode_->Render(tile_renderer, this);
+  windows_.Render();
+  render_data_.tex_ui_.BindSampler(0);
+  glBindVertexArray(render_data_.vao_ui_);
+  render_data_.shader_sp_.Bind();
 
   ui_compass_.Render();
 
@@ -160,22 +149,29 @@ void UiRenderer::Render() {
     text_renderer_.RenderInput();
   }
   ui_buttons_.Render();
+  ui_confirmation_.Render();
+  ui_warning_.Render();
 }
 
-void UiRenderer::RenderPicking() {
-  cur_mode_->RenderPicking();
+void UiRenderer::RenderPicking(TileRenderer* tile_renderer) {
+  ui_confirmation_.RenderPicking();
+  ui_warning_.RenderPicking();
+  if (ui_confirmation_.IsActive() || ui_warning_.IsActive()) {
+    return;
+  }
 
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
+  cur_mode_->RenderPicking(tile_renderer, this);
+  windows_.RenderPicking();
 
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  glBindVertexArray(render_data_.vao_ui_);
+
+  render_data_.tex_ui_.BindSampler(0);
+  render_data_.shader_sp_picking_.Bind();
   ui_compass_.RenderPicking();
 
-  // because mode changes vao (3d model render)
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.shader_sp_picking_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
+  render_data_.tex_ui_.BindSampler(0);
+  render_data_.shader_sp_picking_.Bind();
+  glBindVertexArray(render_data_.vao_ui_);
 
   ui_buttons_.RenderPicking();
 }
@@ -184,19 +180,19 @@ void UiRenderer::Press(int key, int action) { ui_buttons_.Press(key, action); }
 
 void UiRenderer::Parse() {
   // TODO: GenerateAll() for all (maybe)
-  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.Parse("");
+  render_data_.glfw_context_.tile_renderer->cur_tile_.Parse("");
   terrain_.ui_edit_.GenerateAll();
   water_.ui_edit_river_.Generate();
   water_.ui_edit_ocean_.GenerateAll();
   biomes_.ui_edit_.Generate();
   objects_.ui_edit_.Generate();
   placement_.ui_edit_.Generate();
-  ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline();
+  render_data_.glfw_context_.tile_renderer->UpdatePipeline();
   terrain_.ui_bake_.Bake(1000.0f, 1000.0f, 0.1f);
 }
 
 void UiRenderer::Serialize() {
-  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.Serialize("");
+  render_data_.glfw_context_.tile_renderer->cur_tile_.Serialize("");
 }
 
 void UiRenderer::Init() {
@@ -207,21 +203,17 @@ void UiRenderer::Init() {
 }
 
 void UiRenderer::SetupGlobalData() {
-  ui_shared_resources_.glfw_context_.windows = &windows_;
-  ui_shared_resources_.glfw_context_.cur_mode = &cur_mode_;
-  ui_shared_resources_.glfw_context_.menu = &ui_menu_;
-  ui_shared_resources_.glfw_context_.ui_debugger = &ui_debugger_;
-  ui_shared_resources_.glfw_context_.ui_shared_resources =
-      &ui_shared_resources_;
-  ui_shared_resources_.glfw_context_.text_renderer = &text_renderer_;
-  ui_shared_resources_.glfw_context_.ui_renderer = this;
-}
-
-void UiRenderer::AskForConfirmation(data::TextId text_id,
-                                    std::function<void()>&& callable) {
-  ui_confirmation_.SetText(text_id);
-  ui_confirmation_.SetCallable(std::move(callable));
-  ui_confirmation_.Show();
+  render_data_.glfw_context_.windows = &windows_;
+  render_data_.glfw_context_.cur_mode = &cur_mode_;
+  render_data_.glfw_context_.menu = &ui_menu_;
+  render_data_.glfw_context_.ui_debugger = &ui_debugger_;
+  render_data_.glfw_context_.render_data =
+      &render_data_;
+  render_data_.glfw_context_.text_renderer = &text_renderer_;
+  render_data_.glfw_context_.ui_confirmation = &ui_confirmation_;
+  render_data_.glfw_context_.ui_warning = &ui_warning_;
+  render_data_.glfw_context_.text_renderer = &text_renderer_;
+  render_data_.glfw_context_.ui_renderer = this;
 }
 
 void UiRenderer::RenderWorldOrigin(glm::vec4 position, glm::vec4 color) {

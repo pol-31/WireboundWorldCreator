@@ -25,8 +25,7 @@ inline void* ByteOffset(std::size_t offset) noexcept {
 }
 
 void ModelData::BindTextures() const noexcept {
-  glActiveTexture(GL_TEXTURE0);
-  material.albedo.Bind();
+  material.albedo.BindSampler(1);
   //  glActiveTexture(GL_TEXTURE1);
   //  material.emission.Bind();
   //  glActiveTexture(GL_TEXTURE2);
@@ -87,9 +86,9 @@ void ModelData::RenderMeshInstanced(const tinygltf::Mesh& mesh,
   }
 }
 
-ModelLoader::ModelLoader(UiSharedResources& ui_shared_resources,
+ModelLoader::ModelLoader(UiRenderData& render_data,
                          tinygltf::TinyGLTF& loader)
-    : ui_shared_resources_(ui_shared_resources), loader_(loader) {}
+    : render_data_(render_data), loader_(loader) {}
 
 ModelLoader::~ModelLoader() {
   for (auto& model : models_) {
@@ -281,7 +280,7 @@ Texture ModelLoader::LoadTexture(std::string_view path,
   tex_path = tex_path.parent_path();
   fs::path image_uri{model.images[image_index].uri};
   tex_path /= image_uri.make_preferred();
-  return Texture(tex_path.string(), GL_RGBA);
+  return Texture(tex_path.string(), GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
 }
 
 Aabb3D ModelLoader::GetAabb(const tinygltf::Model& model) {

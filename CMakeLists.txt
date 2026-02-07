@@ -17,8 +17,7 @@ add_subdirectory(external EXCLUDE_FROM_ALL)
 
 add_executable(WireboundWorldCreator
         src/main.cpp
-        src/common/Shader.cpp
-        src/common/Texture.cpp
+        src/render/Shader.cpp
         src/common/TextRenderer.cpp
         src/common/Vbos.cpp
         src/core/TileRenderer.cpp
@@ -55,8 +54,6 @@ add_executable(WireboundWorldCreator
         src/core/UiSlots.h
         src/renderers/UiRenderer.cpp
         src/renderers/UiRenderer.h
-        src/modes/UiSharedResources.cpp
-        src/modes/UiSharedResources.h
         src/core/UiComplex.cpp
         src/core/UiComplex.h
         src/modes/UiTerrainConfig.h
@@ -82,7 +79,6 @@ add_executable(WireboundWorldCreator
         src/io/Camera.h
         src/common/models/ModelLoader.cpp
         src/common/models/ModelLoader.h
-        src/common/models/PlayerBase.h
         src/common/models/PlayerFpv.cpp
         src/common/models/PlayerFpv.h
         src/common/models/PlayerHuman.cpp
@@ -159,6 +155,10 @@ add_executable(WireboundWorldCreator
         src/core/UiModal.h
         src/renderers/GeoClipmaps.cpp
         src/renderers/GeoClipmaps.h
+        src/render/Texture.cpp
+        src/render/Texture.h
+        src/ui/UiRenderData.cpp
+        src/ui/UiRenderData.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)
@@ -168,6 +168,7 @@ target_include_directories(WireboundWorldCreator
         PUBLIC ${EXTERNAL_DIR}/glfw/include
         PUBLIC ${EXTERNAL_DIR}/glm/glm
         PUBLIC ${EXTERNAL_DIR}/utfcpp
+        PUBLIC ${EXTERNAL_DIR}/JoltPhysics-5.5.0/Jolt
 #        PUBLIC ${EXTERNAL_DIR}/stb
 #        PUBLIC ${CMAKE_SOURCE_DIR}/external/rapidjson/include
 #        PRIVATE ${CMAKE_SOURCE_DIR}/external/tinygltf
@@ -181,6 +182,7 @@ target_link_libraries(WireboundWorldCreator
         PUBLIC rapidjson
         PRIVATE tinygltf
         PUBLIC nanosvg
+        PUBLIC Jolt
 )
 
 # TODO: rapidjson don't like new gcc...

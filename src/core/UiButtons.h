@@ -9,7 +9,7 @@
 
 class UiButtons {
  public:
-  UiButtons(UiSharedResources& ui_shared_resources,
+  UiButtons(UiRenderData& render_data,
             TextRenderer& text_renderer);
 
   void Press(int key, int action);
@@ -46,7 +46,7 @@ class UiButtons {
   std::string text_keys_;
 
   std::vector<int> symbol_ids_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_UIBUTTONS_H_

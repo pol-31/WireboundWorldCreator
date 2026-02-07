@@ -1,11 +1,11 @@
 #include "UiEditBiomes.h"
 
-UiEditBiomes::UiEditBiomes(UiSharedResources& ui_shared_resources,
+UiEditBiomes::UiEditBiomes(UiRenderData& render_data,
                            UiEditSlots& ui_edit_slots,
                            UiEditConfigSlTxt& value_config)
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),
-      ui_shared_resources_(ui_shared_resources) {}
+      render_data_(render_data) {}
 
 void UiEditBiomes::HideAll() { ui_.ForceHide(); }
 
@@ -32,7 +32,7 @@ void UiEditBiomes::UpdateConfig() {
   glm::vec3 sun_direction = {inst.sun_x, inst.sun_y, inst.sun_z};
   glm::vec3 sun_color = {inst.sun_r, inst.sun_g, inst.sun_b};
   const auto& biome = Data()[selected_id_];
-  ui_.ui_shared_resources_.glfw_context_.tile_renderer->environment_
+  ui_.render_data_.glfw_context_.tile_renderer->environment_
       .SetEnvironment(biome.wind_angle, biome.wind_speed, sun_direction,
                       sun_color);
 }
@@ -88,6 +88,6 @@ BiomeTraits& UiEditBiomes::GetInstanceData() noexcept {
 }
 
 std::vector<BiomeTraits>& UiEditBiomes::Data() {
-  return ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+  return render_data_.glfw_context_.tile_renderer->cur_tile_
       .biomes_data;
 }

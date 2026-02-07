@@ -5,27 +5,25 @@
 #include "../../core/TileRenderer.h"
 #include "ModelLoader.h"
 
-void Obstacle::Render(UiSharedResources& ui_shared_resources) {
+void Obstacle::Render(UiRenderData& render_data) {
   if (instances_num_ == 0) {
     return;
   }
-  ui_shared_resources.shader_mdl_instanced_.Bind();
   auto map_scale =
-      ui_shared_resources.glfw_context_.tile_renderer->cur_tile_.map_scale;
+      render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
   glm::mat4 map_model =
       glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));  // upscaled
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(map_model));
   model_data_->BindTextures();
   model_data_->RenderModelNodesInstanced(instances_num_);
-  glBindVertexArray(0);
 }
 
-void Obstacle::SetPlacement(UiSharedResources& ui_shared_resources,
+void Obstacle::SetPlacement(UiRenderData& render_data,
                             const std::vector<GLuint>& positions) {
   std::vector<glm::mat4> model_matrices;
   model_matrices.reserve(positions.size());
   for (const auto& pos_id : positions) {
-    glm::vec3 position = GenPosition(ui_shared_resources, pos_id);
+    glm::vec3 position = GenPosition(render_data, pos_id);
     glm::quat rotation = GenRotation(pos_id);
     glm::vec3 scale = GenScale(pos_id);
     glm::mat4 object_model = glm::mat4{1.0f};
@@ -60,7 +58,7 @@ void Obstacle::GenerateVbo(const std::vector<glm::mat4>& model_matrices) {
 
 void Obstacle::DeleteVbo(GLuint vbo) { glDeleteBuffers(1, &vbo); }
 
-glm::vec3 Obstacle::GenPosition(UiSharedResources& ui_shared_resources,
+glm::vec3 Obstacle::GenPosition(UiRenderData& render_data,
                                 GLuint pos_id) {
   glm::vec3 position(0.0f);
   glm::uvec2 pos(pos_id & 1023, pos_id >> 10);
@@ -73,7 +71,7 @@ glm::vec3 Obstacle::GenPosition(UiSharedResources& ui_shared_resources,
   float tx = pos.x - x;  // 0..1
   float ty = pos.y - y;  // 0..1
 
-  const auto& h = ui_shared_resources.glfw_context_.tile_renderer->cur_tile_
+  const auto& h = render_data.glfw_context_.tile_renderer->cur_tile_
                       .terrain_heights_;
   int stride = 1024;
 

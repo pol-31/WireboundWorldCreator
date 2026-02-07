@@ -9,11 +9,11 @@
 #include "../core/UiComplex.h"
 #include "TerrainNoiseData.h"
 
-Texture32F GenAndSave(data::TextId tex_id);
+Texture32F GenAndSave(data::TextId text_id);
 
 class ITerrainNoise {
  public:
-  ITerrainNoise(std::string_view shader_path) : shader_(shader_path) {}
+  ITerrainNoise(std::string_view shader_path) : shader_(shader_path, {}) {}
 
   virtual std::span<float> GetValueSpan() noexcept = 0;
   virtual std::span<data::TextId> GetTextIdSpan() noexcept = 0;

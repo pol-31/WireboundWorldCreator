@@ -6,13 +6,13 @@
 #include "../io/Camera.h"
 #include "TileRenderer.h"
 
-UiGrid::UiGrid(UiSharedResources& ui_shared_resources)
-    : ui_shared_resources_(ui_shared_resources),
+UiGrid::UiGrid(UiRenderData& render_data)
+    : render_data_(render_data),
       shader_grid_("../shaders/TerrainGrid.vert",
-                   "../shaders/TerrainGrid.frag"),
-      shader_axis_("../shaders/TerrainGrid.vert", "../shaders/Axis.frag"),
+                   "../shaders/TerrainGrid.frag", {}),
+      shader_axis_("../shaders/TerrainGrid.vert", "../shaders/Axis.frag", {}),
       shader_world_boundary_("../shaders/TerrainGrid.vert",
-                             "../shaders/TerrainBoundary.frag") {
+                             "../shaders/TerrainBoundary.frag", {}) {
   Init();
 }
 
@@ -45,9 +45,9 @@ void UiGrid::RenderGrid() {
   glBindVertexArray(vao_);
   shader_grid_.Bind();
   auto map_scale =
-      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+      render_data_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   glUniform1f(1, map_scale);
-  auto camera_pos = ui_shared_resources_.glfw_context_.camera->GetPosition();
+  auto camera_pos = render_data_.glfw_context_.camera->GetPosition();
   glUniform3fv(2, 1, glm::value_ptr(camera_pos));
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
@@ -55,7 +55,7 @@ void UiGrid::RenderGrid() {
 void UiGrid::RenderAxis(float scale) {
   glBindVertexArray(vao_);
   shader_axis_.Bind();
-  auto camera_pos = ui_shared_resources_.glfw_context_.camera->GetPosition();
+  auto camera_pos = render_data_.glfw_context_.camera->GetPosition();
   glUniform3fv(0, 1, glm::value_ptr(camera_pos));
   glUniform1f(1, scale);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -65,9 +65,9 @@ void UiGrid::RenderBoundary() {
   glBindVertexArray(vao_);
   shader_world_boundary_.Bind();
   auto map_scale =
-      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+      render_data_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   glUniform1f(1, map_scale);
-  auto camera_pos = ui_shared_resources_.glfw_context_.camera->GetPosition();
+  auto camera_pos = render_data_.glfw_context_.camera->GetPosition();
   glUniform3fv(2, 1, glm::value_ptr(camera_pos));
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }

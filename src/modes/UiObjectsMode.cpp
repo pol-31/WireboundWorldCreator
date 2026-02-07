@@ -7,24 +7,21 @@
 #include "../io/Window.h"
 #include "../renderers/UiRenderer.h"
 
-UiObjectsMode::UiObjectsMode(UiSharedResources& ui_shared_resources,
+UiObjectsMode::UiObjectsMode(UiRenderData& render_data,
                              UiSlots& ui_slots, WindowQueue& window_queue,
                              TextRenderer& text_renderer,
                              UiEditSlots& ui_edit_slots,
                              UiEditConfigSlTxt& value_config,
                              ModelManager& mdl_manager)
-    : IUiMode(ui_shared_resources, {data::VboIdMain::kObjectsObjectsMode}),
-      ui_selection_(ui_shared_resources),
-      mouse_transform_(ui_shared_resources),
+    : sp_mode_(data::VboIdMain::kObjectsObjectsMode),
+      ui_selection_(render_data),
+      mouse_transform_(render_data),
       ui_slots_(ui_slots),
-      ui_edit_(ui_shared_resources, ui_edit_slots, value_config, mdl_manager),
+      ui_edit_(render_data, ui_edit_slots, value_config, mdl_manager),
       map_points_(mdl_manager),
       mdl_manager_(mdl_manager) {}
 
 void UiObjectsMode::Setup() {
-  ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
-      static_cast<int>(data::TextId::kHp),
-      static_cast<int>(data::TextId::kAttackSpeed) + 1);
   UpdateModelsList();
   ui_slots_.Setup(&ui_edit_, [this] {
     std::vector<MapPoint>* points = nullptr;
@@ -41,63 +38,56 @@ void UiObjectsMode::Setup() {
     map_points_.UpdateJointsBuffer();
   });
   BindDefaultCallbacks();
-  auto camera = ui_shared_resources_.glfw_context_.camera;
-  camera->SetPosition(glm::vec3{5.0f});
-  camera->SetPitch(45.0f);
-  camera->SetYaw(0.0f);
-  camera->SetOrigin(glm::vec3{0.0f});
-  camera->MoveRotateViewOrigin(0.0f, 0.0f);  // to update camera vectors
   ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
   ui_selection_.SetModeForce(SelectionMode::kRectangle);
 }
 
+void UiObjectsMode::PrerenderText(TextRenderer* text_renderer) {
+  text_renderer->PrerenderModeText(
+      static_cast<int>(data::TextId::kHp),
+      static_cast<int>(data::TextId::kAttackSpeed) + 1);
+}
+
 void UiObjectsMode::BindDefaultCallbacks() {
-  double xpos, ypos;
-  glfwGetCursorPos(gWindow, &xpos, &ypos);
-  lastX = xpos;
-  lastY = ypos;
   glfwSetScrollCallback(gWindow, objects::ScrollCallback);
   glfwSetMouseButtonCallback(gWindow, objects::MouseButtonCallback);
   glfwSetKeyCallback(gWindow, objects::KeyCallback);
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-void UiObjectsMode::Render() {
-  ui_shared_resources_.glfw_context_.tile_renderer->Render();
+void UiObjectsMode::Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+  const auto& render_data = ui_renderer->GetRenderData();
+  tile_renderer->Render();
   ui_selection_.Render();
   if (ui_slots_.GetSelectedSlotId() != -1) {
     auto color = ui_slots_.GetInstanceBaseData()->color;
     map_points_.RenderPoints(color);
     auto map_scale =
-        ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
-    map_points_.RenderJoints(ui_shared_resources_.glfw_context_.tile_renderer
+        render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
+    map_points_.RenderJoints(render_data.glfw_context_.tile_renderer
                                  ->cur_tile_.map_terrain_height,
                              map_scale, color);
   }
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data.tex_ui_.BindSampler(0);
+  glBindVertexArray(render_data.vao_ui_);
+  render_data.shader_sp_.Bind();
   sp_mode_.Render();
 
-  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
-  ui_slots_.Render(mouse_pos);
+  ui_slots_.Render();
 
-  ui_shared_resources_.glfw_context_.windows->Render();
-  auto camera = ui_shared_resources_.glfw_context_.camera;
-  camera->Update();  // const pos
 }
 
-void UiObjectsMode::RenderPicking() {
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
+void UiObjectsMode::RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+  const auto& render_data = ui_renderer->GetRenderData();
+  tile_renderer->RenderPicking();
   map_points_.RenderPickingPoints();
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data.tex_ui_.BindSampler(0);
+  glBindVertexArray(render_data.vao_ui_);
+  render_data.shader_sp_picking_.Bind();
   sp_mode_.RenderPicking();
   ui_slots_.RenderPicking();
-  ui_shared_resources_.glfw_context_.windows->RenderPicking();
 }
 
 void UiObjectsMode::UpdateModelsList() {
@@ -161,10 +151,6 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
   bool mod_ctrl = mods & GLFW_MOD_CONTROL;
   bool mod_shift = mods & GLFW_MOD_SHIFT;
   if (action == GLFW_PRESS) {
-    double xpos, ypos;
-    glfwGetCursorPos(gWindow, &xpos, &ypos);
-    lastX = xpos;
-    lastY = ypos;
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
       std::cout << "Pressed id: " << pressed_id << std::endl;
       bool ui_handled = glfw_context->windows->Press(pressed_id) ||
@@ -250,10 +236,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
 /// --- transform ---
 
 void BindCallbacksTransform() {
-  double xpos, ypos;
-  glfwGetCursorPos(gWindow, &xpos, &ypos);
-  lastX = xpos;
-  lastY = ypos;
   glfwSetScrollCallback(gWindow, nullptr);
   glfwSetMouseButtonCallback(gWindow, MouseButtonCallbackTransform);
   glfwSetKeyCallback(gWindow, KeyCallbackTransform);

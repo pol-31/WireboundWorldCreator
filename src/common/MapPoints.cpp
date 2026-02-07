@@ -8,7 +8,7 @@
 
 MapPointsBase::MapPointsBase(ModelManager& mdl_manager)
     : mdl_manager_(mdl_manager),
-      shader_joints_("../shaders/MapJoint.vert", "../shaders/MapJoint.frag") {
+      shader_joints_("../shaders/MapJoint.vert", "../shaders/MapJoint.frag", {0}) {
   Init();
 }
 
@@ -67,10 +67,8 @@ void MapPointsBase::RenderJoints(const Texture& hmap, float map_scale,
   }
   auto map_model = glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));
   shader_joints_.Bind();
-  glUniform1i(0, 0);
   glUniform4fv(2, false, glm::value_ptr(color));
-  glActiveTexture(GL_TEXTURE0);
-  hmap.Bind();
+  hmap.BindSampler(0);
   glUniformMatrix4fv(1, 1, false, glm::value_ptr(map_model));
   glBindVertexArray(vao_joints_);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, map_joints_->size() * 4);

@@ -6,14 +6,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "../../modes/UiSharedResources.h"
+#include "../../ui/UiRenderData.h"
 
 class ModelData;
 
 /// only color, no animations
 class MapMarker {
  public:
-  void Render(UiSharedResources& ui_shared_resources, glm::vec3 color,
+  void Render(UiRenderData& render_data, glm::vec3 color,
               glm::vec2 position = glm::vec2(0.0f),
               glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
               glm::vec3 scale = glm::vec3(1.0f));
@@ -24,7 +24,7 @@ class MapMarker {
 
   void DeSelect() { selected_ = false; }
 
-  glm::mat4 GenModelMat(UiSharedResources& ui_shared_resources,
+  glm::mat4 GenModelMat(UiRenderData& render_data,
                         glm::vec2 position, glm::quat rotation,
                         glm::vec3 scale);
 

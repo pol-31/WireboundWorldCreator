@@ -6,18 +6,18 @@
 #include "../io/Window.h"
 #include "../renderers/UiRenderer.h"
 
-UiPlayerMode::UiPlayerMode(UiSharedResources& ui_shared_resources,
+UiPlayerMode::UiPlayerMode(UiRenderData& render_data,
                            WindowQueue& window_queue,
                            TextRenderer& text_renderer, Tile& cur_tile,
                            ModelManager& mdl_manager)
-    : IUiMode(ui_shared_resources, {data::VboIdMain::kPlayerPlayerMode}),
+    : sp_mode_(data::VboIdMain::kPlayerPlayerMode),
       sp_hp_(data::VboIdMain::kPlayerHealthPoint),
-      ui_map_(ui_shared_resources, window_queue),
+      ui_map_(render_data, window_queue),
       ui_obj_info_(
           {data::VboIdMain::kPlayerGameObjInfoDesk}, 1.0f,
           {{data::VboIdMain::kPlayerGameObjInfoPinBack, []() {}},
            {data::VboIdMain::kPlayerGameObjInfoPinPoint}},
-          ui_shared_resources_, window_queue,
+          render_data, window_queue,
           {data::VboIdMain::kPlayerGameObjInfoEnemy},
           {data::VboIdMain::kPlayerGameObjInfoFriend},
           {data::VboIdMain::kPlayerGameObjInfoNeutal},
@@ -25,36 +25,38 @@ UiPlayerMode::UiPlayerMode(UiSharedResources& ui_shared_resources,
           {text_renderer, {data::VboIdMain::kPlayerGameObjInfoName}},
           {text_renderer, {data::VboIdMain::kPlayerGameObjInfoCharacteristic}},
           {text_renderer, {data::VboIdMain::kPlayerGameObjInfoValue}}),
-      ui_selection_(ui_shared_resources),
+      ui_selection_(render_data),
+      render_data_(render_data),
       mdl_manager_(mdl_manager) {}
 
 void UiPlayerMode::Setup() {
-  ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
-      static_cast<int>(data::TextId::kHp),
-      static_cast<int>(data::TextId::kAttackSpeed) + 1);
   BindDefaultCallbacks();
   ui_selection_.SetIdBounds(details::kIdOffsetObjects, details::kIdOffsetUi);
   ui_selection_.SetModeForce(SelectionMode::kRectangle);
-  auto camera = ui_shared_resources_.glfw_context_.camera;
+  auto camera = render_data_.glfw_context_.camera;
   camera->SetPitch(45.0f);
   camera->SetOriginDist(10.0f);
 }
 
+void UiPlayerMode::PrerenderText(TextRenderer* text_renderer) {
+  text_renderer->PrerenderModeText(
+      static_cast<int>(data::TextId::kHp),
+      static_cast<int>(data::TextId::kAttackSpeed) + 1);
+}
+
 void UiPlayerMode::BindDefaultCallbacks() {
-  double xpos, ypos;
-  glfwGetCursorPos(gWindow, &xpos, &ypos);
-  lastX = xpos;
-  lastY = ypos;
   glfwSetScrollCallback(gWindow, player::ScrollCallback);
   glfwSetMouseButtonCallback(gWindow, player::MouseButtonCallback);
   glfwSetKeyCallback(gWindow, player::KeyCallback);
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-void UiPlayerMode::Render() {
-  auto camera = ui_shared_resources_.glfw_context_.camera;
+void UiPlayerMode::Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+  const auto& render_data = ui_renderer->GetRenderData();
+  auto camera = render_data.glfw_context_.camera;
   auto map_scale =
-      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+      render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
   glm::vec3 camera_pos;
   if (mdl_manager_.player_.IsFpv()) {
     camera_pos = mdl_manager_.player_.GetFpv().GetPosition();
@@ -63,33 +65,28 @@ void UiPlayerMode::Render() {
   }
   camera->SetOrigin(camera_pos * map_scale);
   camera->MoveRotateViewOriginDist(0.0f);  // update camera vectors after origin
-  camera->Update();
-
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderInGame(camera);
+  render_data.glfw_context_.tile_renderer->RenderInGame(camera);
   mdl_manager_.Update();
   mdl_manager_.Render();
-
   ui_selection_.Render();
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.shader_sp_.Bind();
+
+  render_data.tex_ui_.BindSampler(0);
+  glBindVertexArray(render_data.vao_ui_);
+  render_data.shader_sp_.Bind();
   sp_mode_.Render();
   sp_hp_.Render();
   ui_map_.Render(&mdl_manager_);
-  ui_shared_resources_.glfw_context_.windows->Render();
 }
 
-void UiPlayerMode::RenderPicking() {
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.shader_sp_picking_.Bind();
+void UiPlayerMode::RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+  const auto& render_data = ui_renderer->GetRenderData();
+  tile_renderer->RenderPicking();
+  glBindVertexArray(render_data.vao_ui_);
+  render_data.shader_sp_picking_.Bind();
   sp_mode_.RenderPicking();
   sp_hp_.RenderPicking();
   ui_map_.RenderPicking();
-  ui_shared_resources_.glfw_context_.windows->RenderPicking();
   mdl_manager_.RenderPicking();
 }
 
@@ -175,10 +172,6 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
   bool mod_ctrl = mods & GLFW_MOD_CONTROL;
   bool mod_shift = mods & GLFW_MOD_SHIFT;
   if (action == GLFW_PRESS) {
-    double xpos, ypos;
-    glfwGetCursorPos(gWindow, &xpos, &ypos);
-    lastX = xpos;
-    lastY = ypos;
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
       auto pressed_id = glfw_context->picking_fbo->GetIdByMousePos(cursor_pos);
       std::cout << "Pressed id: " << pressed_id << std::endl;

@@ -14,19 +14,23 @@
 
 class UiWaterMode final : public IUiMode {
  public:
-  UiWaterMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
+  UiWaterMode(UiRenderData& render_data, UiSlots& ui_slots,
               WindowQueue& window_queue, TextRenderer& text_renderer,
               UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config_ocean,
               UiEditConfigSlTxt& value_config_river,
               UiConfigWindow& ui_config_window, ModelManager& mdl_manager);
 
-  void Render() override;
+  void Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
-  void RenderPicking() override;
+  void RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
   void Setup() override;
 
   void BindDefaultCallbacks() override;
+
+  void PrerenderText(TextRenderer* text_renderer) override;
 
   void HandleSelection(const std::set<GLuint>& selected_ids);
 
@@ -38,6 +42,7 @@ class UiWaterMode final : public IUiMode {
 
   void OnSelectedSlotChanged(bool is_ocean);
 
+  UiSprite sp_mode_;
   UiSprite btn_bake_ocean_;
   UiSprite btn_bake_river_;
   UiSprite btn_update_;

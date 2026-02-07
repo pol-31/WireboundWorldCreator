@@ -3,21 +3,7 @@
 
 #include <glad/glad.h>
 
-#include "Texture.h"
-
 namespace utility {
-
-// TODO: GLuint?
-inline void BindImageTexture(int bind_id, const Texture& texture,
-                             GLenum access) {
-  glBindImageTexture(bind_id, texture.GetId(), 0, GL_FALSE, 0, access,
-                     texture.GetFormat());
-}
-
-inline void UnBindImageTexture(int bind_id, const Texture& texture,
-                               GLenum access) {
-  glBindImageTexture(bind_id, 0, 0, GL_FALSE, 0, access, texture.GetFormat());
-}
 
 // why now class instances:
 // - to reduce amount of single Create/Delete calls

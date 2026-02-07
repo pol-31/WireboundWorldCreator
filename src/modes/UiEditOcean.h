@@ -10,11 +10,11 @@
 #include "UiEdit.h"
 #include "UiEditShared.h"
 #include "UiOceanConfig.h"
-#include "UiSharedResources.h"
+#include "../ui/UiRenderData.h"
 
 class UiEditOcean : public IUiEdit {
  public:
-  UiEditOcean(UiSharedResources& ui_shared_resources,
+  UiEditOcean(UiRenderData& render_data,
               TextRenderer& text_renderer, UiEditSlots& ui_edit_slots,
               UiEditConfigSlCfg& value_config, UiConfigWindow& ui_ocean_config);
 
@@ -56,7 +56,7 @@ class UiEditOcean : public IUiEdit {
   UiEditConfigSlCfg& value_config_;
   UiConfigWindow& ui_ocean_config_;
   std::array<OceanLayerConfig, 3> ocean_layers_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_UIEDITOCEAN_H

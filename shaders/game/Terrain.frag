@@ -2,7 +2,6 @@
 
 out vec4 out_color;
 
-layout(location = 1) uniform sampler2D tex_color;  // Diffuse color texture
 layout(location = 2) uniform sampler2D tex_nmap;   // Normal map (GL_RG)
 layout(location = 3) uniform sampler2D tex_occlusion;   // Normal map (GL_RG)
 

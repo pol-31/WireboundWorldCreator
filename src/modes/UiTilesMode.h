@@ -1,31 +1,30 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_UITILESMODE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_UITILESMODE_H_
 
-#include "../common/Vbos.h"
+#include "../core/Ui.h"
+#include "../core/WindowQueue.h"
+#include "../ui/UiRenderData.h"
 #include "IUiMode.h"
 
 class UiTilesMode final : public IUiMode {
  public:
-  explicit UiTilesMode(UiSharedResources& ui_shared_resources,
+  explicit UiTilesMode(UiRenderData& render_data,
                        WindowQueue& window_queue);
 
-  void Render() override;
-  void RenderPicking() override;
+  void Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+
+  void RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
   void Setup() override;
 
-  void BindDefaultCallbacks() override {}
+  void BindDefaultCallbacks() override;
+
+  void PrerenderText(TextRenderer* text_renderer) override;
 
  protected:
-  static void ScrollCallback(GLFWwindow* window, double xoffset,
-                             double yoffset);
-
-  static void MouseButtonCallback(GLFWwindow* window, int button, int action,
-                                  int mods);
-
-  static void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
-                          int mods);
-
+  UiSprite sp_mode_;
   UiSprite btn_up_;
   UiSprite btn_down_;
   UiSprite btn_left_;

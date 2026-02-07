@@ -7,23 +7,21 @@
 #include "../../io/Camera.h"
 #include "ModelLoader.h"
 
-PlayerFpv::PlayerFpv(UiSharedResources& ui_shared_resources) {
+PlayerFpv::PlayerFpv(UiRenderData& render_data) {
   id_ = gEntityIdManager.PlayerFpvId;
 }
 
-void PlayerFpv::Render(UiSharedResources& ui_shared_resources) {
-  ui_shared_resources.shader_mdl_.Bind();
+void PlayerFpv::Render(float map_scale) {
   model_data_->BindTextures();
-  auto model = GenModelMat(ui_shared_resources, 1.f);
+  auto model = GenModelMat(map_scale);
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
   model_data_->RenderModelNodes();
   glBindVertexArray(0);
 }
 
-void PlayerFpv::RenderRigged(UiSharedResources& ui_shared_resources) {
-  ui_shared_resources.shader_animated_mdl_.Bind();
+void PlayerFpv::RenderRigged(float map_scale) {
   model_data_->BindTextures();
-  auto model = GenModelMat(ui_shared_resources, 1.f);
+  auto model = GenModelMat(map_scale);
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
   model_data_->RenderModelNodes();
   glBindVertexArray(0);
@@ -83,7 +81,7 @@ void PlayerFpv::ResetRotation() {
   euler_angles = glm::vec3(0.0f);
 }
 
-void PlayerFpv::Update(UiSharedResources& ui_shared_resources) {
+void PlayerFpv::Update(UiRenderData& render_data) {
   const float stiffness = 1000.0f;  // ground pushback strength
   const float damping = 0.98f;      // stops infinite spin
   const float inertia = 0.01f;
@@ -92,6 +90,8 @@ void PlayerFpv::Update(UiSharedResources& ui_shared_resources) {
   const float mass = 2.0f;
   float angle_speed = glm::radians(5.0f);
   float dt = gDeltaTime;
+  const float max_thrust = mass * g * 2.5f;  // allow 2.5g lift
+
 
   /// --- UpdateInput
   throttle_ += ((thrust_up_ ? +1.f : 0.f) - (thrust_down_ ? 1.f : 0.f)) * dt;
@@ -107,7 +107,6 @@ void PlayerFpv::Update(UiSharedResources& ui_shared_resources) {
   roll_rate_ = glm::clamp(roll_rate_, -1.f, 1.f);
   /// ---
 
-  float max_thrust = mass * g * 2.5f;  // allow 2.5g lift
   float thrust_force = throttle_ * max_thrust;
   glm::vec3 local_up = rotation_ * glm::vec3(0, 1, 0);
   float gravity = -g * mass * (position_.y / 2.0f + 1.0f);
@@ -127,7 +126,7 @@ void PlayerFpv::Update(UiSharedResources& ui_shared_resources) {
   float arms_num = std::size(arms);
   for (auto arm : arms) {
     glm::vec3 motorWorld = rotation_ * arm + fpv_bottom;
-    float ground = ui_shared_resources.glfw_context_.tile_renderer->cur_tile_
+    float ground = render_data.glfw_context_.tile_renderer->cur_tile_
                        .GetPositionY32(motorWorld.x, motorWorld.z);
     float motor_thrust = thrust_force / arms_num;
     float height_difference = motorWorld.y - ground;

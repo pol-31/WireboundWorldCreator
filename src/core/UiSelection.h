@@ -5,8 +5,8 @@
 
 #include <set>
 
-#include "../common/Shader.h"
-#include "../modes/UiSharedResources.h"
+#include "../ui/UiRenderData.h"
+#include "../render/Shader.h"
 #include "Ui.h"
 
 class TerrainTraits;
@@ -17,7 +17,7 @@ class UiSelection {
  public:
   static int gMaxPoints;
 
-  UiSelection(UiSharedResources& ui_shared_resources);
+  UiSelection(UiRenderData& render_data);
 
   ~UiSelection() { DeInit(); }
 
@@ -100,7 +100,7 @@ class UiSelection {
   std::set<GLuint> ApplySelectionIntoSet();
 
   UiSprite sp_circle_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
   Shader shader_;
   Shader shader_area_;
   Shader shader_draw_selection_;

@@ -1,13 +1,13 @@
 #include "UiEditObjects.h"
 
-UiEditObjects::UiEditObjects(UiSharedResources& ui_shared_resources,
+UiEditObjects::UiEditObjects(UiRenderData& render_data,
                              UiEditSlots& ui_edit_slots,
                              UiEditConfigSlTxt& value_config,
                              ModelManager& mdl_manager)
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),
       mdl_manager_(mdl_manager),
-      ui_shared_resources_(ui_shared_resources) {}
+      render_data_(render_data) {}
 
 void UiEditObjects::HideAll() { ui_.ForceHide(); }
 
@@ -95,6 +95,6 @@ void UiEditObjects::SetModels(
 }
 
 std::vector<ObjectTraits>& UiEditObjects::Data() {
-  return ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+  return render_data_.glfw_context_.tile_renderer->cur_tile_
       .objects_data;
 }

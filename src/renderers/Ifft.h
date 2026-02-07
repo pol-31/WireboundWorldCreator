@@ -1,8 +1,8 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_RENDERERS_IFFT_H_
 #define WIREBOUNDWORLDCREATOR_SRC_RENDERERS_IFFT_H_
 
-#include "../common/Shader.h"
-#include "../common/Texture.h"
+#include "../render/Texture.h"
+#include "../render/Shader.h"
 
 class Ifft {
  public:

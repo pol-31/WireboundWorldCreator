@@ -8,12 +8,12 @@
 #include "../core/TileRenderer.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
-#include "UiSharedResources.h"
+#include "../ui/UiRenderData.h"
 #include "traits/BiomeTraits.h"
 
 class UiEditBiomes : public IUiEdit {
  public:
-  UiEditBiomes(UiSharedResources& ui_shared_resources,
+  UiEditBiomes(UiRenderData& render_data,
                UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
 
   void HideAll() override;
@@ -51,7 +51,7 @@ class UiEditBiomes : public IUiEdit {
  private:
   std::array<UiEditConfigSlTxt::Trait, BiomeTraits::GetTraitsSize()> traits_;
   UiEditConfigSlTxt& value_config_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIEDITBIOMES_H_

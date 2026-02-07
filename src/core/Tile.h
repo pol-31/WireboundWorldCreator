@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../common/Texture.h"
+#include "../render/Texture.h"
 #include "../modes/traits/BiomeTraits.h"
 #include "../modes/traits/ObjectTraits.h"
 #include "../modes/traits/OceanTraits.h"
@@ -92,22 +92,13 @@ struct Tile {
   std::vector<float> terrain_heights_;
   std::vector<float> water_heights_;
 
-  /// we need this at the beginning of working with each tile, so we could
-  /// remove all last point sets and thus restore water height map to its
-  /// initial state (input map_water_height + water from external tiles)
-  // std::vector<uint8_t> water_heights_init_;
-
-  // std::vector<ObjGraphTraits>* objects_ = nullptr;
+  std::vector<std::vector<float>> m_maxPyramid;
 
   Tile();
 
   void OnScroll(float yoffset);
 
   void UpdateMapScale(float delta_time);
-
-  void UpScale();
-
-  void DownScale();
 
   /// reset all baked hmaps (but not sources & objects with pos)
   void ResetTerrain();

@@ -17,18 +17,22 @@ struct GLFWwindow;
 
 class UiTerrainMode final : public IUiMode {
  public:
-  UiTerrainMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
+  UiTerrainMode(UiRenderData& render_data, UiSlots& ui_slots,
                 WindowQueue& window_queue, TextRenderer& text_renderer,
                 UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config,
                 Tile& cur_tile, UiConfigWindow& ui_config_windowm);
 
-  void Render() override;
+  void Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
-  void RenderPicking() override;
+  void RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
   void Setup() override;
 
   void BindDefaultCallbacks() override;
+
+  void PrerenderText(TextRenderer* text_renderer) override;
 
   void CancelTransform();
 
@@ -38,6 +42,7 @@ class UiTerrainMode final : public IUiMode {
 
   void Reset();
 
+  UiSprite sp_mode_;
   UiSprite btn_update_;
   UiSprite btn_reset_;
   UiSprite btn_bake_;

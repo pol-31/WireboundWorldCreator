@@ -3,17 +3,17 @@
 
 #include <glm/glm.hpp>
 
-#include "../modes/UiSharedResources.h"
+#include "../ui/UiRenderData.h"
 #include "Ui.h"
 
 class UiWorldOrigin {
  public:
-  UiWorldOrigin(UiSharedResources& ui_shared_resources);
+  UiWorldOrigin(UiRenderData& render_data);
 
   void Render(glm::vec4 position, glm::vec4 color);
 
  private:
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
   UiSprite sp_origin_;
 };
 

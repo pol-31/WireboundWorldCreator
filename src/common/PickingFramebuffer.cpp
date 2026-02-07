@@ -7,17 +7,14 @@
 #include "Details.h"
 #include "OpenGlUtility.h"
 
-PickingFramebuffer::PickingFramebuffer()
-    : texture_(gWindowWidth, gWindowHeight, GL_R32UI, GL_NEAREST,
-               GL_CLAMP_TO_EDGE) {
-  Init();
+PickingFramebuffer::PickingFramebuffer() {
+  UpdateResolution();
 }
 
 void PickingFramebuffer::UpdateResolution() {
   DeInit();
-  texture_ = TextureUi(gWindowWidth, gWindowHeight, GL_R32UI, GL_NEAREST,
-                       GL_CLAMP_TO_EDGE);
-  texture_.Bind();
+  texture_ = TextureUi(gWindowWidth, gWindowHeight, GL_RED_INTEGER, GL_R32UI,
+    GL_UNSIGNED_INT, GL_NEAREST, GL_CLAMP_TO_EDGE);
   Init();
 }
 
@@ -53,7 +50,7 @@ void PickingFramebuffer::Bind() const {
 }
 
 void PickingFramebuffer::BindTexture(int bind_id, GLenum access) const {
-  utility::BindImageTexture(bind_id, texture_, access);
+  texture_.BindImage(bind_id, access);
 }
 
 void PickingFramebuffer::StoreTexture() const {

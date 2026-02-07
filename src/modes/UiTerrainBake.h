@@ -11,7 +11,7 @@ class UiTerrainBake final : public UiWindowAppear {
   using Base = UiWindowAppear;
 
   UiTerrainBake(Tile& cur_tile, UiSprite&& sprite, float size_scale,
-                UiToggle2&& pin, UiSharedResources& ui_shared_resources,
+                UiToggle2&& pin, UiRenderData& render_data,
                 WindowQueue& window_queue, TextRenderer& text_renderer,
                 UiSprite&& accept, UiTextModeId&& erosion_label,
                 UiTextInput&& erosion_input, UiTextModeId&& weathering_label,
@@ -88,7 +88,7 @@ class UiTerrainBake final : public UiWindowAppear {
   UiEventHandler ui_event_handler_;
   UiHierarchy hierarchy_;
 
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 
   Texture32F& tex_hmap_;
   std::vector<GLfloat>& hmap_heights_;

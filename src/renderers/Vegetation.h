@@ -3,8 +3,8 @@
 
 #include <glad/glad.h>
 
-#include "../common/Shader.h"
-#include "../common/Texture.h"
+#include "../render/Texture.h"
+#include "../render/Shader.h"
 
 struct GeoSurface;
 

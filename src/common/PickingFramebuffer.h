@@ -6,7 +6,7 @@
 #include <set>
 
 #include "../io/Window.h"
-#include "Texture.h"
+#include "../render/Texture.h"
 
 class PickingFramebuffer {
  public:
@@ -39,7 +39,7 @@ class PickingFramebuffer {
 
   void DeInit();
 
-  GLuint fbo_{0};
+  GLuint fbo_ = 0;
   TextureUi texture_;
 };
 

@@ -12,7 +12,7 @@ class IUiEdit;
 class UiSlots : public UiBase {
  public:
   UiSlots(
-      UiSharedResources& ui_shared_resources, TextRenderer& text_renderer,
+      UiRenderData& render_data, TextRenderer& text_renderer,
       std::function<void()> on_selection = [] {});
 
   UiSlots(UiSlots&& other) = delete;
@@ -28,13 +28,13 @@ class UiSlots : public UiBase {
   void RemoveGraph(GLuint id);
   [[nodiscard]] int GetSize() const noexcept;
 
-  void Render(glm::vec2 mouse_pos);
+  void Render();
 
   void RenderPicking();
 
   int GetHoveredSlotId();
 
-  int GetSelectedSlotId();
+  int GetSelectedSlotId() const;
 
   bool Press(int pressed_id);
 
@@ -54,6 +54,10 @@ class UiSlots : public UiBase {
 
   /// to init values
   void AddInstance(BaseInstanceData&& data);
+
+  [[nodiscard]] bool IsSelected() const noexcept {
+    return GetSelectedSlotId() != -1;
+  }
 
   static constexpr size_t gMaxLayers = 10;
 
@@ -86,7 +90,7 @@ class UiSlots : public UiBase {
   UiSprite slot_selected_;
 
   UiWindowSlider sl_data_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
   UiEventHandler ui_event_handler_;
   UiHierarchy hierarchy_;
 };

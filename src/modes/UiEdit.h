@@ -12,7 +12,7 @@ class UiEditSlots final : public UiWindowAppear {
  public:
   using Base = UiWindowAppear;
 
-  UiEditSlots(UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+  UiEditSlots(UiRenderData& render_data, WindowQueue& window_queue,
               TextRenderer& text_renderer);
 
   void SetUp(IUiEdit* ui_edit);
@@ -42,7 +42,7 @@ class UiEditSlots final : public UiWindowAppear {
 
   UiEventHandler ui_event_handler_;
   UiHierarchy hierarchy_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 class IUiEdit {

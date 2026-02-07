@@ -19,18 +19,18 @@
 //   next_pos.x += symbol_width / 8.0f;
 //  due to sprite tex coords in Vbos.cpp (auto-generated)
 
-TextRenderer::TextRenderer(UiSharedResources& ui_shared_resources,
+TextRenderer::TextRenderer(UiRenderData& render_data,
                            UiSprite&& prerender_text_slot,
                            UiSprite&& sprite_cursor)
-    : tex_bitmap_("../assets/tex_ascii.png", GL_RED),
+    : tex_bitmap_("../assets/tex_ascii.png", GL_RED, GL_RED, GL_UNSIGNED_BYTE),
       prerender_text_slot_(std::move(prerender_text_slot)),
       sprite_cursor_(std::move(sprite_cursor)),
-      tex_menu_(1024, 1024, GL_RED),
-      tex_mode_(1024, 1024, GL_RED),
-      render_shader_("../shaders/Text.vert", "../shaders/Text.frag"),
+      tex_menu_(1024, 1024, GL_RED, GL_RED, GL_UNSIGNED_BYTE),
+      tex_mode_(1024, 1024, GL_RED, GL_RED, GL_UNSIGNED_BYTE),
+      render_shader_("../shaders/Text.vert", "../shaders/Text.frag", {0}),
       render_shader_picking_("../shaders/Sprite.vert",
-                             "../shaders/SpritePicking.frag"),
-      ui_shared_resources_(ui_shared_resources) {
+                             "../shaders/SpritePicking.frag", {}),
+      render_data_(render_data) {
   Init();
 }
 
@@ -38,7 +38,6 @@ TextRenderer::~TextRenderer() { DeInit(); }
 
 void TextRenderer::Init() {
   render_shader_.Bind();
-  glUniform1i(0, 0);
   glUniform1f(2, 1.0f);
   glUniform1f(1, 1.0f);
   GLuint fbos[2];
@@ -58,9 +57,7 @@ void TextRenderer::RenderTextSelected(UiSprite& text_slot,
                                       std::string_view text,
                                       glm::vec2 translate) {
   float symbol_height = font::gFullHeight / 1024.0f;
-
-  glActiveTexture(GL_TEXTURE0);
-  tex_bitmap_.Bind();
+  tex_bitmap_.BindSampler(0);
   render_shader_.Bind();
   float ui_scale =
       debug::gUiTransforms[4 * (text_slot.GetId() - details::kIdOffsetUi)]
@@ -114,8 +111,7 @@ void TextRenderer::RenderText(UiSprite& text_slot, std::string_view text,
                               float scale, glm::vec2 position,
                               Alignment alignment) {
   float symbol_height = font::gFullHeight * scale / 1024.0f;
-  glActiveTexture(GL_TEXTURE0);
-  tex_bitmap_.Bind();
+  tex_bitmap_.BindSampler(0);
   render_shader_.Bind();
   text_slot.SetScale(scale);
   float ui_scale =
@@ -256,8 +252,7 @@ void TextRenderer::RenderMenuModeText(
     const std::vector<TextRenderer::Aabb>& tex_coords, UiSprite& text_slot,
     int id) {
   text_slot_ = &text_slot;
-  glActiveTexture(GL_TEXTURE0);
-  tex_prerender.Bind();
+  tex_prerender.BindSampler(0);
   render_shader_.Bind();
   glUniform3f(4, 0.2118f, 0.1647f, 0.0745f);
   // TODO: dbg at() <- error possible if menu_id <-> mode_id
@@ -314,7 +309,7 @@ void TextRenderer::PrerenderImpl(int start, int end, Texture& texture,
     coords.push_back(RenderPhrase(data::gText[i]));
   }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  texture.Store("prerenderedTexture.png", 1, GL_RED);
+  // texture.StoreImage("prerenderedTexture.png", 1);
 }
 
 TextRenderer::Aabb TextRenderer::RenderPhrase(std::string_view text) {
@@ -393,7 +388,7 @@ void TextRenderer::StopInput() {
   input_data_->SetText(buffer_input_);
   input_data_->SetTextTranslate(glm::vec2(0.0f));
   input_data_ = nullptr;
-  (*ui_shared_resources_.glfw_context_.cur_mode)->Setup();
+  (*render_data_.glfw_context_.cur_mode)->Setup();
   input_in_progress_ = false;
 }
 
@@ -440,13 +435,13 @@ void TextRenderer::RenderInput() {
     smt_selected_ = true;
   }
   /// blur background, render back
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
+  render_data_.shader_sp_.Bind();
   glUniform1f(1, 1.0f);
   input_data_->sp_back_.Render();
 
   /// render text & selected text
-  tex_bitmap_.Bind();
+  tex_bitmap_.BindSampler(0);
   render_shader_.Bind();
   input_data_->SetText(buffer_input_);
 
@@ -468,8 +463,8 @@ void TextRenderer::RenderInput() {
   glDisable(GL_SCISSOR_TEST);
 
   /// render cursor
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
+  render_data_.shader_sp_.Bind();
   CalculateCursorPos(input_data_->sp_text_, input_data_->text_input_);
   sprite_cursor_.Render();  // has it's position
 }
@@ -478,7 +473,7 @@ int TextRenderer::CursorFromMousePos() {
   float ui_scale = debug::gUiTransforms[4 * (input_data_->sp_text_.GetId() -
                                              details::kIdOffsetUi)]
                        .scale;
-  auto mouse_pos_x = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_.x;
+  auto mouse_pos_x = render_data_.glfw_context_.cursor_pos_tex_norm_.x;
   float next_pos = input_data_->GetLeftBorder();
   int i = 0;
   for (; i < buffer_input_.size(); ++i) {
@@ -636,7 +631,7 @@ float TextRenderer::CalculateLineLength(std::string_view text,
 }
 
 bool TextRenderer::IsCursorOnInputLine() {
-  auto cursor_pos_y = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_.y;
+  auto cursor_pos_y = render_data_.glfw_context_.cursor_pos_tex_norm_.y;
   return cursor_pos_y < input_data_->sp_back_.GetTopBorder() &&
          cursor_pos_y > input_data_->sp_back_.GetBottomBorder();
 }

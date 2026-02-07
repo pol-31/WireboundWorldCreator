@@ -4,8 +4,8 @@
 #include <glm/glm.hpp>
 
 #include "../common/Material.h"
-#include "../common/Shader.h"
 #include "../core/Tile.h"
+#include "../render/Shader.h"
 #include "GeoClipmaps.h"
 
 struct BaseInstanceData;
@@ -39,8 +39,6 @@ class TerrainRenderer {
 
   void InitAo();
 
-  void UpdateShaders();  // for shader dbg in run-time
-
   void BindUniforms();
 
   Tile& tile_;
@@ -50,7 +48,6 @@ class TerrainRenderer {
   Shader shader_selection_;
   Shader shader_wireframe_;
   Shader shader_picking_;
-  Texture nmap_;
 
   Material mat_grass_;
   Material mat_mud_;

@@ -1,7 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_GAUSSIANNOISE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_GAUSSIANNOISE_H_
 
-#include "Texture.h"
+#include "../render/Texture.h"
 
 class GaussianNoise {
  public:

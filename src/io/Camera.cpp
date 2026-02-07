@@ -153,7 +153,7 @@ void Camera::MoveRotateViewOrigin(float xoffset, float yoffset) {
   float sensitivity = speed_ * gDeltaTime;
   yaw_ -= xoffset * sensitivity;
   pitch_ -= yoffset * sensitivity;
-  pitch_ = std::clamp(pitch_, -89.0f, 89.0f);
+  pitch_ = glm::clamp(pitch_, -89.0f, 89.0f);
 
   bool snap = (glfwGetKey(gWindow, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS) ||
               (glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS);
@@ -198,4 +198,12 @@ void Camera::MoveRotateViewOriginDist(float xoffset) {
       glm::normalize(glm::cross(direction_front_, direction_world_up_));
   direction_up_ = glm::cross(direction_right_, direction_front_);
   direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
+}
+
+void Camera::Reset() {
+  SetPosition(glm::vec3{5.0f});
+  SetPitch(45.0f);
+  SetYaw(0.0f);
+  SetOrigin(glm::vec3{0.0f});
+  MoveRotateViewOrigin(0.0f, 0.0f);  // to update camera vectors
 }

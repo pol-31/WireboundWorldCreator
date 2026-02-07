@@ -21,7 +21,7 @@ int GetUiEditEntryId(float height, float size, glm::vec2 mouse_pos,
   return -1;
 }
 
-UiEditConfigSlCfg::UiEditConfigSlCfg(UiSharedResources& ui_shared_resources,
+UiEditConfigSlCfg::UiEditConfigSlCfg(UiRenderData& render_data,
                                      TextRenderer& text_renderer)
     : btn_config_(data::VboIdMain::kTerrainEditNoiseConfig),
       txt_name_(text_renderer, {data::VboIdMain::kTerrainEditNoiseName},
@@ -36,7 +36,7 @@ UiEditConfigSlCfg::UiEditConfigSlCfg(UiSharedResources& ui_shared_resources,
            {data::VboIdMain::kTerrainEditNoiseTilingOn3}),
       sl_strength_({data::VboIdMain::kTerrainEditNoiseStrengthArea},
                    {data::VboIdMain::kTerrainEditNoiseStrengthIcon}),
-      ui_shared_resources_(ui_shared_resources) {}
+      render_data_(render_data) {}
 
 void UiEditConfigSlCfg::Release() {
   sl_strength_.Release();
@@ -54,15 +54,15 @@ void UiEditConfigSlCfg::Render(float& strength, bool do_invert, bool do_tiling,
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
 
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   btn_config_.Render();
   tg1_.Set(do_invert);
   tg2_.Set(do_tiling);
   tg1_.Render();
   tg2_.Render();
   if (update_strength) {
-    auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
+    auto mouse_pos = render_data_.glfw_context_.cursor_pos_tex_norm_;
     sl_strength_.Render(mouse_pos);
     strength = sl_strength_.GetProgress();
   } else {
@@ -100,7 +100,7 @@ void UiEditConfigSlCfg::RenderPickingEntry(glm::vec2 translate) {
   tg2_.SetParentTransform(transform);
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   btn_config_.RenderPicking();
   tg1_.RenderPicking();
   tg2_.RenderPicking();
@@ -116,19 +116,19 @@ void UiEditConfigSlCfg::AttachToHierarchy(UiHierarchy& hierarchy) {
   hierarchy.AddNested(&btn_config_, comps);
 }
 
-UiEditConfigSlTxt::UiEditConfigSlTxt(UiSharedResources& ui_shared_resources,
+UiEditConfigSlTxt::UiEditConfigSlTxt(UiRenderData& render_data,
                                      TextRenderer& text_renderer)
     : sl_strength_({{data::VboIdMain::kBiomesEditNoiseStrengthArea},
                     {data::VboIdMain::kBiomesEditNoiseStrengthIcon}}),
       txt_name_({text_renderer,
                  {data::VboIdMain::kBiomesEditNoiseName},
                  data::TextId::kPerlin}),
-      ui_shared_resources_(ui_shared_resources) {}
+      render_data_(render_data) {}
 
 bool UiEditConfigSlTxt::Press(int id, float height, int num) {
   ResetTransform();
   int pressed_line_id = GetUiEditEntryId(
-      height, num, ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_,
+      height, num, render_data_.glfw_context_.cursor_pos_tex_norm_,
       sl_strength_.GetTrackPtr()->GetTopBorder());
   if (id == sl_strength_.GetId()) {
     pressed_strength_id_ = pressed_line_id;
@@ -170,11 +170,11 @@ void UiEditConfigSlTxt::RenderEntry(float& strength, glm::vec2 translate,
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
 
-  //  ui_shared_resources_.hmap_shader_.Bind();
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  //  render_data_.hmap_shader_.Bind();
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   if (update_strength) {
-    auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
+    auto mouse_pos = render_data_.glfw_context_.cursor_pos_tex_norm_;
     sl_strength_.Render(mouse_pos);
     strength = sl_strength_.GetProgress();
   } else {
@@ -190,7 +190,7 @@ void UiEditConfigSlTxt::RenderPickingEntry(glm::vec2 translate) {
   transform.translate = translate;
   sl_strength_.SetParentTransform(transform);
   txt_name_.SetParentTransform(transform);
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   sl_strength_.RenderPicking();
   // only after (due to internal shader & texture modification)
   if (debug::gUiAltMode) {

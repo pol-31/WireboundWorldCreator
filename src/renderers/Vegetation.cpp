@@ -14,9 +14,9 @@
 #include "GeoClipmaps.h"
 
 Vegetation::Vegetation()
-    : grass_shader_("../shaders/Grass.vert", "../shaders/Grass.frag"),
-      grass_compute_shader_("../shaders/Grass.comp"),
-      tex_grass_("../assets/grass2_64.png", GL_RGBA),
+    : grass_shader_("../shaders/Grass.vert", "../shaders/Grass.frag", {0, 2}),
+      grass_compute_shader_("../shaders/Grass.comp", {}),
+      tex_grass_("../assets/grass2_64.png", GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE),
       blades_num_(16384) {
   Init();
 }
@@ -38,16 +38,12 @@ void Vegetation::Render(float map_scale, const Texture& hmap) {
   if (glfwGetKey(gWindow, GLFW_KEY_7)) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
-  grass_shader_.Update();
+  // grass_shader_.DebugUpdate();
   glBindVertexArray(vao_);
   grass_shader_.Bind();
   glUniform1f(3, sin(glfwGetTime()));
-  glUniform1i(0, 0);
-  glActiveTexture(GL_TEXTURE0);
-  hmap.Bind();
-  glUniform1i(2, 2);
-  glActiveTexture(GL_TEXTURE2);
-  tex_grass_.Bind();
+  hmap.BindSampler(0);
+  tex_grass_.BindSampler(2);
   glm::mat4 mat_world = glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));
   glUniformMatrix4fv(1, 1, false, glm::value_ptr(mat_world));
   glDisable(GL_BLEND);
@@ -67,7 +63,7 @@ void RenderGeoMesh(const GeoMesh& mesh, int size, int lod_id) {
 
 void Vegetation::Update(float map_scale, const GeoSurface* surface) {
   int blades_num_quater = blades_num_ / 4;
-  grass_compute_shader_.Update();
+  // grass_compute_shader_.DebugUpdate();
   grass_compute_shader_.Bind();
   glUniform1f(1, map_scale);
   glUniform1ui(5, static_cast<GLuint>(blades_num_quater));

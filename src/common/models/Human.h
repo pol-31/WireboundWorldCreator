@@ -3,8 +3,9 @@
 
 #include <glm/glm.hpp>
 
-#include "../../modes/UiSharedResources.h"
+#include "../../ui/UiRenderData.h"
 #include "RigidBody.h"
+#include "Animator.h"
 
 struct ModelData;
 
@@ -32,7 +33,7 @@ class Human : public RigidBody {
 
   Human() = default;
 
-  void UpdatePosition(UiSharedResources& ui_shared_resources,
+  void UpdatePosition(UiRenderData& render_data,
                       glm::vec3 position_diff);
 
   void Jump(float strength);
@@ -43,20 +44,18 @@ class Human : public RigidBody {
 
   void Fall();  // internally called by ApplyGravity()
 
-  void ApplyGravity(UiSharedResources& ui_shared_resources);
+  void ApplyGravity(UiRenderData& render_data);
 
   void ResetState();
 
-  void UpdatePositionY(UiSharedResources& ui_shared_resources);
-
-  void RenderPicking(UiSharedResources& ui_shared_resources);
+  void UpdatePositionY(UiRenderData& render_data);
 
   // should be called in Render(), it updates skin ubo
   void UpdateAnimation();
 
-  void Render(UiSharedResources& ui_shared_resources);
+  void Render(float map_scale);
 
-  void Update(UiSharedResources& ui_shared_resources);
+  void Update(UiRenderData& render_data);
 
   void Select() { selected_ = true; }
 
@@ -64,11 +63,19 @@ class Human : public RigidBody {
 
   [[nodiscard]] bool IsSelected() const noexcept { return selected_; }
 
+  void SetAnimator(Animator* animator) {
+    animator_ = animator;
+  }
+
  private:
   State state_ = State::kIdle;
-  HumanAnimation animation_id_ =
-      HumanAnimation::kIdle;  // TODO: merge with state_
+  Animation animation_id_ =
+      Animation::kIdle;  // TODO: merge with state_
   bool selected_ = false;
+
+  float animation_time_ = 0.0f;
+  bool animation_looped_ = true;
+  Animator* animator_ = nullptr;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_HUMAN_H_

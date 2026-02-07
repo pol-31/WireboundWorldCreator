@@ -3,9 +3,9 @@
 #include "../common/PickingFramebuffer.h"
 #include "../modes/IUiMode.h"
 
-UiConfirmation::UiConfirmation(UiSharedResources& ui_shared_resources,
+UiConfirmation::UiConfirmation(UiRenderData& render_data,
                                TextRenderer& text_renderer)
-    : ui_shared_resources_(ui_shared_resources),
+    : render_data_(render_data),
       sp_background_(data::VboIdMain::kConfirmationDesk),
       sp_accept_(data::VboIdMain::kConfirmationAccept),
       sp_decline_(data::VboIdMain::kConfirmationDecline),
@@ -16,9 +16,9 @@ void UiConfirmation::Render() {
   if (!active_) {
     return;
   }
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  glBindVertexArray(render_data_.vao_ui_);
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   sp_background_.Render();
   sp_accept_.Render();
   sp_decline_.Render();
@@ -29,7 +29,7 @@ void UiConfirmation::RenderPicking() {
   if (!active_) {
     return;
   }
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   sp_background_.RenderPicking();
   sp_accept_.RenderPicking();
   sp_decline_.RenderPicking();
@@ -48,7 +48,7 @@ void UiConfirmation::Show(data::TextId text_id,
 
 void UiConfirmation::Hide() {
   active_ = false;
-  (*ui_shared_resources_.glfw_context_.cur_mode)->Setup();
+  (*render_data_.glfw_context_.cur_mode)->Setup();
 }
 
 void UiConfirmation::KeyCallback(GLFWwindow* window, int key, int scancode,
@@ -79,9 +79,9 @@ void UiConfirmation::MouseButtonCallback(GLFWwindow* window, int button,
   ui->Hide();
 }
 
-UiWarning::UiWarning(UiSharedResources& ui_shared_resources,
+UiWarning::UiWarning(UiRenderData& render_data,
                      TextRenderer& text_renderer)
-    : ui_shared_resources_(ui_shared_resources),
+    : render_data_(render_data),
       sp_background_(data::VboIdMain::kCautionDesk),
       text_(text_renderer, data::VboIdMain::kCautionText),
       hierarchy_(&sp_background_, {&text_}) {}
@@ -90,9 +90,9 @@ void UiWarning::Render() {
   if (!active_) {
     return;
   }
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  glBindVertexArray(render_data_.vao_ui_);
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   sp_background_.Render();
   text_.Render();
 }
@@ -101,7 +101,7 @@ void UiWarning::RenderPicking() {
   if (!active_) {
     return;
   }
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   sp_background_.RenderPicking();
   text_.RenderPicking();
 }
@@ -116,7 +116,7 @@ void UiWarning::Show(data::TextId text_id) {
 
 void UiWarning::Hide() {
   active_ = false;
-  (*ui_shared_resources_.glfw_context_.cur_mode)->Setup();
+  (*render_data_.glfw_context_.cur_mode)->Setup();
 }
 
 void UiWarning::KeyCallback(GLFWwindow* window, int key, int scancode,

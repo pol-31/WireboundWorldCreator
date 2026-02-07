@@ -5,8 +5,8 @@
 #include "../renderers/UiRenderer.h"
 #include "TileRenderer.h"
 
-UiLayerWireframe::UiLayerWireframe(UiSharedResources& ui_shared_resources)
-    : ui_shared_resources_(ui_shared_resources),
+UiLayerWireframe::UiLayerWireframe(UiRenderData& render_data)
+    : render_data_(render_data),
       sp_layer_(data::VboIdMain::kWireframeWindow),
       sp_frame_(data::VboIdMain::kWireframeWindowFrame),
       sp_points_({
@@ -31,12 +31,11 @@ UiLayerWireframe::UiLayerWireframe(UiSharedResources& ui_shared_resources)
 
 void UiLayerWireframe::RenderLayerWireframe(TerrainTraits* terrain) {
   UpdateLayerWireframe(terrain);
-  ui_shared_resources_.shader_sp_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_.Bind();
+  glBindVertexArray(render_data_.vao_ui_);
+  render_data_.tex_ui_.BindSampler(0);
   sp_frame_.Render();
-  layer_tex_.Bind();
+  layer_tex_.BindSampler(0);
   sp_layer_.Render();
   // possible to bind these two, but need draw +-XYZ billboarding at first
 }
@@ -52,13 +51,13 @@ void UiLayerWireframe::UpdateLayerWireframe(TerrainTraits* terrain) {
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  ui_shared_resources_.glfw_context_.tile_renderer->terrain.RenderWireframe(
+  render_data_.glfw_context_.tile_renderer->terrain.RenderWireframe(
       terrain);
-  ui_shared_resources_.glfw_context_.ui_renderer->RenderAxis(5.0f);
+  render_data_.glfw_context_.ui_renderer->RenderAxis(5.0f);
 
-  ui_shared_resources_.shader_sp_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_.Bind();
+  glBindVertexArray(render_data_.vao_ui_);
+  render_data_.tex_ui_.BindSampler(0);
 
   RenderAxis(0);  // x
   RenderAxis(2);  // y
@@ -98,11 +97,11 @@ void UiLayerWireframe::RenderAxis(int first_idx) {
 glm::mat4 UiLayerWireframe::GetPointMvpMatrix() {
   auto model = glm::mat4(1.0f);
   auto map_scale =
-      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+      render_data_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   model = glm::scale(model, glm::vec3(glm::sqrt(map_scale)));
   auto view =
-      ui_shared_resources_.glfw_context_.camera->GetViewMatrix(map_scale);
-  auto projection = ui_shared_resources_.glfw_context_.camera->GetProjMatrix();
+      render_data_.glfw_context_.camera->GetViewMatrix(map_scale);
+  auto projection = render_data_.glfw_context_.camera->GetProjMatrix();
   return projection * view * model;
 }
 
@@ -158,7 +157,7 @@ void UiLayerWireframe::InitFbo() {
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     std::cerr << "FBO not complete!" << std::endl;
   }
-  layer_tex_ = Texture(fbo_tex, 256, 256, GL_RGBA8);
+  layer_tex_ = Texture(fbo_tex, 256, 256, GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE);
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

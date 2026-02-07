@@ -11,12 +11,12 @@ GraphBakeConfig RiverTraits::GetGraphConfig() const noexcept {
           .radius_flat = config.radius_flat};
 }
 
-UiEditRiver::UiEditRiver(UiSharedResources& ui_shared_resources,
+UiEditRiver::UiEditRiver(UiRenderData& render_data,
                          UiEditSlots& ui_edit_slots,
                          UiEditConfigSlTxt& value_config)
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),
-      ui_shared_resources_(ui_shared_resources) {}
+      render_data_(render_data) {}
 
 void UiEditRiver::HideAll() { ui_.ForceHide(); }
 
@@ -40,7 +40,7 @@ void UiEditRiver::UpdateConfig() {
       {&inst.config.radius, data::TextId::kWaterRadius},
       {&inst.config.radius_flat, data::TextId::kWaterRadiusFlat},
   }};
-  ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline();
+  render_data_.glfw_context_.tile_renderer->UpdatePipeline();
 }
 
 void UiEditRiver::SetInstanceId(int id) {
@@ -94,6 +94,6 @@ RiverTraits& UiEditRiver::GetInstanceData() noexcept {
 }
 
 std::vector<RiverTraits>& UiEditRiver::Data() {
-  return ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+  return render_data_.glfw_context_.tile_renderer->cur_tile_
       .rivers_data;
 }

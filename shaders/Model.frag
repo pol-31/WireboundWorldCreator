@@ -23,7 +23,7 @@ out vec4 color;
 
 void main() {
 	float lum = max(dot(v_normal, normalize(environment.sun_direction)), 0.0f);
-//	vec4 albedo = texture(tex_albedo, v_texcoord);
-	vec4 albedo = vec4(1.0f);
+	vec4 albedo = texture(tex_albedo, v_texcoord);
+//	vec4 albedo = vec4(1.0f);
 	color = albedo * vec4((0.3f + 0.7f * lum) * environment.sun_color, 1.0f);
 }

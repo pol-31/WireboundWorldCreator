@@ -16,20 +16,25 @@
 /// everything's public, otherwise need to make too much callback friends
 class UiPlayerMode final : public IUiMode {
  public:
-  explicit UiPlayerMode(UiSharedResources& ui_shared_resources,
+  explicit UiPlayerMode(UiRenderData& render_data,
                         WindowQueue& window_queue, TextRenderer& text_renderer,
                         Tile& cur_tile, ModelManager& mdl_manager);
 
-  void Render() override;
+  void Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
-  void RenderPicking() override;
+  void RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
   void Setup() override;
 
   void BindDefaultCallbacks() override;
 
+  void PrerenderText(TextRenderer* text_renderer) override;
+
   void HandleSelection(const std::set<GLuint>& selected_ids);
 
+  UiSprite sp_mode_;
   UiSprite sp_hp_;
 
   UiObjectInfo ui_obj_info_;
@@ -37,6 +42,7 @@ class UiPlayerMode final : public IUiMode {
 
   UiSelection ui_selection_;
   ModelManager& mdl_manager_;
+  UiRenderData& render_data_; // TODO: temp (need to setup camera)
 };
 
 namespace player {

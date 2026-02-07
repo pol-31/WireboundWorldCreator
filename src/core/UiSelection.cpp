@@ -11,18 +11,18 @@
 
 int UiSelection::gMaxPoints = 1000;
 
-UiSelection::UiSelection(UiSharedResources& ui_shared_resources)
+UiSelection::UiSelection(UiRenderData& render_data)
     : sp_circle_(data::VboIdMain::kSelectionCircle),
-      ui_shared_resources_(ui_shared_resources),
-      shader_("../shaders/Stipple.vert", "../shaders/Stipple.frag"),
+      render_data_(render_data),
+      shader_("../shaders/Stipple.vert", "../shaders/Stipple.frag", {}),
       shader_area_("../shaders/SelectionArea.vert",
-                   "../shaders/SelectionArea.frag"),
-      shader_draw_selection_("../shaders/DrawSelection.comp"),
+                   "../shaders/SelectionArea.frag", {}),
+      shader_draw_selection_("../shaders/DrawSelection.comp", {}),
       sp_selection_(data::VboIdMain::kSelectionSprite),
-      selection_tex_(gWindowWidth, gWindowHeight, GL_R8, GL_NEAREST,
-                     GL_CLAMP_TO_EDGE),
+      selection_tex_(gWindowWidth, gWindowHeight,
+        GL_RED, GL_R8, GL_UNSIGNED_BYTE, GL_NEAREST, GL_CLAMP_TO_EDGE),
       selection_tex_surface_(details::gTerrainSize, details::gTerrainSize,
-                             GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE),
+        GL_RED, GL_R8, GL_UNSIGNED_BYTE, GL_NEAREST, GL_CLAMP_TO_EDGE),
       mouse_check_point_(gWindowWidth / 2.0f, gWindowHeight / 2.0f) {
   Init();
 }
@@ -39,7 +39,7 @@ void UiSelection::Render() {
 
 void UiSelection::RenderOnSurface(const Texture32F* surface) {
   glm::vec3 color = glm::vec3(0.8f, 0.8f, 0.1f);
-  ui_shared_resources_.glfw_context_.tile_renderer->terrain.RenderSelection(
+  render_data_.glfw_context_.tile_renderer->terrain.RenderSelection(
       surface, selection_tex_surface_, color);
 }
 
@@ -75,7 +75,7 @@ void UiSelection::Stop(glm::vec2 cursor_pos) {
   ApplySelection();
   ClearSelectionFbo();
   vertex_num_ = 0;
-  mouse_check_point_ = ui_shared_resources_.glfw_context_.cursor_pos_;
+  mouse_check_point_ = render_data_.glfw_context_.cursor_pos_;
   mouse_check_point_.y = gWindowHeight - mouse_check_point_.y;
 }
 
@@ -339,12 +339,11 @@ void UiSelection::RenderCircleLike() {
 }
 
 void UiSelection::RenderSelectionCircle() {
-  auto cursor_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
+  auto cursor_pos = render_data_.glfw_context_.cursor_pos_tex_norm_;
   sp_circle_.SetTranslate(cursor_pos);
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.shader_sp_.Bind();
+  glBindVertexArray(render_data_.vao_ui_);
+  render_data_.tex_ui_.BindSampler(0);
+  render_data_.shader_sp_.Bind();
   sp_circle_.Render();
 }
 
@@ -354,14 +353,11 @@ void UiSelection::ResetConfig() {
 }
 
 void UiSelection::ClearMask() {
-  GLuint black = 0;
-  glClearTexImage(selection_tex_surface_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
-                  &black);
+  selection_tex_surface_.Clear();
 }
 
 void UiSelection::ClearSelectionFbo() {
-  GLuint black = 0;
-  glClearTexImage(selection_tex_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE, &black);
+  selection_tex_.Clear();
 }
 
 void UiSelection::UpdateRenderData(const std::vector<glm::vec3>& polygon,
@@ -377,13 +373,13 @@ void UiSelection::UpdateRenderData(const std::vector<glm::vec3>& polygon,
 
 // only for tweak and circle
 void UiSelection::UpdateSurfaceSelection(float radius) {
-  glm::vec2 mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_;
+  glm::vec2 mouse_pos = render_data_.glfw_context_.cursor_pos_;
   mouse_pos.y = gWindowHeight - mouse_pos.y;
   shader_draw_selection_.Bind();
   const auto& fbo_tex =
-      ui_shared_resources_.glfw_context_.picking_fbo->GetTex();
-  utility::BindImageTexture(0, selection_tex_, GL_WRITE_ONLY);
-  utility::BindImageTexture(1, fbo_tex, GL_READ_ONLY);
+      render_data_.glfw_context_.picking_fbo->GetTex();
+  selection_tex_.BindImage(0, GL_WRITE_ONLY);
+  fbo_tex.BindImage(1, GL_READ_ONLY);
   glUniform1f(2, radius);
   if (start_is_end_) {
     glUniform2fv(0, 1, glm::value_ptr(mouse_pos));
@@ -398,8 +394,6 @@ void UiSelection::UpdateSurfaceSelection(float radius) {
   glDispatchCompute(workGroupSizeX, workGroupSizeY, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   mouse_check_point_ = mouse_pos;
-  utility::UnBindImageTexture(0, selection_tex_, GL_WRITE_ONLY);
-  utility::UnBindImageTexture(1, fbo_tex, GL_READ_ONLY);
 }
 
 /**
@@ -416,7 +410,7 @@ void UiSelection::ApplySelection() {
   }
   last_update_time_ = cur_time;
   const auto& fbo_tex =
-      ui_shared_resources_.glfw_context_.picking_fbo->GetTex();
+      render_data_.glfw_context_.picking_fbo->GetTex();
   int buffer_size = gWindowWidth * gWindowHeight;
 
   std::vector<uint8_t> selection_data(buffer_size);
@@ -461,7 +455,7 @@ void UiSelection::ApplySelection() {
 
 std::set<GLuint> UiSelection::ApplySelectionIntoSet() {
   const auto& fbo_tex =
-      ui_shared_resources_.glfw_context_.picking_fbo->GetTex();
+      render_data_.glfw_context_.picking_fbo->GetTex();
   int buffer_size = gWindowWidth * gWindowHeight;
 
   std::vector<uint8_t> selection_data(buffer_size);
@@ -502,7 +496,7 @@ std::set<GLuint> UiSelection::StopIntoSet(glm::vec2 cursor_pos) {
   auto selected_ids = ApplySelectionIntoSet();
   ClearSelectionFbo();
   vertex_num_ = 0;
-  mouse_check_point_ = ui_shared_resources_.glfw_context_.cursor_pos_;
+  mouse_check_point_ = render_data_.glfw_context_.cursor_pos_;
   mouse_check_point_.y = gWindowHeight - mouse_check_point_.y;
   return selected_ids;
 }

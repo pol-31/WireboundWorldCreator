@@ -10,7 +10,7 @@
 
 class UiEditRoads : public IUiEdit {
  public:
-  UiEditRoads(UiSharedResources& ui_shared_resources,
+  UiEditRoads(UiRenderData& render_data,
               UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
 
   void HideAll() override;
@@ -48,7 +48,7 @@ class UiEditRoads : public IUiEdit {
  private:
   std::array<UiEditConfigSlTxt::Trait, RoadTraits::GetTraitsSize()> traits_;
   UiEditConfigSlTxt& value_config_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_UIEDITROADS_H

@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-#include "../../modes/UiSharedResources.h"
+#include "../../ui/UiRenderData.h"
 
 struct ModelData;
 
@@ -14,9 +14,9 @@ class Obstacle {
 
   ~Obstacle() { DeleteVbo(placement_vbo_); }
 
-  void Render(UiSharedResources& ui_shared_resources);
+  void Render(UiRenderData& render_data);
 
-  void SetPlacement(UiSharedResources& ui_shared_resources,
+  void SetPlacement(UiRenderData& render_data,
                     const std::vector<GLuint>& positions);
 
   void ClearPlacement();
@@ -32,7 +32,7 @@ class Obstacle {
 
   static void DeleteVbo(GLuint vbo);
 
-  glm::vec3 GenPosition(UiSharedResources& ui_shared_resources, GLuint pos_id);
+  glm::vec3 GenPosition(UiRenderData& render_data, GLuint pos_id);
 
   glm::quat GenRotation(GLuint pos_id);
 

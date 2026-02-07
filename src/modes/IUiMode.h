@@ -1,20 +1,19 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_IUIMODE_H_
 #define WIREBOUNDWORLDCREATOR_SRC_IUIMODE_H_
 
-#include "../core/Ui.h"
-#include "UiSharedResources.h"
+class TileRenderer;
+class UiRenderer;
+class TextRenderer;
 
 class IUiMode {
  public:
-  IUiMode(UiSharedResources& ui_shared_resources, UiSprite&& sp_mode)
-      : ui_shared_resources_(ui_shared_resources),
-        sp_mode_(std::move(sp_mode)) {}
-
   virtual ~IUiMode() = default;
 
-  virtual void Render() = 0;
+  virtual void Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) = 0;
 
-  virtual void RenderPicking() = 0;
+  virtual void RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) = 0;
 
   /// setup mode before switching to it
   virtual void Setup() = 0;
@@ -22,8 +21,7 @@ class IUiMode {
   /// in case of mode-menu fast switching (no mode changed)
   virtual void BindDefaultCallbacks() = 0;
 
-  UiSharedResources& ui_shared_resources_;
-  UiSprite sp_mode_;
+  virtual void PrerenderText(TextRenderer* text_renderer) = 0;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_IUIMODE_H_

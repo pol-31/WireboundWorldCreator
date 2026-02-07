@@ -2,13 +2,13 @@
 
 #include "../common/Vbos.h"
 
-UiConfigWindow::UiConfigWindow(UiSharedResources& ui_shared_resources,
+UiConfigWindow::UiConfigWindow(UiRenderData& render_data,
                                WindowQueue& window_queue,
                                TextRenderer& text_renderer)
     : UiWindowAppear((data::VboIdMain::kConfigWindowDesk), 1.0f,
                      {data::VboIdMain::kConfigWindowPinBack,
                       data::VboIdMain::kConfigWindowPinPoint},
-                     ui_shared_resources, window_queue),
+                     render_data, window_queue),
       name_(text_renderer, data::VboIdMain::kConfigWindowName,
             data::TextId::kSeed),
       btn_save_(data::VboIdMain::kConfigWindowSave),
@@ -61,9 +61,9 @@ void UiConfigWindow::RenderSlotsText() {
 
 bool UiConfigWindow::Render() {
   RenderBack(true);
-  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  auto mouse_pos = render_data_.glfw_context_.cursor_pos_tex_norm_;
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   btn_save_.Render();
   sl_data_.Render(mouse_pos);
   glEnable(GL_SCISSOR_TEST);
@@ -107,8 +107,8 @@ void UiConfigWindow::RenderPickingSlotsText() {
 
 void UiConfigWindow::RenderPicking() {
   RenderPickingBack();
-  ui_shared_resources_.shader_sp_picking_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_picking_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   btn_save_.RenderPicking();
   sl_data_.RenderPicking();
   glEnable(GL_SCISSOR_TEST);
@@ -133,7 +133,7 @@ bool UiConfigWindow::Press(int id) {
     return true;
   } else if (id == config_slider_.GetId()) {
     sl_pressed_config_ = sl_data_.GetSlotId(
-        ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_);
+        render_data_.glfw_context_.cursor_pos_tex_norm_);
     config_slider_.Press();
     return true;
   }

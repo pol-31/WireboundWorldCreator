@@ -3,6 +3,9 @@
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
+#include "../ui/UiRenderData.h"
 #include "../common/TextRenderer.h"
 #include "../common/UiDebugger.h"
 #include "../common/models/ModelManager.h"  // temp
@@ -13,13 +16,19 @@
 #include "../core/UiGrid.h"
 #include "../core/UiLayerWireframe.h"
 #include "../core/UiMenu.h"
+#include "../core/UiModal.h"
 #include "../core/UiSlots.h"
 #include "../core/UiWorldOrigin.h"
 #include "../core/WindowQueue.h"
-#include "../modes/AllUiModes.h"
+#include "../modes/UiBiomesMode.h"
 #include "../modes/UiEdit.h"
 #include "../modes/UiEditShared.h"
-#include "GLFW/glfw3.h"
+#include "../modes/UiObjectsMode.h"
+#include "../modes/UiPlacementMode.h"
+#include "../modes/UiPlayerMode.h"
+#include "../modes/UiTerrainMode.h"
+#include "../modes/UiTilesMode.h"
+#include "../modes/UiWaterMode.h"
 
 class Camera;
 
@@ -28,15 +37,14 @@ class UiRenderer {
   UiRenderer(GlfwContext& global_glfw_data_, TileRenderer& tile_renderer,
              const Camera* camera);
 
-  /// delete everything, just in case we missed something
   UiRenderer(UiRenderer&& other) = delete;
   UiRenderer(const UiRenderer& other) = delete;
   UiRenderer& operator=(UiRenderer&& other) = delete;
   UiRenderer& operator=(const UiRenderer& other) = delete;
 
-  void Render();
+  void Render(TileRenderer* tile_renderer);
 
-  void RenderPicking();
+  void RenderPicking(TileRenderer* tile_renderer);
 
   void Press(int key, int action);
 
@@ -46,20 +54,19 @@ class UiRenderer {
 
   void SetupGlobalData();
 
-  // TODO: text should be prerendered in menu_prerender_texture by now
-  void AskForConfirmation(data::TextId text, std::function<void()>&& callable);
-
-  UiLayerWireframe& GetUiLayerWireframe() { return ui_layer_wireframe_; }
-
   void RenderWorldOrigin(glm::vec4 position, glm::vec4 color);
 
   void RenderAxis(float scale);
 
+  [[nodiscard]] const UiRenderData& GetRenderData() const {
+    return render_data_;
+  }
+
  private:
   void Init();
 
-  UiSharedResources ui_shared_resources_;
-  ModelManager mdl_manager_;  // temp
+  UiRenderData render_data_;
+  ModelManager mdl_manager_;
 
   debug::UiDebugger ui_debugger_;
 
@@ -72,7 +79,7 @@ class UiRenderer {
   UiEditConfigSlCfg ui_edit_1_;
   UiEditConfigSlTxt ui_edit_2_;
 
-  IUiMode* cur_mode_{nullptr};
+  IUiMode* cur_mode_ = nullptr;
   UiTerrainMode terrain_;
   UiWaterMode water_;
   UiBiomesMode biomes_;
@@ -83,22 +90,24 @@ class UiRenderer {
 
   UiMenu ui_menu_;
   UiSettings ui_settings_;
-  UiConfirmation ui_confirmation_;
-  UiCaution ui_caution_;
-  UiFile ui_file_;
+
+  bool debug_ui_prev_ = false;
+  bool render_menu_ = false;
+
+  UiButtons ui_buttons_;
+  UiGrid ui_grid_;
+
+public:
   UiTipWindow ui_tip_;
+
+  UiConfirmation ui_confirmation_;
+  UiWarning ui_warning_;
 
   UiLoading ui_loading_;
   UiCompass ui_compass_;
 
-  bool debug_ui_prev_{false};
-  bool render_menu_{false};
-
   UiLayerWireframe ui_layer_wireframe_;
   UiWorldOrigin ui_world_origin_;
-
-  UiButtons ui_buttons_;
-  UiGrid ui_grid_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_RENDERERS_UIRENDERER_H_

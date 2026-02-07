@@ -1,85 +1,52 @@
 #include "Tile.h"
 
+#include <algorithm> // clamp
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 
 #include "../common/Details.h"
 
 Tile::Tile() : map_scale(0.1f) {
-  int size = details::gTerrainSize;
+  GLsizei size = details::gTerrainSize;
 
-  map_terrain_height = Texture32F(size, GL_R32F);
+  map_terrain_height = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
 
   map_terrain_normal =
-      Texture(size, size, GL_RG8, GL_NEAREST, GL_CLAMP_TO_EDGE);
-  map_terrain_slope = Texture(size, size, GL_R8, GL_NEAREST, GL_CLAMP_TO_EDGE);
-  glClearTexImage(map_terrain_slope.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
-                  nullptr);
-  map_terrain_ao = Texture(size, size, GL_R8, GL_LINEAR, GL_CLAMP_TO_EDGE);
-  map_terrain_splat =
-      Texture(size, size, GL_RGBA8, GL_NEAREST, GL_CLAMP_TO_EDGE);
+      Texture(size, size, GL_RG, GL_RG8, GL_UNSIGNED_BYTE, GL_NEAREST, GL_CLAMP_TO_EDGE);
+  map_terrain_slope = Texture(size, size, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
+  map_terrain_ao = Texture(size, size, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
+  map_terrain_splat = Texture(size, size, GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE);
 
-  map_terrain_erosion_thermal = Texture32F(size, GL_R32F);
-  map_terrain_erosion_hydraulic = Texture32F(size, GL_R32F);
-  map_water_accum = Texture32F(size, GL_R32F);
-  map_water_flow = Texture(size, size, GL_RG8, GL_LINEAR, GL_CLAMP_TO_EDGE);
+  map_terrain_erosion_thermal = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  map_terrain_erosion_hydraulic = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  map_water_accum = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  map_water_flow = Texture(size, size, GL_RG, GL_RG8, GL_UNSIGNED_BYTE);
 
-  map_water_height = Texture32F(size, GL_R32F);
+  map_water_height = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
 
   terrain_heights_ = std::vector<float>(size * size, 0.0f);
   water_heights_ = std::vector<float>(size * size, 0.0f);
 
-  map_ocean_surface_ = Texture32F(size, GL_R32F);
-  glClearTexImage(map_ocean_surface_.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
+  map_ocean_surface_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
 
-  tex_roads_deform_ = Texture32F(size, GL_R32F);
-  glClearTexImage(tex_roads_deform_.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
-  tex_roads_df_ = Texture32F(size, GL_R32F);
-  glClearTexImage(tex_roads_df_.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
-  tex_roads_mask_ = Texture(size, size, GL_R8);
-  glClearTexImage(tex_roads_mask_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
-                  nullptr);
+  tex_roads_deform_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  tex_roads_df_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  tex_roads_mask_ = Texture(size, size, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
 
-  tex_rivers_deform_ = Texture32F(size, GL_R32F);
-  glClearTexImage(tex_rivers_deform_.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
-  tex_rivers_df_ = Texture32F(size, GL_R32F);
-  glClearTexImage(tex_rivers_df_.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
-  tex_rivers_mask_ = Texture(size, size, GL_R8);
+  tex_rivers_deform_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  tex_rivers_df_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  tex_rivers_mask_ = Texture(size, size, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
 
-  tex_placement_trees_ =
-      Texture(details::gTerrainSize, details::gTerrainSize, GL_R8);
-  glClearTexImage(tex_placement_trees_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
-                  nullptr);
-  tex_placement_bushes_ =
-      Texture(details::gTerrainSize, details::gTerrainSize, GL_R8);
-  glClearTexImage(tex_placement_bushes_.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
-                  nullptr);
-  tex_placement_tall_grass_ =
-      Texture(details::gTerrainSize, details::gTerrainSize, GL_R8);
-  glClearTexImage(tex_placement_tall_grass_.GetId(), 0, GL_RED,
-                  GL_UNSIGNED_BYTE, nullptr);
-  tex_placement_undergrowth_ =
-      Texture(details::gTerrainSize, details::gTerrainSize, GL_R8);
-  glClearTexImage(tex_placement_undergrowth_.GetId(), 0, GL_RED,
-                  GL_UNSIGNED_BYTE, nullptr);
-  tex_vegetation_mask = Texture(size, size, GL_R8);
-  glClearTexImage(tex_vegetation_mask.GetId(), 0, GL_RED, GL_UNSIGNED_BYTE,
-                  nullptr);
+  tex_placement_trees_ = Texture(size, size, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
+  tex_placement_bushes_ = Texture(size, size, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
+  tex_placement_tall_grass_ = Texture(size, size, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
+  tex_placement_undergrowth_ = Texture(size, size, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
+  tex_vegetation_mask = Texture(size, size, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
 
-  map_terrain_height_raw_ = Texture32F(details::gTerrainSize, GL_R32F);
-  glClearTexImage(map_terrain_height_raw_.GetId(), 0, GL_RED, GL_FLOAT,
-                  nullptr);
-
-  map_water_height = Texture32F(details::gTerrainSize, GL_R32F);
-  glClearTexImage(map_water_height.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
-
-  /// see explanation at header file (Tile.h)
-  // water_heights_ = water_heights_init_;
+  map_terrain_height_raw_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  map_water_height = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
 }
-
-void Tile::UpScale() {}
-
-void Tile::DownScale() {}
 
 void Tile::OnScroll(float yoffset) {
   if (yoffset > 0.0f)
@@ -94,7 +61,6 @@ void Tile::UpdateMapScale(float delta_time) {
   float response =
       glm::mix(6.0f, 14.0f,
                glm::clamp(glm::log(map_scale) / glm::log(100.0f), 0.0f, 1.0f));
-  // const float response = 12.0f; // feel parameter
   map_scale += (target_map_scale - map_scale) *
                (1.0f - std::exp(-response * delta_time));
 }
@@ -154,87 +120,47 @@ float Tile::GetPositionY32(float fx, float fy) {
   return GetPositionY(fx * 16.0f + 512.0f, fy * 16.0f + 512.0f);
 }
 
-bool ReadR32F(std::string_view path, Texture32F& texture) {
-  if (!std::filesystem::exists(path)) {
-    return false;
-  }
-  int size = details::gTerrainSize;
-  std::vector<float> data(size * size);
-  std::ifstream in_file(path.data(), std::ios::in | std::ios::binary);
-  if (in_file.is_open()) {
-    in_file.read(reinterpret_cast<char*>(data.data()),
-                 data.size() * sizeof(float));
-  } else {
-    return false;
-  }
-  GLuint id = 0;
-  glGenTextures(1, &id);
-  glBindTexture(GL_TEXTURE_2D, id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size, size, 0, GL_RED, GL_FLOAT,
-               nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  glTextureSubImage2D(id, 0, 0, 0, size, size, GL_RED, GL_FLOAT, data.data());
-  texture = Texture32F(id, size, size, GL_R32F);
-  return true;
-}
-
-void WriteR32F(std::string_view path, const Texture32F& texture) {
-  std::vector<float> data(details::gTerrainSize * details::gTerrainSize);
-  glGetTextureImage(texture.GetId(), 0, GL_RED, GL_FLOAT,
-                    data.size() * sizeof(float), data.data());
-  std::ofstream out_file(path.data(), std::ios::out | std::ios::binary);
-  if (out_file.is_open()) {
-    out_file.write(reinterpret_cast<const char*>(data.data()),
-                   data.size() * sizeof(float));
-  } else {
-    std::cerr << "unable to write " << path << std::endl;
-  }
-}
-
 void WriteTerrainExtraHeights(const std::vector<TerrainTraits>& terrain) {
   for (int i = 0; i < terrain.size(); ++i) {
     std::string name = "terrain_" + std::to_string(i) + ".r32";
-    WriteR32F(name, terrain[i].extra_heights);
+    terrain[i].extra_heights.StoreData(name, 1);
   }
 }
 
 void ReadTerrainExtraHeights(std::vector<TerrainTraits>& terrain) {
   for (int i = 0; i < terrain.size(); ++i) {
     std::string name = "terrain_" + std::to_string(i) + ".r32";
-    if (!ReadR32F(name, terrain[i].extra_heights)) {
+    if (std::filesystem::exists(name)) {
+      terrain[i].extra_heights = Texture32F(name, GL_RED, GL_R32F, GL_FLOAT);
+    } else {
       // GPU BUG #3
       // need it two times, otherwise UB data
-      terrain[i].extra_heights = Texture32F(details::gTerrainSize, GL_R32F);
-      terrain[i].extra_heights = Texture32F(details::gTerrainSize, GL_R32F);
-      glClearTexImage(terrain[i].extra_heights.GetId(), 0, GL_RED, GL_FLOAT,
-                      nullptr);
+      GLsizei size = details::gTerrainSize;
+      terrain[i].extra_heights = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+      terrain[i].extra_heights = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
     }
+  }
+}
+
+void LoadPlacement(std::string_view path, Texture& texture) {
+  namespace fs = std::filesystem;
+  if (fs::exists(path)) {
+    texture = Texture(path, GL_RED, GL_R8, GL_UNSIGNED_BYTE);
   }
 }
 
 void Tile::Parse(std::string_view path) {
   namespace fs = std::filesystem;
-  // if (fs::exists(fs::path("map_ocean_surface_.png"))) {
-  //   map_ocean_surface_ = Texture("map_ocean_surface_.png", GL_R8);
-  // } // R32F again, need a function
-  if (fs::exists(fs::path("tex_placement_trees_.png"))) {
-    tex_placement_trees_ = Texture("tex_placement_trees_.png", GL_R8);
+  LoadPlacement("tex_placement_trees_.png", tex_placement_trees_);
+  LoadPlacement("tex_placement_bushes_.png", tex_placement_bushes_);
+  LoadPlacement("tex_placement_tall_grass_.png", tex_placement_tall_grass_);
+  LoadPlacement("tex_placement_undergrowth_.png", tex_placement_undergrowth_);
+  if (std::filesystem::exists("OceanHmap.r32")) {
+    map_ocean_surface_ = Texture32F("OceanHmap.r32", GL_RED, GL_R32F, GL_FLOAT);
+  } else {
+    GLsizei size = details::gTerrainSize;
+    map_ocean_surface_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
   }
-  if (fs::exists(fs::path("tex_placement_bushes_.png"))) {
-    tex_placement_bushes_ = Texture("tex_placement_bushes_.png", GL_R8);
-  }
-  if (fs::exists(fs::path("tex_placement_tall_grass_.png"))) {
-    tex_placement_tall_grass_ = Texture("tex_placement_tall_grass_.png", GL_R8);
-  }
-  if (fs::exists(fs::path("tex_placement_undergrowth_.png"))) {
-    tex_placement_undergrowth_ =
-        Texture("tex_placement_undergrowth_.png", GL_R8);
-  }
-  ReadR32F("OceanHmap.r32", map_ocean_surface_);  // ignore result
   std::ifstream in("Serialize.txt");
   std::string tag;
   in >> tag;  // WORLD_BEGIN
@@ -250,11 +176,11 @@ void Tile::Parse(std::string_view path) {
 }
 
 void Tile::Serialize(std::string_view path) {
-  tex_placement_trees_.Store("tex_placement_trees_.png", 1, GL_RED);
-  tex_placement_bushes_.Store("tex_placement_bushes_.png", 1, GL_RED);
-  tex_placement_tall_grass_.Store("tex_placement_tall_grass_.png", 1, GL_RED);
-  tex_placement_undergrowth_.Store("tex_placement_undergrowth_.png", 1, GL_RED);
-  WriteR32F("OceanHmap.r32", map_ocean_surface_);
+  tex_placement_trees_.StoreData("tex_placement_trees_.png", 1);
+  tex_placement_bushes_.StoreData("tex_placement_bushes_.png", 1);
+  tex_placement_tall_grass_.StoreData("tex_placement_tall_grass_.png", 1);
+  tex_placement_undergrowth_.StoreData("tex_placement_undergrowth_.png", 1);
+  map_ocean_surface_.StoreData("OceanHmap.r32", 1);
   std::ofstream out("Serialize.txt");
   out << "WORLD_BEGIN\n";
   WriteObjects(out, objects_data);

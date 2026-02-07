@@ -12,13 +12,13 @@
 #include "TerrainNoiseData.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
-#include "UiSharedResources.h"
+#include "../ui/UiRenderData.h"
 #include "UiTerrainConfig.h"
 #include "traits/TerrainTraits.h"
 
 class UiEditTerrain final : public IUiEdit {
  public:
-  UiEditTerrain(Tile& cur_tile, UiSharedResources& ui_shared_resources,
+  UiEditTerrain(Tile& cur_tile, UiRenderData& render_data,
                 TextRenderer& text_renderer, UiEditSlots& ui_edit_slots,
                 UiEditConfigSlCfg& value_config,
                 UiConfigWindow& ui_noise_config);
@@ -101,7 +101,7 @@ class UiEditTerrain final : public IUiEdit {
   TerrainNoiseFbmPerlinWarp gen_fbm_perlin_warp_;
   std::array<ITerrainNoise*, 8> noises_;
 
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_UIEDITTERRAIN_H

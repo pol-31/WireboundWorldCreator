@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "../common/Texture.h"
+#include "../render/Texture.h"
 
 class Environment {
  public:

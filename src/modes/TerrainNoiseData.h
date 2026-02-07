@@ -1,7 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_MODES_TERRAINNOISEDATA_H_
 #define WIREBOUNDWORLDCREATOR_SRC_MODES_TERRAINNOISEDATA_H_
 
-#include "../common/Texture.h"
+#include "../render/Texture.h"
 
 /// can't make NoiseDataBase as an actual base, have to keep Derived as a POD,
 /// what isn't possible with type Texture32F

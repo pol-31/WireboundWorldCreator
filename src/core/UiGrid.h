@@ -3,12 +3,12 @@
 
 #include <glad/glad.h>
 
-#include "../common/Shader.h"
-#include "../modes/UiSharedResources.h"
+#include "../ui/UiRenderData.h"
+#include "../render/Shader.h"
 
 class UiGrid {
  public:
-  UiGrid(UiSharedResources& ui_shared_resources);
+  UiGrid(UiRenderData& render_data);
 
   ~UiGrid() { DeInit(); }
 
@@ -24,7 +24,7 @@ class UiGrid {
 
   void DeInit();
 
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
   Shader shader_grid_;
   Shader shader_axis_;
   Shader shader_world_boundary_;

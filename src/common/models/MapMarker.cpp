@@ -6,44 +6,26 @@
 #include "../Details.h"
 #include "ModelLoader.h"
 
-void MapMarker::Render(UiSharedResources& ui_shared_resources, glm::vec3 color,
+void MapMarker::Render(UiRenderData& render_data, glm::vec3 color,
                        glm::vec2 position, glm::quat rotation,
                        glm::vec3 scale) {
-  ui_shared_resources.shader_mdl_color_.Bind();
   glUniform3fv(1, 1, glm::value_ptr(color));
   model_data_->BindTextures();
-  auto model =
-      GenModelMat(ui_shared_resources, position, rotation, scale);
+  auto model = GenModelMat(render_data, position, rotation, scale);
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
-  if (selected_) {
-    glStencilFunc(GL_ALWAYS, 1, 0xFF);
-    glStencilMask(0xFF);
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    glStencilMask(0x00);
-    glDisable(GL_DEPTH_TEST);
-    ui_shared_resources.shader_mdl_selected_.Bind();
-    model = GenModelMat(ui_shared_resources, position, rotation, scale);
-    glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
-    model_data_->RenderModelNodes();
-    glStencilFunc(GL_ALWAYS, 0, 0xFF);
-    glStencilMask(0xFF);
-    glEnable(GL_DEPTH_TEST);
-  } else {
-    model_data_->RenderModelNodes();
-  }
-  glBindVertexArray(0);
+  model_data_->RenderModelNodes();
 }
 
-glm::mat4 MapMarker::GenModelMat(UiSharedResources& ui_shared_resources,
+glm::mat4 MapMarker::GenModelMat(UiRenderData& render_data,
                                  glm::vec2 position, glm::quat rotation,
                                  glm::vec3 scale) {
   auto fx = static_cast<int>(position.x * 16.0f + 512.0f);
   auto fz = static_cast<int>(position.y * 16.0f + 512.0f);
   float ground_height =
-      ui_shared_resources.glfw_context_.tile_renderer->cur_tile_.GetPositionY(
+      render_data.glfw_context_.tile_renderer->cur_tile_.GetPositionY(
           fx, fz);
   auto map_scale =
-      ui_shared_resources.glfw_context_.tile_renderer->cur_tile_.map_scale;
+      render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
   glm::mat4 object_model = glm::mat4{1.0f};
   object_model = glm::translate(
       object_model, glm::vec3(position.x, ground_height, position.y));

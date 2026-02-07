@@ -6,11 +6,11 @@
 
 UiTerrainBake::UiTerrainBake(
     Tile& cur_tile, UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+    UiRenderData& render_data, WindowQueue& window_queue,
     TextRenderer& text_renderer, UiSprite&& accept,
     UiTextModeId&& erosion_label, UiTextInput&& erosion_input,
     UiTextModeId&& weathering_label, UiTextInput&& weathering_input)
-    : Base(std::move(sprite), size_scale, std::move(pin), ui_shared_resources,
+    : Base(std::move(sprite), size_scale, std::move(pin), render_data,
            window_queue),
       accept_(std::move(accept)),
       erosion_label_(std::move(erosion_label)),
@@ -19,13 +19,13 @@ UiTerrainBake::UiTerrainBake(
       weathering_input_(std::move(weathering_input)),
       sprite_hmap_(data::VboIdMain::kTerrainBakeHmap),
       ui_event_handler_({&pin_, &accept_, &erosion_input_, &weathering_input_}),
-      ui_shared_resources_(ui_shared_resources),
+      render_data_(render_data),
 
-      shader_gen_nmap_("../shaders/generate_shaders/NormalMap.comp"),
-      shader_gen_slope_map_("../shaders/generate_shaders/SlopeMap.comp"),
-      shader_gen_splat_map_("../shaders/generate_shaders/SplatMap.comp"),
-      shader_gen_ao_map_("../shaders/generate_shaders/AoMap.comp"),
-      shader_perturbate_("../shaders/generate_shaders/Perturbate.comp"),
+      shader_gen_nmap_("../shaders/generate_shaders/NormalMap.comp", {}),
+      shader_gen_slope_map_("../shaders/generate_shaders/SlopeMap.comp", {}),
+      shader_gen_splat_map_("../shaders/generate_shaders/SplatMap.comp", {}),
+      shader_gen_ao_map_("../shaders/generate_shaders/AoMap.comp", {}),
+      shader_perturbate_("../shaders/generate_shaders/Perturbate.comp", {}),
 
       hmap_heights_(cur_tile.terrain_heights_),
       tex_hmap_(cur_tile.map_terrain_height),
@@ -56,14 +56,14 @@ bool UiTerrainBake::Render() {
   if (!Base::BackIsReady()) {
     return stop_show;
   }
-  ui_shared_resources_.shader_sp_hmap_.Bind();
+  render_data_.shader_sp_hmap_.Bind();
 
-  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_terrain_height
-      .Bind();
+  render_data_.glfw_context_.tile_renderer->cur_tile_.map_terrain_height
+      .BindSampler(0);
   sprite_hmap_.Render();
 
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
 
   accept_.Render();
   erosion_input_.RenderBack();
@@ -81,7 +81,7 @@ bool UiTerrainBake::Render() {
 
 void UiTerrainBake::RenderPicking() {
   RenderPickingBack();
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
 
   accept_.RenderPicking();
 
@@ -90,9 +90,9 @@ void UiTerrainBake::RenderPicking() {
   erosion_input_.RenderPicking();
   weathering_input_.RenderPicking();
 
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   erosion_label_.RenderPicking();
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   weathering_label_.RenderPicking();
 }
 
@@ -335,8 +335,8 @@ void UiTerrainBake::ProcessErosion(
     }
   }
 
-  tex_erosion_hydraulic_map_ = Texture32F(details::gTerrainSize, GL_R32F);
-  tex_erosion_hydraulic_map_.Bind();
+  tex_erosion_hydraulic_map_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  tex_erosion_hydraulic_map_.BindSampler(0);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT,
                hmap_heights_updated.data());
   // tex_erosion_hydraulic_map_.Store("erosion_wear.png", 1, GL_RED);
@@ -348,8 +348,8 @@ void UiTerrainBake::ProcessErosion(
       //          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
-  tex_hmap_ = Texture32F(details::gTerrainSize, GL_R32F);
-  tex_hmap_.Bind();
+  tex_hmap_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  tex_hmap_.BindSampler(0);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT,
                hmap_heights_updated.data());
   // tex_hmap_.Store("height_map_erosed.png", 1, GL_RED);
@@ -377,8 +377,8 @@ void UiTerrainBake::ProcessThermalWeathering(int iterations, float talus) {
     }
   }
 
-  tex_erosion_thermal_map_ = Texture32F(details::gTerrainSize, GL_R32F);
-  tex_erosion_thermal_map_.Bind();
+  tex_erosion_thermal_map_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  tex_erosion_thermal_map_.BindSampler(0);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT,
                hmap_heights_updated.data());
   // tex_erosion_thermal_map_.Store("weathering_wear.png", 1, GL_RED);
@@ -390,73 +390,64 @@ void UiTerrainBake::ProcessThermalWeathering(int iterations, float talus) {
       //          static_cast<uint8_t>(std::clamp(acc, 0.0f, 1.0f) * 255.0f);
     }
   }
-  tex_hmap_ = Texture32F(details::gTerrainSize, GL_R32F);
-  tex_hmap_.Bind();
+  tex_hmap_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  tex_hmap_.BindSampler(0);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT,
                hmap_heights_updated.data());
   // tex_hmap_.Store("height_map_weathered.png", 1, GL_RED);
 }
 
 void UiTerrainBake::GenerateSplatmap() {
+  auto size = details::gTerrainSize;
   shader_gen_splat_map_.Bind();
-  glBindImageTexture(0, tex_splat_map_.GetId(), 0, GL_FALSE, 0, GL_WRITE_ONLY,
-                     tex_splat_map_.GetFormat());
-  glBindImageTexture(1, tex_slope_map_.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY,
-                     tex_slope_map_.GetFormat());
-  glBindImageTexture(2, tex_hmap_.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY,
-                     tex_hmap_.GetFormat());
-  // glBindImageTexture(
-  // 1, tex_water_hmap_.GetId(), 0,
-  // GL_FALSE, 0, GL_WRITE_ONLY, tex_slope_map_.GetFormat());
-  glDispatchCompute(details::gTerrainSize / 8, details::gTerrainSize / 8, 1);
+  tex_splat_map_.BindImage(0, GL_WRITE_ONLY);
+  tex_slope_map_.BindImage(1, GL_READ_ONLY);
+  tex_hmap_.BindImage(2, GL_READ_ONLY);
+  glDispatchCompute(size / 8, size / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  // tex_splat_map_.Store("splat_map.png", 1, GL_RED);
+  // tex_splat_map_.StoreImage("splat_map.png", 1);
 }
 
 void UiTerrainBake::GenerateNmap() {
+  auto size = details::gTerrainSize;
   shader_gen_nmap_.Bind();
-  glBindImageTexture(0, tex_hmap_.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY,
-                     GL_R32F);
-  glBindImageTexture(1, tex_nmap_.GetId(), 0, GL_FALSE, 0, GL_WRITE_ONLY,
-                     tex_nmap_.GetFormat());
-  glDispatchCompute(details::gTerrainSize / 8, details::gTerrainSize / 8, 1);
+  tex_hmap_.BindImage(0, GL_READ_ONLY);
+  tex_nmap_.BindImage(1, GL_WRITE_ONLY);
+  glDispatchCompute(size / 8, size / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  tex_nmap_.Store("normal_map.png", 2, GL_RG, 1);
+  tex_nmap_.StoreImage("normal_map.png", 2);
 }
 
 void UiTerrainBake::GenerateSlope() {
+  auto size = details::gTerrainSize;
   shader_gen_slope_map_.Bind();
-  glBindImageTexture(0, tex_hmap_.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY,
-                     tex_hmap_.GetFormat());
-  glBindImageTexture(1, tex_slope_map_.GetId(), 0, GL_FALSE, 0, GL_WRITE_ONLY,
-                     tex_slope_map_.GetFormat());
-  glDispatchCompute(details::gTerrainSize / 8, details::gTerrainSize / 8, 1);
+  tex_hmap_.BindImage(0, GL_READ_ONLY);
+  tex_slope_map_.BindImage(1, GL_WRITE_ONLY);
+  glDispatchCompute(size / 8, size / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  tex_slope_map_.Store("slope_map.png", 1, GL_RED);
+  tex_slope_map_.StoreImage("slope_map.png", 1);
 }
 
 void UiTerrainBake::GenerateAo() {
+  auto size = details::gTerrainSize;
   shader_gen_ao_map_.Bind();
-  glBindImageTexture(0, tex_hmap_.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY,
-                     tex_hmap_.GetFormat());
-  glBindImageTexture(1, tex_ao_map_.GetId(), 0, GL_FALSE, 0, GL_WRITE_ONLY,
-                     tex_ao_map_.GetFormat());
-  glDispatchCompute(details::gTerrainSize / 8, details::gTerrainSize / 8, 1);
+  tex_hmap_.BindImage(0, GL_READ_ONLY);
+  tex_ao_map_.BindImage(1, GL_WRITE_ONLY);
+  glDispatchCompute(size / 8, size / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-  tex_ao_map_.Store("ao_map.png", 1, GL_RED);
+  tex_ao_map_.StoreImage("ao_map.png", 1);
 }
 
 void UiTerrainBake::Perturbate() {
-  Texture32F tex_hmap_new(details::gTerrainSize, GL_R32F);
+  auto size = details::gTerrainSize;
+  Texture32F tex_hmap_new(size, size, GL_RED, GL_R32F, GL_FLOAT);
   shader_perturbate_.Bind();
-  glBindImageTexture(0, tex_hmap_.GetId(), 0, GL_FALSE, 0, GL_READ_ONLY,
-                     tex_hmap_.GetFormat());
-  glBindImageTexture(1, tex_hmap_new.GetId(), 0, GL_FALSE, 0, GL_WRITE_ONLY,
-                     tex_hmap_new.GetFormat());
-  glDispatchCompute(details::gTerrainSize / 8, details::gTerrainSize / 8, 1);
+  tex_hmap_.BindImage(0, GL_READ_ONLY);
+  tex_hmap_new.BindImage(1, GL_WRITE_ONLY);
+  glDispatchCompute(size / 8, size / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   tex_hmap_ = std::move(tex_hmap_new);
-  // tex_hmap_.Store("tex_hmap_perturbated.png", 1, GL_RED);
+  // tex_hmap_.StoreImage("tex_hmap_perturbated.png", 1);
 }
 
 void UiTerrainBake::ComputeFlowMaps(
@@ -554,20 +545,20 @@ void UiTerrainBake::GenerateFlowMap(
 
   tex_water_flow_ = Texture(details::gTerrainSize, details::gTerrainSize,
                             GL_RG8, GL_LINEAR, GL_CLAMP_TO_EDGE);
-  tex_water_flow_.Bind();
+  tex_water_flow_.BindSampler(0);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, width, height, 0, GL_RG,
                GL_UNSIGNED_BYTE, flow_dir_data.data());
-  tex_water_flow_.Store("water_flow.png", 3, GL_RGB);
+  tex_water_flow_.StoreImage("water_flow.png", 3);
 
-  tex_water_accum_ = Texture32F(details::gTerrainSize, GL_R32F);
-  tex_water_accum_.Bind();
+  tex_water_accum_ = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  tex_water_accum_.BindSampler(0);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT,
                flow_accum_data.data());
-  tex_water_accum_.Store("water_accum.png", 1, GL_RED);
+  tex_water_accum_.StoreImage("water_accum.png", 1);
 }
 
 void UiTerrainBake::UpdateCpuData() {
-  tex_hmap_.Bind();
+  tex_hmap_.BindSampler(0);
   glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, hmap_heights_.data());
 }
 
@@ -587,9 +578,8 @@ void UiTerrainBake::Bake(int steps_thermal, int steps_weathering, float talus) {
   UpdateCpuData();
 
   //    ProcessThermalWeathering(steps_weathering, talus);
-  std::cout << "CH6" << std::endl;
   UpdateCpuData();
-
+  std::cout << "CH6" << std::endl;
   GenerateNmap();
   std::cout << "CH7" << std::endl;
   GenerateSlope();

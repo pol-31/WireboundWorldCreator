@@ -10,13 +10,13 @@
 #include "../io/Window.h"
 #include "OpenGlUtility.h"
 
-MouseTransform::MouseTransform(UiSharedResources& ui_shared_resources)
-    : ui_shared_resources_(ui_shared_resources),
+MouseTransform::MouseTransform(UiRenderData& render_data)
+    : render_data_(render_data),
       vertices_transform_shader_(
-          "../shaders/generate_shaders/VerticesTransform.comp") {}
+          "../shaders/generate_shaders/VerticesTransform.comp", {}) {}
 
 void MouseTransform::UpdateStartAngle() {
-  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_;
+  auto mouse_pos = render_data_.glfw_context_.cursor_pos_;
   auto offset = GetWorldOffset(mouse_pos.x, mouse_pos.y);
   zero_angle_ = std::atan2(offset.y, offset.x) - zero_angle_;
   last_angle_ = 0.0f;
@@ -41,7 +41,7 @@ void MouseTransform::InitTransform(glm::vec3 translate, glm::quat rotate,
   axis_ = glm::vec3(1.0f);
   Reset(translate, rotate, scale);
   UpdateStartAngle();
-  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_;
+  auto mouse_pos = render_data_.glfw_context_.cursor_pos_;
   auto offset = GetWorldOffset(mouse_pos.x, mouse_pos.y);
   zero_scale_length_ = glm::length(offset);
 }
@@ -68,8 +68,8 @@ void MouseTransform::SetAxis(int key, bool mod_shift) {
 
 void MouseTransform::RotateSelected(double xpos, double ypos) {
   float map_scale =
-      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
-  Camera* camera = ui_shared_resources_.glfw_context_.camera;
+      render_data_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+  Camera* camera = render_data_.glfw_context_.camera;
   glm::vec3 axis = axis_;
   if (axis == glm::vec3(1.0f)) {
     auto camera_pos = camera->GetPosition();
@@ -213,8 +213,8 @@ void MouseTransform::TranslateSelectedVerticesUp(
     return;
   }
   vertices_transform_shader_.Bind();
-  utility::BindImageTexture(0, hmap, GL_READ_WRITE);
-  utility::BindImageTexture(1, selection_mask, GL_READ_ONLY);
+  hmap.BindImage(0, GL_READ_WRITE);
+  selection_mask.BindImage(1, GL_READ_ONLY);
   glUniform1f(0, value_y);
   // always smoothing, so affect "in-between" vertices too
   float falloff = 10.0f;
@@ -238,8 +238,8 @@ void MouseTransform::Reset(glm::vec3 translate, glm::quat rotate,
 
 glm::vec2 MouseTransform::GetWorldOffset(float xpos, float ypos) {
   float map_scale =
-      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
-  Camera* camera = ui_shared_resources_.glfw_context_.camera;
+      render_data_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+  Camera* camera = render_data_.glfw_context_.camera;
 
   glm::vec4 object_centre_3d =
       glm::vec4(cur_translate_.x, cur_translate_.y, cur_translate_.z, 1.0f);

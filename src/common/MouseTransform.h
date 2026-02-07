@@ -4,14 +4,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "../modes/UiSharedResources.h"
+#include "../ui/UiRenderData.h"
+#include "../render/Shader.h"
 #include "MapPoint.h"
-#include "Shader.h"
-#include "Texture.h"
+#include "../render/Texture.h"
 
 class MouseTransform {
  public:
-  MouseTransform(UiSharedResources& ui_shared_resources);
+  MouseTransform(UiRenderData& render_data);
 
   void InitTransform(glm::vec3 translate = glm::vec3(0.0f),
                      glm::quat rotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
@@ -77,7 +77,7 @@ class MouseTransform {
   float zero_scale_length_ = 0.0f;
   float prev_value_y_ = 0.0f;
 
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 
   Shader vertices_transform_shader_;
 

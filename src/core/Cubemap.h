@@ -8,12 +8,12 @@
 #include <iostream>
 #include <string_view>
 
-#include "../common/Shader.h"
-#include "../common/Texture.h"
+#include "../render/Texture.h"
+#include "../render/Shader.h"
 
 class Cubemap {
  public:
-  Cubemap() : shader_("../shaders/Skybox.vert", "../shaders/Skybox.frag") {
+  Cubemap() : shader_("../shaders/Skybox.vert", "../shaders/Skybox.frag", {0}) {
     Init();
   }
 
@@ -79,10 +79,7 @@ class Cubemap {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    texture_ = Texture(opengl_id, width, height, format);
-
-    shader_.Bind();
-    glUniform1i(0, 0);
+    texture_ = Texture(opengl_id, width, height, format, format, GL_UNSIGNED_BYTE);
     InitBuffers();
   }
 
@@ -119,8 +116,8 @@ class Cubemap {
 
   Texture texture_;
   Shader shader_;
-  GLuint vao_{0};
-  GLuint vbo_{0};
+  GLuint vao_ = 0;
+  GLuint vbo_ = 0;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_CORE_CUBEMAP_H_

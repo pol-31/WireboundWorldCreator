@@ -7,10 +7,10 @@
 #include <string_view>
 
 #include "../core/Ui.h"
-#include "../modes/UiSharedResources.h"
+#include "../ui/UiRenderData.h"
+#include "../render/Shader.h"
 #include "Font.h"
-#include "Shader.h"
-#include "Texture.h"
+#include "../render/Texture.h"
 
 class UiTextInput;
 
@@ -26,7 +26,7 @@ class TextRenderer {
   };
   enum class Alignment { kLeft, kRight, kCentre };
 
-  TextRenderer(UiSharedResources& ui_shared_resources,
+  TextRenderer(UiRenderData& render_data,
                UiSprite&& prerender_text_slot, UiSprite&& sprite_cursor);
 
   ~TextRenderer();
@@ -171,7 +171,7 @@ class TextRenderer {
   bool smt_selected_ = true;
   bool mouse_selection_ = false;
 
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_TEXTRENDERER_H_

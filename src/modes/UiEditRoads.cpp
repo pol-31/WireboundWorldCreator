@@ -11,12 +11,12 @@ GraphBakeConfig RoadTraits::GetGraphConfig() const noexcept {
           .radius_flat = config.radius_flat};
 }
 
-UiEditRoads::UiEditRoads(UiSharedResources& ui_shared_resources,
+UiEditRoads::UiEditRoads(UiRenderData& render_data,
                          UiEditSlots& ui_edit_slots,
                          UiEditConfigSlTxt& value_config)
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),
-      ui_shared_resources_(ui_shared_resources) {}
+      render_data_(render_data) {}
 
 void UiEditRoads::HideAll() { ui_.ForceHide(); }
 
@@ -38,7 +38,7 @@ void UiEditRoads::UpdateConfig() {
       {&inst.config.radius, data::TextId::kPlacementRadius},
       {&inst.config.radius_flat, data::TextId::kPlacementRadiusFlat},
   }};
-  ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline();
+  render_data_.glfw_context_.tile_renderer->UpdatePipeline();
 }
 
 void UiEditRoads::SetInstanceId(int id) {
@@ -91,5 +91,5 @@ RoadTraits& UiEditRoads::GetInstanceData() noexcept {
 }
 
 std::vector<RoadTraits>& UiEditRoads::Data() {
-  return ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.roads_data;
+  return render_data_.glfw_context_.tile_renderer->cur_tile_.roads_data;
 }

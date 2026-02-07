@@ -3,8 +3,8 @@
 
 #include <glad/glad.h>
 
-#include "../common/Texture.h"
-#include "../modes/UiSharedResources.h"
+#include "../render/Texture.h"
+#include "../ui/UiRenderData.h"
 #include "Ui.h"
 #include "UiComplex.h"
 
@@ -13,7 +13,7 @@ struct TerrainTraits;
 
 class UiLayerWireframe {
  public:
-  UiLayerWireframe(UiSharedResources& ui_shared_resources);
+  UiLayerWireframe(UiRenderData& render_data);
 
   UiLayerWireframe(UiLayerWireframe&& other) = delete;
   UiLayerWireframe(const UiLayerWireframe& other) = delete;
@@ -44,7 +44,7 @@ class UiLayerWireframe {
 
   glm::mat4 GetPointMvpMatrix();
 
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
   UiSprite sp_layer_;
   UiSprite sp_frame_;
 

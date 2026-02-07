@@ -2,7 +2,7 @@
 
 #include "../core/TileRenderer.h"
 
-UiEditOcean::UiEditOcean(UiSharedResources& ui_shared_resources,
+UiEditOcean::UiEditOcean(UiRenderData& render_data,
                          TextRenderer& text_renderer,
                          UiEditSlots& ui_edit_slots,
                          UiEditConfigSlCfg& value_config,
@@ -16,7 +16,7 @@ UiEditOcean::UiEditOcean(UiSharedResources& ui_shared_resources,
             {100.0f, 20'000.0f, 1'0000, 0.6f, 0.7f, 5.0f, 0.7f, 1.1f}},
            {data::TextId::kLayer3,
             {100.0f, 20'000.0f, 1'0000, 0.6f, 0.7f, 5.0f, 0.7f, 1.1f}}}),
-      ui_shared_resources_(ui_shared_resources),
+      render_data_(render_data),
       ui_ocean_config_(ui_ocean_config) {}
 
 void UiEditOcean::HideAll() {
@@ -30,7 +30,7 @@ void UiEditOcean::CreateInstance() {
 }
 
 void UiEditOcean::UpdateConfig() {
-  ui_shared_resources_.glfw_context_.tile_renderer->water.SetWaterColor(
+  render_data_.glfw_context_.tile_renderer->water.SetWaterColor(
       Data()[selected_id_].color);
 }
 
@@ -56,7 +56,7 @@ void UiEditOcean::Generate() {
   traits.mid = ocean_layers_[1].GetConfig();
   traits.far = ocean_layers_[2].GetConfig();
   TileRenderer* tile_renderer =
-      ui_shared_resources_.glfw_context_.tile_renderer;
+      render_data_.glfw_context_.tile_renderer;
   tile_renderer->water.UpdateOcean(traits);
 }
 
@@ -71,9 +71,9 @@ void UiEditOcean::GenerateAll() {
     traits.mid = ocean_layers_[1].GetConfig();
     traits.far = ocean_layers_[2].GetConfig();
     TileRenderer* tile_renderer =
-        ui_shared_resources_.glfw_context_.tile_renderer;
+        render_data_.glfw_context_.tile_renderer;
     tile_renderer->water.UpdateOcean(traits);
-    ui_shared_resources_.glfw_context_.tile_renderer->water.SetWaterColor(
+    render_data_.glfw_context_.tile_renderer->water.SetWaterColor(
         Data()[id].color);
   }
 }
@@ -92,7 +92,7 @@ bool UiEditOcean::Press(int id, float height) {
   value_config_.ResetTransform();
   int pressed_line_id =
       GetUiEditEntryId(height, ocean_layers_.size(),
-                       ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_,
+                       render_data_.glfw_context_.cursor_pos_tex_norm_,
                        value_config_.btn_config_.GetTopBorder());
   if (id == value_config_.btn_config_.GetId()) {
     ui_ocean_config_.SetNoise(ocean_layers_[pressed_line_id].GetValueSpan(),
@@ -115,7 +115,7 @@ bool UiEditOcean::Press(int id, float height) {
 void UiEditOcean::Release() { value_config_.Release(); }
 
 void UiEditOcean::Render(float height) {
-  ui_shared_resources_.glfw_context_.tile_renderer->water.SetWaterColor(
+  render_data_.glfw_context_.tile_renderer->water.SetWaterColor(
       Data()[selected_id_].color);
   glm::vec2 next_offset = glm::vec2{0.0f};
   float entry_height = height / (ocean_layers_.size() + 5);  // +pads
@@ -137,5 +137,5 @@ OceanTraits& UiEditOcean::GetInstanceData() noexcept {
 }
 
 std::vector<OceanTraits>& UiEditOcean::Data() {
-  return ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.ocean_data;
+  return render_data_.glfw_context_.tile_renderer->cur_tile_.ocean_data;
 }

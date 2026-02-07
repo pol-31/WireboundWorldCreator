@@ -263,12 +263,12 @@ void UiCompass::Render() {
 void UiCompass::RenderPicking() const { sp_compass_.RenderPicking(); }
 
 UiWindowBase::UiWindowBase(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-                           UiSharedResources& ui_shared_resources,
+                           UiRenderData& render_data,
                            WindowQueue& window_queue)
     : background_(std::move(sprite)),
       size_scale_(size_scale),
       pin_(std::move(pin)),
-      ui_shared_resources_(ui_shared_resources),
+      render_data_(render_data),
       window_queue_(window_queue),
       speed_(4.0f) {
   background_.SetScale(size_scale);
@@ -312,10 +312,10 @@ bool UiWindowBase::Pinned() const noexcept { return pin_.TurnedOn(); }
 
 UiWindowAppear::UiWindowAppear(UiSprite&& sprite, float size_scale,
                                UiToggle2&& pin,
-                               UiSharedResources& ui_shared_resources,
+                               UiRenderData& render_data,
                                WindowQueue& window_queue)
     : UiWindowBase(std::move(sprite), size_scale, std::move(pin),
-                   ui_shared_resources, window_queue) {}
+                   render_data, window_queue) {}
 
 /// back_ready_==false when appearing or disappearing animation
 /// returs false when disappearing fading is over
@@ -333,27 +333,24 @@ bool UiWindowAppear::RenderBack(bool show) {
     }
   }
   progress_ = std::clamp(progress_, 0.0f, 1.0f);
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glActiveTexture(GL_TEXTURE1);
-  ui_shared_resources_.shader_sp_mask_.Bind();
-  ui_shared_resources_.tex_ui_mask_.Bind();
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
+  pin_.Render();
+  render_data_.shader_sp_mask_.Bind();
+  render_data_.tex_ui_mask_.BindSampler(6);
   glUniform1f(4, progress_);
   background_.Render();
-  ui_shared_resources_.shader_sp_.Bind();
-  glActiveTexture(GL_TEXTURE0);  // go back to default
-  pin_.Render();
   return true;
 }
 
 void UiWindowAppear::RenderPickingBack() {
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   background_.RenderPicking();
   pin_.RenderPicking();
 }
 
 UiObjectInfo::UiObjectInfo(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-                           UiSharedResources& ui_shared_resources,
+                           UiRenderData& render_data,
                            WindowQueue& window_queue,
 
                            UiSprite&& sp_enemy, UiSprite&& sp_friend,
@@ -361,7 +358,7 @@ UiObjectInfo::UiObjectInfo(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
                            UiText&& txt_name, UiText&& txt_characteristic,
                            UiText&& txt_value)
     : UiWindowAppear(std::move(sprite), size_scale, std::move(pin),
-                     ui_shared_resources, window_queue),
+                     render_data, window_queue),
       sp_enemy_(std::move(sp_enemy)),
       sp_friend_(std::move(sp_friend)),
       sp_neutral_(std::move(sp_neutral)),
@@ -377,13 +374,13 @@ UiObjectInfo::UiObjectInfo(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
 }
 
 bool UiObjectInfo::Render() {
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   bool stop_show = Base::RenderBack(true);
   //  if (!Base::BackIsReady()) {
   //    return stop_show;
   //  }
 
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.shader_sp_.Bind();
   glUniform1f(1, 0.4f);  /// half-saturated color for non-selected
   sp_enemy_.Render();
   sp_friend_.Render();
@@ -443,7 +440,7 @@ void UiObjectInfo::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   sp_enemy_.RenderPicking();
   sp_friend_.RenderPicking();
   sp_neutral_.RenderPicking();
@@ -498,22 +495,22 @@ void UiObjectInfo::Show(bool enemy_selected, bool friend_selected,
 }
 
 UiTipWindow::UiTipWindow(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-                         UiSharedResources& ui_shared_resources,
+                         UiRenderData& render_data,
                          WindowQueue& window_queue, UiSprite&& text)
     : UiWindowAppear(std::move(sprite), size_scale, std::move(pin),
-                     ui_shared_resources, window_queue),
+                     render_data, window_queue),
       text_(std::move(text)),
       hierarchy_(&background_, {&pin_, &text_}) {
   speed_ = 2.0f;
 }
 
 bool UiTipWindow::Render() {
-  UpdateHoverState(ui_shared_resources_.glfw_context_.hovered_id);
+  UpdateHoverState(render_data_.glfw_context_.hovered_id);
   bool stop_show = Base::RenderBack(hovered_);
   if (!Base::BackIsReady()) {
     return stop_show;
   }
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.shader_sp_.Bind();
   text_.Render();
   return stop_show;
 }
@@ -546,17 +543,17 @@ void UiTipWindow::SetText(data::TextId text_id) {
 
 UiWindowPopUp::UiWindowPopUp(UiSprite&& sprite, float size_scale,
                              UiToggle2&& pin,
-                             UiSharedResources& ui_shared_resources,
+                             UiRenderData& render_data,
                              WindowQueue& window_queue,
                              LocalTransform start_transform,
                              LocalTransform end_transform)
     : UiWindowBase(std::move(sprite), size_scale, std::move(pin),
-                   ui_shared_resources, window_queue),
+                   render_data, window_queue),
       start_transform_(start_transform),
       end_transform_(end_transform) {}
 
 bool UiWindowPopUp::RenderBack(bool show) {
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.shader_sp_.Bind();
   if (pin_.TurnedOn() || show) {
     progress_ += speed_ * gDeltaTime;
     if (progress_ >= 1.0f) {
@@ -579,7 +576,7 @@ bool UiWindowPopUp::RenderBack(bool show) {
 }
 
 void UiWindowPopUp::RenderPickingBack() {
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   background_.RenderPicking();
   pin_.RenderPicking();
 }
@@ -598,7 +595,7 @@ void UiWindowPopUp::CubicInterpolation() {
 
 UiSettings::UiSettings(
     UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-    UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+    UiRenderData& render_data, WindowQueue& window_queue,
     LocalTransform start_transform, LocalTransform end_transform,
     UiSprite&& resolution_label, UiSprite&& resolution_left,
     UiSprite&& resolution_right, UiSprite&& resolution,
@@ -606,7 +603,7 @@ UiSettings::UiSettings(
     UiToggle4&& toggle_sound, UiSliderH2&& music, UiToggle4&& toggle_music,
     UiSprite&& tip_info_label, UiSprite&& tip_info, UiToggle4&& toggle_tip_info)
     : UiWindowPopUp(std::move(sprite), size_scale, std::move(pin),
-                    ui_shared_resources, window_queue, start_transform,
+                    render_data, window_queue, start_transform,
                     end_transform),
       resolution_label_(std::move(resolution_label)),
       resolution_left_(std::move(resolution_left)),
@@ -634,13 +631,13 @@ UiSettings::UiSettings(
 
 // returns "stop render"
 bool UiSettings::Render() {
-  UpdateHoverState(ui_shared_resources_.glfw_context_.hovered_id);
-  ui_shared_resources_.tex_ui_.Bind();
+  UpdateHoverState(render_data_.glfw_context_.hovered_id);
+  render_data_.tex_ui_.BindSampler(0);
   bool stop_show = Base::RenderBack(hovered_);
   //  if (!Base::BackIsReady()) {
   //    return stop_show;
   //  }
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.shader_sp_.Bind();
 
   resolution_label_.SetParentTransform(Base::cur_transform_);
   resolution_left_.SetParentTransform(Base::cur_transform_);
@@ -656,7 +653,7 @@ bool UiSettings::Render() {
   tip_info_.SetParentTransform(Base::cur_transform_);
   toggle_tip_info_.SetParentTransform(Base::cur_transform_);
 
-  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
+  auto mouse_pos = render_data_.glfw_context_.cursor_pos_tex_norm_;
 
   resolution_left_.Render();
   resolution_right_.Render();
@@ -670,11 +667,11 @@ bool UiSettings::Render() {
   tip_info_.Render();
   toggle_tip_info_.Render();
 
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.shader_sp_.Bind();
 
-  ui_shared_resources_.glfw_context_.text_renderer->RenderText(
+  render_data_.glfw_context_.text_renderer->RenderText(
       resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
-  ui_shared_resources_.glfw_context_.text_renderer->RenderText(
+  render_data_.glfw_context_.text_renderer->RenderText(
       tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
 
   return stop_show;
@@ -685,7 +682,7 @@ void UiSettings::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
 
   resolution_left_.RenderPicking();
   resolution_right_.RenderPicking();
@@ -699,11 +696,11 @@ void UiSettings::RenderPicking() {
   tip_info_.RenderPicking();
   toggle_tip_info_.RenderPicking();
 
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
 
-  ui_shared_resources_.glfw_context_.text_renderer->RenderTextPicking(
+  render_data_.glfw_context_.text_renderer->RenderTextPicking(
       resolution_label_, "resolution", 0.05f, glm::vec2{0.0f});
-  ui_shared_resources_.glfw_context_.text_renderer->RenderTextPicking(
+  render_data_.glfw_context_.text_renderer->RenderTextPicking(
       tip_info_label_, "show tips", 0.05f, glm::vec2{0.0f});
 }
 
@@ -729,12 +726,12 @@ bool UiSettings::Scroll(GLuint id, float yoffset) {
          sensitivity_.Scroll(id, yoffset);
 }
 
-UiPlayerMap::UiPlayerMap(UiSharedResources& ui_shared_resources,
+UiPlayerMap::UiPlayerMap(UiRenderData& render_data,
                          WindowQueue& window_queue)
     : UiWindowPopUp(
           {data::VboIdMain::kPlayerPhoneMap}, 1.0f,
           {{data::VboIdMain::kMapFlowerRed}, {data::VboIdMain::kMapFlowerBlue}},
-          ui_shared_resources, window_queue,
+          render_data, window_queue,
           LocalTransform{glm::vec2{0.2f, 0.0f}, 1.0f, 0.0f},
           LocalTransform{glm::vec2{0.0f}, 1.0f, 0.0f}),
       sp_player_(data::VboIdMain::kPlayerMapPlayer),
@@ -752,10 +749,10 @@ bool UiPlayerMap::Render() {
 }
 
 void UiPlayerMap::Render(ModelManager* mdl_manager) {
-  UpdateHoverState(ui_shared_resources_.glfw_context_.hovered_id);
-  ui_shared_resources_.tex_ui_.Bind();
+  UpdateHoverState(render_data_.glfw_context_.hovered_id);
+  render_data_.tex_ui_.BindSampler(0);
   bool stop_show = Base::RenderBack(hovered_);
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.shader_sp_.Bind();
 
   sp_player_.SetParentTransform(Base::cur_transform_);
   sp_enemy_.SetParentTransform(Base::cur_transform_);

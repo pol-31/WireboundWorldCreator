@@ -6,7 +6,7 @@
 #include <random>
 
 Texture32F GaussianNoise::Generate(int size) {
-  Texture32F texture(size, GL_RG32F);
+  Texture32F texture(size, size, GL_RG, GL_RG32F, GL_FLOAT);
   std::vector<GLfloat> data(size * size * 2);
   for (int i = 0; i < size; i++) {
     for (int j = 0; j < size; j++) {
@@ -16,7 +16,7 @@ Texture32F GaussianNoise::Generate(int size) {
       // data[(i * size + j) * 2 + 1] = StableRandom(248);
     }
   }
-  texture.Bind();
+  texture.BindSampler(0);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, size, size, 0, GL_RG, GL_FLOAT,
                data.data());
   return texture;

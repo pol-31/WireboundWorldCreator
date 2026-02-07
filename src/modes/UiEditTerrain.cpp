@@ -7,7 +7,7 @@
 #include "../renderers/UiRenderer.h"
 
 UiEditTerrain::UiEditTerrain(Tile& cur_tile,
-                             UiSharedResources& ui_shared_resources,
+                             UiRenderData& render_data,
                              TextRenderer& text_renderer,
                              UiEditSlots& ui_edit_slots,
                              UiEditConfigSlCfg& value_config,
@@ -24,10 +24,10 @@ UiEditTerrain::UiEditTerrain(Tile& cur_tile,
                             {data::VboIdMain::kTerrainEditLabelStrength},
                             data::TextId::kStrength}),
 
-      shader_merge_noises_("../shaders/noise_shaders/MergeNoises.comp"),
-      shader_flatten_prep_("../shaders/generate_shaders/FlattenPrep.comp"),
-      shader_flatten_step_("../shaders/generate_shaders/FlattenStep.comp"),
-      shader_flatten_merge_("../shaders/generate_shaders/FlattenMerge.comp"),
+      shader_merge_noises_("../shaders/noise_shaders/MergeNoises.comp", {}),
+      shader_flatten_prep_("../shaders/generate_shaders/FlattenPrep.comp", {}),
+      shader_flatten_step_("../shaders/generate_shaders/FlattenStep.comp", {}),
+      shader_flatten_merge_("../shaders/generate_shaders/FlattenMerge.comp", {}),
 
       gen_perlin_("../shaders/noise_shaders/Perlin.comp",
                   {{10.0f, 10.0f, 20.0f}},
@@ -79,7 +79,7 @@ UiEditTerrain::UiEditTerrain(Tile& cur_tile,
                &gen_fbm_multi_, &gen_fbmd_perlin_, &gen_fbm_warp_,
                &gen_fbm_perlin_warp_}),
 
-      ui_shared_resources_(ui_shared_resources),
+      render_data_(render_data),
       ui_noise_config_(ui_noise_config) {
   Init();
 }
@@ -91,19 +91,16 @@ void UiEditTerrain::HideAll() {
 
 void UiEditTerrain::CreateInstance() {
   Data().push_back(TerrainTraits{});
-  Data().back().data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
-  glClearTexImage(Data().back().data.hmap.GetId(), 0, GL_RED, GL_FLOAT,
-                  nullptr);
-  Data().back().extra_heights = Texture32F(details::gTerrainSize, GL_R32F);
-  glClearTexImage(Data().back().extra_heights.GetId(), 0, GL_RED, GL_FLOAT,
-                  nullptr);
+  auto size = details::gTerrainSize;
+  Data().back().data.hmap = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  Data().back().extra_heights = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
   UpdateConfig();
 }
 
 void UiEditTerrain::UpdateConfig() {
   using namespace utility;
   int size = details::gTerrainSize;
-  Texture32F hmap(details::gTerrainSize, GL_R32F);
+  Texture32F hmap(size, size, GL_RED, GL_R32F, GL_FLOAT);
   glBindTexture(GL_TEXTURE_2D, hmap.GetId());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -111,7 +108,7 @@ void UiEditTerrain::UpdateConfig() {
   glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color_black);
   glClearTexImage(hmap.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
 
-  Texture32F tex_mesh(details::gTerrainSize, GL_R32F);
+  Texture32F tex_mesh(size, size, GL_RED, GL_R32F, GL_FLOAT);
   for (int i = 0; i < Data().size(); ++i) {
     if (!Data()[i].do_show) {
       continue;
@@ -127,8 +124,8 @@ void UiEditTerrain::UpdateConfig() {
     glm::mat4 inverseTransform = glm::inverse(model);
     glUniformMatrix4fv(4, 1, false, glm::value_ptr(inverseTransform));
 
-    BindImageTexture(0, Data()[i].data.hmap, GL_READ_ONLY);
-    BindImageTexture(1, tex_mesh, GL_WRITE_ONLY);
+    Data()[i].data.hmap.BindImage(0, GL_READ_ONLY);
+    tex_mesh.BindImage(1, GL_WRITE_ONLY);
     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
@@ -154,8 +151,8 @@ void UiEditTerrain::UpdateConfig() {
     // }
 
     shader_flatten_merge_.Bind();
-    BindImageTexture(0, hmap, GL_READ_WRITE);
-    BindImageTexture(1, tex_mesh, GL_READ_ONLY);
+    hmap.BindImage(0, GL_READ_WRITE);
+    tex_mesh.BindImage(1, GL_READ_ONLY);
     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -167,15 +164,15 @@ void UiEditTerrain::UpdateConfig() {
 
     shader_merge_noises_.Bind();
     glUniform1f(2, 1.0f);
-    BindImageTexture(0, hmap, GL_READ_WRITE);
-    BindImageTexture(1, extra_heights, GL_READ_ONLY);
+    hmap.BindImage(0, GL_READ_WRITE);
+    extra_heights.BindImage(1, GL_READ_ONLY);
     glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   }
 
-  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+  render_data_.glfw_context_.tile_renderer->cur_tile_
       .map_terrain_height_raw_ = std::move(hmap);
-  ui_shared_resources_.glfw_context_.tile_renderer->UpdatePipeline();
+  render_data_.glfw_context_.tile_renderer->UpdatePipeline();
   if (IsHmapNan()) {
     std::cerr << "unnable to generate noises, change the config" << std::endl;
   }
@@ -207,16 +204,16 @@ void UiEditTerrain::RemoveInstance(GLuint id) {
 }
 
 void UiEditTerrain::Reset() {
+  render_data_.glfw_context_.tile_renderer->cur_tile_.ResetTerrain();
   Data().clear();
   UpdateConfig();
 }
 
 void UiEditTerrain::Generate() {
   auto& data = Data()[selected_id_].data;
-  data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
-  glClearTexImage(data.hmap.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
-  Texture32F tex_noise;
-  glClearTexImage(tex_noise.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
+  auto size = details::gTerrainSize;
+  data.hmap = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  Texture32F tex_noise = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
   MergeLayers(data.hmap, tex_noise, &data.perlin, &gen_perlin_);
   MergeLayers(data.hmap, tex_noise, &data.cellular, &gen_cellular_);
   MergeLayers(data.hmap, tex_noise, &data.metaballs, &gen_metaballs_);
@@ -232,6 +229,7 @@ void UiEditTerrain::Generate() {
 
 void UiEditTerrain::GenerateAll() {
   auto& all_data = Data();
+  auto size = details::gTerrainSize;
   for (int i = 0; i < all_data.size(); ++i) {
     auto& data = all_data[i].data;
     gen_perlin_.SetConfig(&data.perlin, {&data.perlin.scale_x, 3});
@@ -244,7 +242,7 @@ void UiEditTerrain::GenerateAll() {
     gen_fbm_warp_.SetConfig(&data.fbm_warp, {&data.fbm_warp.scale_x, 10});
     gen_fbm_perlin_warp_.SetConfig(&data.fbm_perlin_warp,
                                    {&data.fbm_perlin_warp.scale_x, 10});
-    data.hmap = Texture32F(details::gTerrainSize, GL_R32F);
+    data.hmap = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
     glClearTexImage(data.hmap.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
     Texture32F tex_noise;
     MergeLayers(data.hmap, tex_noise, &data.perlin, &gen_perlin_);
@@ -279,7 +277,7 @@ bool UiEditTerrain::Press(int id, float height) {
   value_config_.ResetTransform();
   int pressed_line_id =
       GetUiEditEntryId(height, noises_.size(),
-                       ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_,
+                       render_data_.glfw_context_.cursor_pos_tex_norm_,
                        value_config_.btn_config_.GetTopBorder());
   if (id == value_config_.btn_config_.GetId()) {
     ui_noise_config_.SetNoise(noises_[pressed_line_id]->GetValueSpan(),
@@ -318,7 +316,7 @@ void UiEditTerrain::Render(float height) {
 
 void UiEditTerrain::RenderPicking(float height) {
   value_config_.RenderPicking(height, noises_.size());
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   text_noise_invert_.RenderPicking();
   text_noise_tiling_.RenderPicking();
   text_noise_strength_.RenderPicking();
@@ -333,23 +331,22 @@ void UiEditTerrain::RenderGraph() {
     return;
   }
   /// selected layer wireframe
-  ui_shared_resources_.glfw_context_.tile_renderer->terrain.RenderWireframe(
+  render_data_.glfw_context_.tile_renderer->terrain.RenderWireframe(
       &Data()[selected_id_]);
   auto color_invert = glm::vec4(1.0f) - Data()[selected_id_].color;
   color_invert.w = 1.0f;
 
   glm::vec4 pivot_pos = GetLayerCentre() - pivot_offset_;
   auto map_scale =
-      ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.map_scale;
+      render_data_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   pivot_pos = glm::vec4{pivot_pos.x * map_scale, pivot_pos.y * map_scale,
                         pivot_pos.z * map_scale, 1.0f};
-  ui_shared_resources_.glfw_context_.ui_renderer->RenderWorldOrigin(
+  render_data_.glfw_context_.ui_renderer->RenderWorldOrigin(
       pivot_pos, color_invert);
 
   /// wireframe left bottom
-  auto& ui_layer_wireframe =
-      ui_shared_resources_.glfw_context_.ui_renderer->GetUiLayerWireframe();
-  ui_layer_wireframe.RenderLayerWireframe(&Data()[selected_id_]);
+  render_data_.glfw_context_.ui_renderer->ui_layer_wireframe_
+    .RenderLayerWireframe(&Data()[selected_id_]);
 }
 
 void UiEditTerrain::SetPivotPosition(GLuint pressed_id) {
@@ -360,7 +357,7 @@ void UiEditTerrain::SetPivotPosition(GLuint pressed_id) {
   glm::uvec2 pos(pressed_id >> 10, pressed_id & 1023);
   position.x = pos.x / 16.0f - 32.0f;
   position.z = pos.y / 16.0f - 32.0f;
-  position.y = ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+  position.y = render_data_.glfw_context_.tile_renderer->cur_tile_
                    .terrain_heights_[pressed_id];
   auto layer_centre = GetLayerCentre();
   pivot_offset_ = layer_centre - position;
@@ -417,7 +414,7 @@ bool UiEditTerrain::IsHmapNan() const noexcept {
   /// noises contradicts to some other params like "octaves" and "scale",
   /// so we do the stupid approach - rerun.
   /// (I calculated it on my own - in average it's 6/30 with "bad" result
-  return std::isnan(ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+  return std::isnan(render_data_.glfw_context_.tile_renderer->cur_tile_
                         .terrain_heights_[0]);
 }
 
@@ -437,14 +434,14 @@ void UiEditTerrain::MergeLayers(Texture32F& bottom_layer, Texture32F& top_layer,
   glUniform1f(2, config->strength);
 
   using namespace utility;
-  BindImageTexture(0, bottom_layer, GL_READ_WRITE);
-  BindImageTexture(1, top_layer, GL_READ_ONLY);
+  bottom_layer.BindImage(0, GL_READ_WRITE);
+  top_layer.BindImage(1, GL_READ_ONLY);
   int size = details::gTerrainSize;
   glDispatchCompute((size + 15) / 16, (size + 15) / 16, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 
 std::vector<TerrainTraits>& UiEditTerrain::Data() {
-  return ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
+  return render_data_.glfw_context_.tile_renderer->cur_tile_
       .terrain_data;
 }

@@ -11,18 +11,22 @@
 
 class UiObjectsMode final : public IUiMode {
  public:
-  UiObjectsMode(UiSharedResources& ui_shared_resources, UiSlots& ui_slots,
+  UiObjectsMode(UiRenderData& render_data, UiSlots& ui_slots,
                 WindowQueue& window_queue, TextRenderer& text_renderer,
                 UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
                 ModelManager& mdl_manager);
 
-  void Render() override;
+  void Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
-  void RenderPicking() override;
+  void RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
 
   void Setup() override;
 
   void BindDefaultCallbacks() override;
+
+  void PrerenderText(TextRenderer* text_renderer) override;
 
   void HandleSelection(const std::set<GLuint>& selected_ids);
 
@@ -32,6 +36,7 @@ class UiObjectsMode final : public IUiMode {
 
   void UpdateModelsList();
 
+  UiSprite sp_mode_;
   UiSlots& ui_slots_;
   UiEditObjects ui_edit_;
 

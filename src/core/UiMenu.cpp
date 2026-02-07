@@ -5,7 +5,11 @@
 #include "../renderers/UiRenderer.h"
 #include "TileRenderer.h"
 
-UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
+//temp
+#include "../io/Camera.h"
+#include "../modes/IUiMode.h"
+
+UiMenu::UiMenu(UiRenderData& render_data,
                TextRenderer& text_renderer, WindowQueue& window_queue,
                IUiMode* terrain_mode, IUiMode* water_mode,
                IUiMode* placement_mode, IUiMode* objects_mode,
@@ -14,7 +18,7 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
     : UiWindowAppear({data::VboIdMain::kMenuDesk}, 1.0f,
                      {{data::VboIdMain::kMenuDeskPinBack, []() {}},
                       {data::VboIdMain::kMenuDeskPinPoint}},
-                     ui_shared_resources, window_queue),
+                     render_data, window_queue),
       modes_({terrain_mode, water_mode, placement_mode, objects_mode,
               biomes_mode, tiles_mode, player_mode}),
       cur_mode_(cur_mode),
@@ -31,9 +35,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
 
       tg_terrain_{{data::VboIdMain::kMenuTerrainOff,
                    [this]() {
-                     bool state = this->ui_shared_resources_.glfw_context_
+                     bool state = this->render_data_.glfw_context_
                                       .tile_renderer->show_terrain_;
-                     this->ui_shared_resources_.glfw_context_.tile_renderer
+                     this->render_data_.glfw_context_.tile_renderer
                          ->show_terrain_ = !state;
                    }},
                   {data::VboIdMain::kMenuTerrainOn1},
@@ -41,9 +45,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                   {data::VboIdMain::kMenuTerrainOn3}},
       tg_water_{{data::VboIdMain::kMenuWaterOff,
                  [this]() {
-                   bool state = this->ui_shared_resources_.glfw_context_
+                   bool state = this->render_data_.glfw_context_
                                     .tile_renderer->show_water_;
-                   this->ui_shared_resources_.glfw_context_.tile_renderer
+                   this->render_data_.glfw_context_.tile_renderer
                        ->show_water_ = !state;
                  }},
                 {data::VboIdMain::kMenuWaterOn1},
@@ -51,9 +55,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                 {data::VboIdMain::kMenuWaterOn3}},
       tg_placement_{{data::VboIdMain::kMenuPlacementOff,
                      [this]() {
-                       bool state = this->ui_shared_resources_.glfw_context_
+                       bool state = this->render_data_.glfw_context_
                                         .tile_renderer->show_placement_;
-                       this->ui_shared_resources_.glfw_context_.tile_renderer
+                       this->render_data_.glfw_context_.tile_renderer
                            ->show_placement_ = !state;
                      }},
                     {data::VboIdMain::kMenuPlacementOn1},
@@ -61,9 +65,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                     {data::VboIdMain::kMenuPlacementOn3}},
       tg_objects_{{data::VboIdMain::kMenuObjectsOff,
                    [this]() {
-                     bool state = this->ui_shared_resources_.glfw_context_
+                     bool state = this->render_data_.glfw_context_
                                       .tile_renderer->show_objects_;
-                     this->ui_shared_resources_.glfw_context_.tile_renderer
+                     this->render_data_.glfw_context_.tile_renderer
                          ->show_objects_ = !state;
                    }},
                   {data::VboIdMain::kMenuObjectsOn1},
@@ -71,9 +75,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                   {data::VboIdMain::kMenuObjectsOn3}},
       tg_biomes_{{data::VboIdMain::kMenuBiomesOff,
                   [this]() {
-                    bool state = this->ui_shared_resources_.glfw_context_
+                    bool state = this->render_data_.glfw_context_
                                      .tile_renderer->show_biomes_;
-                    this->ui_shared_resources_.glfw_context_.tile_renderer
+                    this->render_data_.glfw_context_.tile_renderer
                         ->show_biomes_ = !state;
                   }},
                  {data::VboIdMain::kMenuBiomesOn1},
@@ -81,9 +85,9 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
                  {data::VboIdMain::kMenuBiomesOn3}},
       tg_tiles_{{data::VboIdMain::kMenuTilesOff,
                  [this]() {
-                   bool state = this->ui_shared_resources_.glfw_context_
+                   bool state = this->render_data_.glfw_context_
                                     .tile_renderer->show_tiles_;
-                   this->ui_shared_resources_.glfw_context_.tile_renderer
+                   this->render_data_.glfw_context_.tile_renderer
                        ->show_tiles_ = !state;
                  }},
                 {data::VboIdMain::kMenuTilesOn1},
@@ -103,12 +107,12 @@ UiMenu::UiMenu(UiSharedResources& ui_shared_resources,
       save_data_{
           data::VboIdMain::kMenuSave,
           [this] {
-            this->ui_shared_resources_.glfw_context_.ui_renderer->Serialize();
+            this->render_data_.glfw_context_.ui_renderer->Serialize();
           }},
       load_data_{
           data::VboIdMain::kMenuLoad,
           [this] {
-            this->ui_shared_resources_.glfw_context_.ui_renderer->Parse();
+            this->render_data_.glfw_context_.ui_renderer->Parse();
           }},
       text_filename_(text_renderer, {data::VboIdMain::kFileTextLabel},
                      {data::VboIdMain::kFileTextBack}),
@@ -155,6 +159,9 @@ void UiMenu::SetMode(int id) {
       id + static_cast<int>(data::TextId::kMenuTerrain)));
   cur_mode_ = modes_[id];
   cur_mode_->Setup();
+  render_data_.glfw_context_.camera->Reset();
+  (*render_data_.glfw_context_.cur_mode)->PrerenderText(
+    render_data_.glfw_context_.text_renderer);
 }
 
 void UiMenu::BindCallbacks() {
@@ -165,13 +172,13 @@ void UiMenu::BindCallbacks() {
 
 // returns "stop render"
 bool UiMenu::Render() {
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   bool stop_show = Base::RenderBack(true);
   //  if (!Base::BackIsReady()) {
   //    return stop_show;
   //  }
 
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.shader_sp_.Bind();
 
   btn_terrain_.Render();
   btn_water_.Render();
@@ -192,9 +199,9 @@ bool UiMenu::Render() {
 
   toggle_shaders_.Render();
 
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.shader_sp_.Bind();
 
-  auto cursor_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
+  auto cursor_pos = render_data_.glfw_context_.cursor_pos_tex_norm_;
   float arrow_select_angle =
       std::atan2(-cursor_pos.x, cursor_pos.y * gResFactor);
 
@@ -216,7 +223,7 @@ void UiMenu::RenderPicking() {
   if (!Base::BackIsReady()) {
     return;
   }
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
 
   btn_terrain_.RenderPicking();
   btn_water_.RenderPicking();
@@ -237,7 +244,7 @@ void UiMenu::RenderPicking() {
 
   toggle_shaders_.RenderPicking();
 
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
 
   arrow_select_.RenderPicking();
   arrow_selected_.RenderPicking();

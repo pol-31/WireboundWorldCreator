@@ -1,10 +1,11 @@
 #ifndef WIREBOUNDWORLDCREATOR_RIGIDBODY_H
 #define WIREBOUNDWORLDCREATOR_RIGIDBODY_H
 
+#include <vector>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "../../modes/UiSharedResources.h"
 #include "../EntityIdManager.h"
 #include "AttackEvent.h"
 
@@ -27,7 +28,7 @@ class RigidBody {
   [[nodiscard]] const glm::vec3& GetScale() const noexcept { return scale_; }
   void SetScale(const glm::vec3& scale) { scale_ = scale; }
 
-  glm::mat4 GenModelMat(UiSharedResources& ui_shared_resources, float scale);
+  glm::mat4 GenModelMat(float map_scale);
 
   [[nodiscard]] const ModelData* GetModelData() const noexcept {
     return model_data_;

@@ -5,6 +5,8 @@
 #include <fstream>
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
+#include <vector>
+#include <cmath>
 
 #include "../common/Details.h"
 #include "../common/OpenGlUtility.h"
@@ -14,7 +16,7 @@
 TileRenderer::TileRenderer()
     : terrain(cur_tile_, mesh_),
       water(cur_tile_, mesh_),
-      shader_apply_rivers_roads_("../shaders/Hmap2Deformation.comp") {}
+      shader_apply_rivers_roads_("../shaders/Hmap2Deformation.comp", {}) {}
 
 void TileRenderer::Render() {
   environment_.Update();
@@ -107,14 +109,14 @@ void TileRenderer::UpdatePipeline() {
   BakeRoads(heights_in);
 
   shader_apply_rivers_roads_.Bind();
-  utility::BindImageTexture(0, cur_tile_.map_terrain_height_raw_, GL_READ_ONLY);
-  utility::BindImageTexture(1, cur_tile_.tex_rivers_deform_, GL_READ_ONLY);
-  utility::BindImageTexture(2, cur_tile_.tex_rivers_mask_, GL_READ_ONLY);
-  utility::BindImageTexture(3, cur_tile_.tex_roads_deform_, GL_READ_ONLY);
-  utility::BindImageTexture(4, cur_tile_.tex_roads_mask_, GL_READ_ONLY);
-  utility::BindImageTexture(5, cur_tile_.map_terrain_slope, GL_READ_ONLY);
-  utility::BindImageTexture(6, cur_tile_.map_terrain_height, GL_WRITE_ONLY);
-  utility::BindImageTexture(7, cur_tile_.tex_vegetation_mask, GL_WRITE_ONLY);
+  cur_tile_.map_terrain_height_raw_.BindImage(0, GL_READ_ONLY);
+  cur_tile_.tex_rivers_deform_.BindImage(1, GL_READ_ONLY);
+  cur_tile_.tex_rivers_mask_.BindImage(2, GL_READ_ONLY);
+  cur_tile_.tex_roads_deform_.BindImage(3, GL_READ_ONLY);
+  cur_tile_.tex_roads_mask_.BindImage(4, GL_READ_ONLY);
+  cur_tile_.map_terrain_slope.BindImage(5, GL_READ_ONLY);
+  cur_tile_.map_terrain_height.BindImage(6, GL_WRITE_ONLY);
+  cur_tile_.tex_vegetation_mask.BindImage(7, GL_WRITE_ONLY);
   glDispatchCompute(size / 8, size / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -137,6 +139,81 @@ void TileRenderer::UpdatePipeline() {
       vegetation_mask_data, cur_tile_.tex_placement_undergrowth_, 0.1f, 3);
 
   // we can use vegetation_mask_data for further steps
+  Build(cur_tile_.terrain_heights_);
+}
+
+void TileRenderer::Build(const std::vector<float>& originalHeightMap) {
+  cur_tile_.m_maxPyramid.clear();
+  cur_tile_.m_maxPyramid.push_back(originalHeightMap);
+
+  // 10 levels, where 10th is 00 01 10 11
+
+  int currentSize = details::gTerrainSize;
+  int level = 0;
+
+  while (currentSize > 1) {
+    int nextSize = currentSize / 2;
+    std::vector<float> nextLevel(nextSize * nextSize);
+    const std::vector<float>& prev = cur_tile_.m_maxPyramid[level];
+    for (int y = 0; y < nextSize; ++y) {
+      for (int x = 0; x < nextSize; ++x) {
+        float h1 = prev[(x * 2)     + (y * 2)     * currentSize];
+        float h2 = prev[(x * 2 + 1) + (y * 2)     * currentSize];
+        float h3 = prev[(x * 2)     + (y * 2 + 1) * currentSize];
+        float h4 = prev[(x * 2 + 1) + (y * 2 + 1) * currentSize];
+        nextLevel[x + y * nextSize] = std::max({ h1, h2, h3, h4 });
+      }
+    }
+    cur_tile_.m_maxPyramid.push_back(nextLevel);
+    currentSize = nextSize;
+    level++;
+  }
+}
+
+float TileRenderer::GetMaxHeight(int level, int x, int y) const {
+  int size = details::gTerrainSize >> level;
+  if (x < 0 || x >= size || y < 0 || y >= size) return -99999.0f;
+  return cur_tile_.m_maxPyramid[level][x + y * size];
+}
+
+// Returns index (y * 1024 + x) OR -1000 TODO; if no collision
+// start == drone pos, dir == normalized drone dir, maxDist to check
+glm::vec3 TileRenderer::CastRay(glm::vec3 start, glm::vec3 dir, float maxDist) {
+  float currentDist = 0.0f;
+  int size = details::gTerrainSize;
+
+  while (currentDist < maxDist) {
+    glm::vec3 p = start + dir * currentDist;
+    // -32-32 to 0-1024
+    int x = static_cast<int>(p.x * 16.0f + 512.0f);
+    int y = static_cast<int>(p.z * 16.0f + 512.0f);
+    if (x < 0 || x >= size || y < 0 || y >= size) {
+      return glm::vec3{-1000.0f};
+    }
+    bool potential_hit = true;
+    for (int l = 5; l >= 0; --l) {
+      // start at pow 5 (32x32 chunk)
+      int lx = x >> l;
+      int ly = y >> l;
+      float chunkMaxH = GetMaxHeight(l, lx, ly);
+      if (p.y > chunkMaxH) {
+        potential_hit = false;
+        int step = 1 << l;
+        // if step 32 -> +-2
+        // if step 16 -> +-1
+        currentDist += static_cast<float>(step) / 16.0f;
+      }
+    }
+    if (potential_hit) {
+      float preciseHeight = cur_tile_.m_maxPyramid[0][x + y * size];
+      if (p.y <= preciseHeight) {
+        p.y = preciseHeight;
+        return p;
+      }
+      currentDist += 1.0f; // we're close, check next tile cell
+    }
+  }
+  return glm::vec3{-1000.0f};
 }
 
 void TileRenderer::BakeGraphs(const GraphBakeConfig& config,

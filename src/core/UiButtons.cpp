@@ -3,9 +3,9 @@
 int UiButtons::gIndentMod = 12;
 int UiButtons::gIndentKey = 10;
 
-UiButtons::UiButtons(UiSharedResources& ui_shared_resources,
+UiButtons::UiButtons(UiRenderData& render_data,
                      TextRenderer& text_renderer)
-    : ui_shared_resources_(ui_shared_resources),
+    : render_data_(render_data),
       txt_keys_(text_renderer, data::VboIdMain::kButtonsTextKeys),
       txt_mods_(text_renderer, data::VboIdMain::kButtonsTextMods),
       sp_key_(data::VboIdMain::kPressedKey) {}
@@ -117,8 +117,8 @@ void UiButtons::RemoveKey(int idx) {
 }
 
 void UiButtons::Render() {
-  ui_shared_resources_.tex_ui_.Bind();
-  ui_shared_resources_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
+  render_data_.shader_sp_.Bind();
   sp_key_.SetScale(0.9f);  // 1.0f for modifiers (todo; gVar)
   // wrt scale
   glm::vec2 half_length(
@@ -157,7 +157,7 @@ void UiButtons::RenderModifier(bool value, std::string_view text) {
 }
 
 void UiButtons::RenderPicking() {
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   sp_key_.RenderPicking();
   txt_mods_.RenderPicking();
   txt_keys_.RenderPicking();

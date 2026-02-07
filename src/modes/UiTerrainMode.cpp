@@ -9,29 +9,29 @@
 #include "../io/Window.h"
 #include "../renderers/UiRenderer.h"
 
-UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
+UiTerrainMode::UiTerrainMode(UiRenderData& render_data,
                              UiSlots& ui_slots, WindowQueue& window_queue,
                              TextRenderer& text_renderer,
                              UiEditSlots& ui_edit_slots,
                              UiEditConfigSlCfg& value_config, Tile& cur_tile,
                              UiConfigWindow& ui_config_window)
-    : IUiMode(ui_shared_resources, {data::VboIdMain::kTerrainTerrainMode}),
+    : sp_mode_(data::VboIdMain::kTerrainTerrainMode),
       btn_update_(data::VboIdMain::kTerrainUpdate,
-                  [this]() {
+                  [this] {
                     std::cout << "btn_update?" << std::endl;
                     ui_bake_.Bake(1000, 1000, 0.1f);
                   }),
       btn_reset_(data::VboIdMain::kTerrainFlatten,
-                 [this]() {
+                 [this] {
                    std::cerr << "-- reset --" << std::endl;
                    this->Reset();
                  }),
       btn_bake_(data::VboIdMain::kTerrainBake,
-                [this]() { this->ui_bake_.Show(); }),
+                [this] { this->ui_bake_.Show(); }),
       ui_bake_(cur_tile, {data::VboIdMain::kTerrainBakeDesk}, 1.0f,
                {{data::VboIdMain::kTerrainBakeDeskPinBack, []() {}},
                 {data::VboIdMain::kTerrainBakeDeskPinPoint}},
-               ui_shared_resources_, window_queue, text_renderer,
+               render_data, window_queue, text_renderer,
                {data::VboIdMain::kTerrainBakeAccept},
                {text_renderer,
                 {data::VboIdMain::kTerrainBakeErosionStepLabel},
@@ -46,95 +46,71 @@ UiTerrainMode::UiTerrainMode(UiSharedResources& ui_shared_resources,
                 {data::VboIdMain::kTerrainBakeWeatheringStepInputText},
                 {data::VboIdMain::kTerrainBakeWeatheringStepInputBack}}),
       ui_slots_(ui_slots),
-      ui_edit_(cur_tile, ui_shared_resources, text_renderer, ui_edit_slots,
+      ui_edit_(cur_tile, render_data, text_renderer, ui_edit_slots,
                value_config, ui_config_window),
-      ui_selection_(ui_shared_resources),
-      mouse_transform_(ui_shared_resources),
+      ui_selection_(render_data),
+      mouse_transform_(render_data),
       ui_event_handler_({&btn_update_, &btn_reset_, &btn_bake_}) {}
 
 void UiTerrainMode::Setup() {
-  ui_shared_resources_.glfw_context_.text_renderer->PrerenderModeText(
-      static_cast<int>(data::TextId::kScaleTerrain),
-      static_cast<int>(data::TextId::kStrength) + 1);
   ui_slots_.Setup(&ui_edit_, [this] { this->ui_edit_.UpdateConfig(); });
   BindDefaultCallbacks();
-  auto camera = ui_shared_resources_.glfw_context_.camera;
-  camera->SetPosition(glm::vec3{5.0f});
-  camera->SetPitch(45.0f);
-  camera->SetYaw(0.0f);
-  camera->SetOrigin(glm::vec3{0.0f});
-  camera->MoveRotateViewOrigin(0.0f, 0.0f);  // to update camera vectors
   ui_selection_.SetIdBounds(details::kIdOffsetTerrain, details::kIdOffsetWater);
   ui_selection_.SetModeForce(SelectionMode::kRectangle);
 }
 
+void UiTerrainMode::PrerenderText(TextRenderer* text_renderer) {
+  text_renderer->PrerenderModeText(
+      static_cast<int>(data::TextId::kScaleTerrain),
+      static_cast<int>(data::TextId::kStrength) + 1);
+}
+
 void UiTerrainMode::BindDefaultCallbacks() {
   nothing_selected_ = true;
-  double xpos, ypos;
-  glfwGetCursorPos(gWindow, &xpos, &ypos);
-  lastX = xpos;
-  lastY = ypos;
   glfwSetScrollCallback(gWindow, terrain::ScrollCallback);
   glfwSetMouseButtonCallback(gWindow, terrain::MouseButtonCallback);
   glfwSetKeyCallback(gWindow, terrain::KeyCallback);
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-void UiTerrainMode::Render() {
-  if (ui_slots_.GetSelectedSlotId() == -1) {
-    ui_shared_resources_.glfw_context_.tile_renderer->Render();
+void UiTerrainMode::Render(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+  if (ui_slots_.IsSelected()) {
+    tile_renderer->RenderUiTerrain(ui_edit_.GetInstanceData().data.hmap);
   } else {
-    ui_shared_resources_.glfw_context_.tile_renderer->RenderUiTerrain(
-        ui_edit_.GetInstanceData().data.hmap);
+    tile_renderer->Render();
   }
-  // TODO: should we call it RenderUi() and RenderTerrain()?
-  ui_edit_.RenderGraph();  // should be first (terrain render before ui render)
+  ui_edit_.RenderGraph();
   ui_selection_.Render();
-  ui_selection_.RenderOnSurface(
-      &ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_
-           .map_terrain_height);
+  ui_selection_.RenderOnSurface(&tile_renderer->cur_tile_.map_terrain_height);
 
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.shader_sp_.Bind();
-
+  const auto& render_data = ui_renderer->GetRenderData();
+  render_data.tex_ui_.BindSampler(0);
+  glBindVertexArray(render_data.vao_ui_);
+  render_data.shader_sp_.Bind();
   btn_reset_.Render();
   sp_mode_.Render();
-
   btn_update_.Render();
   btn_bake_.Render();
-
-  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
-  ui_slots_.Render(mouse_pos);
-
-  ui_shared_resources_.glfw_context_.windows->Render();
-  auto camera = ui_shared_resources_.glfw_context_.camera;
-  camera->Update();  // const pos
+  ui_slots_.Render();
 }
 
-void UiTerrainMode::RenderPicking() {
-  ui_shared_resources_.glfw_context_.tile_renderer->RenderPicking();
-  glActiveTexture(GL_TEXTURE0);
-  ui_shared_resources_.tex_ui_.Bind();
-  glBindVertexArray(ui_shared_resources_.vao_ui_);
-  ui_shared_resources_.shader_sp_picking_.Bind();
-
+void UiTerrainMode::RenderPicking(
+    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+  tile_renderer->RenderPicking();
+  const auto& render_data = ui_renderer->GetRenderData();
+  glBindVertexArray(render_data.vao_ui_);
+  render_data.shader_sp_picking_.Bind();
   btn_reset_.RenderPicking();
   sp_mode_.RenderPicking();
-
   btn_update_.RenderPicking();
   btn_bake_.RenderPicking();
-
   ui_slots_.RenderPicking();
-  auto& ui_layer_wireframe =
-      ui_shared_resources_.glfw_context_.ui_renderer->GetUiLayerWireframe();
-  ui_layer_wireframe.RenderPickingLayerWireframe();
-  ui_shared_resources_.glfw_context_.windows->RenderPicking();
+  ui_renderer->ui_layer_wireframe_.RenderPickingLayerWireframe();
 }
 
 void UiTerrainMode::CancelTransform() {
-  if (ui_slots_.GetSelectedSlotId() != -1) {
+  if (ui_slots_.IsSelected()) {
     auto& data = ui_edit_.GetInstanceData();
     data.translate = mouse_transform_.prev_translate_;
     data.rotate = mouse_transform_.prev_rotate_;
@@ -151,7 +127,7 @@ void UiTerrainMode::UpdateTransform() {
 }
 
 void UiTerrainMode::ApplyTransform() {
-  if (ui_slots_.GetSelectedSlotId() != -1) {
+  if (ui_slots_.IsSelected()) {
     UpdateTransform();
   }
   BindDefaultCallbacks();
@@ -161,7 +137,6 @@ void UiTerrainMode::Reset() {
   ui_selection_.Stop(glm::vec2{0.0f});
   ui_bake_.ForceHide();
   ui_slots_.Reset();
-  ui_shared_resources_.glfw_context_.tile_renderer->cur_tile_.ResetTerrain();
   mouse_transform_.Reset();
   ui_edit_.Reset();
 }
@@ -195,17 +170,13 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
   bool mod_ctrl = mods & GLFW_MOD_CONTROL;
   bool mod_shift = mods & GLFW_MOD_SHIFT;
   if (action == GLFW_PRESS) {
-    double xpos, ypos;
-    glfwGetCursorPos(gWindow, &xpos, &ypos);
-    lastX = xpos;
-    lastY = ypos;
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
       auto pressed_id = glfw_context->picking_fbo->GetIdByMousePos(cursor_pos);
       std::cout << "Pressed id: " << pressed_id << std::endl;
       bool ui_handled = glfw_context->windows->Press(pressed_id) ||
                         terrain->ui_slots_.Press(pressed_id) ||
                         terrain->ui_event_handler_.Press(pressed_id);
-      if (ui_handled || terrain->ui_slots_.GetSelectedSlotId() == -1) {
+      if (ui_handled || !terrain->ui_slots_.IsSelected()) {
         return;
       }
       terrain->ui_selection_.Start(glfw_context->cursor_pos_tex_norm_, mod_ctrl,
@@ -302,7 +273,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
   } else if (key == GLFW_KEY_4) {
     terrain->ui_selection_.SetMode(SelectionMode::kTweak);
   }
-  if (terrain->ui_slots_.GetSelectedSlotId() == -1) {
+  if (!terrain->ui_slots_.IsSelected()) {
     return;
   }
   if (key == GLFW_KEY_G) {
@@ -341,10 +312,6 @@ void CursorPosCallback_RmbShift(GLFWwindow* window, double xpos, double ypos) {
 /// ---
 
 void BindCallbacksTransform(bool init_transform) {
-  double xpos, ypos;
-  glfwGetCursorPos(gWindow, &xpos, &ypos);
-  lastX = xpos;
-  lastY = ypos;
   glfwSetScrollCallback(gWindow, nullptr);
   glfwSetMouseButtonCallback(gWindow, MouseButtonCallbackTransform);
   glfwSetKeyCallback(gWindow, KeyCallbackTransform);

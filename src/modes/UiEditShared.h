@@ -7,7 +7,7 @@
 #include "../core/Ui.h"
 #include "../core/UiComplex.h"
 #include "../core/UiText.h"
-#include "UiSharedResources.h"
+#include "../ui/UiRenderData.h"
 
 class UiSprite;
 
@@ -23,7 +23,7 @@ class UiEditConfigSlCfg {
     bool tg2;
   };
 
-  UiEditConfigSlCfg(UiSharedResources& ui_shared_resources,
+  UiEditConfigSlCfg(UiRenderData& render_data,
                     TextRenderer& text_renderer);
 
   void Release();
@@ -47,7 +47,7 @@ class UiEditConfigSlCfg {
  private:
   void RenderPickingEntry(glm::vec2 translate);
 
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 class UiEditConfigSlTxt {
@@ -57,7 +57,7 @@ class UiEditConfigSlTxt {
     data::TextId label;
   };
 
-  UiEditConfigSlTxt(UiSharedResources& ui_shared_resources,
+  UiEditConfigSlTxt(UiRenderData& render_data,
                     TextRenderer& text_renderer);
 
   bool Press(int id, float height, int num);
@@ -82,7 +82,7 @@ class UiEditConfigSlTxt {
   void ResetTransform();
 
   int pressed_strength_id_ = -1.0f;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_MODES_UIEDITSHARED_H_

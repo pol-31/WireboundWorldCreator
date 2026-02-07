@@ -1,12 +1,12 @@
 #ifndef WIREBOUNDWORLDCREATOR_PLAYERFPV_H
 #define WIREBOUNDWORLDCREATOR_PLAYERFPV_H
 
-#include "../../modes/UiSharedResources.h"
+#include "../../ui/UiRenderData.h"
 #include "RigidBody.h"
 
 class PlayerFpv : public RigidBody {
  public:
-  PlayerFpv(UiSharedResources& ui_shared_resources);
+  PlayerFpv(UiRenderData& render_data);
 
   void SetMoveForward(bool pressed) { move_forward_ = pressed; }
   void SetMoveBackward(bool pressed) { move_backward_ = pressed; }
@@ -21,11 +21,11 @@ class PlayerFpv : public RigidBody {
     return velocity_;
   }
 
-  void Render(UiSharedResources& ui_shared_resources);
+  void Render(float map_scale);
 
-  void RenderRigged(UiSharedResources& ui_shared_resources);
+  void RenderRigged(float map_scale);
 
-  void Update(UiSharedResources& ui_shared_resources);
+  void Update(UiRenderData& render_data);
 
   void ProcessMovement(int key, int action);
 

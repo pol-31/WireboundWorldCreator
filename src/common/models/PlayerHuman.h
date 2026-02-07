@@ -1,7 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_PLAYERHUMAN_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_PLAYERHUMAN_H_
 
-#include "../../modes/UiSharedResources.h"
+#include "../../ui/UiRenderData.h"
 #include "RigidBody.h"
 #include "PlayerFpv.h"
 #include "Animator.h"
@@ -53,7 +53,7 @@ class PlayerHuman : public RigidBody {
     return state_ == State::kFpv;
   }
 
-  PlayerHuman(UiSharedResources& ui_shared_resources);
+  PlayerHuman(UiRenderData& render_data);
 
   void Jump(float strength);
 
@@ -65,16 +65,18 @@ class PlayerHuman : public RigidBody {
 
   void Fall();  // internally called by ApplyGravity()
 
-  void ApplyGravity(UiSharedResources& ui_shared_resources);
+  void ApplyGravity(UiRenderData& render_data);
 
   void ResetState();
 
   // should be called in Render(), it updates skin ubo
   void UpdateAnimation();
 
-  void Render(UiSharedResources& ui_shared_resources);
+  void RenderHuman(float map_scale);
 
-  void Update(UiSharedResources& ui_shared_resources);
+  void RenderFpv(float map_scale);
+
+  void Update(UiRenderData& render_data);
 
   void ProcessMovement(int key, int action);
 

@@ -1,13 +1,13 @@
 #ifndef WIREBOUNDWORLDCREATOR_UIMODAL_H
 #define WIREBOUNDWORLDCREATOR_UIMODAL_H
 
-#include "../modes/UiSharedResources.h"
+#include "../ui/UiRenderData.h"
 #include "Ui.h"
 #include "UiText.h"
 
 class UiConfirmation {
  public:
-  UiConfirmation(UiSharedResources& ui_shared_resources,
+  UiConfirmation(UiRenderData& render_data,
                  TextRenderer& text_renderer);
 
   void Render();
@@ -35,12 +35,12 @@ class UiConfirmation {
 
   std::function<void()> callable_;
   UiHierarchy hierarchy_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 class UiWarning {
  public:
-  UiWarning(UiSharedResources& ui_shared_resources,
+  UiWarning(UiRenderData& render_data,
             TextRenderer& text_renderer);
 
   void Render();
@@ -64,7 +64,7 @@ class UiWarning {
   UiTextMenuId text_;
   UiSprite sp_background_;
   UiHierarchy hierarchy_;
-  UiSharedResources& ui_shared_resources_;
+  UiRenderData& render_data_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_UIMODAL_H

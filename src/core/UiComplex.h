@@ -1,7 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_
 #define WIREBOUNDWORLDCREATOR_SRC_CORE_UICOMPLEX_H_
 
-#include "../modes/UiSharedResources.h"
+#include "../ui/UiRenderData.h"
 #include "Ui.h"
 #include "UiText.h"
 #include "WindowQueue.h"
@@ -161,7 +161,7 @@ class UiWindowBase {
  public:
   virtual ~UiWindowBase() = default;
   UiWindowBase(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-               UiSharedResources& ui_shared_resources,
+               UiRenderData& render_data,
                WindowQueue& window_queue);
 
   UiWindowBase(UiWindowBase&& other) = delete;
@@ -198,7 +198,7 @@ class UiWindowBase {
   // how it differs from the nested components
   float size_scale_{1.0f};
   UiToggle2 pin_;
-  UiSharedResources& ui_shared_resources_;  // for shader bindings, mask texture
+  UiRenderData& render_data_;  // for shader bindings, mask texture
 
   WindowQueue& window_queue_;
   int window_queue_id_ = -1;
@@ -214,7 +214,7 @@ class UiWindowBase {
 class UiWindowAppear : public UiWindowBase {
  public:
   UiWindowAppear(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-                 UiSharedResources& ui_shared_resources,
+                 UiRenderData& render_data,
                  WindowQueue& window_queue);
 
   UiWindowAppear(UiWindowAppear&& other) = delete;
@@ -236,7 +236,7 @@ class UiObjectInfo final : public UiWindowAppear {
   using Base::Show;
 
   UiObjectInfo(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-               UiSharedResources& ui_shared_resources,
+               UiRenderData& render_data,
                WindowQueue& window_queue,
 
                UiSprite&& sp_enemy, UiSprite&& sp_friend, UiSprite&& sp_neutral,
@@ -300,7 +300,7 @@ class UiTipWindow final : public UiWindowAppear {
   using Base = UiWindowAppear;
 
   UiTipWindow(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-              UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+              UiRenderData& render_data, WindowQueue& window_queue,
               UiSprite&& text);
 
   UiTipWindow(UiTipWindow&& other) = delete;
@@ -332,7 +332,7 @@ class UiTipWindow final : public UiWindowAppear {
 class UiWindowPopUp : public UiWindowBase {
  public:
   UiWindowPopUp(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-                UiSharedResources& ui_shared_resources,
+                UiRenderData& render_data,
                 WindowQueue& window_queue, LocalTransform start_transform,
                 LocalTransform end_transform);
 
@@ -367,7 +367,7 @@ class UiSettings final : public UiWindowPopUp {
   using Base = UiWindowPopUp;
 
   UiSettings(UiSprite&& sprite, float size_scale, UiToggle2&& pin,
-             UiSharedResources& ui_shared_resources, WindowQueue& window_queue,
+             UiRenderData& render_data, WindowQueue& window_queue,
              LocalTransform start_transform, LocalTransform end_transform,
              UiSprite&& resolution_label, UiSprite&& resolution_left,
              UiSprite&& resolution_right, UiSprite&& resolution,
@@ -423,7 +423,7 @@ class UiPlayerMap final : public UiWindowPopUp {
  public:
   using Base = UiWindowPopUp;
 
-  UiPlayerMap(UiSharedResources& ui_shared_resources,
+  UiPlayerMap(UiRenderData& render_data,
               WindowQueue& window_queue);
 
   UiPlayerMap(UiPlayerMap&& other) = delete;

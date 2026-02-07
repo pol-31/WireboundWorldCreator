@@ -6,13 +6,12 @@
 #include "../../io/Camera.h"
 #include "ModelLoader.h"
 
-PlayerHuman::PlayerHuman(UiSharedResources& ui_shared_resources)
-    : fpv_(ui_shared_resources) {
+PlayerHuman::PlayerHuman(UiRenderData& render_data)
+    : fpv_(render_data) {
   id_ = gEntityIdManager.PlayerHumanId;
 }
 
-void PlayerHuman::Render(UiSharedResources& ui_shared_resources) {
-  // std::cout << position_.y << std::endl;
+void PlayerHuman::RenderHuman(float map_scale) {
   UpdateAnimation();
   // if reached time point OR animation's over (idle state)
   if (!next_event_.done &&
@@ -20,16 +19,18 @@ void PlayerHuman::Render(UiSharedResources& ui_shared_resources) {
     next_event_.done = true;
     FireEvent(next_event_.type);
   }
-  ui_shared_resources.shader_animated_mdl_.Bind();
   model_data_->BindTextures();
-  auto model = GenModelMat(ui_shared_resources, 1.f);
+  auto model = GenModelMat(map_scale);
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
   model_data_->RenderModelNodes();
-  glBindVertexArray(0);
+  if (state_ != State::kFpv) {
+    fpv_.RenderRigged(map_scale);
+  }
+}
+
+void PlayerHuman::RenderFpv(float map_scale) {
   if (state_ == State::kFpv) {
-    fpv_.Render(ui_shared_resources);
-  } else {
-    fpv_.RenderRigged(ui_shared_resources);
+    fpv_.Render(map_scale);
   }
 }
 
@@ -70,9 +71,9 @@ void PlayerHuman::ProcessMovement(int key, int action) {
 // crouch, fall, idle, run, walk - after end loop
 // jump, kick, stunned - after end keep last frame till other anim set
 
-void PlayerHuman::Update(UiSharedResources& ui_shared_resources) {
+void PlayerHuman::Update(UiRenderData& render_data) {
   if (state_ == State::kFpv) {
-    fpv_.Update(ui_shared_resources);
+    fpv_.Update(render_data);
     return;
   }
   if (animation_id_ == Animation::kIdleSitting) {
@@ -89,7 +90,7 @@ void PlayerHuman::Update(UiSharedResources& ui_shared_resources) {
   acceleration_ = 0.1f;   // tweak for snappier movement
   float friction = 6.0f;  // slows down when no input
 
-  auto camera = ui_shared_resources.glfw_context_.camera;
+  auto camera = render_data.glfw_context_.camera;
   glm::vec3 forward = -camera->GetDirectionWorldFront();
   glm::vec3 right = camera->GetDirectionRight();
 
@@ -166,7 +167,7 @@ void PlayerHuman::Update(UiSharedResources& ui_shared_resources) {
     animation_looped_ = true;
   }
 
-  ApplyGravity(ui_shared_resources);
+  ApplyGravity(render_data);
 
   fpv_.SetPosition(position_);
   fpv_.SetRotation(rotation_);
@@ -228,9 +229,9 @@ void PlayerHuman::Fall() {
   }
 }
 
-void PlayerHuman::ApplyGravity(UiSharedResources& ui_shared_resources) {
+void PlayerHuman::ApplyGravity(UiRenderData& render_data) {
   float ground_height =
-      ui_shared_resources.glfw_context_.tile_renderer->cur_tile_.GetPositionY(
+      render_data.glfw_context_.tile_renderer->cur_tile_.GetPositionY(
           position_.x * 16.0f + 512.0f, position_.z * 16.0f + 512.0f);
   if (!IsOnGround()) {
     const float gravity = -9.81f;

@@ -8,7 +8,7 @@ class UiMenu final : public UiWindowAppear {
  public:
   using Base = UiWindowAppear;
 
-  UiMenu(UiSharedResources& ui_shared_resources, TextRenderer& text_renderer,
+  UiMenu(UiRenderData& render_data, TextRenderer& text_renderer,
          WindowQueue& window_queue, IUiMode* terrain_mode, IUiMode* water_mode,
          IUiMode* placement_mode, IUiMode* objects_mode, IUiMode* biomes_mode,
          IUiMode* tiles_mode, IUiMode* player_mode, IUiMode*& cur_mode);

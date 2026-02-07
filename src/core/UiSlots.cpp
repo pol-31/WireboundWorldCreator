@@ -12,12 +12,12 @@
 
 /// parent is back_ BUT UiSlots is taken from slider, so
 /// outside is's shown as a slider area
-UiSlots::UiSlots(UiSharedResources& ui_shared_resources,
+UiSlots::UiSlots(UiRenderData& render_data,
                  TextRenderer& text_renderer,
                  std::function<void()> on_selection)
     : UiBase(static_cast<int>(data::VboIdMain::kSlotsBack), {}),
       on_selection_(on_selection),
-      ui_shared_resources_(ui_shared_resources),
+      render_data_(render_data),
       sl_data_({data::VboIdMain::kSlotsSlider},
                {data::VboIdMain::kSlotsHandler}, 6, 0.75f, 0.8f),
       back_(data::VboIdMain::kSlotsBack),
@@ -146,20 +146,21 @@ void UiSlots::RenderSlotsText() {
   }
 }
 
-void UiSlots::Render(glm::vec2 mouse_pos) {  // done
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+void UiSlots::Render() {
+  auto mouse_pos = render_data_.glfw_context_.cursor_pos_tex_norm_;
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   back_.Render();
   sl_data_.Render(mouse_pos);
   sl_data_.SetUpScissors();
   glEnable(GL_SCISSOR_TEST);
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   RenderSlotsSprites();
   RenderSlotsText();
   glDisable(GL_SCISSOR_TEST);
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   create_.Render();
 }
 
@@ -201,8 +202,8 @@ void UiSlots::RenderPickingSlotsText() {
 }
 
 void UiSlots::RenderPicking() {  // done
-  ui_shared_resources_.shader_sp_picking_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_picking_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   back_.RenderPicking();
   sl_data_.RenderPicking();
   sl_data_.SetUpScissors();
@@ -210,8 +211,8 @@ void UiSlots::RenderPicking() {  // done
   RenderPickingSlotsSprites();
   RenderPickingSlotsText();
   glDisable(GL_SCISSOR_TEST);
-  ui_shared_resources_.shader_sp_picking_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_picking_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   create_.RenderPicking();
 }
 
@@ -280,10 +281,10 @@ slot_back_.GetBottomBorder(), graph_.GetSize()); return true;*/
 
 int UiSlots::GetHoveredSlotId() {
   return sl_data_.GetSlotId(
-      ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_);
+      render_data_.glfw_context_.cursor_pos_tex_norm_);
 }
 
-int UiSlots::GetSelectedSlotId() { return *selected_id_; }
+int UiSlots::GetSelectedSlotId() const { return *selected_id_; }
 
 void UiSlots::DeSelect() {
   ui_edit_->HideAll();

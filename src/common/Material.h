@@ -1,7 +1,7 @@
 #ifndef WIREBOUNDWORLDCREATOR_MATERIAL_H
 #define WIREBOUNDWORLDCREATOR_MATERIAL_H
 
-#include "Texture.h"
+#include "../render/Texture.h"
 
 struct Material {
   /**

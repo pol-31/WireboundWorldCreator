@@ -12,7 +12,7 @@ class TileRenderer;
 class IUiMode;
 class UiMenu;
 class PickingFramebuffer;
-class UiSharedResources;
+class UiRenderData;
 class TextRenderer;
 class UiConfirmation;
 class UiWarning;
@@ -37,12 +37,12 @@ struct GlfwContext {
   UiMenu* menu;
   PickingFramebuffer* picking_fbo = nullptr;
   debug::UiDebugger* ui_debugger = nullptr;
-  UiSharedResources* ui_shared_resources = nullptr;
+  UiRenderData* render_data = nullptr;
   TextRenderer* text_renderer = nullptr;
   UiRenderer* ui_renderer = nullptr;
+
   UiConfirmation* ui_confirmation = nullptr;
   UiWarning* ui_warning = nullptr;
-
   WindowQueue* windows = nullptr;
 
   glm::dvec2 cursor_pos_{0.0};

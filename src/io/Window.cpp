@@ -6,7 +6,7 @@
 #include "../common/GlfwContext.h"
 #include "../common/PickingFramebuffer.h"
 #include "../common/UiDebugger.h"
-#include "../modes/UiSharedResources.h"
+#include "../ui/UiRenderData.h"
 #include "Camera.h"
 
 extern int gWindowWidth = 1600;

@@ -6,15 +6,15 @@
 #include "../common/OpenGlUtility.h"
 
 Ocean::Ocean(const OceanTraits& traits)
-    : init_spectrum_shader_("../shaders/ocean/InitialSpectrum.comp"),
-      time_spectrum_shader_("../shaders/ocean/TimeDependentSpectrum.comp"),
-      textures_merger_shader_("../shaders/ocean/WavesTexturesMerger.comp"),
-      buffer_tex_(size_, GL_RG32F),
-      dxdz_tex_(size_, GL_RG32F),
-      dydxz_tex_(size_, GL_RG32F),
-      dyxdyz_tex_(size_, GL_RG32F),
-      dxxdzz_tex_(size_, GL_RG32F),
+    : init_spectrum_shader_("../shaders/ocean/InitialSpectrum.comp", {}),
+      time_spectrum_shader_("../shaders/ocean/TimeDependentSpectrum.comp", {}),
+      textures_merger_shader_("../shaders/ocean/WavesTexturesMerger.comp", {}),
       size_(64),
+      buffer_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
+      dxdz_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
+      dydxz_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
+      dyxdyz_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
+      dxxdzz_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
       fft_(size_),
       noise_tex_(GaussianNoise{}.Generate(size_)),
       //      length_scale_near_(1),
@@ -89,7 +89,8 @@ void Ocean::Init() {
   float boundary_max = 10.0f;
   init_spectrum_shader_.Bind();
   glUniform1ui(0, size_);
-  utility::BindImageTexture(13, noise_tex_, GL_READ_ONLY);
+
+  noise_tex_.BindImage(13, GL_READ_ONLY);
 
   glUniform1ui(9, 0);
   CalculateInitials(0, traits_.near.scale, boundary_min, boundary_max);
@@ -102,9 +103,6 @@ void Ocean::Init() {
   glUniform1ui(9, 2);
   CalculateInitials(2, traits_.far.scale, boundary_min, boundary_max);
 
-#ifndef NDEBUG
-  utility::UnBindImageTexture(13, noise_tex_, GL_READ_ONLY);
-#endif
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   Update();
 }
@@ -143,12 +141,12 @@ Ocean::SpectrumSettings Ocean::GenSpectrumSettings(
   SpectrumSettings settings{};
   settings.scale = std::max(std::numeric_limits<float>::min(), traits.scale);
   settings.angle = wind_direction / 180 * std::numbers::pi_v<float>;
-  settings.spreadBlend = std::clamp(traits.spreadBlend, 0.0f, 1.0f);
+  settings.spreadBlend = std::clamp(traits.spread_blend, 0.0f, 1.0f);
   settings.swell = std::max(0.0f, traits.swell);
   settings.alpha = JonswapAlpha(traits.fetch, traits.wind);
   settings.peakOmega = JonswapPeakFrequency(traits.fetch, traits.wind);
-  settings.gamma = traits.peakEnhancement;
-  settings.shortWavesFade = traits.shortWavesFade;
+  settings.gamma = traits.peak_enhancement;
+  settings.shortWavesFade = traits.short_waves_fade;
   return settings;
 }
 
@@ -170,50 +168,36 @@ void Ocean::CalculateInitials(int cascade_id, float length_scale,
   // glUniform1f(7, cutoff_high);
   float zeros2[2] = {0.0f, 0.0f};
   glClearTexImage(buffer_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
-  BindImageTexture(11, buffer_tex_, GL_READ_WRITE);
+  buffer_tex_.BindImage(11, GL_READ_WRITE);
   glBindImageTexture(12, tex_precomputed_data_, 0, false, cascade_id,
                      GL_READ_ONLY, GL_RGBA32F);
   glBindImageTexture(14, tex_init_spectrum_, 0, false, cascade_id, GL_READ_ONLY,
                      GL_RGBA32F);
   glDispatchCompute(size_ / 8, size_ / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-#ifndef NDEBUG
-  UnBindImageTexture(11, buffer_tex_, GL_READ_WRITE);
-  glBindImageTexture(12, 0, 0, false, cascade_id, GL_READ_ONLY, GL_RGBA32F);
-  glBindImageTexture(14, 0, 0, false, cascade_id, GL_READ_ONLY, GL_RGBA32F);
-#endif
 }
 
 void Ocean::PackIfftData(int cascade_id) {
   using namespace utility;
-  BindImageTexture(4, dxdz_tex_, GL_WRITE_ONLY);
-  BindImageTexture(5, dydxz_tex_, GL_WRITE_ONLY);
-  BindImageTexture(6, dyxdyz_tex_, GL_WRITE_ONLY);
-  BindImageTexture(7, dxxdzz_tex_, GL_WRITE_ONLY);
+  dxdz_tex_.BindImage(4, GL_WRITE_ONLY);
+  dydxz_tex_.BindImage(5, GL_WRITE_ONLY);
+  dyxdyz_tex_.BindImage(6, GL_WRITE_ONLY);
+  dxxdzz_tex_.BindImage(7, GL_WRITE_ONLY);
   glBindImageTexture(12, tex_precomputed_data_, 0, false, cascade_id,
                      GL_READ_ONLY, GL_RGBA32F);
   glBindImageTexture(14, tex_init_spectrum_, 0, false, cascade_id, GL_READ_ONLY,
                      GL_RGBA32F);
   glDispatchCompute(size_ / 8, size_ / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-#ifndef NDEBUG
-  UnBindImageTexture(4, dxdz_tex_, GL_WRITE_ONLY);
-  UnBindImageTexture(5, dydxz_tex_, GL_WRITE_ONLY);
-  UnBindImageTexture(6, dyxdyz_tex_, GL_WRITE_ONLY);
-  UnBindImageTexture(7, dxxdzz_tex_, GL_WRITE_ONLY);
-  glBindImageTexture(12, 0, 0, false, cascade_id, GL_READ_ONLY, GL_RGBA32F);
-  glBindImageTexture(14, 0, 0, false, cascade_id, GL_READ_ONLY, GL_RGBA32F);
-#endif
 }
 
 void Ocean::UnPackIfftData(int cascade_id, float lambda) {
   using namespace utility;
   glUniform1f(5, lambda);
-
-  BindImageTexture(4, dxdz_tex_, GL_READ_ONLY);
-  BindImageTexture(5, dydxz_tex_, GL_READ_ONLY);
-  BindImageTexture(6, dyxdyz_tex_, GL_READ_ONLY);
-  BindImageTexture(7, dxxdzz_tex_, GL_READ_ONLY);
+  dxdz_tex_.BindImage(4, GL_READ_ONLY);
+  dydxz_tex_.BindImage(5, GL_READ_ONLY);
+  dyxdyz_tex_.BindImage(6, GL_READ_ONLY);
+  dxxdzz_tex_.BindImage(7, GL_READ_ONLY);
 
   glBindImageTexture(8, tex_displacement_, 0, false, cascade_id, GL_WRITE_ONLY,
                      GL_RGBA32F);
@@ -224,14 +208,4 @@ void Ocean::UnPackIfftData(int cascade_id, float lambda) {
 
   glDispatchCompute(size_ / 8, size_ / 8, 1);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-#ifndef NDEBUG
-  UnBindImageTexture(4, dxdz_tex_, GL_READ_ONLY);
-  UnBindImageTexture(5, dydxz_tex_, GL_READ_ONLY);
-  UnBindImageTexture(6, dyxdyz_tex_, GL_READ_ONLY);
-  UnBindImageTexture(7, dxxdzz_tex_, GL_READ_ONLY);
-  glBindImageTexture(8, 0, 0, false, cascade_id, GL_WRITE_ONLY, GL_RGBA32F);
-  glBindImageTexture(9, 0, 0, false, cascade_id, GL_WRITE_ONLY, GL_RGBA32F);
-  glBindImageTexture(10, 0, 0, false, cascade_id, GL_READ_WRITE, GL_RGBA32F);
-#endif
 }

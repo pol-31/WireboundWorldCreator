@@ -26,16 +26,19 @@ void WireboundWorldCreator::RunRenderLoop() {
     auto current_frame = static_cast<float>(glfwGetTime());
     gDeltaTime = current_frame - last_frame;
     last_frame = current_frame;
+
     tile_renderer_.cur_tile_.UpdateMapScale(gDeltaTime);
     cubemap_.Render();
 
     global_data_.UpdateCursorPos();
     global_data_.UpdateHoveredId();
 
-    ui_renderer_.Render();
+    ui_renderer_.Render(&tile_renderer_);
 
     picking_fbo_.Bind();
-    ui_renderer_.RenderPicking();
+    ui_renderer_.RenderPicking(&tile_renderer_);
+
+    camera_.Update();
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glfwPollEvents();
@@ -73,7 +76,7 @@ void WireboundWorldCreator::CheckGlobalData() {
   if (!global_data_.camera || !global_data_.tile_renderer ||
       !global_data_.cur_mode || !global_data_.menu ||
       !global_data_.picking_fbo || !global_data_.ui_debugger ||
-      !global_data_.ui_shared_resources || !global_data_.text_renderer ||
+      !global_data_.render_data || !global_data_.text_renderer ||
       !global_data_.windows) {
     throw "init global glfw callback data plz";
   }

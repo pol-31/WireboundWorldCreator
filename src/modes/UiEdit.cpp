@@ -2,12 +2,12 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-UiEditSlots::UiEditSlots(UiSharedResources& ui_shared_resources,
+UiEditSlots::UiEditSlots(UiRenderData& render_data,
                          WindowQueue& window_queue, TextRenderer& text_renderer)
     : Base({data::VboIdMain::kBiomesEditDesk, [] {}}, 1.0f,
            {{data::VboIdMain::kBiomesEditDeskPinBack, [] {}},
             {data::VboIdMain::kBiomesEditDeskPinPoint}},
-           ui_shared_resources, window_queue),
+           render_data, window_queue),
       accept_(data::VboIdMain::kBiomesEditAccept,
               [this] { ui_edit_->Generate(); }),
       name_(text_renderer, {data::VboIdMain::kBiomesEditNameBack},
@@ -25,7 +25,7 @@ UiEditSlots::UiEditSlots(UiSharedResources& ui_shared_resources,
       hierarchy_(&background_,
                  {&pin_, &accept_, &name_, &color_palette_, &color_brightness_,
                   &color_indicator_, &random_generate_}),
-      ui_shared_resources_(ui_shared_resources),
+      render_data_(render_data),
       random_generator_(std::random_device{}()) {
   speed_ = 2.0f;
   color_brightness_.SetValue(1.0f);
@@ -59,15 +59,15 @@ bool UiEditSlots::Scroll(GLuint id, float yoffset) {
 }
 
 bool UiEditSlots::Render() {
-  ui_shared_resources_.tex_ui_.Bind();
-  auto mouse_pos = ui_shared_resources_.glfw_context_.cursor_pos_tex_norm_;
+  render_data_.tex_ui_.BindSampler(0);
+  auto mouse_pos = render_data_.glfw_context_.cursor_pos_tex_norm_;
   bool stop_show = RenderBack(true);
   if (!Base::BackIsReady()) {
     return stop_show;
   }
 
-  ui_shared_resources_.shader_sp_.Bind();
-  ui_shared_resources_.tex_ui_.Bind();
+  render_data_.shader_sp_.Bind();
+  render_data_.tex_ui_.BindSampler(0);
   accept_.Render();
   color_palette_.Render(mouse_pos);
   color_brightness_.Render(mouse_pos);
@@ -94,7 +94,7 @@ bool UiEditSlots::Render() {
 
 void UiEditSlots::RenderPicking() {
   RenderPickingBack();
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
 
   accept_.RenderPicking();
   name_.RenderPicking();
@@ -105,6 +105,6 @@ void UiEditSlots::RenderPicking() {
 
   ui_edit_->RenderPicking(background_.GetHeight());
 
-  ui_shared_resources_.shader_sp_picking_.Bind();
+  render_data_.shader_sp_picking_.Bind();
   name_.RenderPicking();
 }
