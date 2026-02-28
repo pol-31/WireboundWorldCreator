@@ -7,8 +7,7 @@
 
 class UiConfirmation {
  public:
-  UiConfirmation(UiRenderData& render_data,
-                 TextRenderer& text_renderer);
+  UiConfirmation(UiRenderData& render_data, TextRenderer& text_renderer);
 
   void Render();
 
@@ -40,8 +39,7 @@ class UiConfirmation {
 
 class UiWarning {
  public:
-  UiWarning(UiRenderData& render_data,
-            TextRenderer& text_renderer);
+  UiWarning(UiRenderData& render_data, TextRenderer& text_renderer);
 
   void Render();
 

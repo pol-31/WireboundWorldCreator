@@ -21,8 +21,8 @@ void Fpv::Update(UiRenderData& render_data) {
   position_ = glm::clamp(position_, -32.0f, 32.0f);
   glm::vec2 pos_end(position_.x, position_.z);
   float ground_height =
-      render_data.glfw_context_.tile_renderer
-      ->cur_tile_.GetPositionY32(position_.x, position_.z);
+      render_data.glfw_context_.tile_renderer->cur_tile_.GetPositionY32(
+          position_.x, position_.z);
   position_.y = ground_height;
 
   glm::vec2 move_dir = pos_end - pos_start;

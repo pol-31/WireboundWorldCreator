@@ -16,16 +16,13 @@ void MapMarker::Render(UiRenderData& render_data, glm::vec3 color,
   model_data_->RenderModelNodes();
 }
 
-glm::mat4 MapMarker::GenModelMat(UiRenderData& render_data,
-                                 glm::vec2 position, glm::quat rotation,
-                                 glm::vec3 scale) {
+glm::mat4 MapMarker::GenModelMat(UiRenderData& render_data, glm::vec2 position,
+                                 glm::quat rotation, glm::vec3 scale) {
   auto fx = static_cast<int>(position.x * 16.0f + 512.0f);
   auto fz = static_cast<int>(position.y * 16.0f + 512.0f);
   float ground_height =
-      render_data.glfw_context_.tile_renderer->cur_tile_.GetPositionY(
-          fx, fz);
-  auto map_scale =
-      render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
+      render_data.glfw_context_.tile_renderer->cur_tile_.GetPositionY(fx, fz);
+  auto map_scale = render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
   glm::mat4 object_model = glm::mat4{1.0f};
   object_model = glm::translate(
       object_model, glm::vec3(position.x, ground_height, position.y));

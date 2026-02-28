@@ -1,10 +1,9 @@
 #ifndef WIREBOUNDWORLDCREATOR_RIGIDBODY_H
 #define WIREBOUNDWORLDCREATOR_RIGIDBODY_H
 
-#include <vector>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <vector>
 
 #include "../EntityIdManager.h"
 #include "AttackEvent.h"
@@ -34,8 +33,7 @@ class RigidBody {
     return model_data_;
   }
 
-  void SetModelData(ModelData* model,
-                    std::vector<AttackEvent>* attack_queue) {
+  void SetModelData(ModelData* model, std::vector<AttackEvent>* attack_queue) {
     model_data_ = model;
     attack_queue_ = attack_queue;
   }

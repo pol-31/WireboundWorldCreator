@@ -7,13 +7,13 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../render/Texture.h"
 #include "../modes/traits/BiomeTraits.h"
 #include "../modes/traits/ObjectTraits.h"
 #include "../modes/traits/OceanTraits.h"
 #include "../modes/traits/RiverTraits.h"
 #include "../modes/traits/RoadTraits.h"
 #include "../modes/traits/TerrainTraits.h"
+#include "../render/Texture.h"
 
 static std::vector<TerrainTraits> ReadTerrain(std::istream& in);
 void WriteTerrain(std::ostream& out, const std::vector<TerrainTraits>& terrain);

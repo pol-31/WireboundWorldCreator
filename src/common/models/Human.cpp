@@ -28,8 +28,7 @@ void Human::UpdateAnimation() {
   }
 }
 
-void Human::UpdatePosition(UiRenderData& render_data,
-                           glm::vec3 position_diff) {
+void Human::UpdatePosition(UiRenderData& render_data, glm::vec3 position_diff) {
   glm::vec2 pos_start(position_.x, position_.z);
   position_ += position_diff * speed_ * gDeltaTime;
   position_ = glm::clamp(position_, -32.0f, 32.0f);

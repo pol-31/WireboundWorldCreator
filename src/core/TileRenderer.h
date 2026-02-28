@@ -52,12 +52,11 @@ class TileRenderer {
   void BakeRivers(const std::vector<float>& heights_in);
   void BakeRoads(const std::vector<float>& heights_in);
 
+  void Build(const std::vector<float>& originalHeightMap);
 
-void Build(const std::vector<float>& originalHeightMap);
+  float GetMaxHeight(int level, int x, int y) const;
 
-float GetMaxHeight(int level, int x, int y) const;
-
-glm::vec3 CastRay(glm::vec3 start, glm::vec3 dir, float maxDist);
+  glm::vec3 CastRay(glm::vec3 start, glm::vec3 dir, float maxDist);
 
   Tile cur_tile_;
   GeoClipmaps mesh_;

@@ -4,8 +4,8 @@
 #include <memory>
 
 #include "../core/Tile.h"
-#include "Ocean.h"
 #include "GeoClipmaps.h"
+#include "Ocean.h"
 
 class WaterRenderer {
  public:

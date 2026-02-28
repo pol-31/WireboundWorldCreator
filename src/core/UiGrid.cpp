@@ -8,8 +8,8 @@
 
 UiGrid::UiGrid(UiRenderData& render_data)
     : render_data_(render_data),
-      shader_grid_("../shaders/TerrainGrid.vert",
-                   "../shaders/TerrainGrid.frag", {}),
+      shader_grid_("../shaders/TerrainGrid.vert", "../shaders/TerrainGrid.frag",
+                   {}),
       shader_axis_("../shaders/TerrainGrid.vert", "../shaders/Axis.frag", {}),
       shader_world_boundary_("../shaders/TerrainGrid.vert",
                              "../shaders/TerrainBoundary.frag", {}) {

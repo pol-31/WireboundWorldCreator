@@ -7,16 +7,16 @@
 #include <vector>
 
 #include "../core/UiConfigWindow.h"
+#include "../ui/UiRenderData.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
 #include "UiOceanConfig.h"
-#include "../ui/UiRenderData.h"
 
 class UiEditOcean : public IUiEdit {
  public:
-  UiEditOcean(UiRenderData& render_data,
-              TextRenderer& text_renderer, UiEditSlots& ui_edit_slots,
-              UiEditConfigSlCfg& value_config, UiConfigWindow& ui_ocean_config);
+  UiEditOcean(UiRenderData& render_data, TextRenderer& text_renderer,
+              UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config,
+              UiConfigWindow& ui_ocean_config);
 
   void HideAll() override;
 

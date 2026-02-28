@@ -1,10 +1,10 @@
 #ifndef WIREBOUNDWORLDCREATOR_GEOCLIPMAPS_H
 #define WIREBOUNDWORLDCREATOR_GEOCLIPMAPS_H
 
-#include <vector>
-
 #include <glad/glad.h>
+
 #include <glm/glm.hpp>
+#include <vector>
 
 class Camera;
 struct Tile;
@@ -24,12 +24,10 @@ struct GeoSurface {
 };
 
 class GeoClipmaps {
-public:
+ public:
   GeoClipmaps();
 
-  ~GeoClipmaps() {
-    DeInit();
-  }
+  ~GeoClipmaps() { DeInit(); }
 
   void Update(const Camera* camera, Tile* tile);
 
@@ -43,7 +41,7 @@ public:
     return surface_;
   }
 
-private:
+ private:
   struct Patch {
     glm::vec4 p0;
     glm::vec4 p1;

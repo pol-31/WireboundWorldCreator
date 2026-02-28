@@ -8,8 +8,8 @@
 #include <iostream>
 #include <string_view>
 
-#include "../render/Texture.h"
 #include "../render/Shader.h"
+#include "../render/Texture.h"
 
 class Cubemap {
  public:
@@ -79,7 +79,8 @@ class Cubemap {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    texture_ = Texture(opengl_id, width, height, format, format, GL_UNSIGNED_BYTE);
+    texture_ =
+        Texture(opengl_id, width, height, format, format, GL_UNSIGNED_BYTE);
     InitBuffers();
   }
 

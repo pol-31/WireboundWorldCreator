@@ -3,8 +3,8 @@
 
 #include <glad/glad.h>
 
-#include "../ui/UiRenderData.h"
 #include "../render/Shader.h"
+#include "../ui/UiRenderData.h"
 
 class UiGrid {
  public:

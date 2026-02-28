@@ -32,9 +32,8 @@ void UiEditBiomes::UpdateConfig() {
   glm::vec3 sun_direction = {inst.sun_x, inst.sun_y, inst.sun_z};
   glm::vec3 sun_color = {inst.sun_r, inst.sun_g, inst.sun_b};
   const auto& biome = Data()[selected_id_];
-  ui_.render_data_.glfw_context_.tile_renderer->environment_
-      .SetEnvironment(biome.wind_angle, biome.wind_speed, sun_direction,
-                      sun_color);
+  ui_.render_data_.glfw_context_.tile_renderer->environment_.SetEnvironment(
+      biome.wind_angle, biome.wind_speed, sun_direction, sun_color);
 }
 
 void UiEditBiomes::SetInstanceId(int id) {
@@ -88,6 +87,5 @@ BiomeTraits& UiEditBiomes::GetInstanceData() noexcept {
 }
 
 std::vector<BiomeTraits>& UiEditBiomes::Data() {
-  return render_data_.glfw_context_.tile_renderer->cur_tile_
-      .biomes_data;
+  return render_data_.glfw_context_.tile_renderer->cur_tile_.biomes_data;
 }

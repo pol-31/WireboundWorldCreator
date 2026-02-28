@@ -9,8 +9,7 @@
 
 class UiButtons {
  public:
-  UiButtons(UiRenderData& render_data,
-            TextRenderer& text_renderer);
+  UiButtons(UiRenderData& render_data, TextRenderer& text_renderer);
 
   void Press(int key, int action);
 

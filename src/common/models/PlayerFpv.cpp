@@ -92,7 +92,6 @@ void PlayerFpv::Update(UiRenderData& render_data) {
   float dt = gDeltaTime;
   const float max_thrust = mass * g * 2.5f;  // allow 2.5g lift
 
-
   /// --- UpdateInput
   throttle_ += ((thrust_up_ ? +1.f : 0.f) - (thrust_down_ ? 1.f : 0.f)) * dt;
   yaw_rate_ +=
@@ -126,8 +125,9 @@ void PlayerFpv::Update(UiRenderData& render_data) {
   float arms_num = std::size(arms);
   for (auto arm : arms) {
     glm::vec3 motorWorld = rotation_ * arm + fpv_bottom;
-    float ground = render_data.glfw_context_.tile_renderer->cur_tile_
-                       .GetPositionY32(motorWorld.x, motorWorld.z);
+    float ground =
+        render_data.glfw_context_.tile_renderer->cur_tile_.GetPositionY32(
+            motorWorld.x, motorWorld.z);
     float motor_thrust = thrust_force / arms_num;
     float height_difference = motorWorld.y - ground;
     if (height_difference < 0.0f) {

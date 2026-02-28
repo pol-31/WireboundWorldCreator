@@ -2,8 +2,7 @@
 
 #include "../core/TileRenderer.h"
 
-UiEditOcean::UiEditOcean(UiRenderData& render_data,
-                         TextRenderer& text_renderer,
+UiEditOcean::UiEditOcean(UiRenderData& render_data, TextRenderer& text_renderer,
                          UiEditSlots& ui_edit_slots,
                          UiEditConfigSlCfg& value_config,
                          UiConfigWindow& ui_ocean_config)
@@ -55,8 +54,7 @@ void UiEditOcean::Generate() {
   traits.near = ocean_layers_[0].GetConfig();
   traits.mid = ocean_layers_[1].GetConfig();
   traits.far = ocean_layers_[2].GetConfig();
-  TileRenderer* tile_renderer =
-      render_data_.glfw_context_.tile_renderer;
+  TileRenderer* tile_renderer = render_data_.glfw_context_.tile_renderer;
   tile_renderer->water.UpdateOcean(traits);
 }
 
@@ -70,8 +68,7 @@ void UiEditOcean::GenerateAll() {
     traits.near = ocean_layers_[0].GetConfig();
     traits.mid = ocean_layers_[1].GetConfig();
     traits.far = ocean_layers_[2].GetConfig();
-    TileRenderer* tile_renderer =
-        render_data_.glfw_context_.tile_renderer;
+    TileRenderer* tile_renderer = render_data_.glfw_context_.tile_renderer;
     tile_renderer->water.UpdateOcean(traits);
     render_data_.glfw_context_.tile_renderer->water.SetWaterColor(
         Data()[id].color);

@@ -11,8 +11,7 @@ GraphBakeConfig RiverTraits::GetGraphConfig() const noexcept {
           .radius_flat = config.radius_flat};
 }
 
-UiEditRiver::UiEditRiver(UiRenderData& render_data,
-                         UiEditSlots& ui_edit_slots,
+UiEditRiver::UiEditRiver(UiRenderData& render_data, UiEditSlots& ui_edit_slots,
                          UiEditConfigSlTxt& value_config)
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),
@@ -94,6 +93,5 @@ RiverTraits& UiEditRiver::GetInstanceData() noexcept {
 }
 
 std::vector<RiverTraits>& UiEditRiver::Data() {
-  return render_data_.glfw_context_.tile_renderer->cur_tile_
-      .rivers_data;
+  return render_data_.glfw_context_.tile_renderer->cur_tile_.rivers_data;
 }

@@ -24,9 +24,8 @@ class MapMarker {
 
   void DeSelect() { selected_ = false; }
 
-  glm::mat4 GenModelMat(UiRenderData& render_data,
-                        glm::vec2 position, glm::quat rotation,
-                        glm::vec3 scale);
+  glm::mat4 GenModelMat(UiRenderData& render_data, glm::vec2 position,
+                        glm::quat rotation, glm::vec3 scale);
 
   [[nodiscard]] const ModelData* GetModelData() const noexcept {
     return model_data_;

@@ -6,16 +6,15 @@
 
 #include "../common/models/ModelManager.h"
 #include "../core/TileRenderer.h"
+#include "../ui/UiRenderData.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
-#include "../ui/UiRenderData.h"
 #include "traits/ObjectTraits.h"
 
 class UiEditObjects : public IUiEdit {
  public:
-  UiEditObjects(UiRenderData& render_data,
-                UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
-                ModelManager& mdl_manager);
+  UiEditObjects(UiRenderData& render_data, UiEditSlots& ui_edit_slots,
+                UiEditConfigSlTxt& value_config, ModelManager& mdl_manager);
 
   void HideAll() override;
 

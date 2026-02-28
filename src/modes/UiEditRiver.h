@@ -10,8 +10,8 @@
 
 class UiEditRiver : public IUiEdit {
  public:
-  UiEditRiver(UiRenderData& render_data,
-              UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
+  UiEditRiver(UiRenderData& render_data, UiEditSlots& ui_edit_slots,
+              UiEditConfigSlTxt& value_config);
 
   void HideAll() override;
 

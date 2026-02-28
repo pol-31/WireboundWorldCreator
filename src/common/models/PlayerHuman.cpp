@@ -6,8 +6,7 @@
 #include "../../io/Camera.h"
 #include "ModelLoader.h"
 
-PlayerHuman::PlayerHuman(UiRenderData& render_data)
-    : fpv_(render_data) {
+PlayerHuman::PlayerHuman(UiRenderData& render_data) : fpv_(render_data) {
   id_ = gEntityIdManager.PlayerHumanId;
 }
 

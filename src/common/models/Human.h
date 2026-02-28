@@ -4,8 +4,8 @@
 #include <glm/glm.hpp>
 
 #include "../../ui/UiRenderData.h"
-#include "RigidBody.h"
 #include "Animator.h"
+#include "RigidBody.h"
 
 struct ModelData;
 
@@ -33,8 +33,7 @@ class Human : public RigidBody {
 
   Human() = default;
 
-  void UpdatePosition(UiRenderData& render_data,
-                      glm::vec3 position_diff);
+  void UpdatePosition(UiRenderData& render_data, glm::vec3 position_diff);
 
   void Jump(float strength);
 
@@ -63,14 +62,11 @@ class Human : public RigidBody {
 
   [[nodiscard]] bool IsSelected() const noexcept { return selected_; }
 
-  void SetAnimator(Animator* animator) {
-    animator_ = animator;
-  }
+  void SetAnimator(Animator* animator) { animator_ = animator; }
 
  private:
   State state_ = State::kIdle;
-  Animation animation_id_ =
-      Animation::kIdle;  // TODO: merge with state_
+  Animation animation_id_ = Animation::kIdle;  // TODO: merge with state_
   bool selected_ = false;
 
   float animation_time_ = 0.0f;

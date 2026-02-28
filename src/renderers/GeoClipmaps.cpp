@@ -2,15 +2,13 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "../io/Camera.h"
 #include "../core/Tile.h"
+#include "../io/Camera.h"
 
 const int GeoClipmaps::gPatchNum = 40;
 const int GeoClipmaps::gPatchNumLowPoly = 64 * 64;
 
-GeoClipmaps::GeoClipmaps() {
-  Init();
-}
+GeoClipmaps::GeoClipmaps() { Init(); }
 
 void GeoClipmaps::Init() {
   glGenVertexArrays(1, &vao_);
@@ -41,9 +39,7 @@ void GeoClipmaps::DeInit() {
   glDeleteVertexArrays(1, &vao_);
 }
 
-void GeoClipmaps::BindVao() const noexcept {
-  glBindVertexArray(vao_);
-}
+void GeoClipmaps::BindVao() const noexcept { glBindVertexArray(vao_); }
 
 void GeoClipmaps::Render() {
   BindVao();
@@ -104,8 +100,8 @@ void GeoClipmaps::Update(const Camera* camera, Tile* tile) {
                   patches.data());
 }
 
-GeoClipmaps::GroundView GeoClipmaps::RaysToGround(
-    const Camera* camera, Tile* tile) {
+GeoClipmaps::GroundView GeoClipmaps::RaysToGround(const Camera* camera,
+                                                  Tile* tile) {
   glm::vec4 ndcCorners[4] = {
       {-1.2, -1.2, 1, 1},  // near-left
       {1.2, -1.2, 1, 1},   // near-right

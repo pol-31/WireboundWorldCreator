@@ -9,10 +9,10 @@
 #include "../common/TextRenderer.h"
 #include "../core/Tile.h"
 #include "../core/UiConfigWindow.h"
+#include "../ui/UiRenderData.h"
 #include "TerrainNoiseData.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
-#include "../ui/UiRenderData.h"
 #include "UiTerrainConfig.h"
 #include "traits/TerrainTraits.h"
 

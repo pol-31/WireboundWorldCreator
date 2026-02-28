@@ -23,8 +23,7 @@ class UiEditConfigSlCfg {
     bool tg2;
   };
 
-  UiEditConfigSlCfg(UiRenderData& render_data,
-                    TextRenderer& text_renderer);
+  UiEditConfigSlCfg(UiRenderData& render_data, TextRenderer& text_renderer);
 
   void Release();
 
@@ -57,8 +56,7 @@ class UiEditConfigSlTxt {
     data::TextId label;
   };
 
-  UiEditConfigSlTxt(UiRenderData& render_data,
-                    TextRenderer& text_renderer);
+  UiEditConfigSlTxt(UiRenderData& render_data, TextRenderer& text_renderer);
 
   bool Press(int id, float height, int num);
 

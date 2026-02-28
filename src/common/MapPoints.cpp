@@ -8,7 +8,8 @@
 
 MapPointsBase::MapPointsBase(ModelManager& mdl_manager)
     : mdl_manager_(mdl_manager),
-      shader_joints_("../shaders/MapJoint.vert", "../shaders/MapJoint.frag", {0}) {
+      shader_joints_("../shaders/MapJoint.vert", "../shaders/MapJoint.frag",
+                     {0}) {
   Init();
 }
 

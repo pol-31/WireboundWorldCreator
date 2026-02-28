@@ -2,20 +2,13 @@
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_PLAYERHUMAN_H_
 
 #include "../../ui/UiRenderData.h"
-#include "RigidBody.h"
-#include "PlayerFpv.h"
 #include "Animator.h"
+#include "PlayerFpv.h"
+#include "RigidBody.h"
 
 class PlayerHuman : public RigidBody {
  public:
-  enum class State {
-    kIdle,
-    kJumping,
-    kFalling,
-    kAttacking,
-    kStunned,
-    kFpv
-  };
+  enum class State { kIdle, kJumping, kFalling, kAttacking, kStunned, kFpv };
 
   enum class PlayerEventType {
     None,
@@ -45,13 +38,9 @@ class PlayerHuman : public RigidBody {
     return state_ != State::kJumping && state_ != State::kFalling;
   }
 
-  [[nodiscard]] bool IsIdle() const noexcept {
-    return state_ == State::kIdle;
-  }
+  [[nodiscard]] bool IsIdle() const noexcept { return state_ == State::kIdle; }
 
-  [[nodiscard]] bool IsFpv() const noexcept {
-    return state_ == State::kFpv;
-  }
+  [[nodiscard]] bool IsFpv() const noexcept { return state_ == State::kFpv; }
 
   PlayerHuman(UiRenderData& render_data);
 
@@ -84,13 +73,9 @@ class PlayerHuman : public RigidBody {
 
   void SwitchToFpv();
 
-  PlayerFpv& GetFpv() {
-    return fpv_;
-  }
+  PlayerFpv& GetFpv() { return fpv_; }
 
-  void SetAnimator(Animator* animator) {
-    animator_ = animator;
-  }
+  void SetAnimator(Animator* animator) { animator_ = animator; }
 
   void SetMoveForward(bool pressed) { move_forward_ = pressed; }
   void SetMoveBackward(bool pressed) { move_backward_ = pressed; }
@@ -113,8 +98,7 @@ class PlayerHuman : public RigidBody {
   float animation_time_ = 0.0f;
   bool animation_looped_ = true;
   Animator* animator_ = nullptr;
-  Animation animation_id_ =
-      Animation::kIdle;  // todo; merge with state_?
+  Animation animation_id_ = Animation::kIdle;  // todo; merge with state_?
 
   PlayerFpv fpv_;
 };

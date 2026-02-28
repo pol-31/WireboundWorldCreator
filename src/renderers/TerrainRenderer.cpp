@@ -17,26 +17,22 @@ TerrainRenderer::TerrainRenderer(Tile& tile, GeoClipmaps& mesh)
       shader_("../shaders/Terrain.vert", "../shaders/Terrain.tesc",
               "../shaders/Terrain.tese", "../shaders/Terrain.frag",
               {0, 2, 3, 8, 9, 12, 13}),
-      shader_game_(
-        "../shaders/game/Terrain.vert", "../shaders/game/Terrain.tesc",
-        "../shaders/game/Terrain.tese", "../shaders/game/Terrain.frag",
-              {0, 2, 3, 8, 9, 12, 13}),
-      shader_subtract_(
-        "../shaders/Terrain.vert", "../shaders/Terrain.tesc",
-        "../shaders/TerrainSubtract.tese", "../shaders/Terrain.frag",
-              {0, 2, 3, 6, 8, 9, 12, 13}),
-      shader_picking_(
-        "../shaders/Terrain.vert", "../shaders/Terrain.tesc",
-        "../shaders/Terrain.tese", "../shaders/TerrainPicking.frag",
-              {0, 1}),
-      shader_selection_(
-        "../shaders/Terrain.vert", "../shaders/Terrain.tesc",
-        "../shaders/Terrain.tese", "../shaders/TerrainSelection.frag",
-              {0}),
-      shader_wireframe_(
-          "../shaders/Terrain.vert", "../shaders/Terrain.tesc",
-          "../shaders/Terrain.tese", "../shaders/TerrainWireframe.frag",
-              {0}),
+      shader_game_("../shaders/game/Terrain.vert",
+                   "../shaders/game/Terrain.tesc",
+                   "../shaders/game/Terrain.tese",
+                   "../shaders/game/Terrain.frag", {0, 2, 3, 8, 9, 12, 13}),
+      shader_subtract_("../shaders/Terrain.vert", "../shaders/Terrain.tesc",
+                       "../shaders/TerrainSubtract.tese",
+                       "../shaders/Terrain.frag", {0, 2, 3, 6, 8, 9, 12, 13}),
+      shader_picking_("../shaders/Terrain.vert", "../shaders/Terrain.tesc",
+                      "../shaders/Terrain.tese",
+                      "../shaders/TerrainPicking.frag", {0, 1}),
+      shader_selection_("../shaders/Terrain.vert", "../shaders/Terrain.tesc",
+                        "../shaders/Terrain.tese",
+                        "../shaders/TerrainSelection.frag", {0}),
+      shader_wireframe_("../shaders/Terrain.vert", "../shaders/Terrain.tesc",
+                        "../shaders/Terrain.tese",
+                        "../shaders/TerrainWireframe.frag", {0}),
       mesh_(mesh) {
   InitMaterial();
 }

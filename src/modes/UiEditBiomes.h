@@ -6,15 +6,15 @@
 
 #include "../common/MapPoint.h"
 #include "../core/TileRenderer.h"
+#include "../ui/UiRenderData.h"
 #include "UiEdit.h"
 #include "UiEditShared.h"
-#include "../ui/UiRenderData.h"
 #include "traits/BiomeTraits.h"
 
 class UiEditBiomes : public IUiEdit {
  public:
-  UiEditBiomes(UiRenderData& render_data,
-               UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config);
+  UiEditBiomes(UiRenderData& render_data, UiEditSlots& ui_edit_slots,
+               UiEditConfigSlTxt& value_config);
 
   void HideAll() override;
 

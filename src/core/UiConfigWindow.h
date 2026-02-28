@@ -14,8 +14,8 @@
 
 class UiConfigWindow final : public UiWindowAppear {
  public:
-  UiConfigWindow(UiRenderData& render_data,
-                 WindowQueue& window_queue, TextRenderer& text_renderer);
+  UiConfigWindow(UiRenderData& render_data, WindowQueue& window_queue,
+                 TextRenderer& text_renderer);
 
   bool Render() override;
 

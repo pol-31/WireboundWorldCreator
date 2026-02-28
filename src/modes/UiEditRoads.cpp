@@ -11,8 +11,7 @@ GraphBakeConfig RoadTraits::GetGraphConfig() const noexcept {
           .radius_flat = config.radius_flat};
 }
 
-UiEditRoads::UiEditRoads(UiRenderData& render_data,
-                         UiEditSlots& ui_edit_slots,
+UiEditRoads::UiEditRoads(UiRenderData& render_data, UiEditSlots& ui_edit_slots,
                          UiEditConfigSlTxt& value_config)
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),

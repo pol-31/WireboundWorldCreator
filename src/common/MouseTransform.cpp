@@ -197,8 +197,8 @@ void MouseTransform::ScaleSelectedMapPointsBack(
 }
 
 void MouseTransform::TranslateSelectedVerticesUp(
-    double xpos, double ypos,
-    const Texture& hmap, const Texture& selection_mask) {
+    double xpos, double ypos, const Texture& hmap,
+    const Texture& selection_mask) {
   auto value = GetWorldOffsetTranslate(xpos, ypos);
 
   auto value_y = value.y - prev_value_y_;

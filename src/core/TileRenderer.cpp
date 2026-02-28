@@ -1,12 +1,12 @@
 #include "TileRenderer.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
 #include <vector>
-#include <cmath>
 
 #include "../common/Details.h"
 #include "../common/OpenGlUtility.h"
@@ -157,11 +157,11 @@ void TileRenderer::Build(const std::vector<float>& originalHeightMap) {
     const std::vector<float>& prev = cur_tile_.m_maxPyramid[level];
     for (int y = 0; y < nextSize; ++y) {
       for (int x = 0; x < nextSize; ++x) {
-        float h1 = prev[(x * 2)     + (y * 2)     * currentSize];
-        float h2 = prev[(x * 2 + 1) + (y * 2)     * currentSize];
-        float h3 = prev[(x * 2)     + (y * 2 + 1) * currentSize];
+        float h1 = prev[(x * 2) + (y * 2) * currentSize];
+        float h2 = prev[(x * 2 + 1) + (y * 2) * currentSize];
+        float h3 = prev[(x * 2) + (y * 2 + 1) * currentSize];
         float h4 = prev[(x * 2 + 1) + (y * 2 + 1) * currentSize];
-        nextLevel[x + y * nextSize] = std::max({ h1, h2, h3, h4 });
+        nextLevel[x + y * nextSize] = std::max({h1, h2, h3, h4});
       }
     }
     cur_tile_.m_maxPyramid.push_back(nextLevel);
@@ -210,7 +210,7 @@ glm::vec3 TileRenderer::CastRay(glm::vec3 start, glm::vec3 dir, float maxDist) {
         p.y = preciseHeight;
         return p;
       }
-      currentDist += 1.0f; // we're close, check next tile cell
+      currentDist += 1.0f;  // we're close, check next tile cell
     }
   }
   return glm::vec3{-1000.0f};

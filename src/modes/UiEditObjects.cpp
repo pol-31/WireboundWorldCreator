@@ -95,6 +95,5 @@ void UiEditObjects::SetModels(
 }
 
 std::vector<ObjectTraits>& UiEditObjects::Data() {
-  return render_data_.glfw_context_.tile_renderer->cur_tile_
-      .objects_data;
+  return render_data_.glfw_context_.tile_renderer->cur_tile_.objects_data;
 }

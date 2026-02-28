@@ -4,8 +4,8 @@
 #include <glad/glad.h>
 
 #include "../render/Shader.h"
-#include "MapPoint.h"
 #include "../render/Texture.h"
+#include "MapPoint.h"
 #include "models/ModelManager.h"
 
 class MapPointsBase {
