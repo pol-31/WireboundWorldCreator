@@ -12,34 +12,32 @@
 
 /// parent is back_ BUT UiSlots is taken from slider, so
 /// outside is's shown as a slider area
-UiSlots::UiSlots(UiRenderData& render_data,
-                 TextRenderer& text_renderer,
+UiSlots::UiSlots(UiRenderData& render_data, TextRenderer& text_renderer,
                  std::function<void()> on_selection)
-    : UiBase(static_cast<int>(data::VboIdMain::kSlotsBack), {}),
+    : UiBase(static_cast<int>(data::UiId::kSlotsBack), {}),
       on_selection_(on_selection),
       render_data_(render_data),
-      sl_data_({data::VboIdMain::kSlotsSlider},
-               {data::VboIdMain::kSlotsHandler}, 6, 0.75f, 0.8f),
-      back_(data::VboIdMain::kSlotsBack),
-      create_(data::VboIdMain::kSlotsCreate, [this]() { this->CreateGraph(); }),
-      slot_name_(text_renderer, data::VboIdMain::kSlotsName),
-      slot_config_(data::VboIdMain::kSlotsConfig,
+      sl_data_({data::UiId::kSlotsSlider}, {data::UiId::kSlotsHandler}, 6,
+               0.75f, 0.8f),
+      back_(data::UiId::kSlotsBack),
+      create_(data::UiId::kSlotsCreate, [this]() { this->CreateGraph(); }),
+      slot_name_(text_renderer, data::UiId::kSlotsName),
+      slot_config_(data::UiId::kSlotsConfig,
                    [this]() {
                      SelectGraph(GetHoveredSlotId());
                      ui_edit_->Show();
                    }),
-      toggle_slot_visible_({data::VboIdMain::kSlotsVisibleOff,
-                            [this]() {
-                              auto slot_id = GetHoveredSlotId();
-                              auto instance =
-                                  ui_edit_->GetBaseInstanceData(slot_id);
-                              instance->do_show = !instance->do_show;
-                              ui_edit_->UpdateConfig();
-                            }},
-                           {data::VboIdMain::kSlotsVisibleOn1},
-                           {data::VboIdMain::kSlotsVisibleOn2},
-                           {data::VboIdMain::kSlotsVisibleOn3}),
-      slot_back_(data::VboIdMain::kSlotsSlot,
+      toggle_slot_visible_(
+          {data::UiId::kSlotsVisibleOff,
+           [this]() {
+             auto slot_id = GetHoveredSlotId();
+             auto instance = ui_edit_->GetBaseInstanceData(slot_id);
+             instance->do_show = !instance->do_show;
+             ui_edit_->UpdateConfig();
+           }},
+          {data::UiId::kSlotsVisibleOn1}, {data::UiId::kSlotsVisibleOn2},
+          {data::UiId::kSlotsVisibleOn3}),
+      slot_back_(data::UiId::kSlotsSlot,
                  [this]() {
                    auto cursor_slot_id = GetHoveredSlotId();
                    if (*selected_id_ == cursor_slot_id) {
@@ -50,8 +48,8 @@ UiSlots::UiSlots(UiRenderData& render_data,
                    }
                    SelectGraph(cursor_slot_id);
                  }),
-      slot_color_(data::VboIdMain::kSlotsSlotColor),
-      slot_remove_(data::VboIdMain::kSlotsRemove,
+      slot_color_(data::UiId::kSlotsSlotColor),
+      slot_remove_(data::UiId::kSlotsRemove,
                    [this]() {
                      auto slot_id = GetHoveredSlotId();
                      std::cout << "graph removed " << slot_id << std::endl;
@@ -60,7 +58,7 @@ UiSlots::UiSlots(UiRenderData& render_data,
                      }
                      RemoveGraph(slot_id);
                    }),
-      slot_selected_(data::VboIdMain::kSlotsSelected),
+      slot_selected_(data::UiId::kSlotsSelected),
       ui_event_handler_({&create_, &slot_config_, &toggle_slot_visible_,
                          &slot_back_, &slot_remove_}),
       hierarchy_(&back_, {&create_, &sl_data_}) {
@@ -280,8 +278,7 @@ slot_back_.GetBottomBorder(), graph_.GetSize()); return true;*/
 }
 
 int UiSlots::GetHoveredSlotId() {
-  return sl_data_.GetSlotId(
-      render_data_.glfw_context_.cursor_pos_tex_norm_);
+  return sl_data_.GetSlotId(render_data_.glfw_context_.cursor_pos_tex_norm_);
 }
 
 int UiSlots::GetSelectedSlotId() const { return *selected_id_; }

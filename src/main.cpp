@@ -53,8 +53,13 @@ btn button (clickable picture)
 ui_ ui (complex ui component)
  */
 
-#include <Jolt/Jolt.h>
+// TODO: 	glBindTextureUnit()
+// TODO: 	glBindTextureUnit()
+// TODO: 	glBindTextureUnit()
+// TODO: 	glBindTextureUnit()
+
 #include <Jolt/Core/Factory.h>
+#include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
 
 #include <cstdarg>
@@ -80,7 +85,7 @@ static bool AssertFailedImpl(const char *inExpression, const char *inMessage,
                              const char *inFile, JPH::uint inLine) {
   // Print to the TTY
   std::cout << inFile << ":" << inLine << ": (" << inExpression << ") "
-       << (inMessage != nullptr ? inMessage : "") << std::endl;
+            << (inMessage != nullptr ? inMessage : "") << std::endl;
 
   // Breakpoint
   return true;

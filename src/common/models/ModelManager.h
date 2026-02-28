@@ -1,6 +1,18 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELMANAGER_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELMANAGER_H_
 
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Core/JobSystemThreadPool.h>
+#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Body/BodyActivationListener.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/PhysicsSettings.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/RegisterTypes.h>
+
 #include <vector>
 
 #include "../../ui/UiRenderData.h"
@@ -14,22 +26,6 @@
 #include "Obstacle.h"
 #include "PlayerFpv.h"
 #include "PlayerHuman.h"
-
-
-
-#include <Jolt/Jolt.h>
-
-#include <Jolt/Core/Factory.h>
-#include <Jolt/Core/JobSystemThreadPool.h>
-#include <Jolt/Core/TempAllocator.h>
-#include <Jolt/Physics/Body/BodyActivationListener.h>
-#include <Jolt/Physics/Body/BodyCreationSettings.h>
-#include <Jolt/Physics/Collision/Shape/BoxShape.h>
-#include <Jolt/Physics/Collision/Shape/SphereShape.h>
-#include <Jolt/Physics/PhysicsSettings.h>
-#include <Jolt/Physics/PhysicsSystem.h>
-#include <Jolt/RegisterTypes.h>
-
 
 namespace Layers {
 static constexpr JPH::ObjectLayer NON_MOVING = 0;
@@ -79,7 +75,7 @@ class BPLayerInterfaceImpl final : public JPH::BroadPhaseLayerInterface {
   }
 
 #if defined(JPH_EXTERNAL_PROFILE) || defined(JPH_PROFILE_ENABLED)
-  virtual const char *GetBroadPhaseLayerName(
+  virtual const char* GetBroadPhaseLayerName(
       JPH::BroadPhaseLayer inLayer) const override {
     switch ((JPH::BroadPhaseLayer::Type)inLayer) {
       case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::NON_MOVING:
@@ -98,7 +94,8 @@ class BPLayerInterfaceImpl final : public JPH::BroadPhaseLayerInterface {
 };
 
 /// Class that determines if an object layer can collide with a broadphase layer
-class ObjectVsBroadPhaseLayerFilterImpl : public JPH::ObjectVsBroadPhaseLayerFilter {
+class ObjectVsBroadPhaseLayerFilterImpl
+    : public JPH::ObjectVsBroadPhaseLayerFilter {
  public:
   virtual bool ShouldCollide(JPH::ObjectLayer inLayer1,
                              JPH::BroadPhaseLayer inLayer2) const override {
@@ -118,37 +115,41 @@ class MyContactListener : public JPH::ContactListener {
  public:
   // See: ContactListener
   virtual JPH::ValidateResult OnContactValidate(
-      const JPH::Body &inBody1, const JPH::Body &inBody2, JPH::RVec3Arg inBaseOffset,
-      const JPH::CollideShapeResult &inCollisionResult) override {
+      const JPH::Body& inBody1, const JPH::Body& inBody2,
+      JPH::RVec3Arg inBaseOffset,
+      const JPH::CollideShapeResult& inCollisionResult) override {
     // std::cout << "Contact validate callback" << std::endl;
     return JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
   }
 
-  virtual void OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2,
-                              const JPH::ContactManifold &inManifold,
-                              JPH::ContactSettings &ioSettings) override {
+  virtual void OnContactAdded(const JPH::Body& inBody1,
+                              const JPH::Body& inBody2,
+                              const JPH::ContactManifold& inManifold,
+                              JPH::ContactSettings& ioSettings) override {
     // std::cout << "A contact was added" << std::endl;
   }
 
-  virtual void OnContactPersisted(const JPH::Body &inBody1, const JPH::Body &inBody2,
-                                  const JPH::ContactManifold &inManifold,
-                                  JPH::ContactSettings &ioSettings) override {
+  virtual void OnContactPersisted(const JPH::Body& inBody1,
+                                  const JPH::Body& inBody2,
+                                  const JPH::ContactManifold& inManifold,
+                                  JPH::ContactSettings& ioSettings) override {
     // std::cout << "A contact was persisted" << std::endl;
   }
 
-  virtual void OnContactRemoved(const JPH::SubShapeIDPair &inSubShapePair) override {
+  virtual void OnContactRemoved(
+      const JPH::SubShapeIDPair& inSubShapePair) override {
     // std::cout << "A contact was removed" << std::endl;
   }
 };
 
 class MyBodyActivationListener : public JPH::BodyActivationListener {
  public:
-  virtual void OnBodyActivated(const JPH::BodyID &inBodyID,
+  virtual void OnBodyActivated(const JPH::BodyID& inBodyID,
                                JPH::uint64 inBodyUserData) override {
     // std::cout << "A body got activated" << std::endl;
   }
 
-  virtual void OnBodyDeactivated(const JPH::BodyID &inBodyID,
+  virtual void OnBodyDeactivated(const JPH::BodyID& inBodyID,
                                  JPH::uint64 inBodyUserData) override {
     // std::cout << "A body went to sleep" << std::endl;
   }
@@ -218,16 +219,13 @@ class ModelManager {
 
   void DeInit();
 
-  void RenderAabb(RigidBody* entity, const ModelData::Mesh& prim);
-  void RenderAabb(MapMarker* entity, const ModelData::Mesh& prim,
-    glm::vec2 position = glm::vec2(0.0f),
-    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-    glm::vec3 scale = glm::vec3(1.0f));
-
+  void RenderAabb(RigidBody* entity, const RenderBuffer& prim);
+  void RenderAabb(MapMarker* entity, const RenderBuffer& prim,
+                  glm::vec2 position = glm::vec2(0.0f),
+                  glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                  glm::vec3 scale = glm::vec3(1.0f));
 
   void RenderAabb(JPH::BodyID id);
-
-
 
   GLuint animation_ubo_ = 0;
   GLuint player_ubo_ = 0;

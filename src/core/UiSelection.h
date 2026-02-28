@@ -5,8 +5,8 @@
 
 #include <set>
 
-#include "../ui/UiRenderData.h"
 #include "../render/Shader.h"
+#include "../ui/UiRenderData.h"
 #include "Ui.h"
 
 class TerrainTraits;
@@ -47,6 +47,8 @@ class UiSelection {
   }
 
   void SetMode(SelectionMode mode);
+
+  bool TrySetMode(int key);
 
   /// use at menu mode switches, no check selection_mode_ == mode
   void SetModeForce(SelectionMode mode);

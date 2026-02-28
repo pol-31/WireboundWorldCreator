@@ -24,6 +24,11 @@ inline void* ByteOffset(std::size_t offset) noexcept {
   return reinterpret_cast<void*>(static_cast<std::uintptr_t>(offset));
 }
 
+void ModelData::Primitive::Render() const noexcept {
+  glBindVertexArray(vao);
+  glDrawElements(mode, indexCount, indexType, ByteOffset(indexOffset));
+}
+
 void ModelData::BindTextures() const noexcept {
   material.albedo.BindSampler(1);
   //  glActiveTexture(GL_TEXTURE1);
@@ -53,41 +58,12 @@ void ModelData::RenderModelNode(const tinygltf::Node& node) const {
 }
 
 void ModelData::RenderMesh(const tinygltf::Mesh& mesh) const {
-  for (auto& prim : primitives) {
-    glBindVertexArray(prim.vao);
-    glDrawElements(prim.mode, prim.indexCount, prim.indexType,
-                   ByteOffset(prim.indexOffset));
+  for (const auto& prim : primitives) {
+    prim.Render();
   }
 }
 
-void ModelData::RenderModelNodesInstanced(int instances_num) const {
-  const tinygltf::Scene& scene = model.scenes[model.defaultScene];
-  for (size_t i = 0; i < scene.nodes.size(); ++i) {
-    RenderModelNodeInstanced(model.nodes[scene.nodes[i]], instances_num);
-  }
-}
-
-void ModelData::RenderModelNodeInstanced(const tinygltf::Node& node,
-                                         int instances_num) const {
-  if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
-    RenderMeshInstanced(model.meshes[node.mesh], instances_num);
-  }
-  for (size_t i = 0; i < node.children.size(); i++) {
-    RenderModelNodeInstanced(model.nodes[node.children[i]], instances_num);
-  }
-}
-
-void ModelData::RenderMeshInstanced(const tinygltf::Mesh& mesh,
-                                    int instances_num) const {
-  for (auto& prim : primitives) {
-    glBindVertexArray(prim.vao);
-    glDrawElementsInstanced(prim.mode, prim.indexCount, prim.indexType,
-                            ByteOffset(prim.indexOffset), instances_num);
-  }
-}
-
-ModelLoader::ModelLoader(UiRenderData& render_data,
-                         tinygltf::TinyGLTF& loader)
+ModelLoader::ModelLoader(UiRenderData& render_data, tinygltf::TinyGLTF& loader)
     : render_data_(render_data), loader_(loader) {}
 
 ModelLoader::~ModelLoader() {
@@ -132,7 +108,7 @@ ModelData* ModelLoader::Load(std::string_view path, int id) {
 
 void ModelLoader::BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
                            std::map<int, GLuint>& ebos,
-                           std::vector<ModelData::Mesh>& primitives) {
+                           std::vector<ModelData::Primitive>& primitives) {
   for (size_t i = 0; i < model.bufferViews.size(); ++i) {
     const tinygltf::BufferView& bufferView = model.bufferViews[i];
     if (bufferView.target == 0) {
@@ -148,7 +124,7 @@ void ModelLoader::BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
                  &buffer.data.at(0) + bufferView.byteOffset, GL_STATIC_DRAW);
   }
   for (size_t i = 0; i < mesh.primitives.size(); ++i) {
-    ModelData::Mesh cache_mesh;
+    ModelData::Primitive cache_mesh;
     glGenVertexArrays(1, &cache_mesh.vao);
     glBindVertexArray(cache_mesh.vao);
     tinygltf::Primitive primitive = mesh.primitives[i];
@@ -210,9 +186,9 @@ void ModelLoader::BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
   }
 }
 
-void ModelLoader::BindModelNodes(tinygltf::Model& model, tinygltf::Node& node,
-                                 std::map<int, GLuint>& ebos,
-                                 std::vector<ModelData::Mesh>& primitives) {
+void ModelLoader::BindModelNodes(
+    tinygltf::Model& model, tinygltf::Node& node, std::map<int, GLuint>& ebos,
+    std::vector<ModelData::Primitive>& primitives) {
   if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
     BindMesh(model, model.meshes[node.mesh], ebos, primitives);
   }
@@ -224,7 +200,7 @@ void ModelLoader::BindModelNodes(tinygltf::Model& model, tinygltf::Node& node,
 }
 
 void ModelLoader::BindModel(tinygltf::Model& model,
-                            std::vector<ModelData::Mesh>& primitives) {
+                            std::vector<ModelData::Primitive>& primitives) {
   std::map<int, GLuint> ebos;
   const tinygltf::Scene& scene = model.scenes[model.defaultScene];
   for (size_t i = 0; i < scene.nodes.size(); ++i) {
@@ -280,7 +256,7 @@ Texture ModelLoader::LoadTexture(std::string_view path,
   tex_path = tex_path.parent_path();
   fs::path image_uri{model.images[image_index].uri};
   tex_path /= image_uri.make_preferred();
-  return Texture(tex_path.string(), GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
+  return Texture(tex_path.string(), Texture::Type::TerrainRGBA8);
 }
 
 Aabb3D ModelLoader::GetAabb(const tinygltf::Model& model) {

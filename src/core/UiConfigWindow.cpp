@@ -5,18 +5,17 @@
 UiConfigWindow::UiConfigWindow(UiRenderData& render_data,
                                WindowQueue& window_queue,
                                TextRenderer& text_renderer)
-    : UiWindowAppear((data::VboIdMain::kConfigWindowDesk), 1.0f,
-                     {data::VboIdMain::kConfigWindowPinBack,
-                      data::VboIdMain::kConfigWindowPinPoint},
-                     render_data, window_queue),
-      name_(text_renderer, data::VboIdMain::kConfigWindowName,
-            data::TextId::kSeed),
-      btn_save_(data::VboIdMain::kConfigWindowSave),
-      sl_data_({data::VboIdMain::kConfigWindowSlider},
-               {data::VboIdMain::kConfigWindowHandler}, 6, 0.75f, 0.8f),
-      config_slider_(data::VboIdMain::kConfigWindowSliderArea,
-                     data::VboIdMain::kConfigWindowSliderIcon),
-      config_text_(text_renderer, data::VboIdMain::kConfigWindowSliderText,
+    : UiWindowAppear(
+          (data::UiId::kConfigWindowDesk), 1.0f,
+          {data::UiId::kConfigWindowPinBack, data::UiId::kConfigWindowPinPoint},
+          render_data, window_queue),
+      name_(text_renderer, data::UiId::kConfigWindowName, data::TextId::kSeed),
+      btn_save_(data::UiId::kConfigWindowSave),
+      sl_data_({data::UiId::kConfigWindowSlider},
+               {data::UiId::kConfigWindowHandler}, 6, 0.75f, 0.8f),
+      config_slider_(data::UiId::kConfigWindowSliderArea,
+                     data::UiId::kConfigWindowSliderIcon),
+      config_text_(text_renderer, data::UiId::kConfigWindowSliderText,
                    data::TextId::kSeed),
       hierarchy_(&background_, {&pin_, &name_, &btn_save_, &sl_data_}) {
   UiBase* comps[] = {&config_text_};
@@ -132,8 +131,8 @@ bool UiConfigWindow::Press(int id) {
     sl_data_.Press();
     return true;
   } else if (id == config_slider_.GetId()) {
-    sl_pressed_config_ = sl_data_.GetSlotId(
-        render_data_.glfw_context_.cursor_pos_tex_norm_);
+    sl_pressed_config_ =
+        sl_data_.GetSlotId(render_data_.glfw_context_.cursor_pos_tex_norm_);
     config_slider_.Press();
     return true;
   }

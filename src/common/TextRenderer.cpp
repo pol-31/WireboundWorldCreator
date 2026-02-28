@@ -30,7 +30,8 @@ TextRenderer::TextRenderer(UiRenderData& render_data,
       render_shader_("../shaders/Text.vert", "../shaders/Text.frag", {0}),
       render_shader_picking_("../shaders/Sprite.vert",
                              "../shaders/SpritePicking.frag", {}),
-      render_data_(render_data) {
+      render_data_(render_data),
+      font_("Roboto-Regular", 24) {
   Init();
 }
 
@@ -583,6 +584,16 @@ void TextRenderer::BindCallbacks() {
   glfwSetScrollCallback(gWindow, nullptr);
   glfwSetKeyCallback(gWindow, TextRenderer::KeyCallback);
   glfwSetMouseButtonCallback(gWindow, TextRenderer::MouseButtonCallback);
+}
+
+void TextRenderer::DrawText(int inX, int inY, const std::string_view& inText,
+                            const Font* inFont, JPH::ColorArg inColor) {
+  glm::vec4 pos(float(inX), float(inY), 0.0f, 1.0f);
+  glm::vec4 right(float(inFont->GetCharHeight()), 0.0f, 0.0f, 0.0f);
+  glm::vec4 up(0.0f, float(-inFont->GetCharHeight()), 0.0f, 0.0f);
+  glm::vec4 forward(0.0f, 0.0f, 1.0f, 0.0f);
+  glm::mat4 transform(right, up, forward, pos);
+  inFont->DrawText3D(transform, inText, inColor);
 }
 
 void TextRenderer::SetupFramebuffer(GLuint fbo_id, Texture& texture,

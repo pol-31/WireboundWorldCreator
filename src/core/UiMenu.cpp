@@ -2,122 +2,122 @@
 
 #include "../common/PickingFramebuffer.h"
 #include "../modes/IUiMode.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 #include "TileRenderer.h"
 
-//temp
+// temp
 #include "../io/Camera.h"
 #include "../modes/IUiMode.h"
 
-UiMenu::UiMenu(UiRenderData& render_data,
-               TextRenderer& text_renderer, WindowQueue& window_queue,
-               IUiMode* terrain_mode, IUiMode* water_mode,
-               IUiMode* placement_mode, IUiMode* objects_mode,
-               IUiMode* biomes_mode, IUiMode* tiles_mode, IUiMode* player_mode,
-               IUiMode*& cur_mode)
-    : UiWindowAppear({data::VboIdMain::kMenuDesk}, 1.0f,
-                     {{data::VboIdMain::kMenuDeskPinBack, []() {}},
-                      {data::VboIdMain::kMenuDeskPinPoint}},
+UiMenu::UiMenu(UiRenderData& render_data, TextRenderer& text_renderer,
+               WindowQueue& window_queue, IUiMode* terrain_mode,
+               IUiMode* water_mode, IUiMode* placement_mode,
+               IUiMode* objects_mode, IUiMode* biomes_mode, IUiMode* tiles_mode,
+               IUiMode* player_mode, IUiMode*& cur_mode)
+    : UiWindowAppear({data::UiId::kMenuDesk}, 1.0f,
+                     {{data::UiId::kMenuDeskPinBack, []() {}},
+                      {data::UiId::kMenuDeskPinPoint}},
                      render_data, window_queue),
       modes_({terrain_mode, water_mode, placement_mode, objects_mode,
               biomes_mode, tiles_mode, player_mode}),
       cur_mode_(cur_mode),
-      btn_terrain_{data::VboIdMain::kMenuTerrain,
-                   [this]() { this->SetMode(0); }},
-      btn_water_{data::VboIdMain::kMenuWater, [this]() { this->SetMode(1); }},
-      btn_placement_{data::VboIdMain::kMenuPlacement,
+      btn_terrain_{data::UiId::kMenuTerrain, [this]() { this->SetMode(0); }},
+      btn_water_{data::UiId::kMenuWater, [this]() { this->SetMode(1); }},
+      btn_placement_{data::UiId::kMenuPlacement,
                      [this]() { this->SetMode(2); }},
-      btn_objects_{data::VboIdMain::kMenuObjects,
-                   [this]() { this->SetMode(3); }},
-      btn_biomes_{data::VboIdMain::kMenuBiomes, [this]() { this->SetMode(4); }},
-      btn_tiles_{data::VboIdMain::kMenuTiles, [this]() { this->SetMode(5); }},
-      btn_player_{data::VboIdMain::kMenuPlayer, [this]() { this->SetMode(6); }},
+      btn_objects_{data::UiId::kMenuObjects, [this]() { this->SetMode(3); }},
+      btn_biomes_{data::UiId::kMenuBiomes, [this]() { this->SetMode(4); }},
+      btn_tiles_{data::UiId::kMenuTiles, [this]() { this->SetMode(5); }},
+      btn_player_{data::UiId::kMenuPlayer, [this]() { this->SetMode(6); }},
 
-      tg_terrain_{{data::VboIdMain::kMenuTerrainOff,
-                   [this]() {
-                     bool state = this->render_data_.glfw_context_
-                                      .tile_renderer->show_terrain_;
-                     this->render_data_.glfw_context_.tile_renderer
-                         ->show_terrain_ = !state;
-                   }},
-                  {data::VboIdMain::kMenuTerrainOn1},
-                  {data::VboIdMain::kMenuTerrainOn2},
-                  {data::VboIdMain::kMenuTerrainOn3}},
-      tg_water_{{data::VboIdMain::kMenuWaterOff,
-                 [this]() {
-                   bool state = this->render_data_.glfw_context_
-                                    .tile_renderer->show_water_;
-                   this->render_data_.glfw_context_.tile_renderer
-                       ->show_water_ = !state;
-                 }},
-                {data::VboIdMain::kMenuWaterOn1},
-                {data::VboIdMain::kMenuWaterOn2},
-                {data::VboIdMain::kMenuWaterOn3}},
-      tg_placement_{{data::VboIdMain::kMenuPlacementOff,
-                     [this]() {
-                       bool state = this->render_data_.glfw_context_
-                                        .tile_renderer->show_placement_;
-                       this->render_data_.glfw_context_.tile_renderer
-                           ->show_placement_ = !state;
-                     }},
-                    {data::VboIdMain::kMenuPlacementOn1},
-                    {data::VboIdMain::kMenuPlacementOn2},
-                    {data::VboIdMain::kMenuPlacementOn3}},
-      tg_objects_{{data::VboIdMain::kMenuObjectsOff,
-                   [this]() {
-                     bool state = this->render_data_.glfw_context_
-                                      .tile_renderer->show_objects_;
-                     this->render_data_.glfw_context_.tile_renderer
-                         ->show_objects_ = !state;
-                   }},
-                  {data::VboIdMain::kMenuObjectsOn1},
-                  {data::VboIdMain::kMenuObjectsOn2},
-                  {data::VboIdMain::kMenuObjectsOn3}},
-      tg_biomes_{{data::VboIdMain::kMenuBiomesOff,
-                  [this]() {
-                    bool state = this->render_data_.glfw_context_
-                                     .tile_renderer->show_biomes_;
-                    this->render_data_.glfw_context_.tile_renderer
-                        ->show_biomes_ = !state;
-                  }},
-                 {data::VboIdMain::kMenuBiomesOn1},
-                 {data::VboIdMain::kMenuBiomesOn2},
-                 {data::VboIdMain::kMenuBiomesOn3}},
-      tg_tiles_{{data::VboIdMain::kMenuTilesOff,
-                 [this]() {
-                   bool state = this->render_data_.glfw_context_
-                                    .tile_renderer->show_tiles_;
-                   this->render_data_.glfw_context_.tile_renderer
-                       ->show_tiles_ = !state;
-                 }},
-                {data::VboIdMain::kMenuTilesOn1},
-                {data::VboIdMain::kMenuTilesOn2},
-                {data::VboIdMain::kMenuTilesOn3}},
+      tg_terrain_{
+          {data::UiId::kMenuTerrainOff,
+           [this]() {
+             bool state =
+                 this->render_data_.glfw_context_.tile_renderer->show_terrain_;
+             this->render_data_.glfw_context_.tile_renderer->show_terrain_ =
+                 !state;
+           }},
+          {data::UiId::kMenuTerrainOn1},
+          {data::UiId::kMenuTerrainOn2},
+          {data::UiId::kMenuTerrainOn3}},
+      tg_water_{
+          {data::UiId::kMenuWaterOff,
+           [this]() {
+             bool state =
+                 this->render_data_.glfw_context_.tile_renderer->show_water_;
+             this->render_data_.glfw_context_.tile_renderer->show_water_ =
+                 !state;
+           }},
+          {data::UiId::kMenuWaterOn1},
+          {data::UiId::kMenuWaterOn2},
+          {data::UiId::kMenuWaterOn3}},
+      tg_placement_{
+          {data::UiId::kMenuPlacementOff,
+           [this]() {
+             bool state = this->render_data_.glfw_context_.tile_renderer
+                              ->show_placement_;
+             this->render_data_.glfw_context_.tile_renderer->show_placement_ =
+                 !state;
+           }},
+          {data::UiId::kMenuPlacementOn1},
+          {data::UiId::kMenuPlacementOn2},
+          {data::UiId::kMenuPlacementOn3}},
+      tg_objects_{
+          {data::UiId::kMenuObjectsOff,
+           [this]() {
+             bool state =
+                 this->render_data_.glfw_context_.tile_renderer->show_objects_;
+             this->render_data_.glfw_context_.tile_renderer->show_objects_ =
+                 !state;
+           }},
+          {data::UiId::kMenuObjectsOn1},
+          {data::UiId::kMenuObjectsOn2},
+          {data::UiId::kMenuObjectsOn3}},
+      tg_biomes_{
+          {data::UiId::kMenuBiomesOff,
+           [this]() {
+             bool state =
+                 this->render_data_.glfw_context_.tile_renderer->show_biomes_;
+             this->render_data_.glfw_context_.tile_renderer->show_biomes_ =
+                 !state;
+           }},
+          {data::UiId::kMenuBiomesOn1},
+          {data::UiId::kMenuBiomesOn2},
+          {data::UiId::kMenuBiomesOn3}},
+      tg_tiles_{
+          {data::UiId::kMenuTilesOff,
+           [this]() {
+             bool state =
+                 this->render_data_.glfw_context_.tile_renderer->show_tiles_;
+             this->render_data_.glfw_context_.tile_renderer->show_tiles_ =
+                 !state;
+           }},
+          {data::UiId::kMenuTilesOn1},
+          {data::UiId::kMenuTilesOn2},
+          {data::UiId::kMenuTilesOn3}},
 
-      btn_shader_wirebound_{data::VboIdMain::kMenuShaderWirebound},
+      btn_shader_wirebound_{data::UiId::kMenuShaderWirebound},
       toggle_shaders_{
-          {data::VboIdMain::kMenuShadersOff,
+          {data::UiId::kMenuShadersOff,
            [this]() { std::cout << "toggle shaders" << std::endl; }},
-          {data::VboIdMain::kMenuShadersOn1},
-          {data::VboIdMain::kMenuShadersOn2},
-          {data::VboIdMain::kMenuShadersOn3}},
+          {data::UiId::kMenuShadersOn1},
+          {data::UiId::kMenuShadersOn2},
+          {data::UiId::kMenuShadersOn3}},
 
-      arrow_select_{data::VboIdMain::kMenuArrowSelect},
-      arrow_selected_{data::VboIdMain::kMenuArrowSelected},
-      save_data_{
-          data::VboIdMain::kMenuSave,
-          [this] {
-            this->render_data_.glfw_context_.ui_renderer->Serialize();
-          }},
+      arrow_select_{data::UiId::kMenuArrowSelect},
+      arrow_selected_{data::UiId::kMenuArrowSelected},
+      save_data_{data::UiId::kMenuSave,
+                 [this] {
+                   this->render_data_.glfw_context_.ui_renderer->Serialize();
+                 }},
       load_data_{
-          data::VboIdMain::kMenuLoad,
-          [this] {
-            this->render_data_.glfw_context_.ui_renderer->Parse();
-          }},
-      text_filename_(text_renderer, {data::VboIdMain::kFileTextLabel},
-                     {data::VboIdMain::kFileTextBack}),
+          data::UiId::kMenuLoad,
+          [this] { this->render_data_.glfw_context_.ui_renderer->Parse(); }},
+      text_filename_(text_renderer, {data::UiId::kFileTextLabel},
+                     {data::UiId::kFileTextBack}),
       txt_mode_{text_renderer,
-                {data::VboIdMain::kModeModeText},
+                {data::UiId::kModeModeText},
                 data::TextId::kMenuTerrain},
       ui_event_handler_({
           &pin_, &btn_terrain_, &btn_water_, &btn_placement_, &btn_objects_,
@@ -160,8 +160,8 @@ void UiMenu::SetMode(int id) {
   cur_mode_ = modes_[id];
   cur_mode_->Setup();
   render_data_.glfw_context_.camera->Reset();
-  (*render_data_.glfw_context_.cur_mode)->PrerenderText(
-    render_data_.glfw_context_.text_renderer);
+  (*render_data_.glfw_context_.cur_mode)
+      ->PrerenderText(render_data_.glfw_context_.text_renderer);
 }
 
 void UiMenu::BindCallbacks() {

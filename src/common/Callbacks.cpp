@@ -4,11 +4,29 @@
 #include "../io/Camera.h"
 #include "../io/Window.h"
 #include "../modes/IUiMode.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 #include "GlfwContext.h"
 #include "glfw/glfw3.h"
 
+void RemoveMouseJump() {
+  double xpos, ypos;
+  glfwGetCursorPos(gWindow, &xpos, &ypos);
+  lastX = xpos;
+  lastY = ypos;
+}
+
 namespace callbacks {
+
+void SetCameraCallbacks(bool mod_shift) {
+  RemoveMouseJump();
+  if (mod_shift) {
+    glfwSetCursorPosCallback(gWindow, CursorPosCallback_MmbShift);
+  } else {
+    glfwSetCursorPosCallback(gWindow, CursorPosCallback_Mmb);
+  }
+  glfwSetMouseButtonCallback(gWindow, MouseButtonCallback_Mmb_MmbShift);
+  glfwSetKeyCallback(gWindow, KeyCallback_Blocked);
+}
 
 void MouseButtonCallback_Mmb_MmbShift(GLFWwindow* window, int button,
                                       int action, int mods) {
@@ -37,6 +55,8 @@ void KeyCallback_Blocked(GLFWwindow* window, int key, int scancode, int action,
 void CursorPosCallback_Mmb(GLFWwindow* window, double xpos, double ypos) {
   float xoffset = (xpos - lastX) / 0.05f;
   float yoffset = (lastY - ypos) / 0.05f;
+
+  std::cout << xpos << ' ' << ypos << std::endl;
 
   lastX = xpos;
   lastY = ypos;

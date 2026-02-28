@@ -10,9 +10,9 @@
 #include <memory>
 #include <vector>
 
+#include "../../render/Texture.h"
 #include "../../ui/UiRenderData.h"
 #include "../Material.h"
-#include "../../render/Texture.h"
 #include "Aabb3D.h"
 
 bool LoadImageData(tinygltf::Image* image, const int image_idx,
@@ -21,16 +21,17 @@ bool LoadImageData(tinygltf::Image* image, const int image_idx,
                    void* user_data);
 
 struct ModelData {
-  struct Mesh {
+  struct Primitive {
     GLuint vao = 0;
-    GLuint ebo = 0;
+    GLuint ebo = 0;  // + vbo todo; deleted?
     GLenum mode = 0;
     GLsizei indexCount = 0;
     GLenum indexType = 0;
-    std::size_t indexOffset = 0;
+    size_t indexOffset = 0;
+    GLenum usage = GL_STATIC_DRAW;
+    void Render() const noexcept;
   };
-
-  std::vector<Mesh> primitives;
+  std::vector<Primitive> primitives;
   tinygltf::Model model;
   Material material;
   Aabb3D aabb;
@@ -48,20 +49,11 @@ struct ModelData {
   void RenderModelNode(const tinygltf::Node& node) const;
 
   void RenderMesh(const tinygltf::Mesh& mesh) const;
-
-  /// instanced
-  void RenderModelNodesInstanced(int instances_num) const;
-
-  void RenderModelNodeInstanced(const tinygltf::Node& node,
-                                int instances_num) const;
-
-  void RenderMeshInstanced(const tinygltf::Mesh& mesh, int instances_num) const;
 };
 
 class ModelLoader {
  public:
-  ModelLoader(UiRenderData& render_data,
-              tinygltf::TinyGLTF& loader);
+  ModelLoader(UiRenderData& render_data, tinygltf::TinyGLTF& loader);
 
   ~ModelLoader();
 
@@ -72,14 +64,14 @@ class ModelLoader {
  private:
   void BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
                 std::map<int, GLuint>& ebos,
-                std::vector<ModelData::Mesh>& primitives);
+                std::vector<ModelData::Primitive>& primitives);
 
   void BindModelNodes(tinygltf::Model& model, tinygltf::Node& node,
                       std::map<int, GLuint>& ebos,
-                      std::vector<ModelData::Mesh>& primitives);
+                      std::vector<ModelData::Primitive>& primitives);
 
   void BindModel(tinygltf::Model& model,
-                 std::vector<ModelData::Mesh>& primitives);
+                 std::vector<ModelData::Primitive>& primitives);
 
   // ptr (store uniq ptrs)
   void LoadTextures(std::string_view path, ModelData* model_data);

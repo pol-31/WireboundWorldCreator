@@ -7,44 +7,43 @@
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 
-UiTerrainMode::UiTerrainMode(UiRenderData& render_data,
-                             UiSlots& ui_slots, WindowQueue& window_queue,
+UiTerrainMode::UiTerrainMode(UiRenderData& render_data, UiSlots& ui_slots,
+                             WindowQueue& window_queue,
                              TextRenderer& text_renderer,
                              UiEditSlots& ui_edit_slots,
                              UiEditConfigSlCfg& value_config, Tile& cur_tile,
                              UiConfigWindow& ui_config_window)
-    : sp_mode_(data::VboIdMain::kTerrainTerrainMode),
-      btn_update_(data::VboIdMain::kTerrainUpdate,
+    : sp_mode_(data::UiId::kTerrainTerrainMode),
+      btn_update_(data::UiId::kTerrainUpdate,
                   [this] {
                     std::cout << "btn_update?" << std::endl;
                     ui_bake_.Bake(1000, 1000, 0.1f);
                   }),
-      btn_reset_(data::VboIdMain::kTerrainFlatten,
+      btn_reset_(data::UiId::kTerrainFlatten,
                  [this] {
                    std::cerr << "-- reset --" << std::endl;
                    this->Reset();
                  }),
-      btn_bake_(data::VboIdMain::kTerrainBake,
-                [this] { this->ui_bake_.Show(); }),
-      ui_bake_(cur_tile, {data::VboIdMain::kTerrainBakeDesk}, 1.0f,
-               {{data::VboIdMain::kTerrainBakeDeskPinBack, []() {}},
-                {data::VboIdMain::kTerrainBakeDeskPinPoint}},
+      btn_bake_(data::UiId::kTerrainBake, [this] { this->ui_bake_.Show(); }),
+      ui_bake_(cur_tile, {data::UiId::kTerrainBakeDesk}, 1.0f,
+               {{data::UiId::kTerrainBakeDeskPinBack, []() {}},
+                {data::UiId::kTerrainBakeDeskPinPoint}},
                render_data, window_queue, text_renderer,
-               {data::VboIdMain::kTerrainBakeAccept},
+               {data::UiId::kTerrainBakeAccept},
                {text_renderer,
-                {data::VboIdMain::kTerrainBakeErosionStepLabel},
+                {data::UiId::kTerrainBakeErosionStepLabel},
                 data::TextId::kErosion},
                {text_renderer,
-                {data::VboIdMain::kTerrainBakeErosionStepInputText},
-                {data::VboIdMain::kTerrainBakeErosionStepInputBack}},
+                {data::UiId::kTerrainBakeErosionStepInputText},
+                {data::UiId::kTerrainBakeErosionStepInputBack}},
                {text_renderer,
-                {data::VboIdMain::kTerrainBakeWeatheringStepLabel},
+                {data::UiId::kTerrainBakeWeatheringStepLabel},
                 data::TextId::kWeathering},
                {text_renderer,
-                {data::VboIdMain::kTerrainBakeWeatheringStepInputText},
-                {data::VboIdMain::kTerrainBakeWeatheringStepInputBack}}),
+                {data::UiId::kTerrainBakeWeatheringStepInputText},
+                {data::UiId::kTerrainBakeWeatheringStepInputBack}}),
       ui_slots_(ui_slots),
       ui_edit_(cur_tile, render_data, text_renderer, ui_edit_slots,
                value_config, ui_config_window),
@@ -73,8 +72,8 @@ void UiTerrainMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-void UiTerrainMode::Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiTerrainMode::Render(TileRenderer* tile_renderer,
+                           UiRenderer__Deprecated* ui_renderer) {
   if (ui_slots_.IsSelected()) {
     tile_renderer->RenderUiTerrain(ui_edit_.GetInstanceData().data.hmap);
   } else {
@@ -95,8 +94,8 @@ void UiTerrainMode::Render(
   ui_slots_.Render();
 }
 
-void UiTerrainMode::RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiTerrainMode::RenderPicking(TileRenderer* tile_renderer,
+                                  UiRenderer__Deprecated* ui_renderer) {
   tile_renderer->RenderPicking();
   const auto& render_data = ui_renderer->GetRenderData();
   glBindVertexArray(render_data.vao_ui_);
@@ -171,7 +170,6 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
   bool mod_shift = mods & GLFW_MOD_SHIFT;
   if (action == GLFW_PRESS) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-      auto pressed_id = glfw_context->picking_fbo->GetIdByMousePos(cursor_pos);
       std::cout << "Pressed id: " << pressed_id << std::endl;
       bool ui_handled = glfw_context->windows->Press(pressed_id) ||
                         terrain->ui_slots_.Press(pressed_id) ||
@@ -193,15 +191,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
       }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-      if (mod_shift) {
-        glfwSetCursorPosCallback(gWindow,
-                                 callbacks::CursorPosCallback_MmbShift);
-      } else {
-        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_Mmb);
-      }
-      glfwSetMouseButtonCallback(gWindow,
-                                 callbacks::MouseButtonCallback_Mmb_MmbShift);
-      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+      callbacks::SetCameraCallbacks(mod_shift);
     }
   } else {  // GLFW_RELEASE
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -264,14 +254,8 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
         glfwSetWindowShouldClose(gWindow, true);
       });
     }
-  } else if (key == GLFW_KEY_1) {
-    terrain->ui_selection_.SetMode(SelectionMode::kRectangle);
-  } else if (key == GLFW_KEY_2) {
-    terrain->ui_selection_.SetMode(SelectionMode::kCircle);
-  } else if (key == GLFW_KEY_3) {
-    terrain->ui_selection_.SetMode(SelectionMode::kLasso);
-  } else if (key == GLFW_KEY_4) {
-    terrain->ui_selection_.SetMode(SelectionMode::kTweak);
+  } else {
+    terrain->ui_selection_.TrySetMode(key);
   }
   if (!terrain->ui_slots_.IsSelected()) {
     return;
@@ -312,6 +296,7 @@ void CursorPosCallback_RmbShift(GLFWwindow* window, double xpos, double ypos) {
 /// ---
 
 void BindCallbacksTransform(bool init_transform) {
+  RemoveMouseJump();
   glfwSetScrollCallback(gWindow, nullptr);
   glfwSetMouseButtonCallback(gWindow, MouseButtonCallbackTransform);
   glfwSetKeyCallback(gWindow, KeyCallbackTransform);

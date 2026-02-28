@@ -16,15 +16,15 @@
 /// everything's public, otherwise need to make too much callback friends
 class UiPlayerMode final : public IUiMode {
  public:
-  explicit UiPlayerMode(UiRenderData& render_data,
-                        WindowQueue& window_queue, TextRenderer& text_renderer,
-                        Tile& cur_tile, ModelManager& mdl_manager);
+  explicit UiPlayerMode(UiRenderData& render_data, WindowQueue& window_queue,
+                        TextRenderer& text_renderer, Tile& cur_tile,
+                        ModelManager& mdl_manager);
 
-  void Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void Render(TileRenderer* tile_renderer,
+              UiRenderer__Deprecated* ui_renderer) override;
 
-  void RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void RenderPicking(TileRenderer* tile_renderer,
+                     UiRenderer__Deprecated* ui_renderer) override;
 
   void Setup() override;
 
@@ -42,7 +42,7 @@ class UiPlayerMode final : public IUiMode {
 
   UiSelection ui_selection_;
   ModelManager& mdl_manager_;
-  UiRenderData& render_data_; // TODO: temp (need to setup camera)
+  UiRenderData& render_data_;  // TODO: temp (need to setup camera)
 };
 
 namespace player {

@@ -3,7 +3,11 @@
 
 struct GLFWwindow;
 
+void RemoveMouseJump();
+
 namespace callbacks {
+
+void SetCameraCallbacks(bool mod_shift);
 
 void MouseButtonCallback_Mmb_MmbShift(GLFWwindow* window, int button,
                                       int action, int mods);

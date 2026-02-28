@@ -7,10 +7,11 @@
 #include <string_view>
 
 #include "../core/Ui.h"
-#include "../ui/UiRenderData.h"
+#include "../render/Font.h"
 #include "../render/Shader.h"
-#include "Font.h"
 #include "../render/Texture.h"
+#include "../ui/UiRenderData.h"
+#include "Font.h"
 
 class UiTextInput;
 
@@ -26,8 +27,8 @@ class TextRenderer {
   };
   enum class Alignment { kLeft, kRight, kCentre };
 
-  TextRenderer(UiRenderData& render_data,
-               UiSprite&& prerender_text_slot, UiSprite&& sprite_cursor);
+  TextRenderer(UiRenderData& render_data, UiSprite&& prerender_text_slot,
+               UiSprite&& sprite_cursor);
 
   ~TextRenderer();
 
@@ -78,6 +79,13 @@ class TextRenderer {
 
   void BindCallbacks();
 
+  // TODO: refactor (now different shader, now +color)
+
+  /// Draw a string in screen coordinates (assumes that the projection matrix
+  /// has been set up correctly)
+  void DrawText(int inX, int inY, const std::string_view& inText,
+                const Font* inFont, JPH::ColorArg inColor = JPH::Color::sWhite);
+
  private:
   static void CharCallback(GLFWwindow* window, unsigned int codepoint);
 
@@ -113,6 +121,8 @@ class TextRenderer {
 
   void PrerenderImpl(int start, int end, Texture& texture,
                      std::vector<Aabb>& coords);
+
+  Font font_;
 
   int cur_mode_start_ = 0;
   int cur_mode_end_ = 0;

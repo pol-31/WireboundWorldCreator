@@ -15,11 +15,10 @@ WaterRenderer::WaterRenderer(Tile& tile, GeoClipmaps& mesh)
       shader_("../shaders/Terrain.vert", "../shaders/Terrain.tesc",
               "../shaders/Water.tese", "../shaders/Water.frag",
               {0, 1, 2, 4, 5, 15}),
-      shader_game_(
-        "../shaders/game/Terrain.vert", "../shaders/game/Terrain.tesc",
-        "../shaders/game/Water.tese", "../shaders/game/Water.frag",
-        {0, 1, 2, 4, 5, 15}),
-      tex_foam_("../assets/tex_foam.png", GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE),
+      shader_game_("../shaders/game/Terrain.vert",
+                   "../shaders/game/Terrain.tesc", "../shaders/game/Water.tese",
+                   "../shaders/game/Water.frag", {0, 1, 2, 4, 5, 15}),
+      tex_foam_("../assets/tex_foam.png", Texture::Type::TerrainRGBA8),
       mesh_(mesh) {
   UpdateOcean({});
 }

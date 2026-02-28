@@ -5,7 +5,6 @@
 
 #include "../common/MapPoints.h"
 #include "../common/MouseTransform.h"
-#include "../render/Texture.h"
 #include "../common/Vbos.h"
 #include "../common/models/ModelManager.h"
 #include "../core/Ui.h"
@@ -13,6 +12,7 @@
 #include "../core/UiSelection.h"
 #include "../core/UiSlots.h"
 #include "../render/Shader.h"
+#include "../render/Texture.h"
 #include "IUiMode.h"
 #include "UiEditRoads.h"
 
@@ -22,11 +22,11 @@ class UiPlacementMode final : public IUiMode {
                   WindowQueue& window_queue, UiEditSlots& ui_edit_slots,
                   UiEditConfigSlTxt& value_config, ModelManager& mdl_manager);
 
-  void Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void Render(TileRenderer* tile_renderer,
+              UiRenderer__Deprecated* ui_renderer) override;
 
-  void RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void RenderPicking(TileRenderer* tile_renderer,
+                     UiRenderer__Deprecated* ui_renderer) override;
 
   void Setup() override;
 
@@ -75,7 +75,7 @@ class UiPlacementMode final : public IUiMode {
 
   MapPoints map_points_;
   MouseTransform mouse_transform_;
-  UiRenderData& render_data_; // TODO: temp (need to set placement)
+  UiRenderData& render_data_;  // TODO: temp (need to set placement)
 };
 
 namespace placement {

@@ -5,18 +5,17 @@
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 
-UiWaterMode::UiWaterMode(UiRenderData& render_data,
-                         UiSlots& ui_slots, WindowQueue& window_queue,
-                         TextRenderer& text_renderer,
+UiWaterMode::UiWaterMode(UiRenderData& render_data, UiSlots& ui_slots,
+                         WindowQueue& window_queue, TextRenderer& text_renderer,
                          UiEditSlots& ui_edit_slots,
                          UiEditConfigSlCfg& value_config_ocean,
                          UiEditConfigSlTxt& value_config_river,
                          UiConfigWindow& ui_config_window,
                          ModelManager& mdl_manager)
-    : sp_mode_(data::VboIdMain::kWaterWaterMode),
-      btn_bake_ocean_(data::VboIdMain::kWaterOcean,
+    : sp_mode_(data::UiId::kWaterWaterMode),
+      btn_bake_ocean_(data::UiId::kWaterOcean,
                       [this]() {
                         sp_selected_mode_.SetSelected(0);
                         bool is_ocean = true;
@@ -24,7 +23,7 @@ UiWaterMode::UiWaterMode(UiRenderData& render_data,
                           this->OnSelectedSlotChanged(is_ocean);
                         });
                       }),
-      btn_bake_river_(data::VboIdMain::kWaterRiver,
+      btn_bake_river_(data::UiId::kWaterRiver,
                       [this] {
                         sp_selected_mode_.SetSelected(1);
                         bool is_ocean = false;
@@ -33,8 +32,8 @@ UiWaterMode::UiWaterMode(UiRenderData& render_data,
                         });
                       }),
       map_points_(mdl_manager),
-      btn_update_(data::VboIdMain::kWaterUpdate, [this] { UpdateRivers(); }),
-      sp_selected_mode_({data::VboIdMain::kWaterSelected}, &btn_bake_ocean_),
+      btn_update_(data::UiId::kWaterUpdate, [this] { UpdateRivers(); }),
+      sp_selected_mode_({data::UiId::kWaterSelected}, &btn_bake_ocean_),
       ui_slots_(ui_slots),
       ui_edit_ocean_(render_data, text_renderer, ui_edit_slots,
                      value_config_ocean, ui_config_window),
@@ -81,8 +80,8 @@ void UiWaterMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-void UiWaterMode::Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiWaterMode::Render(TileRenderer* tile_renderer,
+                         UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   tile_renderer->Render();
   ui_selection_.Render();
@@ -91,12 +90,12 @@ void UiWaterMode::Render(
     map_points_.RenderPoints(color);
     auto map_scale =
         render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
-    map_points_.RenderJoints(render_data.glfw_context_.tile_renderer
-      ->cur_tile_.map_terrain_height, map_scale, color);
+    map_points_.RenderJoints(
+        render_data.glfw_context_.tile_renderer->cur_tile_.map_terrain_height,
+        map_scale, color);
   } else {
     ui_selection_.RenderOnSurface(
-        &render_data.glfw_context_.tile_renderer->cur_tile_
-             .map_ocean_surface_);
+        &render_data.glfw_context_.tile_renderer->cur_tile_.map_ocean_surface_);
   }
 
   render_data.tex_ui_.BindSampler(0);
@@ -110,11 +109,10 @@ void UiWaterMode::Render(
   sp_selected_mode_.Render();
 
   ui_slots_.Render();
-
 }
 
-void UiWaterMode::RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiWaterMode::RenderPicking(TileRenderer* tile_renderer,
+                                UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   tile_renderer->RenderPicking();
   map_points_.RenderPickingPoints();
@@ -130,7 +128,7 @@ void UiWaterMode::RenderPicking(
 
   ui_slots_.RenderPicking();
   render_data.glfw_context_.ui_renderer->ui_layer_wireframe_
-    .RenderPickingLayerWireframe();
+      .RenderPickingLayerWireframe();
 }
 
 void UiWaterMode::HandleSelection(const std::set<GLuint>& selected_ids) {
@@ -351,15 +349,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         water->map_points_.AddPoint(pressed_id);
       }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-      if (mod_shift) {
-        glfwSetCursorPosCallback(gWindow,
-                                 callbacks::CursorPosCallback_MmbShift);
-      } else {
-        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_Mmb);
-      }
-      glfwSetMouseButtonCallback(gWindow,
-                                 callbacks::MouseButtonCallback_Mmb_MmbShift);
-      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+      callbacks::SetCameraCallbacks(mod_shift);
     }
   } else {  // GLFW_RELEASE
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -390,14 +380,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
         glfwSetWindowShouldClose(gWindow, true);
       });
     }
-  } else if (key == GLFW_KEY_1) {
-    water->ui_selection_.SetMode(SelectionMode::kRectangle);
-  } else if (key == GLFW_KEY_2) {
-    water->ui_selection_.SetMode(SelectionMode::kCircle);
-  } else if (key == GLFW_KEY_3) {
-    water->ui_selection_.SetMode(SelectionMode::kLasso);
-  } else if (key == GLFW_KEY_4) {
-    water->ui_selection_.SetMode(SelectionMode::kTweak);
   } else if (key == GLFW_KEY_G) {
     glfwSetScrollCallback(gWindow, nullptr);
     glfwSetMouseButtonCallback(gWindow, MouseButtonCallbackTransform);
@@ -407,6 +389,8 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
     auto water = dynamic_cast<UiWaterMode*>(*glfw_context->cur_mode);
     water->mouse_transform_.Reset();
     glfwSetCursorPosCallback(gWindow, CursorPosCallback_G);
+  } else {
+    water->ui_selection_.TrySetMode(key);
   }
 }
 

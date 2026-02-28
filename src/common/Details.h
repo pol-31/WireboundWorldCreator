@@ -68,6 +68,7 @@ inline constexpr std::array<float, 2> kMsgInfoPos = {0.0f, -0.9f};
 inline constexpr std::array<float, 2> kMsgErrorPos = {0.0f, 0.0f};
 
 inline constexpr int gTerrainSize = 1024;
+inline constexpr int gWaterSize = 64;
 
 }  // namespace details
 

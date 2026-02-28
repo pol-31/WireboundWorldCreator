@@ -16,7 +16,7 @@
 Vegetation::Vegetation()
     : grass_shader_("../shaders/Grass.vert", "../shaders/Grass.frag", {0, 2}),
       grass_compute_shader_("../shaders/Grass.comp", {}),
-      tex_grass_("../assets/grass2_64.png", GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE),
+      tex_grass_("../assets/grass2_64.png", Texture::Type::TerrainRGBA8),
       blades_num_(16384) {
   Init();
 }

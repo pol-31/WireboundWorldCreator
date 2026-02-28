@@ -9,13 +9,13 @@ void Obstacle::Render(UiRenderData& render_data) {
   if (instances_num_ == 0) {
     return;
   }
-  auto map_scale =
+  /*auto map_scale =
       render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
   glm::mat4 map_model =
       glm::scale(glm::mat4(1.0f), glm::vec3(map_scale));  // upscaled
   glUniformMatrix4fv(0, 1, false, glm::value_ptr(map_model));
   model_data_->BindTextures();
-  model_data_->RenderModelNodesInstanced(instances_num_);
+  model_data_->RenderModelNodesInstanced(instances_num_);*/
 }
 
 void Obstacle::SetPlacement(UiRenderData& render_data,
@@ -38,28 +38,16 @@ void Obstacle::SetPlacement(UiRenderData& render_data,
 void Obstacle::ClearPlacement() { instances_num_ = 0; }
 
 void Obstacle::GenerateVbo(const std::vector<glm::mat4>& model_matrices) {
-  instances_num_ = model_matrices.size();
+  /*instances_num_ = model_matrices.size();
   GLuint prev_vbo = placement_vbo_;
-  glBindVertexArray(model_data_->primitives[0].vao);
-  glGenBuffers(1, &placement_vbo_);
-  glBindBuffer(GL_ARRAY_BUFFER, placement_vbo_);
-  glBufferData(GL_ARRAY_BUFFER, instances_num_ * sizeof(glm::mat4),
-               model_matrices.data(), GL_STATIC_DRAW);
-
-  std::size_t vec4Size = sizeof(glm::vec4);
-  for (int i = 0; i < 4; ++i) {
-    glEnableVertexAttribArray(3 + i);
-    glVertexAttribPointer(3 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
-                          (void*)(i * vec4Size));
-    glVertexAttribDivisor(3 + i, 1);
-  }
-  DeleteVbo(prev_vbo);
+  placement_vbo_ = render_primitive_.CreateInstancedBuffer(
+    model_matrices.data(), instances_num_ * sizeof(glm::mat4));
+  DeleteVbo(prev_vbo);*/
 }
 
 void Obstacle::DeleteVbo(GLuint vbo) { glDeleteBuffers(1, &vbo); }
 
-glm::vec3 Obstacle::GenPosition(UiRenderData& render_data,
-                                GLuint pos_id) {
+glm::vec3 Obstacle::GenPosition(UiRenderData& render_data, GLuint pos_id) {
   glm::vec3 position(0.0f);
   glm::uvec2 pos(pos_id & 1023, pos_id >> 10);
   position.x = pos.x / 16.0f - 32.0f;
@@ -71,8 +59,8 @@ glm::vec3 Obstacle::GenPosition(UiRenderData& render_data,
   float tx = pos.x - x;  // 0..1
   float ty = pos.y - y;  // 0..1
 
-  const auto& h = render_data.glfw_context_.tile_renderer->cur_tile_
-                      .terrain_heights_;
+  const auto& h =
+      render_data.glfw_context_.tile_renderer->cur_tile_.terrain_heights_;
   int stride = 1024;
 
   float h00 = h[y * stride + x];

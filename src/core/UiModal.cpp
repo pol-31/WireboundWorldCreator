@@ -6,10 +6,10 @@
 UiConfirmation::UiConfirmation(UiRenderData& render_data,
                                TextRenderer& text_renderer)
     : render_data_(render_data),
-      sp_background_(data::VboIdMain::kConfirmationDesk),
-      sp_accept_(data::VboIdMain::kConfirmationAccept),
-      sp_decline_(data::VboIdMain::kConfirmationDecline),
-      text_(text_renderer, data::VboIdMain::kConfirmationText),
+      sp_background_(data::UiId::kConfirmationDesk),
+      sp_accept_(data::UiId::kConfirmationAccept),
+      sp_decline_(data::UiId::kConfirmationDecline),
+      text_(text_renderer, data::UiId::kConfirmationText),
       hierarchy_(&sp_background_, {&sp_accept_, &sp_decline_, &text_}) {}
 
 void UiConfirmation::Render() {
@@ -79,11 +79,10 @@ void UiConfirmation::MouseButtonCallback(GLFWwindow* window, int button,
   ui->Hide();
 }
 
-UiWarning::UiWarning(UiRenderData& render_data,
-                     TextRenderer& text_renderer)
+UiWarning::UiWarning(UiRenderData& render_data, TextRenderer& text_renderer)
     : render_data_(render_data),
-      sp_background_(data::VboIdMain::kCautionDesk),
-      text_(text_renderer, data::VboIdMain::kCautionText),
+      sp_background_(data::UiId::kCautionDesk),
+      text_(text_renderer, data::UiId::kCautionText),
       hierarchy_(&sp_background_, {&text_}) {}
 
 void UiWarning::Render() {

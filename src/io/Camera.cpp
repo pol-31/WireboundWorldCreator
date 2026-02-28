@@ -1,8 +1,12 @@
 #include "Camera.h"
 
+#include <iostream>
+
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <iostream>
 
 #include "../common/Details.h"
 #include "../common/OpenGlUtility.h"
@@ -206,4 +210,14 @@ void Camera::Reset() {
   SetYaw(0.0f);
   SetOrigin(glm::vec3{0.0f});
   MoveRotateViewOrigin(0.0f, 0.0f);  // to update camera vectors
+}
+
+void Camera::HideCursor() {
+  glfwSetCursorPosCallback(gWindow, nullptr);
+  glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+}
+
+void Camera::ShowCursor() {
+  glfwSetCursorPosCallback(gWindow, nullptr);
+  glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }

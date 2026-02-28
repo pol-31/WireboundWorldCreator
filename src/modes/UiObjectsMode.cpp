@@ -5,15 +5,15 @@
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 
-UiObjectsMode::UiObjectsMode(UiRenderData& render_data,
-                             UiSlots& ui_slots, WindowQueue& window_queue,
+UiObjectsMode::UiObjectsMode(UiRenderData& render_data, UiSlots& ui_slots,
+                             WindowQueue& window_queue,
                              TextRenderer& text_renderer,
                              UiEditSlots& ui_edit_slots,
                              UiEditConfigSlTxt& value_config,
                              ModelManager& mdl_manager)
-    : sp_mode_(data::VboIdMain::kObjectsObjectsMode),
+    : sp_mode_(data::UiId::kObjectsObjectsMode),
       ui_selection_(render_data),
       mouse_transform_(render_data),
       ui_slots_(ui_slots),
@@ -55,8 +55,8 @@ void UiObjectsMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-void UiObjectsMode::Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiObjectsMode::Render(TileRenderer* tile_renderer,
+                           UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   tile_renderer->Render();
   ui_selection_.Render();
@@ -65,9 +65,9 @@ void UiObjectsMode::Render(
     map_points_.RenderPoints(color);
     auto map_scale =
         render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
-    map_points_.RenderJoints(render_data.glfw_context_.tile_renderer
-                                 ->cur_tile_.map_terrain_height,
-                             map_scale, color);
+    map_points_.RenderJoints(
+        render_data.glfw_context_.tile_renderer->cur_tile_.map_terrain_height,
+        map_scale, color);
   }
   render_data.tex_ui_.BindSampler(0);
   glBindVertexArray(render_data.vao_ui_);
@@ -75,11 +75,10 @@ void UiObjectsMode::Render(
   sp_mode_.Render();
 
   ui_slots_.Render();
-
 }
 
-void UiObjectsMode::RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiObjectsMode::RenderPicking(TileRenderer* tile_renderer,
+                                  UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   tile_renderer->RenderPicking();
   map_points_.RenderPickingPoints();
@@ -171,15 +170,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         return objects->map_points_.AddPoint(pressed_id);
       }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-      if (mod_shift) {
-        glfwSetCursorPosCallback(gWindow,
-                                 callbacks::CursorPosCallback_MmbShift);
-      } else {
-        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_Mmb);
-      }
-      glfwSetMouseButtonCallback(gWindow,
-                                 callbacks::MouseButtonCallback_Mmb_MmbShift);
-      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+      callbacks::SetCameraCallbacks(mod_shift);
     }
   } else {  // GLFW_RELEASE
     if (button == GLFW_MOUSE_BUTTON_LEFT) {

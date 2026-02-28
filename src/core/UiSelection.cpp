@@ -12,17 +12,15 @@
 int UiSelection::gMaxPoints = 1000;
 
 UiSelection::UiSelection(UiRenderData& render_data)
-    : sp_circle_(data::VboIdMain::kSelectionCircle),
+    : sp_circle_(data::UiId::kSelectionCircle),
       render_data_(render_data),
       shader_("../shaders/Stipple.vert", "../shaders/Stipple.frag", {}),
       shader_area_("../shaders/SelectionArea.vert",
                    "../shaders/SelectionArea.frag", {}),
       shader_draw_selection_("../shaders/DrawSelection.comp", {}),
-      sp_selection_(data::VboIdMain::kSelectionSprite),
-      selection_tex_(gWindowWidth, gWindowHeight,
-        GL_RED, GL_R8, GL_UNSIGNED_BYTE, GL_NEAREST, GL_CLAMP_TO_EDGE),
-      selection_tex_surface_(details::gTerrainSize, details::gTerrainSize,
-        GL_RED, GL_R8, GL_UNSIGNED_BYTE, GL_NEAREST, GL_CLAMP_TO_EDGE),
+      sp_selection_(data::UiId::kSelectionSprite),
+      selection_tex_(Texture::Type::WindowR8),
+      selection_tex_surface_(Texture::Type::TerrainR8),
       mouse_check_point_(gWindowWidth / 2.0f, gWindowHeight / 2.0f) {
   Init();
 }
@@ -110,6 +108,21 @@ void UiSelection::SetMode(SelectionMode mode) {
     return;
   }
   SetModeForce(mode);
+}
+
+bool UiSelection::TrySetMode(int key) {
+  if (key == GLFW_KEY_1) {
+    SetMode(SelectionMode::kRectangle);
+  } else if (key == GLFW_KEY_2) {
+    SetMode(SelectionMode::kCircle);
+  } else if (key == GLFW_KEY_3) {
+    SetMode(SelectionMode::kLasso);
+  } else if (key == GLFW_KEY_4) {
+    SetMode(SelectionMode::kTweak);
+  } else {
+    return false;
+  }
+  return true;
 }
 
 void UiSelection::SetModeForce(SelectionMode mode) {
@@ -352,13 +365,9 @@ void UiSelection::ResetConfig() {
   render_offset_ = glm::vec2(0.0f);
 }
 
-void UiSelection::ClearMask() {
-  selection_tex_surface_.Clear();
-}
+void UiSelection::ClearMask() { selection_tex_surface_.Clear(); }
 
-void UiSelection::ClearSelectionFbo() {
-  selection_tex_.Clear();
-}
+void UiSelection::ClearSelectionFbo() { selection_tex_.Clear(); }
 
 void UiSelection::UpdateRenderData(const std::vector<glm::vec3>& polygon,
                                    float stipple_width) {
@@ -376,8 +385,7 @@ void UiSelection::UpdateSurfaceSelection(float radius) {
   glm::vec2 mouse_pos = render_data_.glfw_context_.cursor_pos_;
   mouse_pos.y = gWindowHeight - mouse_pos.y;
   shader_draw_selection_.Bind();
-  const auto& fbo_tex =
-      render_data_.glfw_context_.picking_fbo->GetTex();
+  const auto& fbo_tex = render_data_.glfw_context_.picking_fbo->GetTex();
   selection_tex_.BindImage(0, GL_WRITE_ONLY);
   fbo_tex.BindImage(1, GL_READ_ONLY);
   glUniform1f(2, radius);
@@ -409,8 +417,7 @@ void UiSelection::ApplySelection() {
     return;
   }
   last_update_time_ = cur_time;
-  const auto& fbo_tex =
-      render_data_.glfw_context_.picking_fbo->GetTex();
+  const auto& fbo_tex = render_data_.glfw_context_.picking_fbo->GetTex();
   int buffer_size = gWindowWidth * gWindowHeight;
 
   std::vector<uint8_t> selection_data(buffer_size);
@@ -454,8 +461,7 @@ void UiSelection::ApplySelection() {
 // TODO: these two are pretty ugly
 
 std::set<GLuint> UiSelection::ApplySelectionIntoSet() {
-  const auto& fbo_tex =
-      render_data_.glfw_context_.picking_fbo->GetTex();
+  const auto& fbo_tex = render_data_.glfw_context_.picking_fbo->GetTex();
   int buffer_size = gWindowWidth * gWindowHeight;
 
   std::vector<uint8_t> selection_data(buffer_size);

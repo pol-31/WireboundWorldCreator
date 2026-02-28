@@ -5,16 +5,16 @@
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 
-UiBiomesMode::UiBiomesMode(UiRenderData& render_data,
-                           UiSlots& ui_slots, WindowQueue& window_queue,
+UiBiomesMode::UiBiomesMode(UiRenderData& render_data, UiSlots& ui_slots,
+                           WindowQueue& window_queue,
                            TextRenderer& text_renderer,
                            UiEditSlots& ui_edit_slots,
                            UiEditConfigSlTxt& value_config,
                            ModelManager& mdl_manager)
-    : sp_mode_(data::VboIdMain::kBiomesBiomesMode),
-      sp_biome_(data::VboIdMain::kMapTomb),
+    : sp_mode_(data::UiId::kBiomesBiomesMode),
+      sp_biome_(data::UiId::kMapTomb),
       ui_selection_(render_data),
       mouse_transform_(render_data),
       ui_slots_(ui_slots),
@@ -47,8 +47,8 @@ void UiBiomesMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-void UiBiomesMode::Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiBiomesMode::Render(TileRenderer* tile_renderer,
+                          UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   tile_renderer->Render();
   ui_selection_.Render();
@@ -61,11 +61,10 @@ void UiBiomesMode::Render(
   sp_mode_.Render();
 
   ui_slots_.Render();
-
 }
 
-void UiBiomesMode::RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiBiomesMode::RenderPicking(TileRenderer* tile_renderer,
+                                 UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   tile_renderer->RenderPicking();
   map_points_.RenderPickingPoints();
@@ -157,15 +156,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         biomes->map_points_.AddPoint(pressed_id);
       }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-      if (mod_shift) {
-        glfwSetCursorPosCallback(gWindow,
-                                 callbacks::CursorPosCallback_MmbShift);
-      } else {
-        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_Mmb);
-      }
-      glfwSetMouseButtonCallback(gWindow,
-                                 callbacks::MouseButtonCallback_Mmb_MmbShift);
-      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+      callbacks::SetCameraCallbacks(mod_shift);
     }
   } else {  // GLFW_RELEASE
     if (button == GLFW_MOUSE_BUTTON_LEFT) {

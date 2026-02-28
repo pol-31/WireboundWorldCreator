@@ -7,30 +7,30 @@
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 
-UiPlacementMode::UiPlacementMode(UiRenderData& render_data,
-                                 UiSlots& ui_slots, WindowQueue& window_queue,
+UiPlacementMode::UiPlacementMode(UiRenderData& render_data, UiSlots& ui_slots,
+                                 WindowQueue& window_queue,
                                  UiEditSlots& ui_edit_slots,
                                  UiEditConfigSlTxt& value_config,
                                  ModelManager& mdl_manager)
-    : sp_mode_(data::VboIdMain::kPlacementPlacementMode),
-      btn_trees_(data::VboIdMain::kPlacementTrees,
+    : sp_mode_(data::UiId::kPlacementPlacementMode),
+      btn_trees_(data::UiId::kPlacementTrees,
                  [this]() { SetPlacementMode(GetPlacementTree(), 0); }),
-      btn_bushes_(data::VboIdMain::kPlacementBushes,
+      btn_bushes_(data::UiId::kPlacementBushes,
                   [this]() { SetPlacementMode(GetPlacementBushes(), 1); }),
       btn_tall_grass(
-          data::VboIdMain::kPlacementTallGrass,
+          data::UiId::kPlacementTallGrass,
           [this]() { SetPlacementMode(GetPlacementTallGrass(), 2); }),
       btn_undergrowth_(
-          data::VboIdMain::kPlacementUndergrowth,
+          data::UiId::kPlacementUndergrowth,
           [this]() { SetPlacementMode(GetPlacementUndergrowth(), 3); }),
-      btn_change_mode_(data::VboIdMain::kPlacementChangeMode,
+      btn_change_mode_(data::UiId::kPlacementChangeMode,
                        [this]() { TogglePlacement(); }),
       ui_selection_(render_data),
       ui_event_handler_({&btn_trees_, &btn_bushes_, &btn_tall_grass,
                          &btn_undergrowth_, &btn_change_mode_}),
-      sp_selected_mode_({data::VboIdMain::kPlacementSelected}, &btn_trees_),
+      sp_selected_mode_({data::UiId::kPlacementSelected}, &btn_trees_),
       mdl_manager_(mdl_manager),
       map_points_(mdl_manager),
       ui_slots_(ui_slots),
@@ -99,23 +99,23 @@ void UiPlacementMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-void UiPlacementMode::Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiPlacementMode::Render(TileRenderer* tile_renderer,
+                             UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   tile_renderer->Render();
   if (!IsPreviewMode()) {
     ui_selection_.Render();
     ui_selection_.RenderOnSurface(
-        &render_data.glfw_context_.tile_renderer->cur_tile_
-             .map_terrain_height);
+        &render_data.glfw_context_.tile_renderer->cur_tile_.map_terrain_height);
   }
   if (ui_slots_.GetSelectedSlotId() != -1) {
     auto color = ui_slots_.GetInstanceBaseData()->color;
     map_points_.RenderPoints(color);
     auto map_scale =
         render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
-    map_points_.RenderJoints(render_data.glfw_context_.tile_renderer
-      ->cur_tile_.map_terrain_height, map_scale, color);
+    map_points_.RenderJoints(
+        render_data.glfw_context_.tile_renderer->cur_tile_.map_terrain_height,
+        map_scale, color);
   }
 
   mdl_manager_.RenderPlacement();
@@ -135,8 +135,8 @@ void UiPlacementMode::Render(
   ui_slots_.Render();
 }
 
-void UiPlacementMode::RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiPlacementMode::RenderPicking(TileRenderer* tile_renderer,
+                                    UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   tile_renderer->RenderPicking();
   map_points_.RenderPickingPoints();
@@ -244,15 +244,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         return placement->map_points_.AddPoint(pressed_id);
       }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-      if (mod_shift) {
-        glfwSetCursorPosCallback(gWindow,
-                                 callbacks::CursorPosCallback_MmbShift);
-      } else {
-        glfwSetCursorPosCallback(gWindow, callbacks::CursorPosCallback_Mmb);
-      }
-      glfwSetMouseButtonCallback(gWindow,
-                                 callbacks::MouseButtonCallback_Mmb_MmbShift);
-      glfwSetKeyCallback(gWindow, callbacks::KeyCallback_Blocked);
+      callbacks::SetCameraCallbacks(mod_shift);
     }
   } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
     glfw_context->windows->Release();

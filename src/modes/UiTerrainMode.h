@@ -22,11 +22,11 @@ class UiTerrainMode final : public IUiMode {
                 UiEditSlots& ui_edit_slots, UiEditConfigSlCfg& value_config,
                 Tile& cur_tile, UiConfigWindow& ui_config_windowm);
 
-  void Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void Render(TileRenderer* tile_renderer,
+              UiRenderer__Deprecated* ui_renderer) override;
 
-  void RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void RenderPicking(TileRenderer* tile_renderer,
+                     UiRenderer__Deprecated* ui_renderer) override;
 
   void Setup() override;
 

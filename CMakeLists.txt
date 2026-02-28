@@ -22,7 +22,6 @@ add_executable(WireboundWorldCreator
         src/common/Vbos.cpp
         src/core/TileRenderer.cpp
         src/core/WireboundWorldCreator.cpp
-        src/io/Cursor.cpp
         src/io/Window.cpp
         src/modes/UiBiomesMode.cpp
         src/modes/UiObjectsMode.cpp
@@ -38,12 +37,6 @@ add_executable(WireboundWorldCreator
         # temp (need to remove)
         src/core/Environment.cpp
         src/core/Environment.h
-        src/common/OpenGlUtility.h
-        src/core/Ui.cpp
-        src/core/Ui.h
-        src/core/Ui.cpp
-        src/common/UiDebugger.cpp
-        src/common/UiDebugger.h
         src/common/SkylineBottomLeft.h
         src/common/LocalTransform.h
         src/common/Font.h
@@ -52,8 +45,6 @@ add_executable(WireboundWorldCreator
         src/common/GlfwContext.cpp
         src/core/UiSlots.cpp
         src/core/UiSlots.h
-        src/renderers/UiRenderer.cpp
-        src/renderers/UiRenderer.h
         src/core/UiComplex.cpp
         src/core/UiComplex.h
         src/modes/UiTerrainConfig.h
@@ -157,8 +148,45 @@ add_executable(WireboundWorldCreator
         src/renderers/GeoClipmaps.h
         src/render/Texture.cpp
         src/render/Texture.h
-        src/ui/UiRenderData.cpp
-        src/ui/UiRenderData.h
+        src/modes/ModeTerrain.h
+        src/ui/UIElement.cpp
+        src/ui/UIElement.h
+        src/ui/UiRenderer.cpp
+        src/ui/UiRenderer.h
+        src/ui/UiQuad.h
+        src/render/Font.cpp
+        src/render/Font.h
+        src/render/DebugRendererImp.cpp
+        src/render/DebugRendererImp.h
+        src/render/Frustum.h
+        src/render/Renderer.cpp
+        src/render/Renderer.h
+        src/core/Wirebound.cpp
+        src/core/Wirebound.h
+        src/core/Layers.h
+        src/ui/UiQuad.cpp
+        src/ui/UiSprite.cpp
+        src/ui/UiSprite.h
+        src/ui/UiButton.cpp
+        src/ui/UiButton.h
+        src/ui/UiSlider.cpp
+        src/ui/UiSlider.h
+        src/ui/UiText.cpp
+        src/ui/UiText.h
+        src/ui/UiCheckBox.cpp
+        src/ui/UiCheckBox.h
+        src/ui/UiRadioButton.cpp
+        src/ui/UiRadioButton.h
+        src/ui/UiAnimation.cpp
+        src/ui/UiAnimation.h
+        src/ui/custom/UiCompass.cpp
+        src/ui/custom/UiCompass.h
+        src/ui/custom/UiGameMap.cpp
+        src/ui/custom/UiGameMap.h
+        src/ui/custom/UiSettings.cpp
+        src/ui/custom/UiSettings.h
+        src/ui/custom/UiObjectInfo.cpp
+        src/ui/custom/UiObjectInfo.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

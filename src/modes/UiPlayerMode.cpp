@@ -4,27 +4,25 @@
 #include "../core/TileRenderer.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 
-UiPlayerMode::UiPlayerMode(UiRenderData& render_data,
-                           WindowQueue& window_queue,
+UiPlayerMode::UiPlayerMode(UiRenderData& render_data, WindowQueue& window_queue,
                            TextRenderer& text_renderer, Tile& cur_tile,
                            ModelManager& mdl_manager)
-    : sp_mode_(data::VboIdMain::kPlayerPlayerMode),
-      sp_hp_(data::VboIdMain::kPlayerHealthPoint),
+    : sp_mode_(data::UiId::kPlayerPlayerMode),
+      sp_hp_(data::UiId::kPlayerHealthPoint),
       ui_map_(render_data, window_queue),
       ui_obj_info_(
-          {data::VboIdMain::kPlayerGameObjInfoDesk}, 1.0f,
-          {{data::VboIdMain::kPlayerGameObjInfoPinBack, []() {}},
-           {data::VboIdMain::kPlayerGameObjInfoPinPoint}},
-          render_data, window_queue,
-          {data::VboIdMain::kPlayerGameObjInfoEnemy},
-          {data::VboIdMain::kPlayerGameObjInfoFriend},
-          {data::VboIdMain::kPlayerGameObjInfoNeutal},
-          {data::VboIdMain::kPlayerGameObjInfoObstacle},
-          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoName}},
-          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoCharacteristic}},
-          {text_renderer, {data::VboIdMain::kPlayerGameObjInfoValue}}),
+          {data::UiId::kPlayerGameObjInfoDesk}, 1.0f,
+          {{data::UiId::kPlayerGameObjInfoPinBack, []() {}},
+           {data::UiId::kPlayerGameObjInfoPinPoint}},
+          render_data, window_queue, {data::UiId::kPlayerGameObjInfoEnemy},
+          {data::UiId::kPlayerGameObjInfoFriend},
+          {data::UiId::kPlayerGameObjInfoNeutal},
+          {data::UiId::kPlayerGameObjInfoObstacle},
+          {text_renderer, {data::UiId::kPlayerGameObjInfoName}},
+          {text_renderer, {data::UiId::kPlayerGameObjInfoCharacteristic}},
+          {text_renderer, {data::UiId::kPlayerGameObjInfoValue}}),
       ui_selection_(render_data),
       render_data_(render_data),
       mdl_manager_(mdl_manager) {}
@@ -51,12 +49,11 @@ void UiPlayerMode::BindDefaultCallbacks() {
   glfwSetCursorPosCallback(gWindow, nullptr);
 }
 
-void UiPlayerMode::Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiPlayerMode::Render(TileRenderer* tile_renderer,
+                          UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   auto camera = render_data.glfw_context_.camera;
-  auto map_scale =
-      render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
+  auto map_scale = render_data.glfw_context_.tile_renderer->cur_tile_.map_scale;
   glm::vec3 camera_pos;
   if (mdl_manager_.player_.IsFpv()) {
     camera_pos = mdl_manager_.player_.GetFpv().GetPosition();
@@ -78,8 +75,8 @@ void UiPlayerMode::Render(
   ui_map_.Render(&mdl_manager_);
 }
 
-void UiPlayerMode::RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiPlayerMode::RenderPicking(TileRenderer* tile_renderer,
+                                 UiRenderer__Deprecated* ui_renderer) {
   const auto& render_data = ui_renderer->GetRenderData();
   tile_renderer->RenderPicking();
   glBindVertexArray(render_data.vao_ui_);
@@ -97,8 +94,8 @@ void UiPlayerMode::HandleSelection(const std::set<GLuint>& selected_ids) {
   bool friend_selected = false;
   bool neutral_selected = false;
   bool obstacle_selected = false;
-  auto it = selected_ids.find(
-    mdl_manager_.player_.GetId() || mdl_manager_.player_.GetFpv().GetId());
+  auto it = selected_ids.find(mdl_manager_.player_.GetId() ||
+                              mdl_manager_.player_.GetFpv().GetId());
   if (it != selected_ids.end()) {
     std::cout << "player selected" << std::endl;
   }
@@ -237,8 +234,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
   auto& player_ = player->mdl_manager_.player_;
   player_.ProcessMovement(key, action);
   if (action == GLFW_PRESS) {
-    if (key == GLFW_KEY_1) player_.SwitchToHuman();
-    else if (key == GLFW_KEY_2) player_.SwitchToFpv();
+    if (key == GLFW_KEY_1)
+      player_.SwitchToHuman();
+    else if (key == GLFW_KEY_2)
+      player_.SwitchToFpv();
   }
 }
 

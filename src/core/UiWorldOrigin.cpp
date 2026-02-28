@@ -7,8 +7,7 @@
 #include "TileRenderer.h"
 
 UiWorldOrigin::UiWorldOrigin(UiRenderData& render_data)
-    : render_data_(render_data),
-      sp_origin_(data::VboIdMain::kPivot) {}
+    : render_data_(render_data), sp_origin_(data::UiId::kPivot) {}
 
 void UiWorldOrigin::Render(glm::vec4 position, glm::vec4 color) {
   render_data_.shader_sp_.Bind();
@@ -22,8 +21,7 @@ void UiWorldOrigin::Render(glm::vec4 position, glm::vec4 color) {
   //  std::cout << map_scale << " map_scale" << std::endl;
   auto model = glm::mat4(1.0f);
   model = glm::scale(model, glm::vec3(map_scale));
-  auto view =
-      render_data_.glfw_context_.camera->GetViewMatrix(map_scale);
+  auto view = render_data_.glfw_context_.camera->GetViewMatrix(map_scale);
   auto projection = render_data_.glfw_context_.camera->GetProjMatrix();
   auto mvp = projection * view * model;
 

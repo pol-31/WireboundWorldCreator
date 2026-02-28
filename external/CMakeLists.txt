@@ -24,4 +24,12 @@ add_subdirectory(tinygltf EXCLUDE_FROM_ALL)
 message(STATUS "---> nanosvg building")
 add_subdirectory(nanosvg EXCLUDE_FROM_ALL)
 
+message(STATUS "---> Jolt Physics building")
+set(PHYSICS_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/JoltPhysics-5.5.0" CACHE PATH "" FORCE)
+# Disable the IPO warning for now
+set(INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(JoltPhysics-5.5.0/Build EXCLUDE_FROM_ALL)
+
+
 # rapidjson header-only, so included directly

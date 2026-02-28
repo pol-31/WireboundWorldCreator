@@ -3,12 +3,11 @@
 int UiButtons::gIndentMod = 12;
 int UiButtons::gIndentKey = 10;
 
-UiButtons::UiButtons(UiRenderData& render_data,
-                     TextRenderer& text_renderer)
+UiButtons::UiButtons(UiRenderData& render_data, TextRenderer& text_renderer)
     : render_data_(render_data),
-      txt_keys_(text_renderer, data::VboIdMain::kButtonsTextKeys),
-      txt_mods_(text_renderer, data::VboIdMain::kButtonsTextMods),
-      sp_key_(data::VboIdMain::kPressedKey) {}
+      txt_keys_(text_renderer, data::UiId::kButtonsTextKeys),
+      txt_mods_(text_renderer, data::UiId::kButtonsTextMods),
+      sp_key_(data::UiId::kPressedKey) {}
 
 void UiButtons::Press(int key, int action) {
   if (action == GLFW_REPEAT) {

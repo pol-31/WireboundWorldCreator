@@ -7,8 +7,6 @@
 #include <glm/glm.hpp>
 #include <memory>
 
-#include "Cursor.h"
-
 /// camera move:
 /// left x-
 /// right x+
@@ -81,7 +79,11 @@ class Camera {
 
   [[nodiscard]] glm::vec3 GetOrigin() const noexcept { return origin_; }
 
-  void Reset(); // for all modes except UiPlayerMode
+  void Reset();  // for all modes except UiPlayerMode
+
+  void HideCursor();
+
+  void ShowCursor();
 
  protected:
   void Init();
@@ -113,7 +115,6 @@ class Camera {
   float speed_;
 
   GLuint ubo_ = 0;
-  Cursor cursor_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_IO_CAMERA_H_

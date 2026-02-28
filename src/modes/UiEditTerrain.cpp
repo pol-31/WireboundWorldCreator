@@ -4,10 +4,9 @@
 
 #include "../common/OpenGlUtility.h"
 #include "../core/TileRenderer.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 
-UiEditTerrain::UiEditTerrain(Tile& cur_tile,
-                             UiRenderData& render_data,
+UiEditTerrain::UiEditTerrain(Tile& cur_tile, UiRenderData& render_data,
                              TextRenderer& text_renderer,
                              UiEditSlots& ui_edit_slots,
                              UiEditConfigSlCfg& value_config,
@@ -15,19 +14,20 @@ UiEditTerrain::UiEditTerrain(Tile& cur_tile,
     : IUiEdit(ui_edit_slots),
       value_config_(value_config),
       text_noise_invert_({text_renderer,
-                          {data::VboIdMain::kTerrainEditLabelInvert},
+                          {data::UiId::kTerrainEditLabelInvert},
                           data::TextId::kInvert}),
       text_noise_tiling_({text_renderer,
-                          {data::VboIdMain::kTerrainEditLabelTiling},
+                          {data::UiId::kTerrainEditLabelTiling},
                           data::TextId::kTiling}),
       text_noise_strength_({text_renderer,
-                            {data::VboIdMain::kTerrainEditLabelStrength},
+                            {data::UiId::kTerrainEditLabelStrength},
                             data::TextId::kStrength}),
 
       shader_merge_noises_("../shaders/noise_shaders/MergeNoises.comp", {}),
       shader_flatten_prep_("../shaders/generate_shaders/FlattenPrep.comp", {}),
       shader_flatten_step_("../shaders/generate_shaders/FlattenStep.comp", {}),
-      shader_flatten_merge_("../shaders/generate_shaders/FlattenMerge.comp", {}),
+      shader_flatten_merge_("../shaders/generate_shaders/FlattenMerge.comp",
+                            {}),
 
       gen_perlin_("../shaders/noise_shaders/Perlin.comp",
                   {{10.0f, 10.0f, 20.0f}},
@@ -91,29 +91,27 @@ void UiEditTerrain::HideAll() {
 
 void UiEditTerrain::CreateInstance() {
   Data().push_back(TerrainTraits{});
-  auto size = details::gTerrainSize;
-  Data().back().data.hmap = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
-  Data().back().extra_heights = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  Data().back().data.hmap = Texture32F(Texture::Type::TerrainR32F);
+  Data().back().extra_heights = Texture32F(Texture::Type::TerrainR32F);
   UpdateConfig();
 }
 
 void UiEditTerrain::UpdateConfig() {
   using namespace utility;
   int size = details::gTerrainSize;
-  Texture32F hmap(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  Texture32F hmap(Texture::Type::TerrainR32F);
   glBindTexture(GL_TEXTURE_2D, hmap.GetId());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
   float color_black[] = {0.0f, 0.0f, 0.0f, 0.0f};
   glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color_black);
-  glClearTexImage(hmap.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
 
-  Texture32F tex_mesh(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  Texture32F tex_mesh(Texture::Type::TerrainR32F);
   for (int i = 0; i < Data().size(); ++i) {
     if (!Data()[i].do_show) {
       continue;
     }
-    glClearTexImage(tex_mesh.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
+    tex_mesh.Clear();
     shader_flatten_prep_.Bind();
     glm::mat4 model = glm::mat4{1.0f};
     // scale to -512;512 I guess... (without it translation's wrong)
@@ -170,8 +168,8 @@ void UiEditTerrain::UpdateConfig() {
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   }
 
-  render_data_.glfw_context_.tile_renderer->cur_tile_
-      .map_terrain_height_raw_ = std::move(hmap);
+  render_data_.glfw_context_.tile_renderer->cur_tile_.map_terrain_height_raw_ =
+      std::move(hmap);
   render_data_.glfw_context_.tile_renderer->UpdatePipeline();
   if (IsHmapNan()) {
     std::cerr << "unnable to generate noises, change the config" << std::endl;
@@ -211,9 +209,8 @@ void UiEditTerrain::Reset() {
 
 void UiEditTerrain::Generate() {
   auto& data = Data()[selected_id_].data;
-  auto size = details::gTerrainSize;
-  data.hmap = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
-  Texture32F tex_noise = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
+  data.hmap = Texture32F(Texture::Type::TerrainR32F);
+  Texture32F tex_noise = Texture32F(Texture::Type::TerrainR32F);
   MergeLayers(data.hmap, tex_noise, &data.perlin, &gen_perlin_);
   MergeLayers(data.hmap, tex_noise, &data.cellular, &gen_cellular_);
   MergeLayers(data.hmap, tex_noise, &data.metaballs, &gen_metaballs_);
@@ -229,7 +226,6 @@ void UiEditTerrain::Generate() {
 
 void UiEditTerrain::GenerateAll() {
   auto& all_data = Data();
-  auto size = details::gTerrainSize;
   for (int i = 0; i < all_data.size(); ++i) {
     auto& data = all_data[i].data;
     gen_perlin_.SetConfig(&data.perlin, {&data.perlin.scale_x, 3});
@@ -242,8 +238,7 @@ void UiEditTerrain::GenerateAll() {
     gen_fbm_warp_.SetConfig(&data.fbm_warp, {&data.fbm_warp.scale_x, 10});
     gen_fbm_perlin_warp_.SetConfig(&data.fbm_perlin_warp,
                                    {&data.fbm_perlin_warp.scale_x, 10});
-    data.hmap = Texture32F(size, size, GL_RED, GL_R32F, GL_FLOAT);
-    glClearTexImage(data.hmap.GetId(), 0, GL_RED, GL_FLOAT, nullptr);
+    data.hmap = Texture32F(Texture::Type::TerrainR32F);
     Texture32F tex_noise;
     MergeLayers(data.hmap, tex_noise, &data.perlin, &gen_perlin_);
     MergeLayers(data.hmap, tex_noise, &data.cellular, &gen_cellular_);
@@ -275,10 +270,9 @@ void UiEditTerrain::RandomGenerate() {
 
 bool UiEditTerrain::Press(int id, float height) {
   value_config_.ResetTransform();
-  int pressed_line_id =
-      GetUiEditEntryId(height, noises_.size(),
-                       render_data_.glfw_context_.cursor_pos_tex_norm_,
-                       value_config_.btn_config_.GetTopBorder());
+  int pressed_line_id = GetUiEditEntryId(
+      height, noises_.size(), render_data_.glfw_context_.cursor_pos_tex_norm_,
+      value_config_.btn_config_.GetTopBorder());
   if (id == value_config_.btn_config_.GetId()) {
     ui_noise_config_.SetNoise(noises_[pressed_line_id]->GetValueSpan(),
                               noises_[pressed_line_id]->GetTextIdSpan(),
@@ -341,12 +335,12 @@ void UiEditTerrain::RenderGraph() {
       render_data_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   pivot_pos = glm::vec4{pivot_pos.x * map_scale, pivot_pos.y * map_scale,
                         pivot_pos.z * map_scale, 1.0f};
-  render_data_.glfw_context_.ui_renderer->RenderWorldOrigin(
-      pivot_pos, color_invert);
+  render_data_.glfw_context_.ui_renderer->RenderWorldOrigin(pivot_pos,
+                                                            color_invert);
 
   /// wireframe left bottom
   render_data_.glfw_context_.ui_renderer->ui_layer_wireframe_
-    .RenderLayerWireframe(&Data()[selected_id_]);
+      .RenderLayerWireframe(&Data()[selected_id_]);
 }
 
 void UiEditTerrain::SetPivotPosition(GLuint pressed_id) {
@@ -414,8 +408,8 @@ bool UiEditTerrain::IsHmapNan() const noexcept {
   /// noises contradicts to some other params like "octaves" and "scale",
   /// so we do the stupid approach - rerun.
   /// (I calculated it on my own - in average it's 6/30 with "bad" result
-  return std::isnan(render_data_.glfw_context_.tile_renderer->cur_tile_
-                        .terrain_heights_[0]);
+  return std::isnan(
+      render_data_.glfw_context_.tile_renderer->cur_tile_.terrain_heights_[0]);
 }
 
 void UiEditTerrain::MergeLayers(Texture32F& bottom_layer, Texture32F& top_layer,
@@ -442,6 +436,5 @@ void UiEditTerrain::MergeLayers(Texture32F& bottom_layer, Texture32F& top_layer,
 }
 
 std::vector<TerrainTraits>& UiEditTerrain::Data() {
-  return render_data_.glfw_context_.tile_renderer->cur_tile_
-      .terrain_data;
+  return render_data_.glfw_context_.tile_renderer->cur_tile_.terrain_data;
 }

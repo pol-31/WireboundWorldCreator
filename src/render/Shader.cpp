@@ -5,8 +5,8 @@
 #include <sstream>
 #include <stdexcept>
 
-GLuint Shader::AttachShader(
-    GLuint program_id, std::string_view path, GLenum type) {
+GLuint Shader::AttachShader(GLuint program_id, std::string_view path,
+                            GLenum type) {
   std::string code;
   try {
     std::ifstream shader_file;
@@ -28,7 +28,7 @@ GLuint Shader::AttachShader(
 }
 
 Shader::Shader(std::string_view comp_path,
-    const std::vector<int>& textures_units) {
+               const std::vector<int>& textures_units) {
   id_ = glCreateProgram();
   GLuint id_comp = AttachShader(id_, comp_path, GL_COMPUTE_SHADER);
   glLinkProgram(id_);
@@ -43,7 +43,7 @@ Shader::Shader(std::string_view comp_path,
 }
 
 Shader::Shader(std::string_view vert_path, std::string_view frag_path,
-    const std::vector<int>& textures_units) {
+               const std::vector<int>& textures_units) {
   id_ = glCreateProgram();
   GLuint id_vert = AttachShader(id_, vert_path, GL_VERTEX_SHADER);
   GLuint id_frag = AttachShader(id_, frag_path, GL_FRAGMENT_SHADER);
@@ -61,7 +61,8 @@ Shader::Shader(std::string_view vert_path, std::string_view frag_path,
 }
 
 Shader::Shader(std::string_view vert_path, std::string_view frag_path,
-    std::string_view geom_path, const std::vector<int>& textures_units) {
+               std::string_view geom_path,
+               const std::vector<int>& textures_units) {
   id_ = glCreateProgram();
   GLuint id_vert = AttachShader(id_, vert_path, GL_VERTEX_SHADER);
   GLuint id_geom = AttachShader(id_, frag_path, GL_GEOMETRY_SHADER);
@@ -82,8 +83,8 @@ Shader::Shader(std::string_view vert_path, std::string_view frag_path,
 }
 
 Shader::Shader(std::string_view vert_path, std::string_view tesc_path,
-    std::string_view tese_path, std::string_view frag_path,
-    const std::vector<int>& textures_units) {
+               std::string_view tese_path, std::string_view frag_path,
+               const std::vector<int>& textures_units) {
   id_ = glCreateProgram();
   GLuint id_vert = AttachShader(id_, vert_path, GL_VERTEX_SHADER);
   GLuint id_tesc = AttachShader(id_, tesc_path, GL_TESS_CONTROL_SHADER);
@@ -120,13 +121,9 @@ Shader& Shader::operator=(Shader&& other) noexcept {
   return *this;
 }
 
-Shader::~Shader() {
-  glDeleteProgram(id_);
-}
+Shader::~Shader() { glDeleteProgram(id_); }
 
-void Shader::Bind() const {
-  glUseProgram(id_);
-}
+void Shader::Bind() const { glUseProgram(id_); }
 
 void Shader::CheckCompilation(GLuint shader, GLenum type) {
   GLint success;
@@ -135,7 +132,8 @@ void Shader::CheckCompilation(GLuint shader, GLenum type) {
   if (!success) {
     glGetShaderInfoLog(shader, std::size(buffer), nullptr, buffer);
     std::cerr << "Shader compiling error at " << ShaderNameFromType(type)
-              << " shader:\n" << buffer << std::endl;
+              << " shader:\n"
+              << buffer << std::endl;
   }
 }
 
@@ -191,7 +189,8 @@ void Shader::DebugUpdate() {
   } else if (paths_.Size() == 3) {
     new_shader = Shader(paths_[0], paths_[1], paths_[2], textures_units_);
   } else if (paths_.Size() == 4) {
-    new_shader = Shader(paths_[0], paths_[1], paths_[2], paths_[3], textures_units_);
+    new_shader =
+        Shader(paths_[0], paths_[1], paths_[2], paths_[3], textures_units_);
   }
   *this = std::move(new_shader);
 }
@@ -199,6 +198,6 @@ void Shader::DebugUpdate() {
 void Shader::SetTextureUnits() const {
   Bind();
   for (auto id : textures_units_) {
-    glUniform1i(id, id); // for glActiveTexture(id)
+    glUniform1i(id, id);  // for glActiveTexture(id)
   }
 }

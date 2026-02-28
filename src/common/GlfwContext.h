@@ -16,7 +16,7 @@ class UiRenderData;
 class TextRenderer;
 class UiConfirmation;
 class UiWarning;
-class UiRenderer;
+class UiRenderer__Deprecated;
 class WindowQueue;
 struct GLFWwindow;
 
@@ -39,7 +39,7 @@ struct GlfwContext {
   debug::UiDebugger* ui_debugger = nullptr;
   UiRenderData* render_data = nullptr;
   TextRenderer* text_renderer = nullptr;
-  UiRenderer* ui_renderer = nullptr;
+  UiRenderer__Deprecated* ui_renderer = nullptr;
 
   UiConfirmation* ui_confirmation = nullptr;
   UiWarning* ui_warning = nullptr;

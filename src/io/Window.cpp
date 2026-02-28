@@ -41,6 +41,7 @@ void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
   glfw_context->camera->UpdateProjectionMatrix();
   glfw_context->ui_debugger->UpdateMoveSteps();
   glfw_context->picking_fbo->UpdateResolution();
+  glfw_context->renderer->OnWindowResize();
 }
 
 void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id,

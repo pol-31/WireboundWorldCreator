@@ -2,20 +2,20 @@
 
 #include "../io/Camera.h"
 #include "../modes/traits/TerrainTraits.h"
-#include "../renderers/UiRenderer.h"
+#include "../renderers/UiRenderer__Deprecated.h"
 #include "TileRenderer.h"
 
 UiLayerWireframe::UiLayerWireframe(UiRenderData& render_data)
     : render_data_(render_data),
-      sp_layer_(data::VboIdMain::kWireframeWindow),
-      sp_frame_(data::VboIdMain::kWireframeWindowFrame),
+      sp_layer_(data::UiId::kWireframeWindow),
+      sp_frame_(data::UiId::kWireframeWindowFrame),
       sp_points_({
-          {data::VboIdMain::kWireframeWindowXneg},
-          {data::VboIdMain::kWireframeWindowXpos},
-          {data::VboIdMain::kWireframeWindowYneg},
-          {data::VboIdMain::kWireframeWindowYpos},
-          {data::VboIdMain::kWireframeWindowZneg},
-          {data::VboIdMain::kWireframeWindowZpos},
+          {data::UiId::kWireframeWindowXneg},
+          {data::UiId::kWireframeWindowXpos},
+          {data::UiId::kWireframeWindowYneg},
+          {data::UiId::kWireframeWindowYpos},
+          {data::UiId::kWireframeWindowZneg},
+          {data::UiId::kWireframeWindowZpos},
       }),
       pos_points_({
           {-8.0f, 0.0f, 0.0f, 1.0f},
@@ -51,8 +51,7 @@ void UiLayerWireframe::UpdateLayerWireframe(TerrainTraits* terrain) {
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  render_data_.glfw_context_.tile_renderer->terrain.RenderWireframe(
-      terrain);
+  render_data_.glfw_context_.tile_renderer->terrain.RenderWireframe(terrain);
   render_data_.glfw_context_.ui_renderer->RenderAxis(5.0f);
 
   render_data_.shader_sp_.Bind();
@@ -99,8 +98,7 @@ glm::mat4 UiLayerWireframe::GetPointMvpMatrix() {
   auto map_scale =
       render_data_.glfw_context_.tile_renderer->cur_tile_.map_scale;
   model = glm::scale(model, glm::vec3(glm::sqrt(map_scale)));
-  auto view =
-      render_data_.glfw_context_.camera->GetViewMatrix(map_scale);
+  auto view = render_data_.glfw_context_.camera->GetViewMatrix(map_scale);
   auto projection = render_data_.glfw_context_.camera->GetProjMatrix();
   return projection * view * model;
 }

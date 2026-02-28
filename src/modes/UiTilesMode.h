@@ -8,14 +8,13 @@
 
 class UiTilesMode final : public IUiMode {
  public:
-  explicit UiTilesMode(UiRenderData& render_data,
-                       WindowQueue& window_queue);
+  explicit UiTilesMode(UiRenderData& render_data, WindowQueue& window_queue);
 
-  void Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void Render(TileRenderer* tile_renderer,
+              UiRenderer__Deprecated* ui_renderer) override;
 
-  void RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void RenderPicking(TileRenderer* tile_renderer,
+                     UiRenderer__Deprecated* ui_renderer) override;
 
   void Setup() override;
 

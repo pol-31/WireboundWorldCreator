@@ -13,19 +13,17 @@ class Shader {
  public:
   Shader() = default;
 
-  Shader(std::string_view comp_path,
-    const std::vector<int>& texture_units);
+  Shader(std::string_view comp_path, const std::vector<int>& texture_units);
 
   Shader(std::string_view vert_path, std::string_view frag_path,
-    const std::vector<int>& texture_units);
+         const std::vector<int>& texture_units);
 
   Shader(std::string_view vert_path, std::string_view geom_path,
-      std::string_view frag_path,
-      const std::vector<int>& texture_units);
+         std::string_view frag_path, const std::vector<int>& texture_units);
 
   Shader(std::string_view vert_path, std::string_view tesc_path,
-      std::string_view tese_path, std::string_view frag_path,
-      const std::vector<int>& texture_units);
+         std::string_view tese_path, std::string_view frag_path,
+         const std::vector<int>& texture_units);
 
   Shader(const Shader& other) = delete;
   Shader& operator=(const Shader& other) = delete;
@@ -41,15 +39,15 @@ class Shader {
 
   void DebugUpdate();
 
-private:
+ private:
   static void CheckCompilation(GLuint shader, GLenum type);
 
   static void CheckLinking(GLuint shader);
 
   static std::string ShaderNameFromType(GLenum type);
 
-  static GLuint AttachShader(
-    GLuint program_id, std::string_view path, GLenum type);
+  static GLuint AttachShader(GLuint program_id, std::string_view path,
+                             GLenum type);
 
   std::filesystem::file_time_type GetLastModificationTime();
 
@@ -59,8 +57,8 @@ private:
   GLuint id_ = 0;
 
   /// NDEBUG
-  std::filesystem::file_time_type last_modification_time_
-    = std::filesystem::file_time_type::min();
+  std::filesystem::file_time_type last_modification_time_ =
+      std::filesystem::file_time_type::min();
   FixedSizeQueue<std::string_view, 4> paths_;
   std::vector<int> textures_units_;
 };

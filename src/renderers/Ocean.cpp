@@ -3,18 +3,19 @@
 #include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "../common/Details.h"
 #include "../common/OpenGlUtility.h"
 
 Ocean::Ocean(const OceanTraits& traits)
     : init_spectrum_shader_("../shaders/ocean/InitialSpectrum.comp", {}),
       time_spectrum_shader_("../shaders/ocean/TimeDependentSpectrum.comp", {}),
       textures_merger_shader_("../shaders/ocean/WavesTexturesMerger.comp", {}),
-      size_(64),
-      buffer_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
-      dxdz_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
-      dydxz_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
-      dyxdyz_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
-      dxxdzz_tex_(size_, size_, GL_RG, GL_RG32F, GL_FLOAT),
+      size_(details::gWaterSize),
+      buffer_tex_(Texture::Type::WaterRG32F),
+      dxdz_tex_(Texture::Type::WaterRG32F),
+      dydxz_tex_(Texture::Type::WaterRG32F),
+      dyxdyz_tex_(Texture::Type::WaterRG32F),
+      dxxdzz_tex_(Texture::Type::WaterRG32F),
       fft_(size_),
       noise_tex_(GaussianNoise{}.Generate(size_)),
       //      length_scale_near_(1),
@@ -48,12 +49,11 @@ void Ocean::Update() {
 }
 
 void Ocean::UpdateCascade(int cascade_id, float lambda) {
-  float zeros2[2] = {0.0f, 0.0f};
-  glClearTexImage(buffer_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
-  glClearTexImage(dxdz_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
-  glClearTexImage(dydxz_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
-  glClearTexImage(dyxdyz_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
-  glClearTexImage(dxxdzz_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
+  buffer_tex_.Clear();
+  dxdz_tex_.Clear();
+  dydxz_tex_.Clear();
+  dyxdyz_tex_.Clear();
+  dxxdzz_tex_.Clear();
 
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   time_spectrum_shader_.Bind();
@@ -166,8 +166,7 @@ void Ocean::CalculateInitials(int cascade_id, float length_scale,
   glUniform1f(6, length_scale);
   // glUniform1f(8, cutoff_low);
   // glUniform1f(7, cutoff_high);
-  float zeros2[2] = {0.0f, 0.0f};
-  glClearTexImage(buffer_tex_.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
+  buffer_tex_.Clear();
   buffer_tex_.BindImage(11, GL_READ_WRITE);
   glBindImageTexture(12, tex_precomputed_data_, 0, false, cascade_id,
                      GL_READ_ONLY, GL_RGBA32F);

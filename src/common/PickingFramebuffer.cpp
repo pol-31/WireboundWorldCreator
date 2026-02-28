@@ -7,14 +7,12 @@
 #include "Details.h"
 #include "OpenGlUtility.h"
 
-PickingFramebuffer::PickingFramebuffer() {
-  UpdateResolution();
-}
+PickingFramebuffer::PickingFramebuffer() { UpdateResolution(); }
 
 void PickingFramebuffer::UpdateResolution() {
   DeInit();
-  texture_ = TextureUi(gWindowWidth, gWindowHeight, GL_RED_INTEGER, GL_R32UI,
-    GL_UNSIGNED_INT, GL_NEAREST, GL_CLAMP_TO_EDGE);
+  texture_ =
+      TextureUi(Texture::Type::WindowR32UI, GL_NEAREST, GL_CLAMP_TO_EDGE);
   Init();
 }
 

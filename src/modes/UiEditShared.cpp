@@ -23,19 +23,19 @@ int GetUiEditEntryId(float height, float size, glm::vec2 mouse_pos,
 
 UiEditConfigSlCfg::UiEditConfigSlCfg(UiRenderData& render_data,
                                      TextRenderer& text_renderer)
-    : btn_config_(data::VboIdMain::kTerrainEditNoiseConfig),
-      txt_name_(text_renderer, {data::VboIdMain::kTerrainEditNoiseName},
+    : btn_config_(data::UiId::kTerrainEditNoiseConfig),
+      txt_name_(text_renderer, {data::UiId::kTerrainEditNoiseName},
                 data::TextId::kPerlin),
-      tg1_({data::VboIdMain::kTerrainEditNoiseInvertOff},
-           {data::VboIdMain::kTerrainEditNoiseInvertOn1},
-           {data::VboIdMain::kTerrainEditNoiseInvertOn2},
-           {data::VboIdMain::kTerrainEditNoiseInvertOn3}),
-      tg2_({data::VboIdMain::kTerrainEditNoiseTilingOff},
-           {data::VboIdMain::kTerrainEditNoiseTilingOn1},
-           {data::VboIdMain::kTerrainEditNoiseTilingOn2},
-           {data::VboIdMain::kTerrainEditNoiseTilingOn3}),
-      sl_strength_({data::VboIdMain::kTerrainEditNoiseStrengthArea},
-                   {data::VboIdMain::kTerrainEditNoiseStrengthIcon}),
+      tg1_({data::UiId::kTerrainEditNoiseInvertOff},
+           {data::UiId::kTerrainEditNoiseInvertOn1},
+           {data::UiId::kTerrainEditNoiseInvertOn2},
+           {data::UiId::kTerrainEditNoiseInvertOn3}),
+      tg2_({data::UiId::kTerrainEditNoiseTilingOff},
+           {data::UiId::kTerrainEditNoiseTilingOn1},
+           {data::UiId::kTerrainEditNoiseTilingOn2},
+           {data::UiId::kTerrainEditNoiseTilingOn3}),
+      sl_strength_({data::UiId::kTerrainEditNoiseStrengthArea},
+                   {data::UiId::kTerrainEditNoiseStrengthIcon}),
       render_data_(render_data) {}
 
 void UiEditConfigSlCfg::Release() {
@@ -118,10 +118,10 @@ void UiEditConfigSlCfg::AttachToHierarchy(UiHierarchy& hierarchy) {
 
 UiEditConfigSlTxt::UiEditConfigSlTxt(UiRenderData& render_data,
                                      TextRenderer& text_renderer)
-    : sl_strength_({{data::VboIdMain::kBiomesEditNoiseStrengthArea},
-                    {data::VboIdMain::kBiomesEditNoiseStrengthIcon}}),
+    : sl_strength_({{data::UiId::kBiomesEditNoiseStrengthArea},
+                    {data::UiId::kBiomesEditNoiseStrengthIcon}}),
       txt_name_({text_renderer,
-                 {data::VboIdMain::kBiomesEditNoiseName},
+                 {data::UiId::kBiomesEditNoiseName},
                  data::TextId::kPerlin}),
       render_data_(render_data) {}
 

@@ -11,17 +11,14 @@ Ifft::Ifft(int size)
       ifft_shader_("../shaders/ocean/Ifft.comp", {}),
       permute_shader_("../shaders/ocean/Permute.comp", {}),
       precompute_shader_("../shaders/ocean/PrecompIfftData.comp", {}),
-      precomputed_data_(static_cast<int>(std::log2(size_)), size_, GL_RGBA, GL_RGBA32F, GL_FLOAT) {
+      precomputed_data_(Texture::Type::WaterLogRGBA32F) {
   Init();
   SetSize(size);
 }
 
 void Ifft::Init() {
   glGenBuffers(1, &ssbo_indices_);
-  // TODO: 1 to header ShadersBindings
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo_indices_);
-  float zeros4[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-  glClearTexImage(precomputed_data_.GetId(), 0, GL_RGBA, GL_FLOAT, zeros4);
 }
 
 void Ifft::DeInit() { glDeleteBuffers(1, &ssbo_indices_); }
@@ -31,8 +28,7 @@ void Ifft::Compute(Texture32F& input, Texture32F& buffer) const {
   auto log_size = static_cast<int>(std::log2(size_));
   bool ping_pong = false;
 
-  float zeros2[2] = {0.0f, 0.0f};
-  glClearTexImage(buffer.GetId(), 0, GL_RG, GL_FLOAT, zeros2);
+  buffer.Clear();
   ifft_shader_.Bind();
   precomputed_data_.BindImage(0, GL_READ_ONLY);
   input.BindImage(1, GL_READ_WRITE);

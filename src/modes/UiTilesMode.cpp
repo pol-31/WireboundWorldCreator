@@ -3,26 +3,25 @@
 #include <iostream>
 
 #include "../common/PickingFramebuffer.h"
-#include "../core/TileRenderer.h"
 #include "../common/TextRenderer.h"
+#include "../core/TileRenderer.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
 
-UiTilesMode::UiTilesMode(UiRenderData& render_data,
-                         WindowQueue& window_queue)
-    : sp_mode_(data::VboIdMain::kTilesTilesMode),
-      btn_up_(data::VboIdMain::kTilesUp,
+UiTilesMode::UiTilesMode(UiRenderData& render_data, WindowQueue& window_queue)
+    : sp_mode_(data::UiId::kTilesTilesMode),
+      btn_up_(data::UiId::kTilesUp,
               [this] { std::cout << "btn_up" << std::endl; }),
-      btn_down_(data::VboIdMain::kTilesDown,
+      btn_down_(data::UiId::kTilesDown,
                 [this] { std::cout << "btn_down" << std::endl; }),
-      btn_left_(data::VboIdMain::kTilesLeft,
+      btn_left_(data::UiId::kTilesLeft,
                 [this] { std::cout << "btn_left" << std::endl; }),
-      btn_right_(data::VboIdMain::kTilesRight,
+      btn_right_(data::UiId::kTilesRight,
                  [this] { std::cout << "btn_right" << std::endl; }),
       ui_event_handler_({&btn_up_, &btn_down_, &btn_left_, &btn_right_}) {}
 
-void UiTilesMode::Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiTilesMode::Render(TileRenderer* tile_renderer,
+                         UiRenderer__Deprecated* ui_renderer) {
   // sp_mode_.Render();
   // btn_up_.Render();
   // btn_down_.Render();
@@ -30,8 +29,8 @@ void UiTilesMode::Render(
   // btn_right_.Render();
 }
 
-void UiTilesMode::RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) {
+void UiTilesMode::RenderPicking(TileRenderer* tile_renderer,
+                                UiRenderer__Deprecated* ui_renderer) {
   // sp_mode_.RenderPicking();
   // btn_up_.RenderPicking();
   // btn_down_.RenderPicking();

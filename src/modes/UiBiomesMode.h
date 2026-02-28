@@ -16,11 +16,11 @@ class UiBiomesMode final : public IUiMode {
                UiEditSlots& ui_edit_slots, UiEditConfigSlTxt& value_config,
                ModelManager& mdl_manager);
 
-  void Render(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void Render(TileRenderer* tile_renderer,
+              UiRenderer__Deprecated* ui_renderer) override;
 
-  void RenderPicking(
-    TileRenderer* tile_renderer, UiRenderer* ui_renderer) override;
+  void RenderPicking(TileRenderer* tile_renderer,
+                     UiRenderer__Deprecated* ui_renderer) override;
 
   void Setup() override;
 
