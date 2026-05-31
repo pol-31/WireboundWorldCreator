@@ -5,13 +5,11 @@
 #include "../common/Details.h"
 #include "../common/GlfwContext.h"
 #include "../common/PickingFramebuffer.h"
-#include "../common/UiDebugger.h"
-#include "../ui/UiRenderData.h"
 #include "Camera.h"
 
-extern int gWindowWidth = 1600;
-extern int gWindowHeight = 900;
-extern float gResFactor =
+int gWindowWidth = 1600;
+int gWindowHeight = 900;
+float gResFactor =
     static_cast<float>(gWindowHeight) / static_cast<float>(gWindowWidth);
 
 float lastX = static_cast<float>(gWindowWidth) / 2.0;
@@ -38,10 +36,10 @@ void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
 
   auto glfw_context =
       reinterpret_cast<GlfwContext*>(glfwGetWindowUserPointer(gWindow));
-  glfw_context->camera->UpdateProjectionMatrix();
-  glfw_context->ui_debugger->UpdateMoveSteps();
-  glfw_context->picking_fbo->UpdateResolution();
-  glfw_context->renderer->OnWindowResize();
+  // glfw_context->camera->UpdateProjectionMatrix();
+  // glfw_context->ui_debugger->UpdateMoveSteps();
+  // glfw_context->picking_fbo->UpdateResolution();
+  // glfw_context->renderer->OnWindowResize();
 }
 
 void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id,

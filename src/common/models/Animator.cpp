@@ -43,20 +43,25 @@ float WrapTime(float t, const float* times, int count) {
   return start + std::fmod(t - start, duration);
 }
 
-Animator::Animator(tinygltf::TinyGLTF& loader, const GLuint& ubo)
-    : loader_(loader), speed_(0.5f), ubo_(ubo) {}
+Animator::~Animator() {
+  glDeleteBuffers(1, &ubo_);
+}
 
-void Animator::Load(std::string_view path) {
-  std::string err, warn;
-  bool res = loader_.LoadASCIIFromFile(&model_, &err, &warn, path.data());
-  if (!warn.empty()) std::cout << "WARN: " << warn << std::endl;
-  if (!err.empty()) std::cout << "ERR: " << err << std::endl;
+Animator::Animator(tinygltf::Model model) {
+  //TODO: 1 huge ssbo, so wrong here
+  //TODO: 1 huge ssbo, so wrong here
+  //TODO: 1 huge ssbo, so wrong here
 
-  if (!res)
-    throw "Failed to load glTF";
-  else
-    std::cout << "Loaded glTF: " << path << std::endl;
+  glDeleteBuffers(1, &ubo_);
 
+  glGenBuffers(1, &ubo_);
+  glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
+  glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4) * Animator::gMaxBones,
+               nullptr, GL_DYNAMIC_DRAW);
+  glBindBufferBase(GL_UNIFORM_BUFFER, 10, ubo_);
+  glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+  model_ = std::move(model);
   if (model_.skins.size() != 1 || model_.animations.size() == 0) {
     throw "wrong animation data";
   }

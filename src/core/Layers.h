@@ -1,5 +1,8 @@
-#ifndef WIREBOUNDWORLDCREATOR_SRC_LAYERS_H_
-#define WIREBOUNDWORLDCREATOR_SRC_LAYERS_H_
+// Jolt Physics Library (https://github.com/jrouwe/JoltPhysics)
+// SPDX-FileCopyrightText: 2021 Jorrit Rouwe
+// SPDX-License-Identifier: MIT
+
+#pragma once
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
@@ -57,7 +60,7 @@ static constexpr JPH::BroadPhaseLayer MOVING(1);
 static constexpr JPH::BroadPhaseLayer DEBRIS(2);
 static constexpr JPH::BroadPhaseLayer SENSOR(3);
 static constexpr JPH::BroadPhaseLayer UNUSED(4);
-static constexpr unsigned int NUM_LAYERS(5);
+static constexpr JPH::uint NUM_LAYERS(5);
 };  // namespace BroadPhaseLayers
 
 /// BroadPhaseLayerInterface implementation
@@ -75,7 +78,7 @@ class BPLayerInterfaceImpl final : public JPH::BroadPhaseLayerInterface {
     mObjectToBroadPhase[Layers::SENSOR] = BroadPhaseLayers::SENSOR;
   }
 
-  virtual unsigned int GetNumBroadPhaseLayers() const override {
+  virtual JPH::uint GetNumBroadPhaseLayers() const override {
     return BroadPhaseLayers::NUM_LAYERS;
   }
 
@@ -138,5 +141,3 @@ class ObjectVsBroadPhaseLayerFilterImpl
     }
   }
 };
-
-#endif  // WIREBOUNDWORLDCREATOR_SRC_LAYERS_H_

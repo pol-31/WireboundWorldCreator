@@ -1,89 +1,78 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_
 
-#include <glad/glad.h>
-#include <tiny_gltf.h>
-
-#include <glm/gtc/quaternion.hpp>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <vector>
 
+#include <glad/glad.h>
+#include <tiny_gltf.h>
+
 #include "../../render/Texture.h"
-#include "../../ui/UiRenderData.h"
-#include "../Material.h"
-#include "Aabb3D.h"
+#include "Scene.h"
 
 bool LoadImageData(tinygltf::Image* image, const int image_idx,
                    std::string* err, std::string* warn, int req_width,
                    int req_height, const unsigned char* bytes, int size,
                    void* user_data);
 
-struct ModelData {
-  struct Primitive {
-    GLuint vao = 0;
-    GLuint ebo = 0;  // + vbo todo; deleted?
-    GLenum mode = 0;
-    GLsizei indexCount = 0;
-    GLenum indexType = 0;
-    size_t indexOffset = 0;
-    GLenum usage = GL_STATIC_DRAW;
-    void Render() const noexcept;
-  };
-  std::vector<Primitive> primitives;
-  tinygltf::Model model;
-  Material material;
-  Aabb3D aabb;
-  std::string name;
-
-  float hp = 100.0f;
-  float speed = 1.0f;
-  float attack = 1.0f;
-  float attack_speed = 1.0f;
-
-  void BindTextures() const noexcept;
-
-  void RenderModelNodes() const;
-
-  void RenderModelNode(const tinygltf::Node& node) const;
-
-  void RenderMesh(const tinygltf::Mesh& mesh) const;
-};
-
 class ModelLoader {
  public:
-  ModelLoader(UiRenderData& render_data, tinygltf::TinyGLTF& loader);
+  ModelLoader();
 
   ~ModelLoader();
 
-  ModelData* Load(std::string_view path, int id);
+  Scene* LoadScene(
+    std::string_view collisions_path,
+    std::string_view characters_path,
+    std::string_view scene_path);
 
-  std::vector<std::unique_ptr<ModelData>>& GetLoadedModels() { return models_; }
+  struct BufferData {
+    std::vector<std::uint8_t> all_positions;
+    std::vector<std::uint8_t> all_normals;
+    std::vector<std::uint8_t> all_uvs;
+    std::vector<std::uint8_t> all_weights;
+    std::vector<std::uint8_t> all_joints;
+    std::vector<std::uint8_t> all_indices;
+    int current_base_vertex = 0;
+    GLenum joints_type = GL_UNSIGNED_BYTE;
+  };
 
  private:
-  void BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
-                std::map<int, GLuint>& ebos,
-                std::vector<ModelData::Primitive>& primitives);
+  // idx_offset inside meshes vector, so collisions has 0, scene has 4
+  void BindModelNodesScene(tinygltf::Model& model, tinygltf::Node& node,
+    std::vector<Scene::Model>& models, int idx_offset);
 
-  void BindModelNodes(tinygltf::Model& model, tinygltf::Node& node,
-                      std::map<int, GLuint>& ebos,
-                      std::vector<ModelData::Primitive>& primitives);
+  /// is_rigged separates 3-component vbo from 5-component (weights, joints)
+  tinygltf::Model LoadBufferMerge(std::string_view path,
+    std::vector<Scene::Model>& primitives,
+    std::vector<Scene::Mesh>& meshes,
+    BufferData& data,
+    bool is_rigged);
 
-  void BindModel(tinygltf::Model& model,
-                 std::vector<ModelData::Primitive>& primitives);
+  // void BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
+  //               std::map<int, GLuint>& ebos,
+  //               std::vector<ModelData::Primitive>& primitives,
+  //                          std::vector<ModelData::Model>& models);
+  //
+  // void BindModelNodes(tinygltf::Model& model, tinygltf::Node& node,
+  //                     std::map<int, GLuint>& ebos,
+  //                     std::vector<ModelData::Primitive>& primitives,
+  //                          std::vector<ModelData::Model>& models);
+  //
+  // void BindModel(tinygltf::Model& model,
+  // std::vector<ModelData::Primitive>& primitives,
+  //           std::vector<ModelData::Model>& models);
 
   // ptr (store uniq ptrs)
-  void LoadTextures(std::string_view path, ModelData* model_data);
+  void LoadMaterials(std::string_view path, tinygltf::Model& model,
+    std::vector<Material>& materials);
 
   Texture LoadTexture(std::string_view path, const tinygltf::Model& model,
                       int tex_id);
 
-  Aabb3D GetAabb(const tinygltf::Model& model);
-
-  std::vector<std::unique_ptr<ModelData>> models_;
-  UiRenderData& render_data_;
-  tinygltf::TinyGLTF& loader_;
+  tinygltf::TinyGLTF loader_;
+  std::unique_ptr<Scene> scene_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_

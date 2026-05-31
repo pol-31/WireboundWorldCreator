@@ -9,7 +9,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../common/Details.h"
-#include "../common/OpenGlUtility.h"
 #include "Window.h"  // for frame rate (gDeltaTime)
 
 struct CameraUBO {
@@ -73,7 +72,27 @@ void Camera::Init() {
   Update();
 }
 
+void Camera::UpdateMovement() {
+  auto speed = 0.1f;
+  bool shift = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+    glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+  bool control = glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+    glfwGetKey(gWindow, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+  bool alt = glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+    glfwGetKey(gWindow, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+  if (shift)				speed *= 10.0f;
+  else if (control)		speed /= 25.0f;
+  else if (alt)			speed = 0.0f;
+
+  if (glfwGetKey(gWindow, GLFW_KEY_A) == GLFW_PRESS) position_ -= speed * direction_right_;
+  if (glfwGetKey(gWindow, GLFW_KEY_D) == GLFW_PRESS) position_ += speed * direction_right_;
+  if (glfwGetKey(gWindow, GLFW_KEY_W) == GLFW_PRESS) position_ += speed * direction_front_;
+  if (glfwGetKey(gWindow, GLFW_KEY_S) == GLFW_PRESS) position_ -= speed * direction_front_;
+}
+
 void Camera::Update() {
+  // UpdateMovement();
+
   CameraUBO data{};
 
   // TODO: not "position_", but world_pos, so map_scale'd
@@ -92,24 +111,24 @@ void Camera::Update() {
       fovy_, float(gWindowWidth) / float(gWindowHeight), 0.01f, 1000.0f);
   glNamedBufferSubData(ubo_, 0, sizeof(CameraUBO), &data);
 }
-
-void Camera::UpdateViewMatrix() const {
-  glm::mat4 view_mat =
-      glm::lookAt(position_, position_ + direction_front_, direction_up_);
-  utility::UpdateUbo(ubo_, 0, 64, glm::value_ptr(view_mat));
-}
-
-void Camera::UpdateProjectionMatrix() const {
-  glm::mat4 proj_mat = glm::perspective(
-      glm::radians(45.0f),
-      static_cast<float>(gWindowWidth) / static_cast<float>(gWindowHeight),
-      0.01f, 1000.0f);
-  utility::UpdateUbo(ubo_, 64, 64, glm::value_ptr(proj_mat));
-}
-
-void Camera::UpdateUboPos() const {
-  utility::UpdateUbo(ubo_, 128, 12, glm::value_ptr(origin_));
-}
+//
+// void Camera::UpdateViewMatrix() const {
+//   glm::mat4 view_mat =
+//       glm::lookAt(position_, position_ + direction_front_, direction_up_);
+//   utility::UpdateUbo(ubo_, 0, 64, glm::value_ptr(view_mat));
+// }
+//
+// void Camera::UpdateProjectionMatrix() const {
+//   glm::mat4 proj_mat = glm::perspective(
+//       glm::radians(45.0f),
+//       static_cast<float>(gWindowWidth) / static_cast<float>(gWindowHeight),
+//       0.01f, 1000.0f);
+//   utility::UpdateUbo(ubo_, 64, 64, glm::value_ptr(proj_mat));
+// }
+//
+// void Camera::UpdateUboPos() const {
+//   utility::UpdateUbo(ubo_, 128, 12, glm::value_ptr(origin_));
+// }
 
 void Camera::UpdateCameraVectors(float radius) {
   glm::vec3 front;
@@ -221,3 +240,44 @@ void Camera::ShowCursor() {
   glfwSetCursorPosCallback(gWindow, nullptr);
   glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
+
+Frustum Camera::GetFrustum() {
+  auto pos = GetOrigin();
+  auto fwd = GetDirectionFront();
+  auto up = GetDirectionUp();
+  JPH::Vec3 cam_position(pos.x, pos.y, pos.z);
+  JPH::Vec3 cam_inForward(fwd.x, fwd.y, fwd.z);
+  JPH::Vec3 cam_inUp(up.x, up.y, up.z);
+  float cam_fovx = glm::radians(90.0f);
+  float cam_fovy = glm::radians(75.0f);
+  float cam_inNear = 0.0f;
+  return Frustum(cam_position, cam_inForward, cam_inUp,
+    cam_fovx, cam_fovy, cam_inNear);
+}
+
+void Camera::ProcessMovement(int key, int action) {
+  // if (action == GLFW_PRESS) {
+  //   if (key == GLFW_KEY_W)
+  //     SetMoveForward(true);
+  //   else if (key == GLFW_KEY_S)
+  //     SetMoveBackward(true);
+  //   else if (key == GLFW_KEY_A)
+  //     SetMoveLeft(true);
+  //   else if (key == GLFW_KEY_D)
+  //     SetMoveRight(true);
+  // } else if (action == GLFW_RELEASE) {
+  //   if (key == GLFW_KEY_W)
+  //     SetMoveForward(false);
+  //   else if (key == GLFW_KEY_S)
+  //     SetMoveBackward(false);
+  //   else if (key == GLFW_KEY_A)
+  //     SetMoveLeft(false);
+  //   else if (key == GLFW_KEY_D)
+  //     SetMoveRight(false);
+  // }
+}
+
+// void SetMoveForward(bool pressed) { move_forward_ = pressed; }
+// void SetMoveBackward(bool pressed) { move_backward_ = pressed; }
+// void SetMoveLeft(bool pressed) { move_left_ = pressed; }
+// void SetMoveRight(bool pressed) { move_right_ = pressed; }

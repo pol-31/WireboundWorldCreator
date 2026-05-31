@@ -1,11 +1,13 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_IO_CAMERA_H_
 #define WIREBOUNDWORLDCREATOR_SRC_IO_CAMERA_H_
 
-#include <glad/glad.h>
-
 #include <array>
-#include <glm/glm.hpp>
 #include <memory>
+
+#include <glad/glad.h>
+#include <glm/glm.hpp>
+
+#include "../core/Frustum.h"
 
 /// camera move:
 /// left x-
@@ -24,6 +26,7 @@ class Camera {
   [[nodiscard]] glm::mat4 GetProjMatrix() const noexcept;
 
   void Update();
+  void UpdateMovement();
 
   void UpdateViewMatrix() const;
 
@@ -84,6 +87,10 @@ class Camera {
   void HideCursor();
 
   void ShowCursor();
+
+  void ProcessMovement(int key, int action);
+
+  Frustum GetFrustum();
 
  protected:
   void Init();

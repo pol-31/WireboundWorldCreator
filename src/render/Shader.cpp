@@ -110,6 +110,9 @@ Shader::Shader(std::string_view vert_path, std::string_view tesc_path,
 Shader::Shader(Shader&& other) noexcept {
   id_ = other.id_;
   other.id_ = 0;
+  last_modification_time_ = std::move(other.last_modification_time_);
+  paths_ = std::move(other.paths_);
+  textures_units_ = std::move(other.textures_units_);
 }
 
 Shader& Shader::operator=(Shader&& other) noexcept {
@@ -118,6 +121,9 @@ Shader& Shader::operator=(Shader&& other) noexcept {
   }
   id_ = other.id_;
   other.id_ = 0;
+  last_modification_time_ = std::move(other.last_modification_time_);
+  paths_ = std::move(other.paths_);
+  textures_units_ = std::move(other.textures_units_);
   return *this;
 }
 

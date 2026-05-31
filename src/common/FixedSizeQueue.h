@@ -13,15 +13,15 @@ template <typename T, std::size_t N>
 class FixedSizeQueue {
  public:
   using SizeType = std::size_t;
-  using Iterator = typename std::array<T, N>::iterator;
-  using ConstIterator = typename std::array<T, N>::const_iterator;
+  using Iterator = std::array<T, N>::iterator;
+  using ConstIterator = std::array<T, N>::const_iterator;
 
-  FixedSizeQueue() : cur_size_(0) {}
+  FixedSizeQueue() = default;
+  FixedSizeQueue(const FixedSizeQueue&) = default;
+  FixedSizeQueue(FixedSizeQueue&&) noexcept = default;
+  FixedSizeQueue& operator=(const FixedSizeQueue&) noexcept = default;
+  FixedSizeQueue& operator=(FixedSizeQueue&&) noexcept = default;
 
-  FixedSizeQueue(const FixedSizeQueue<T, N>& other)
-      : cur_size_(other.cur_size_) {
-    std::copy(other.data_.begin(), other.data_.end(), data_.begin());
-  }
 
   SizeType PushBack(const T& value) {
     assert(cur_size_ < N && "Queue overflow");
@@ -45,9 +45,8 @@ class FixedSizeQueue {
       std::move(first, last, first + 1);
       data_[pos] = value;
       return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
   SizeType PopBack() {
@@ -105,7 +104,7 @@ class FixedSizeQueue {
 
  private:
   std::array<T, N> data_;
-  SizeType cur_size_;
+  SizeType cur_size_ = 0;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_FIXEDSIZEQUEUE_H_

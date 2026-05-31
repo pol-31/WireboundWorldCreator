@@ -2,69 +2,18 @@
 
 #include <iostream>
 #include <string>
+#include <cstdarg>
 
-#include "core/WireboundWorldCreator.h"
-#include "io/Window.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/RegisterTypes.h>
 
-// TODO: after window size changing we should recreate all fbos
-//  with new resolution
+#include "core/Game.h"
 
-// TODO: rearrange dir/files - now all important files hided,
-//  while assisting here with main.cpp
-
-// TODO (for now):
-//  - draw ui, implement switching between modes
-//  - idk how to bake.. then how to represent water.........................
-
-// TODO: check all OpenGL objects deletion (destructors::DeInit()) !!!
-
-// TODO; Texture water_caustics_;
-
-// TODO: we can replace colors in Placement_mode to another one UiSlider,
-//  so don't need other 3 colors (only white and black), but
-//  then we want to show currect color, so need special shader / ui_component
-
-// TODO: we can prerender all picking framebuffer (!)
-
-// TODO: remove utility::UnBindImageTexture at NDEBUG
-
-// TODO: check all classes declaration order:
-/* damn...
- * In C++, member variables are initialized in the order they are declared
- * in the class, not in the order they appear in the initializer list.
- * */
-
-/// in Ui*Mode everything's public, otherwise need to make too much callback
-/// friends
-///
 
 // TODO: JoltPhysics-5.5.0/Build/CMakeLists.txt
 // # Set repository root <--------------------------------------commented by me
 // #set(PHYSICS_REPO_ROOT ..)
-
-/**
- * NAMING CONVENTION
-tex texture (GL_TEXTURE_*)
-sp sprite (non-clickable picture)
-tg toggle (on/off)
-sl slider (hor vert, 2, 3, 2d, etc)
-mdl model (3d obj)
-btn button (clickable picture)
-ui_ ui (complex ui component)
- */
-
-// TODO: 	glBindTextureUnit()
-// TODO: 	glBindTextureUnit()
-// TODO: 	glBindTextureUnit()
-// TODO: 	glBindTextureUnit()
-
-#include <Jolt/Core/Factory.h>
-#include <Jolt/Jolt.h>
-#include <Jolt/RegisterTypes.h>
-
-#include <cstdarg>
-
-JPH_SUPPRESS_WARNINGS
 
 static void TraceImpl(const char *inFMT, ...) {
   // Format the message
@@ -93,7 +42,7 @@ static bool AssertFailedImpl(const char *inExpression, const char *inMessage,
 
 #endif  // JPH_ENABLE_ASSERTS
 
-int main(int argc, char *args[]) {
+int main() {
   JPH::RegisterDefaultAllocator();
   JPH::Trace = TraceImpl;
   JPH_IF_ENABLE_ASSERTS(JPH::AssertFailed = AssertFailedImpl;)
@@ -103,8 +52,8 @@ int main(int argc, char *args[]) {
   stbi_set_flip_vertically_on_load(true);
   SetupWindow();
   {
-    WireboundWorldCreator app;
-    app.RunRenderLoop();
+    Game app;
+    app.Run();
   }
   glfwTerminate();
 

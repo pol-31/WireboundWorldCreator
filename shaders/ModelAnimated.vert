@@ -27,19 +27,19 @@ out vec2 v_texcoord;
 
 void main(){
     mat4 skinMat =
-//            mat4(1.0f);
+//                mat4(1.0f);
     in_weight.x * bones.uBones[in_joint.x] +
     in_weight.y * bones.uBones[in_joint.y] +
     in_weight.z * bones.uBones[in_joint.z] +
-   in_weight.w * bones.uBones[in_joint.w];
+    in_weight.w * bones.uBones[in_joint.w];
 
     vec4 skinned_pos = skinMat * vec4(in_vertex, 1.0);
     vec3 skinned_normal = mat3(skinMat) * in_normal;
 
     vec4 world_pos = model_mat * skinned_pos;
-	gl_Position = camera.proj * camera.view * world_pos;
-	v_world_pos = world_pos.xyz;
-	mat3 normal_mat = transpose(inverse(mat3(model_mat)));
-	v_normal = normalize(normal_mat * skinned_normal);
-	v_texcoord = in_texcoord;
+    gl_Position = camera.proj * camera.view * world_pos;
+    v_world_pos = world_pos.xyz;
+    mat3 normal_mat = transpose(inverse(mat3(model_mat)));
+    v_normal = normalize(normal_mat * skinned_normal);
+    v_texcoord = in_texcoord;
 }

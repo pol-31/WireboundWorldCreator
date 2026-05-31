@@ -45,9 +45,10 @@ class Animator {
     glm::vec3 s;
   };
 
-  Animator(tinygltf::TinyGLTF& loader, const GLuint& ubo);
+  Animator() = default;
+  Animator(tinygltf::Model model);
 
-  void Load(std::string_view path);
+  ~Animator();
 
   /// throw data to ubo, buffer, so need to call Render() after.
   /// returns was_looped
@@ -77,13 +78,11 @@ class Animator {
  private:
   void SetZeroUbo();
 
-  tinygltf::TinyGLTF& loader_;
-  tinygltf::Model model_;  // skin + animations
+  tinygltf::Model model_;
   std::vector<glm::mat4> joints_zero_;
-
   float speed_ = 1.0f;
 
-  const GLuint& ubo_;
+  GLuint ubo_;
   Skin skin_;
 };
 
