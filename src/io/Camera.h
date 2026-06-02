@@ -19,14 +19,13 @@ class Camera {
  public:
   Camera();
 
-  ~Camera() { DeInitUbo(); }
+  ~Camera() { DeInit(); }
 
-  [[nodiscard]] glm::mat4 GetViewMatrix(float map_scale) const noexcept;
+  [[nodiscard]] glm::mat4 GetViewMatrix(float map_scale = 1.0f) const noexcept;
 
   [[nodiscard]] glm::mat4 GetProjMatrix() const noexcept;
 
-  void Update();
-  void UpdateMovement();
+  void Update(glm::vec3 head_pos);
 
   void UpdateViewMatrix() const;
 
@@ -34,13 +33,7 @@ class Camera {
 
   void UpdateUboPos() const;
 
-  void UpdateCameraVectors(float radius = 1.0f);
-
-  // UiTerrainMode, other similar
-  void MoveRotateViewOrigin(float xoffset, float yoffset);
-
-  // UiPlayerMode (no pitch)
-  void MoveRotateViewOriginDist(float xoffset);
+  void MoveRotateView(float xoffset, float yoffset);
 
   void MovePanView(float xoffset, float yoffset);
 
@@ -74,6 +67,8 @@ class Camera {
 
   void SetOriginDist(float origin_dist) { origin_dist_ = origin_dist; }
 
+  void ZoomOriginDist(float yoffset);
+
   [[nodiscard]] float GetYaw() const noexcept { return yaw_; }
 
   [[nodiscard]] float GetPitch() const noexcept { return pitch_; }
@@ -92,16 +87,24 @@ class Camera {
 
   Frustum GetFrustum();
 
+  void SwitchFaceMode() {
+    first_face_mode_ = !first_face_mode_;
+  }
+
+  bool IsFirstFaceMode() const noexcept {
+    return first_face_mode_;
+  }
+
  protected:
   void Init();
 
-  void InitUbo();
-
-  void DeInitUbo();
+  void DeInit();
 
   void SnapYaw();
 
   void SnapPitch();
+
+  bool first_face_mode_ = true;
 
   glm::vec3 position_;
 

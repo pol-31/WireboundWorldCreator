@@ -183,7 +183,7 @@ void CharacterBaseTest::Init() {
   auto scene =
       mdl_loader_.LoadScene(
         "C:\\Users\\Pavlo\\Desktop\\assets\\CollisionShapes.gltf",
-        "C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf",
+        "C:\\Users\\Pavlo\\Desktop\\assets\\Human_1.gltf",
         "C:\\Users\\Pavlo\\Desktop\\assets\\room4.gltf");
   renderer_->SetScene(scene);
 
@@ -231,26 +231,41 @@ void CharacterBaseTest::Init() {
       local_shape = offset_settings.Create().Get();
     }
 
-    JPH::BodyCreationSettings body_settings(
+    JPH::BodyCreationSettings static_body_settings(
       local_shape,
       JPH::RVec3::sZero(),
       JPH::Quat::sIdentity(),
       JPH::EMotionType::Static,
       Layers::NON_MOVING
     );
+    JPH::BodyCreationSettings dynamic_body_settings(
+      local_shape,
+      JPH::RVec3::sZero(),
+      JPH::Quat::sIdentity(),
+      JPH::EMotionType::Dynamic,
+      Layers::MOVING
+    );
 
+    /// not for jolt (doesn't support dynamic bodies scaling)
+    /// auto scale = glm::vec3{data.scale.x, data.scale.y, data.scale.z};
     for (const auto& data : obj.instances) {
-      /// not for jolt (doesn't support dynamic bodies scaling)
-      /// auto scale = glm::vec3{data.scale.x, data.scale.y, data.scale.z};
-      body_settings.mPosition = {data.position.x, data.position.y, data.position.z};
-      body_settings.mRotation = {data.rotation.x, data.rotation.y, data.rotation.z, data.rotation.w};
-
-      auto collision_id = mBodyInterface->CreateAndAddBody(body_settings, JPH::EActivation::DontActivate);
-
-      if (obj.type == Scene::Type::PointLight) {
-        point_lights_.push_back({obj, collision_id});
+      if (obj.type == Scene::Type::Dynamic || obj.type == Scene::Type::Door ||
+        obj.type == Scene::Type::Bench) {
+        dynamic_body_settings.mPosition = {data.position.x, data.position.y, data.position.z};
+        dynamic_body_settings.mRotation = {data.rotation.x, data.rotation.y, data.rotation.z, data.rotation.w};
+        dynamic_body_settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+        dynamic_body_settings.mMassPropertiesOverride.mMass = 10.0f;
+        auto collision_id = mBodyInterface->CreateAndAddBody(dynamic_body_settings, JPH::EActivation::Activate);
+          static_objects_.push_back({obj, collision_id});
       } else {
-        static_objects_.push_back({obj, collision_id});
+        static_body_settings.mPosition = {data.position.x, data.position.y, data.position.z};
+        static_body_settings.mRotation = {data.rotation.x, data.rotation.y, data.rotation.z, data.rotation.w};
+        auto collision_id = mBodyInterface->CreateAndAddBody(static_body_settings, JPH::EActivation::DontActivate);
+        if (obj.type == Scene::Type::PointLight) {
+          point_lights_.push_back({obj, collision_id});
+        } else {
+          static_objects_.push_back({obj, collision_id});
+        }
       }
     }
   }
@@ -420,231 +435,137 @@ JPH::Color DefineColor(JPH::EMotionType body_type, JPH::BodyID body_id) {
   return color;
 }
 
-void CharacterBaseTest::DebugDrawPhysics() {
-  const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
-  for (const auto& s : static_objects_) {
-    JPH::BodyLockRead lock(bli, s.body_id_);
-    if (!lock.SucceededAndIsInBroadPhase()) {
-      continue;
-    }
-    const JPH::Body& body = lock.GetBody();
-    JPH::RMat44 matrix = body.GetCenterOfMassTransform();
-    const JPH::Shape* shape = body.GetShape();
+void AddCharacterDebugInstance(const JPH::BodyLockInterface& bli,
+  Renderer* renderer,
+  const CharacterBaseTest::ShapeToGeometryMap& shapeToGeometry,
+  JPH::BodyID body_id, const Scene::Model* model) {
+  JPH::BodyLockRead lock(bli, body_id);
+  if (!lock.SucceededAndIsInBroadPhase()) {
+    return;
+  }
+  const JPH::Body& body = lock.GetBody();
+  JPH::RMat44 matrix = body.GetCenterOfMassTransform();
+  const JPH::Shape* shape = body.GetShape();
+  const auto* rt_shape = static_cast<const JPH::RotatedTranslatedShape*>(shape);
+  const JPH::Shape* core_shape = rt_shape->GetInnerShape();
+  const auto* capsule_shape = static_cast<const JPH::CapsuleShape*>(core_shape);
+  float diameter = capsule_shape->GetRadius();
+  JPH::Vec3 scale = JPH::Vec3(diameter, diameter, diameter);
+  matrix = matrix.PreScaled(scale);
+  JPH::AABox bounds = body.GetWorldSpaceBounds();
+  const Scene::Model* player_model = model;
+  auto start = player_model->primitives_offset;
+  auto end = start + player_model->primitives_num;
+  int mesh_id = shapeToGeometry.at(core_shape->GetSubType());
+  JPH::Color color = DefineColor(body.GetMotionType(), body.GetID());
+  for (int i = start; i < end; ++i) {
+    renderer->AddInstance(Renderer::InstanceInfo{
+    matrix, color, mesh_id, bounds});
+  }
+}
 
+void CharacterBaseTest::DebugDrawPhysics(bool is_first_face_mode) {
+  const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
+  auto get_shape_data = [&](const JPH::Shape* shape, JPH::Vec3& out_scale, int& out_mesh_id) {
     while (shape->GetSubType() == JPH::EShapeSubType::OffsetCenterOfMass ||
            shape->GetSubType() == JPH::EShapeSubType::RotatedTranslated) {
-
       if (shape->GetSubType() == JPH::EShapeSubType::OffsetCenterOfMass) {
         shape = static_cast<const JPH::OffsetCenterOfMassShape*>(shape)->GetInnerShape();
       } else {
         shape = static_cast<const JPH::RotatedTranslatedShape*>(shape)->GetInnerShape();
       }
-           }
-
-    JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
-    if (shape->GetSubType() == JPH::EShapeSubType::Box) {
-      const auto* box_shape = static_cast<const JPH::BoxShape*>(shape);
-      scale = 1.0f * box_shape->GetHalfExtent();
     }
+    out_scale = JPH::Vec3::sReplicate(1.0f);
+    if (shape->GetSubType() == JPH::EShapeSubType::Box) {
+      out_scale = static_cast<const JPH::BoxShape*>(shape)->GetHalfExtent();
+    } else if (shape->GetSubType() == JPH::EShapeSubType::Sphere) {
+      out_scale = JPH::Vec3::sReplicate(static_cast<const JPH::SphereShape*>(shape)->GetRadius());
+    }
+    out_mesh_id = mShapeToGeometry[shape->GetSubType()];
+  };
+  auto process_debug_batch = [&](const JPH::BodyID& body_id, auto dispatch_render_fn) {
+    JPH::BodyLockRead lock(bli, body_id);
+    if (!lock.SucceededAndIsInBroadPhase()) return;
+    const JPH::Body& body = lock.GetBody();
+    JPH::RMat44 matrix = body.GetCenterOfMassTransform();
+    JPH::Vec3 scale;
+    int mesh_id;
+    get_shape_data(body.GetShape(), scale, mesh_id);
     matrix = matrix.PreScaled(scale);
     JPH::AABox bounds = body.GetWorldSpaceBounds();
-    //TODO: distance culling here; return {};
-    auto start = s.model.primitives_offset;
-    auto end = start + s.model.primitives_num;
-
-    int mesh_id = mShapeToGeometry[shape->GetSubType()];
     JPH::Color color = DefineColor(body.GetMotionType(), body.GetID());
-    renderer_->AddInstance(Renderer::InstanceInfo{
-      matrix, color, mesh_id, bounds});
+    Renderer::InstanceInfo info{matrix, color, mesh_id, bounds};
+    dispatch_render_fn(info);
+  };
+
+  for (const auto& s : static_objects_) {
+    process_debug_batch(s.body_id_, [&](const auto& info) { renderer_->AddInstance(info); });
   }
   for (const auto& l : point_lights_) {
-    JPH::BodyLockRead lock(bli, l.body_id_);
-    if (!lock.SucceededAndIsInBroadPhase()) {
-      continue;
-    }
-    const JPH::Body& body = lock.GetBody();
-    JPH::RMat44 matrix = body.GetCenterOfMassTransform();
-    const JPH::Shape* shape = body.GetShape();
-    JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
-    if (shape->GetSubType() == JPH::EShapeSubType::Box) {
-      const auto* box_shape = static_cast<const JPH::BoxShape*>(shape);
-      scale = 1.0f * box_shape->GetHalfExtent();
-    }
-    matrix = matrix.PreScaled(scale);
-    JPH::AABox bounds = body.GetWorldSpaceBounds();
-    //TODO: distance culling here; return {};
-    auto start = l.model.primitives_offset;
-    auto end = start + l.model.primitives_num;
-
-    int mesh_id = mShapeToGeometry[shape->GetSubType()];
-    JPH::Color color = DefineColor(body.GetMotionType(), body.GetID());
-    renderer_->AddInstance(&l, Renderer::InstanceInfo{
-    matrix, color, mesh_id, bounds});
+    process_debug_batch(l.body_id_, [&](const auto& info) { renderer_->AddInstance(&l, info); });
   }
   for (const auto& c : characters_) {
-    JPH::BodyLockRead lock(bli, c.jph_character_->GetInnerBodyID());
-    if (!lock.SucceededAndIsInBroadPhase()) {
-      continue;
-    }
-    const JPH::Body& body = lock.GetBody();
-    JPH::RMat44 matrix = body.GetCenterOfMassTransform();
-    const JPH::Shape* shape = body.GetShape();
-    JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
-    if (shape->GetSubType() == JPH::EShapeSubType::Box) {
-      const auto* box_shape = static_cast<const JPH::BoxShape*>(shape);
-      scale = 1.0f * box_shape->GetHalfExtent();
-    }
-    matrix = matrix.PreScaled(scale);
-    JPH::AABox bounds = body.GetWorldSpaceBounds();
-    //TODO: distance culling here; return {};
-    auto start = c.model.primitives_offset;
-    auto end = start + c.model.primitives_num;
-
-    int mesh_id = mShapeToGeometry[shape->GetSubType()];
-    JPH::Color color = DefineColor(body.GetMotionType(), body.GetID());
-    renderer_->AddCharacter(Renderer::InstanceInfo{
-    matrix, color, mesh_id, bounds});
+    AddCharacterDebugInstance(bli, renderer_, mShapeToGeometry,
+                              c.jph_character_->GetInnerBodyID(), &c.model);
   }
-  /// player character
-
-  JPH::BodyLockRead lock(bli, player_.GetJphCharacter()->GetInnerBodyID());
-  if (!lock.SucceededAndIsInBroadPhase()) {
-    throw std::runtime_error("player !lock.SucceededAndIsInBroadPhase()");
-  }
-  const JPH::Body& body = lock.GetBody();
-  JPH::RMat44 matrix = body.GetCenterOfMassTransform();
-  const JPH::Shape* shape = body.GetShape();
-  JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
-
-  const JPH::Shape* core_shape = shape;
-  if (shape->GetSubType() == JPH::EShapeSubType::RotatedTranslated) {
-    const auto* rt_shape = static_cast<const JPH::RotatedTranslatedShape*>(shape);
-    core_shape = rt_shape->GetInnerShape(); // Dig inside to get the raw Capsule/Box
-  }
-  if (core_shape->GetSubType() == JPH::EShapeSubType::Box) {
-    const auto* box_shape = static_cast<const JPH::BoxShape*>(core_shape);
-    scale = 1.0f * box_shape->GetHalfExtent();
-  }
-  else if (core_shape->GetSubType() == JPH::EShapeSubType::Capsule) {
-    const auto* capsule_shape = static_cast<const JPH::CapsuleShape*>(core_shape);
-    float diameter = 1.0f * capsule_shape->GetRadius();
-    // std::cout << "player is a capsule" << std::endl;
-    scale = JPH::Vec3(diameter, diameter, diameter);
-  }
-
-  matrix = matrix.PreScaled(scale);
-  JPH::AABox bounds = body.GetWorldSpaceBounds();
-  //TODO: distance culling here; return {};
-  const Scene::Model* player_model = player_.GetModel();
-  auto start = player_model->primitives_offset;
-  auto end = start + player_model->primitives_num;
-
-  int mesh_id = mShapeToGeometry[core_shape->GetSubType()];
-  JPH::Color color = DefineColor(body.GetMotionType(), body.GetID());
-  for (int i = start; i < end; ++i) {
-    renderer_->AddInstance(Renderer::InstanceInfo{
-    matrix, color, mesh_id, bounds});
+  if (!is_first_face_mode) {
+    AddCharacterDebugInstance(bli, renderer_, mShapeToGeometry,
+                              player_.GetJphCharacter()->GetInnerBodyID(), player_.GetModel());
   }
 }
 
-void CharacterBaseTest::RenderScene() {
-  const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
-  for (const auto& s : static_objects_) {
-    JPH::BodyLockRead lock(bli, s.body_id_);
-    if (!lock.SucceededAndIsInBroadPhase()) {
-      continue;
-    }
-    const JPH::Body& body = lock.GetBody();
-    JPH::RMat44 matrix = body.GetCenterOfMassTransform();
-    const JPH::Shape* shape = body.GetShape();
-    JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
-    if (shape->GetSubType() == JPH::EShapeSubType::Box) {
-      const auto* box_shape = static_cast<const JPH::BoxShape*>(shape);
-      // scale = 1.0f * box_shape->GetHalfExtent();
-    }
-    matrix = matrix.PreScaled(scale);
-    JPH::AABox bounds = body.GetWorldSpaceBounds();
-    //TODO: distance culling here; return {};
-    auto start = s.model.primitives_offset;
-    auto end = start + s.model.primitives_num;
-
-    for (int i = start; i < end; ++i) {
-      renderer_->AddInstance(Renderer::InstanceInfo{
-      matrix, JPH::Color::sWhite, i, bounds});
-    }
-  }
-  for (const auto& l : point_lights_) {
-    JPH::BodyLockRead lock(bli, l.body_id_);
-    if (!lock.SucceededAndIsInBroadPhase()) {
-      continue;
-    }
-    const JPH::Body& body = lock.GetBody();
-    JPH::RMat44 matrix = body.GetCenterOfMassTransform();
-    const JPH::Shape* shape = body.GetShape();
-    JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
-    if (shape->GetSubType() == JPH::EShapeSubType::Box) {
-      const auto* box_shape = static_cast<const JPH::BoxShape*>(shape);
-      scale = 1.0f * box_shape->GetHalfExtent();
-    }
-    matrix = matrix.PreScaled(scale);
-    JPH::AABox bounds = body.GetWorldSpaceBounds();
-    //TODO: distance culling here; return {};
-    auto start = l.model.primitives_offset;
-    auto end = start + l.model.primitives_num;
-
-    for (int i = start; i < end; ++i) {
-      renderer_->AddInstance(&l, Renderer::InstanceInfo{
-      matrix, JPH::Color::sWhite, i, bounds});
-    }
-  }
-  for (const auto& c : characters_) {
-    JPH::BodyLockRead lock(bli, c.jph_character_->GetInnerBodyID());
-    if (!lock.SucceededAndIsInBroadPhase()) {
-      continue;
-    }
-    const JPH::Body& body = lock.GetBody();
-    JPH::RMat44 matrix = body.GetCenterOfMassTransform();
-    const JPH::Shape* shape = body.GetShape();
-    JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
-    if (shape->GetSubType() == JPH::EShapeSubType::Box) {
-      const auto* box_shape = static_cast<const JPH::BoxShape*>(shape);
-      scale = 1.0f * box_shape->GetHalfExtent();
-    }
-    matrix = matrix.PreScaled(scale);
-    JPH::AABox bounds = body.GetWorldSpaceBounds();
-    //TODO: distance culling here; return {};
-    auto start = c.model.primitives_offset;
-    auto end = start + c.model.primitives_num;
-
-    for (int i = start; i < end; ++i) {
-      renderer_->AddCharacter(Renderer::InstanceInfo{
-      matrix, JPH::Color::sWhite, i, bounds});
-    }
-  }
-  /// player character
-
-  JPH::BodyLockRead lock(bli, player_.GetJphCharacter()->GetInnerBodyID());
+void AddCharacterSceneInstance(const JPH::BodyLockInterface& bli,
+  Renderer* renderer,
+  JPH::BodyID body_id, const Scene::Model* model) {
+  JPH::BodyLockRead lock(bli, body_id);
   if (!lock.SucceededAndIsInBroadPhase()) {
-    throw std::runtime_error("player !lock.SucceededAndIsInBroadPhase()");
+    return;
   }
   const JPH::Body& body = lock.GetBody();
   JPH::RMat44 matrix = body.GetCenterOfMassTransform();
-  const JPH::Shape* shape = body.GetShape();
-  JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
-  if (shape->GetSubType() == JPH::EShapeSubType::Box) {
-    const auto* box_shape = static_cast<const JPH::BoxShape*>(shape);
-    scale = 1.0f * box_shape->GetHalfExtent();
-  }
-  matrix = matrix.PreScaled(scale);
+  float half_height = (model->max.y - model->min.y) / 2.0f;
+  matrix = matrix.PreTranslated(JPH::Vec3(0.0f, -half_height, 0.0f));
   JPH::AABox bounds = body.GetWorldSpaceBounds();
-  //TODO: distance culling here; return {};
-  const Scene::Model* player_model = player_.GetModel();
-  auto start = player_model->primitives_offset;
-  auto end = start + player_model->primitives_num;
-
+  auto start = model->primitives_offset;
+  auto end = start + model->primitives_num;
   for (int i = start; i < end; ++i) {
-    renderer_->AddCharacter(Renderer::InstanceInfo{
+    renderer->AddCharacter(Renderer::InstanceInfo{
     matrix, JPH::Color::sWhite, i, bounds});
+  }
+}
+
+void CharacterBaseTest::RenderScene(bool is_first_face_mode) {
+  const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
+  auto process_render_batch = [&](const JPH::BodyID& body_id,
+                                  const Scene::Model& model,
+                                  auto dispatch_render_fn) {
+    JPH::BodyLockRead lock(bli, body_id);
+    if (!lock.SucceededAndIsInBroadPhase()) return;
+    const JPH::Body& body = lock.GetBody();
+    JPH::RMat44 matrix = body.GetCenterOfMassTransform();
+    JPH::AABox bounds = body.GetWorldSpaceBounds();
+    int start = model.primitives_offset;
+    int end = start + model.primitives_num;
+    for (int i = start; i < end; ++i) {
+      Renderer::InstanceInfo info{matrix, JPH::Color::sWhite, i, bounds};
+      dispatch_render_fn(info);
+    }
+  };
+  for (const auto& s : static_objects_) {
+    process_render_batch(s.body_id_, s.model,
+      [&](const auto& info) { renderer_->AddInstance(info); });
+  }
+  for (const auto& l : point_lights_) {
+    process_render_batch(l.body_id_, l.model,
+      [&](const auto& info) { renderer_->AddInstance(&l, info); });
+  }
+  for (const auto& c : characters_) {
+    AddCharacterSceneInstance(bli, renderer_,
+      c.jph_character_->GetInnerBodyID(), &c.model);
+  }
+  if (!is_first_face_mode) {
+    AddCharacterSceneInstance(bli, renderer_,
+      player_.GetJphCharacter()->GetInnerBodyID(), player_.GetModel());
   }
 }
 

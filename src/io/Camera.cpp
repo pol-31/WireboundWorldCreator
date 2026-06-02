@@ -24,8 +24,6 @@ struct CameraUBO {
   glm::mat4 proj;
 };
 
-// map scale to shaders? or just get from transform mat
-
 Camera::Camera()
     : speed_(1.0f),
       yaw_(-90.0f),
@@ -34,24 +32,20 @@ Camera::Camera()
       direction_front_{0.0f, 0.0f, -1.0f},
       direction_up_{0.0f, 1.0f, 0.0f},
       direction_right_{0.0f},
-      direction_world_up_{direction_up_} {
+      direction_world_up_{0.0f, 1.0f, 0.0f} {
   Init();
 }
 
-/*void Camera::Init() {
-  InitUbo();
-  UpdateCameraVectors();
-  Update();
-}*/
-
-void Camera::InitUbo() {
+void Camera::Init() {
   glCreateBuffers(1, &ubo_);
   glNamedBufferStorage(ubo_, sizeof(CameraUBO), nullptr,
                        GL_DYNAMIC_STORAGE_BIT);
   glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo_);
+  MoveRotateView(0.0f, 0.0f);
+  Update(glm::vec3(0.0f));
 }
 
-void Camera::DeInitUbo() { glDeleteBuffers(1, &ubo_); }
+void Camera::DeInit() { glDeleteBuffers(1, &ubo_); }
 
 glm::mat4 Camera::GetViewMatrix(float map_scale) const noexcept {
   auto scaled_position = map_scale * position_;
@@ -66,92 +60,46 @@ glm::mat4 Camera::GetProjMatrix() const noexcept {
       0.01f, 1000.0f);
 }
 
-void Camera::Init() {
-  InitUbo();
-  UpdateCameraVectors();
-  Update();
+void Camera::ZoomOriginDist(float yoffset) {
+  origin_dist_ = glm::clamp(origin_dist_ - yoffset, 5.0f, 15.0f);
 }
 
-void Camera::UpdateMovement() {
-  auto speed = 0.1f;
-  bool shift = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-    glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-  bool control = glfwGetKey(gWindow, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-    glfwGetKey(gWindow, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-  bool alt = glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-    glfwGetKey(gWindow, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-  if (shift)				speed *= 10.0f;
-  else if (control)		speed /= 25.0f;
-  else if (alt)			speed = 0.0f;
-
-  if (glfwGetKey(gWindow, GLFW_KEY_A) == GLFW_PRESS) position_ -= speed * direction_right_;
-  if (glfwGetKey(gWindow, GLFW_KEY_D) == GLFW_PRESS) position_ += speed * direction_right_;
-  if (glfwGetKey(gWindow, GLFW_KEY_W) == GLFW_PRESS) position_ += speed * direction_front_;
-  if (glfwGetKey(gWindow, GLFW_KEY_S) == GLFW_PRESS) position_ -= speed * direction_front_;
-}
-
-void Camera::Update() {
-  // UpdateMovement();
+void Camera::Update(glm::vec3 head_pos) {
+  if (first_face_mode_) {
+    position_ = head_pos;
+    origin_ = head_pos;
+    direction_front_.x = glm::cos(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
+    direction_front_.y = glm::sin(glm::radians(pitch_));
+    direction_front_.z = glm::sin(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
+    direction_front_ = glm::normalize(direction_front_);
+    direction_right_ = glm::normalize(glm::cross(direction_front_, direction_world_up_));
+    direction_up_    = glm::normalize(glm::cross(direction_right_, direction_front_));
+  } else {
+    origin_ = head_pos;
+    float yawRad = glm::radians(yaw_);
+    float pitchRad = glm::radians(pitch_);
+    // float origin_dist = glm::length(origin_ - position_);
+    position_.x = origin_.x + origin_dist_ * cos(pitchRad) * sin(yawRad);
+    position_.y = origin_.y + origin_dist_ * sin(pitchRad);
+    position_.z = origin_.z + origin_dist_ * cos(pitchRad) * cos(yawRad);
+    direction_front_ = glm::normalize(origin_ - position_);
+    direction_right_ =
+        glm::normalize(glm::cross(direction_front_, direction_world_up_));
+    direction_up_ = glm::cross(direction_right_, direction_front_);
+    direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
+  }
 
   CameraUBO data{};
-
-  // TODO: not "position_", but world_pos, so map_scale'd
-
   data.camPos = position_;
-  data.camForward = glm::normalize(direction_front_);
-  data.camUp = glm::normalize(direction_up_);
-  data.camRight = glm::normalize(direction_right_);
-
+  data.camForward = direction_front_;
+  data.camUp = direction_up_;
+  data.camRight = direction_right_;
   data.cosHalfFov = std::cos(fovy_ * 0.5f);
-
   data.view =
       glm::lookAt(position_, position_ + direction_front_, direction_up_);
-
   data.proj = glm::perspective(
       fovy_, float(gWindowWidth) / float(gWindowHeight), 0.01f, 1000.0f);
   glNamedBufferSubData(ubo_, 0, sizeof(CameraUBO), &data);
-}
-//
-// void Camera::UpdateViewMatrix() const {
-//   glm::mat4 view_mat =
-//       glm::lookAt(position_, position_ + direction_front_, direction_up_);
-//   utility::UpdateUbo(ubo_, 0, 64, glm::value_ptr(view_mat));
-// }
-//
-// void Camera::UpdateProjectionMatrix() const {
-//   glm::mat4 proj_mat = glm::perspective(
-//       glm::radians(45.0f),
-//       static_cast<float>(gWindowWidth) / static_cast<float>(gWindowHeight),
-//       0.01f, 1000.0f);
-//   utility::UpdateUbo(ubo_, 64, 64, glm::value_ptr(proj_mat));
-// }
-//
-// void Camera::UpdateUboPos() const {
-//   utility::UpdateUbo(ubo_, 128, 12, glm::value_ptr(origin_));
-// }
-
-void Camera::UpdateCameraVectors(float radius) {
-  glm::vec3 front;
-  front.x = glm::cos(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
-  front.y = glm::sin(glm::radians(pitch_));
-  front.z = glm::sin(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
-  front *= radius;
-  direction_front_ = glm::normalize(-front);
-  direction_right_ =
-      glm::normalize(glm::cross(direction_front_, direction_world_up_));
-  direction_up_ =
-      glm::normalize(glm::cross(direction_right_, direction_front_));
-  direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
-}
-
-void Camera::MovePanView(float xoffset, float yoffset) {
-  float sensitivity = speed_ * gDeltaTime;
-
-  position_ -= direction_right_ * sensitivity * xoffset;
-  position_ -= direction_up_ * sensitivity * yoffset;
-
-  origin_ -= direction_right_ * sensitivity * xoffset;
-  origin_ -= direction_up_ * sensitivity * yoffset;
 }
 
 void Camera::SnapYaw() {
@@ -172,63 +120,44 @@ void Camera::SnapPitch() {
   }
 }
 
-void Camera::MoveRotateViewOrigin(float xoffset, float yoffset) {
+// map-like
+void Camera::MovePanView(float xoffset, float yoffset) {
+  return;
   float sensitivity = speed_ * gDeltaTime;
-  yaw_ -= xoffset * sensitivity;
-  pitch_ -= yoffset * sensitivity;
-  pitch_ = glm::clamp(pitch_, -89.0f, 89.0f);
 
-  bool snap = (glfwGetKey(gWindow, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS) ||
-              (glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS);
-  if (snap) {
-    SnapYaw();
-    SnapPitch();
-  }
+  position_ -= direction_right_ * sensitivity * xoffset;
+  position_ -= direction_up_ * sensitivity * yoffset;
 
-  float yawRad = glm::radians(yaw_);
-  float pitchRad = glm::radians(pitch_);
-
-  float origin_dist = glm::length(origin_ - position_);
-
-  position_.x = origin_.x + origin_dist * cos(pitchRad) * sin(yawRad);
-  position_.y = origin_.y + origin_dist * sin(pitchRad);
-  position_.z = origin_.z + origin_dist * cos(pitchRad) * cos(yawRad);
-  direction_front_ = glm::normalize(origin_ - position_);
-  direction_right_ =
-      glm::normalize(glm::cross(direction_front_, direction_world_up_));
-  direction_up_ = glm::cross(direction_right_, direction_front_);
-  direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
+  origin_ -= direction_right_ * sensitivity * xoffset;
+  origin_ -= direction_up_ * sensitivity * yoffset;
 }
 
-void Camera::MoveRotateViewOriginDist(float xoffset) {
-  float sensitivity = speed_ * gDeltaTime;
-  yaw_ -= xoffset * sensitivity;
+void Camera::MoveRotateView(float xoffset, float yoffset) {
+  if (first_face_mode_) {
+    float sensitivity = speed_ * gDeltaTime;
+    yaw_ += xoffset * sensitivity;
+    pitch_ += yoffset * sensitivity;
+    pitch_ = glm::clamp(pitch_, -89.0f, 89.0f);
+  } else {
+    float sensitivity = speed_ * gDeltaTime;
+    yaw_ -= xoffset * sensitivity;
+    pitch_ -= yoffset * sensitivity;
+    pitch_ = glm::clamp(pitch_, -89.0f, 89.0f);
 
-  bool snap = (glfwGetKey(gWindow, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS) ||
-              (glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS);
-  if (snap) {
-    SnapYaw();
+    bool snap = (glfwGetKey(gWindow, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS) ||
+                (glfwGetKey(gWindow, GLFW_KEY_LEFT_ALT) == GLFW_PRESS);
+    if (snap) {
+      SnapYaw();
+      SnapPitch();
+    }
   }
-
-  float yawRad = glm::radians(yaw_);
-  float pitchRad = glm::radians(pitch_);
-
-  position_.x = origin_.x + origin_dist_ * cos(pitchRad) * sin(yawRad);
-  position_.y = origin_.y + origin_dist_ * sin(pitchRad);
-  position_.z = origin_.z + origin_dist_ * cos(pitchRad) * cos(yawRad);
-  direction_front_ = glm::normalize(origin_ - position_);
-  direction_right_ =
-      glm::normalize(glm::cross(direction_front_, direction_world_up_));
-  direction_up_ = glm::cross(direction_right_, direction_front_);
-  direction_world_front_ = glm::cross(direction_right_, direction_world_up_);
 }
 
 void Camera::Reset() {
-  SetPosition(glm::vec3{5.0f});
+  SetPosition(glm::vec3{0.0f});
   SetPitch(45.0f);
   SetYaw(0.0f);
   SetOrigin(glm::vec3{0.0f});
-  MoveRotateViewOrigin(0.0f, 0.0f);  // to update camera vectors
 }
 
 void Camera::HideCursor() {
@@ -248,36 +177,9 @@ Frustum Camera::GetFrustum() {
   JPH::Vec3 cam_position(pos.x, pos.y, pos.z);
   JPH::Vec3 cam_inForward(fwd.x, fwd.y, fwd.z);
   JPH::Vec3 cam_inUp(up.x, up.y, up.z);
-  float cam_fovx = glm::radians(90.0f);
+  float cam_fovx = glm::radians(120.0f);
   float cam_fovy = glm::radians(75.0f);
   float cam_inNear = 0.0f;
   return Frustum(cam_position, cam_inForward, cam_inUp,
     cam_fovx, cam_fovy, cam_inNear);
 }
-
-void Camera::ProcessMovement(int key, int action) {
-  // if (action == GLFW_PRESS) {
-  //   if (key == GLFW_KEY_W)
-  //     SetMoveForward(true);
-  //   else if (key == GLFW_KEY_S)
-  //     SetMoveBackward(true);
-  //   else if (key == GLFW_KEY_A)
-  //     SetMoveLeft(true);
-  //   else if (key == GLFW_KEY_D)
-  //     SetMoveRight(true);
-  // } else if (action == GLFW_RELEASE) {
-  //   if (key == GLFW_KEY_W)
-  //     SetMoveForward(false);
-  //   else if (key == GLFW_KEY_S)
-  //     SetMoveBackward(false);
-  //   else if (key == GLFW_KEY_A)
-  //     SetMoveLeft(false);
-  //   else if (key == GLFW_KEY_D)
-  //     SetMoveRight(false);
-  // }
-}
-
-// void SetMoveForward(bool pressed) { move_forward_ = pressed; }
-// void SetMoveBackward(bool pressed) { move_backward_ = pressed; }
-// void SetMoveLeft(bool pressed) { move_left_ = pressed; }
-// void SetMoveRight(bool pressed) { move_right_ = pressed; }

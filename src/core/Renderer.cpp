@@ -18,7 +18,7 @@ void Renderer::AddInstance(DirLight* dir_light, InstanceInfo info) {
 }
 
 void Renderer::AddInstance(const PointLight* point_light, InstanceInfo info) {
-  if (point_lights_.size() > 2) return;
+  // if (point_lights_.size() > 8) return;
   point_lights_.push_back({point_light, info, {}});
 }
 
@@ -66,7 +66,7 @@ void Renderer::UpdateVboBuffer(Frustum frustum_camera) {
   for (int k = 0; k < objects_.size(); ++k) {
     const auto& src_instance = objects_[k];
     /// camera frustum
-    if (true || frustum_camera.Overlaps(src_instance.bounds)) {
+    if (frustum_camera.Overlaps(src_instance.bounds)) {
       instances_gpu_camera[src_instance.mesh_id].instances.push_back(
         InstanceGpu{src_instance.matrix, src_instance.color.ToVec4()});
     }
@@ -81,9 +81,16 @@ void Renderer::UpdateVboBuffer(Frustum frustum_camera) {
 
     /// point light frustums
     for (int l = 0; l < point_lights_.size(); ++l) {
+      if (l != 1 && l != 5 && l != 7 && l != 10) {
+        continue;
+      }
       auto jph_pos = point_lights_[l].info.bounds.GetCenter();
+      if (!frustum_camera.Overlaps(JPH::AABox(jph_pos, point_lights_[l].source->radius_))) {
+        continue;
+      }
       if (src_instance.bounds.Overlaps(
-            JPH::AABox(jph_pos, point_lights_[l].source->radius_))) {
+            JPH::AABox(jph_pos, point_lights_[l].source->radius_)) &&
+            frustum_camera.Overlaps(src_instance.bounds)) {
         instances_gpu_point_light[l][src_instance.mesh_id].instances.push_back(
           InstanceGpu{src_instance.matrix, src_instance.color.ToVec4()});
             }
@@ -246,6 +253,10 @@ void Renderer::DrawGeometryPass() {
   sh_geometry_.Bind();
   for (const auto& o : camera_data_.objects) {
     const auto& p = scene_->meshes[o.rename__id];
+    glActiveTexture(GL_TEXTURE0);
+    scene_->materials[p.material].albedo.BindSampler(0);
+    // glActiveTexture(GL_TEXTURE1);
+    // scene_->materials[p.material].normal.BindSampler(0);
     glDrawElementsInstancedBaseVertexBaseInstance(
           GL_TRIANGLES,
           p.index_count,
@@ -259,6 +270,10 @@ void Renderer::DrawGeometryPass() {
   glBindVertexArray(scene_->vao_rigged);
   sh_geometry5_.Bind();
   const auto& p = scene_->meshes_rigged[character_offset.rename__id];
+  glActiveTexture(GL_TEXTURE0);
+  scene_->materials_rigged[p.material].albedo.BindSampler(0);
+  // glActiveTexture(GL_TEXTURE1);
+  // scene_->materials_rigged[p.material].normal.BindSampler(0);
   glDrawElementsInstancedBaseVertexBaseInstance(
         GL_TRIANGLES,
         p.index_count,
@@ -364,19 +379,22 @@ void Renderer::DrawLightPass() {
   glBindVertexArray(scene_->vao);
   sh_light_emitter_.Bind();
   //TODO: here separate shader for light sources (+bloom);
-  // draw call per source, no instancing here
-  // for (const auto& l : point_lights_) {
-  //   const auto& p = scene_->meshes[l.info.mesh_id];
-  //   glDrawElementsInstancedBaseVertexBaseInstance(
-  //           GL_TRIANGLES,
-  //           p.index_count,
-  //           p.index_type,
-  //           (void*)p.index_byte_offset,
-  //           1, // render call per 1 light source
-  //           p.base_vertex,
-  //           p.light_base_index
-  //       );
-  // }
+  for (const auto& l : point_lights_) {
+    const auto& p = scene_->meshes[l.info.mesh_id];
+    glUniformMatrix4fv(0, 1, GL_FALSE, reinterpret_cast<const float*>(&l.info.matrix));
+    // glUniformMatrix4fv(0, 1, GL_FALSE, &l.info.matrix.Get(0).mF32[0]);
+    JPH::Vec4 colorVec = l.info.color.ToVec4();
+    glUniform4fv(1, 1, &colorVec.mF32[0]);
+    // glUniformMatrix4fv(0, 1, false, l.info.matrix);
+    // glUniform4fv(1, 1, l.info.color.ToVec4());
+    glDrawElementsBaseVertex(
+            GL_TRIANGLES,
+            p.index_count,
+            p.index_type,
+            (void*)p.index_byte_offset,
+            p.base_vertex
+        );
+  }
 
   /// lines
   if (!mLines.empty()) {

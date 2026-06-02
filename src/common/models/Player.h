@@ -107,6 +107,8 @@ class Player {
     model_ = model;
   }
 
+  void FaceTo(glm::vec3 camera_forward);
+
  private:
   Scene::Model* model_ = nullptr;
 

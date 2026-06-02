@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <chrono>
 
+#include <glm/glm.hpp>
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
@@ -51,6 +52,11 @@ class Game {
 
   CharacterBaseTest* mTest = nullptr;
 
+  void SwitchRenderMode() {
+    render_only_physics_ = !render_only_physics_;
+  }
+
+  bool render_only_physics_ = false;
 
  private:
   void Init();
@@ -62,17 +68,11 @@ class Game {
   /// throw an exception in case of uninitialized global_data_ members
   void CheckGlobalData();
 
-  void Render();
-
-  void RenderPicking();
-
   void UpdateDeltaTime();
 
   void DebugDrawPhysics();
 
   void UpdateInstances();
-
-  void RenderScene();
 
   // Global settings
   int mMaxConcurrentJobs = 1;  // thread::hardware_concurrency();

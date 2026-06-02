@@ -94,8 +94,13 @@ void Game::Run() {
     if (gDeltaTime > 0.0f) {
       // if (mKeyboard->IsKeyPressedAndTriggered(EKey::B, mWasShootKeyPressed))
       // ShootObject();
-      mTest->RenderScene();
-      // mTest->DebugDrawPhysics();
+
+      bool first_face_mode = camera_.IsFirstFaceMode();
+      if (render_only_physics_) {
+        mTest->DebugDrawPhysics(first_face_mode);
+      } else {
+        mTest->RenderScene(first_face_mode);
+      }
 
       // update physics
       float delta_time = 1.0f / mUpdateFrequency;
@@ -109,11 +114,12 @@ void Game::Run() {
     // mDebugRenderer->DrawCoordinateSystem(RMat44::sIdentity());
 
     auto player_pos = mTest->GetCharacterPosition(bi);
+    auto head_pos = player_pos;
+    float head_height = (mTest->player_.GetModel()->max.y - mTest->player_.GetModel()->min.y) * 0.9f;
+    head_pos.y += head_height;
     // std::cout << player_pos.x << ' ' << player_pos.y << ' ' << player_pos.z << ' ' << std::endl;
-    camera_.SetOrigin(player_pos);
-    camera_.SetOriginDist(10.0f);
-    camera_.MoveRotateViewOriginDist(0.0f);
-    camera_.Update();
+    camera_.Update(head_pos);
+    //TODO: update player jph rotation
 
     renderer_.DrawShadowPass(camera_.GetFrustum());
     renderer_.DrawGeometryPass();
@@ -138,10 +144,6 @@ void Game::Run() {
     glfwPollEvents();
     glfwSwapBuffers(gWindow);
   }
-}
-
-void Game::RenderScene() {
-  mTest->RenderScene();
 }
 
 void Game::Init() {
@@ -205,6 +207,7 @@ void Game::Init() {
   mPhysicsSystem->OptimizeBroadPhase();
 
   camera_.Reset();
+  camera_.SetOriginDist(10.0f);
 }
 
 void Game::BindCallbacks() {
@@ -226,11 +229,10 @@ void Game::CheckGlobalData() {
   // }
 }
 
-void Game::Render() {}
-
-void Game::RenderPicking() {}
-
-void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {}
+void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+  auto game = reinterpret_cast<Game*>(glfwGetWindowUserPointer(window));
+  game->camera_.ZoomOriginDist(yoffset);
+}
 
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
   auto game = reinterpret_cast<Game*>(glfwGetWindowUserPointer(window));
@@ -246,10 +248,18 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
   auto game = reinterpret_cast<Game*>(glfwGetWindowUserPointer(window));
   bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
   bool mod_shift = (mods & GLFW_MOD_SHIFT);
-  if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE) {
-    glfwSetWindowShouldClose(window, true);
+  if (action == GLFW_PRESS) {
+    if (key == GLFW_KEY_ESCAPE) {
+      glfwSetWindowShouldClose(window, true);
+    } else if (key == GLFW_KEY_F1) {
+      game->camera_.SwitchFaceMode();
+    } else if (key == GLFW_KEY_F2) {
+      game->SwitchRenderMode();
+    }
   }
-  game->camera_.ProcessMovement(key, action);
+
+
+  //game->camera_.ProcessMovement(key, action);
   game->mTest->player_.ProcessMovement(key, action);
 
 }
@@ -264,7 +274,9 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
   lastY = ypos;
 
   auto game = reinterpret_cast<Game*>(glfwGetWindowUserPointer(window));
-  game->camera_.MoveRotateViewOrigin(xoffset, yoffset);
+
+  game->camera_.MoveRotateView(xoffset, yoffset);
+  // game->camera_.MoveRotateViewOrigin(xoffset, yoffset);
 }
 
 // RefConst<Shape> SamplesApp::CreateProbeShape()

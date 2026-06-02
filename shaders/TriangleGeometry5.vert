@@ -50,9 +50,9 @@ void main() {
     uint index = gl_InstanceID + gl_BaseInstance;
     mat4 model = instances[index].modelMatrix;
 //    mat4 model = mat4(1.0f);
-    model[0][0] = 10.0f;
-    model[1][1] = 10.0f;
-    model[2][2] = 10.0f;
+//    model[0][0] = 10.0f;
+//    model[1][1] = 10.0f;
+//    model[2][2] = 10.0f;
     vec4 color = instances[index].modelColor;
     vec4 worldPos = model * skinned_pos;
     gl_Position = camera.proj * camera.view * worldPos;

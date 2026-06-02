@@ -23,8 +23,11 @@ struct Scene {
   };
 
   enum class Type {
-    Default,
-    PointLight
+    Static,
+    Dynamic,
+    Door,
+    PointLight,
+    Bench,
   };
 
   struct Mesh {
@@ -49,7 +52,7 @@ struct Scene {
 
   struct Model {
     CollisionType collision_type;
-    Type type = Type::Default;
+    Type type = Type::Static;
     std::string name; // identifying is it a door or a window
     int primitives_offset = 0;
     int primitives_num = 0;

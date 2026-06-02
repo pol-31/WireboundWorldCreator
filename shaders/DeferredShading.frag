@@ -12,7 +12,7 @@ struct Light {
     vec3 Color;
 };
 
-const float LightLinear = 10.1;
+const float LightLinear = 1.1;
 const float LightQuadratic = 0.2;
 
 const int MAX_LIGHTS = 32;
@@ -32,17 +32,17 @@ layout(std140, binding = 0) uniform Camera {
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
     vec3 Normal = texture(gNormal, TexCoords).rgb;
-    vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb;
+    vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb * vec3(0.6f, 0.7f, 0.8f);
     float Specular = texture(gAlbedoSpec, TexCoords).a;
 
-    vec3 lighting  = Diffuse * 0.1;
+    vec3 lighting  = Diffuse;
     vec3 viewDir  = normalize(camera.pos - FragPos);
     for(int i = 0; i < lights_num; ++i) {
         vec3 lightDir = normalize(lights[i].Position - FragPos);
         vec3 diffuse = max(dot(Normal, lightDir), 0.0) * Diffuse * lights[i].Color;
 
         vec3 halfwayDir = normalize(lightDir + viewDir);
-        float spec = pow(max(dot(Normal, halfwayDir), 0.0), 16.0);
+        float spec = pow(max(dot(Normal, halfwayDir), 0.0), 64.0);
         vec3 specular = lights[i].Color * spec * Specular;
 
         float dist = length(lights[i].Position - FragPos);

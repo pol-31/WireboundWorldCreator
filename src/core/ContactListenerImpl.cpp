@@ -31,8 +31,8 @@ JPH::ValidateResult ContactListenerImpl::OnContactValidate(
   //         inCollisionResult.mPenetrationAxis.NormalizedOr(Vec3::sZero()),
   //     Color::sBlue, 0.05f);
 
-  JPH::Trace("Validate %u and %u result %d", inBody1.GetID().GetIndex(),
-             inBody2.GetID().GetIndex(), (int)result);
+  // JPH::Trace("Validate %u and %u result %d", inBody1.GetID().GetIndex(),
+             // inBody2.GetID().GetIndex(), (int)result);
 
   return result;
 }
@@ -44,9 +44,9 @@ void ContactListenerImpl::OnContactAdded(const JPH::Body &inBody1,
   // Expect bodies to be sorted
   if (!(inBody1.GetID() < inBody2.GetID())) JPH_BREAKPOINT;
 
-  JPH::Trace("Contact added %u (%08x) and %u (%08x)",
-             inBody1.GetID().GetIndex(), inManifold.mSubShapeID1.GetValue(),
-             inBody2.GetID().GetIndex(), inManifold.mSubShapeID2.GetValue());
+  // JPH::Trace("Contact added %u (%08x) and %u (%08x)",
+  //            inBody1.GetID().GetIndex(), inManifold.mSubShapeID1.GetValue(),
+  //            inBody2.GetID().GetIndex(), inManifold.mSubShapeID2.GetValue());
 
   // DebugRenderer::sInstance->DrawWirePolygon(
   //     RMat44::sTranslation(inManifold.mBaseOffset),
@@ -80,9 +80,10 @@ void ContactListenerImpl::OnContactPersisted(
   // Expect bodies to be sorted
   if (!(inBody1.GetID() < inBody2.GetID())) JPH_BREAKPOINT;
 
-  JPH::Trace("Contact persisted %u (%08x) and %u (%08x)",
-             inBody1.GetID().GetIndex(), inManifold.mSubShapeID1.GetValue(),
-             inBody2.GetID().GetIndex(), inManifold.mSubShapeID2.GetValue());
+  //TODO: this is actually good
+  // JPH::Trace("Contact persisted %u (%08x) and %u (%08x)",
+  //            inBody1.GetID().GetIndex(), inManifold.mSubShapeID1.GetValue(),
+  //            inBody2.GetID().GetIndex(), inManifold.mSubShapeID2.GetValue());
 
   // DebugRenderer::sInstance->DrawWirePolygon(
   //     RMat44::sTranslation(inManifold.mBaseOffset),
@@ -118,11 +119,11 @@ void ContactListenerImpl::OnContactRemoved(
   if (!(inSubShapePair.GetBody1ID() < inSubShapePair.GetBody2ID()))
     JPH_BREAKPOINT;
 
-  JPH::Trace("Contact removed %u (%08x) and %u (%08x)",
-             inSubShapePair.GetBody1ID().GetIndex(),
-             inSubShapePair.GetSubShapeID1().GetValue(),
-             inSubShapePair.GetBody2ID().GetIndex(),
-             inSubShapePair.GetSubShapeID2().GetValue());
+  // JPH::Trace("Contact removed %u (%08x) and %u (%08x)",
+  //            inSubShapePair.GetBody1ID().GetIndex(),
+  //            inSubShapePair.GetSubShapeID1().GetValue(),
+  //            inSubShapePair.GetBody2ID().GetIndex(),
+  //            inSubShapePair.GetSubShapeID2().GetValue());
 
   // Update existing manifold in state map
   {

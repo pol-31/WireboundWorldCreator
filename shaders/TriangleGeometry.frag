@@ -19,13 +19,14 @@ layout(std140, binding = 0) uniform Camera {
     mat4 proj;
 } camera;
 
-//layout (location = 0) uniform sampler2D texture_diffuse1;
-//layout (location = 1) uniform sampler2D texture_specular1;
+layout (location = 0) uniform sampler2D texture_diffuse1;
+//layout (location = 1) uniform sampler2D texture_normal;
 
 void main() {
     gPosition = vec4(fs_in.FragPos, 1.0f);
     gNormal = vec4(normalize(fs_in.Normal), 1.0f);
-    gAlbedoSpec.rgb = fs_in.vert_color.rgb;
+    gAlbedoSpec.rgb = texture(texture_diffuse1, fs_in.TexCoords).rgb * fs_in.vert_color.rgb;
+//    gAlbedoSpec.rgb = fs_in.vert_color.rgb;
     gAlbedoSpec.a = 1.0f;
 //    gAlbedoSpec.a = 0.5f;
 }

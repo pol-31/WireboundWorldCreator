@@ -160,11 +160,18 @@ Scene* ModelLoader::LoadScene(std::string_view collisions_path,
 }
 
 Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
-  auto type = Scene::Type::Default;
-  auto extras = mesh.extras.Keys();
-  auto extras_light = std::find(extras.begin(), extras.end(), "light");
-  if (extras_light != extras.end()) {
-    type = Scene::Type::PointLight;
+  auto type = Scene::Type::Static;
+  if (mesh.extras.Has("body")) {
+    std::string collision_value = mesh.extras.Get("body").Get<std::string>();
+    if (collision_value == "dynamic") {
+      type = Scene::Type::Dynamic;
+    } else if (collision_value == "door") {
+      type = Scene::Type::Door;
+    } else if (collision_value == "light") {
+      type = Scene::Type::PointLight;
+    } else if (collision_value == "bench") {
+      type = Scene::Type::Bench;
+    }
   }
   return type;
 }
@@ -291,9 +298,13 @@ tinygltf::Model ModelLoader::LoadBufferMerge(std::string_view path,
           ? GL_UNSIGNED_INT
           : GL_UNSIGNED_SHORT;
 
+      int material_id = primitive.material;
+      if (material_id == -1) {
+        material_id = 0;
+      }
       meshes.push_back({idxAccessor.count, index_byte_offset,
                         data.current_base_vertex, gl_idx_type, min, max,
-                        primitive.material});
+                        material_id});
       data.current_base_vertex += posAccessor.count;
     }
     auto collision_type = GetCollisionType(mesh);
@@ -347,9 +358,11 @@ void ModelLoader::LoadMaterials(std::string_view path, tinygltf::Model& model,
     Material material;
     auto albedo_tex_id = m.pbrMetallicRoughness.baseColorTexture.index;
     if (albedo_tex_id == -1) {
-      albedo_tex_id = 0; //TODO: rather .gltf Blender file wrong
+      continue;
     }
     material.albedo = LoadTexture(path, model, albedo_tex_id);
+    // auto normal_tex_id = m.normalTexture.index;
+    // material.normal = LoadTexture(path, model, normal_tex_id);
     materials.push_back(std::move(material));
   }
   //  auto emission_tex_id =

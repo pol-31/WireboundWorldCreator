@@ -38,9 +38,9 @@ class CharacterBaseTest : public JPH::ContactListener,
     DeInit();
   }
 
-  void DebugDrawPhysics();
+  void DebugDrawPhysics(bool is_first_face_mode);
 
-  void RenderScene();
+  void RenderScene(bool is_first_face_mode);
 
   void PrePhysicsUpdate(float delta_time);
 

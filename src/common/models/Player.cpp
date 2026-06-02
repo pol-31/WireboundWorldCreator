@@ -1,5 +1,7 @@
 #include "Player.h"
 
+#include <iostream>
+
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -39,7 +41,14 @@ void Player::Render(float map_scale) {
   // model_data_->RenderModelNodes();
 }
 
+void Player::FaceTo(glm::vec3 camera_forward) {
+  float target_yaw = std::atan2(camera_forward.x, camera_forward.z);
+  JPH::Quat target_rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisY(), target_yaw);
+  mCharacter->SetRotation(target_rotation);
+}
+
 void Player::Update(JPH::Vec3 camera_forward, JPH::Vec3 gravity) {
+  // std::cout << camera_forward.GetX() << ' ' << camera_forward.GetY() << ' ' << camera_forward.GetZ() << std::endl;
   // Determine controller input
   JPH::Vec3 mControlInput = JPH::Vec3::sZero();
   if (move_left_) mControlInput.SetZ(-1);
@@ -69,7 +78,10 @@ void Player::Update(JPH::Vec3 camera_forward, JPH::Vec3 gravity) {
 
   JPH::Quat character_up_rotation = JPH::Quat::sEulerAngles(JPH::Vec3(0, 0, 0));
   mCharacter->SetUp(character_up_rotation.RotateAxisY());
-  mCharacter->SetRotation(character_up_rotation);
+  // mCharacter->SetRotation(character_up_rotation);
+  // mCharacter->SetUp(JPH::Vec3::sAxisY());
+  JPH::Quat target_rotation = JPH::Quat::sFromTo(JPH::Vec3::sAxisZ(), cam_fwd);
+  mCharacter->SetRotation(target_rotation);
 
   mCharacter->UpdateGroundVelocity();
   JPH::Vec3 current_vertical_velocity = mCharacter->GetLinearVelocity().Dot(mCharacter->GetUp()) * mCharacter->GetUp();
@@ -80,7 +92,7 @@ void Player::Update(JPH::Vec3 camera_forward, JPH::Vec3 gravity) {
       (!mCharacter->IsSlopeTooSteep(mCharacter->GetGroundNormal()))) {
     new_velocity = ground_velocity;
     if (jump_triggered_ && moving_towards_ground) {
-      new_velocity += 2 * jump_speed_  * mCharacter->GetUp();
+      new_velocity += 1 * jump_speed_  * mCharacter->GetUp();
       jump_triggered_ = false;
     }
   } else
