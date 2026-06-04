@@ -10,6 +10,7 @@
 
 const GLuint Renderer::cShadowMapSize = 256;
 const int Renderer::cMaxInstances = 10000;
+const int Renderer::cMaxInstancesRigged = 10;
 const int Renderer::cMaxLines = 100 * 3;
 
 void Renderer::AddInstance(DirLight* dir_light, InstanceInfo info) {
@@ -22,7 +23,7 @@ void Renderer::AddInstance(const PointLight* point_light, InstanceInfo info) {
   point_lights_.push_back({point_light, info, {}});
 }
 
-void Renderer::AddCharacter(InstanceInfo info) {
+void Renderer::AddCharacter(InstanceInfoRigged info) {
   characters_.push_back(info);
 }
 
@@ -42,11 +43,14 @@ sh_shadow_point_("../shaders/TriangleShadowPoint.vert",
                           "../shaders/TriangleShadowPoint.geom",
                           "../shaders/TriangleShadowPoint.frag", {}),
 sh_geometry_("../shaders/TriangleGeometry.vert",
-                      "../shaders/TriangleGeometry.frag", {}),
+                      "../shaders/TriangleGeometry.frag", {0, 1}),
 sh_geometry5_("../shaders/TriangleGeometry5.vert",
-                      "../shaders/TriangleGeometry.frag", {}),
+                      "../shaders/TriangleGeometry.frag", {0, 1}),
 sh_deferred_shading_("../shaders/DeferredShading.vert",
                               "../shaders/DeferredShading.frag", {0, 1, 2}),
+sh_bloom_("../shaders/DeferredShading.vert", "../shaders/Bloom.frag", {0}),
+sh_gauss_("../shaders/DeferredShading.vert", "../shaders/Gauss.frag", {0}),
+sh_composite_("../shaders/DeferredShading.vert", "../shaders/FinalComposite.frag", {0, 1}),
 sh_light_emitter_("../shaders/LightEmitter.vert",
                            "../shaders/LightEmitter.frag", {}) {
   Init();
@@ -132,18 +136,26 @@ void Renderer::UpdateVboBuffer(Frustum frustum_camera) {
       ssbo_data.insert(ssbo_data.end(), mesh_data.begin(), mesh_data.end());
     }
   }
-  character_offset = SsboOffset{
-    static_cast<int>(ssbo_data.size()),
-    static_cast<int>(characters_.size()),
-    0};
-  for (const auto& c : characters_) {
-    ssbo_data.push_back({c.matrix, c.color.ToVec4()});
-  }
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
   if (ssbo_data.size() > 0) {
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
                     ssbo_data.size() * sizeof(InstanceGpu),
                     ssbo_data.data());
+  }
+  std::vector<InstanceGpuRigged> ssbo_data_rigged;
+  character_offset = SsboOffset{
+    static_cast<int>(0),
+    static_cast<int>(characters_.size()),
+    0};
+  for (const auto& c : characters_) {
+    ssbo_data_rigged.push_back({c.matrix, c.color.ToVec4(),
+      (uint32_t)c.bones_offset, 0, 0, 0});
+  }
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_rigged_);
+  if (ssbo_data_rigged.size() > 0) {
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
+                    ssbo_data_rigged.size() * sizeof(InstanceGpuRigged),
+                    ssbo_data_rigged.data());
   }
 }
 
@@ -255,8 +267,8 @@ void Renderer::DrawGeometryPass() {
     const auto& p = scene_->meshes[o.rename__id];
     glActiveTexture(GL_TEXTURE0);
     scene_->materials[p.material].albedo.BindSampler(0);
-    // glActiveTexture(GL_TEXTURE1);
-    // scene_->materials[p.material].normal.BindSampler(0);
+    glActiveTexture(GL_TEXTURE1);
+    scene_->materials[p.material].normal.BindSampler(1);
     glDrawElementsInstancedBaseVertexBaseInstance(
           GL_TRIANGLES,
           p.index_count,
@@ -272,8 +284,8 @@ void Renderer::DrawGeometryPass() {
   const auto& p = scene_->meshes_rigged[character_offset.rename__id];
   glActiveTexture(GL_TEXTURE0);
   scene_->materials_rigged[p.material].albedo.BindSampler(0);
-  // glActiveTexture(GL_TEXTURE1);
-  // scene_->materials_rigged[p.material].normal.BindSampler(0);
+  glActiveTexture(GL_TEXTURE1);
+  scene_->materials_rigged[p.material].normal.BindSampler(1);
   glDrawElementsInstancedBaseVertexBaseInstance(
         GL_TRIANGLES,
         p.index_count,
@@ -288,7 +300,7 @@ void Renderer::DrawGeometryPass() {
 void Renderer::DrawLightPass() {
   sh_deferred_shading_.DebugUpdate();
   sh_light_emitter_.DebugUpdate();
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_hdr_scene_);
   // glDisable(GL_CULL_FACE);
 
   // render fbo quad
@@ -312,17 +324,15 @@ void Renderer::DrawLightPass() {
   }
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-  // blit DEPTH to default fbo
+  // blit DEPTH to bloom fbo
   glBindFramebuffer(GL_READ_FRAMEBUFFER, g_buffer_);
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_hdr_scene_);
   glBlitFramebuffer(0, 0, gWindowWidth, gWindowHeight, 0, 0, gWindowWidth,
                     gWindowHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_hdr_scene_);
 
   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  // TODO: WRONG!!! we don't need to render geometry....?? why not? idk, do?
-  // TODO: here shadows from shadowmaps?
   glEnable(GL_BLEND);
   glBlendFunc(GL_ONE, GL_ONE);
   sh_shadow_dir_apply_.DebugUpdate();
@@ -375,18 +385,14 @@ void Renderer::DrawLightPass() {
   }
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  // PrimitiveType::PointLight
+  /// light sources (point light)
   glBindVertexArray(scene_->vao);
   sh_light_emitter_.Bind();
-  //TODO: here separate shader for light sources (+bloom);
   for (const auto& l : point_lights_) {
     const auto& p = scene_->meshes[l.info.mesh_id];
     glUniformMatrix4fv(0, 1, GL_FALSE, reinterpret_cast<const float*>(&l.info.matrix));
-    // glUniformMatrix4fv(0, 1, GL_FALSE, &l.info.matrix.Get(0).mF32[0]);
     JPH::Vec4 colorVec = l.info.color.ToVec4();
     glUniform4fv(1, 1, &colorVec.mF32[0]);
-    // glUniformMatrix4fv(0, 1, false, l.info.matrix);
-    // glUniform4fv(1, 1, l.info.color.ToVec4());
     glDrawElementsBaseVertex(
             GL_TRIANGLES,
             p.index_count,
@@ -395,6 +401,41 @@ void Renderer::DrawLightPass() {
             p.base_vertex
         );
   }
+
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
+  glClear(GL_COLOR_BUFFER_BIT);
+  sh_bloom_.Bind();
+  glBindVertexArray(vao_ui_);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, tex_hdr_scene_);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+  bool horizontal = true;
+  bool first_iteration = true;
+  int amount = 10;
+  sh_gauss_.Bind();
+  for (unsigned int i = 0; i < amount; i++) {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[horizontal]);
+    glUniform1i(1, horizontal);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D,
+      first_iteration ? bloom_tex_ : buffer_ping_pong_[!horizontal]);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    horizontal = !horizontal;
+    if (first_iteration)
+      first_iteration = false;
+  }
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  sh_composite_.Bind();
+  glBindVertexArray(vao_ui_);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, tex_hdr_scene_);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[!horizontal]);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   /// lines
   if (!mLines.empty()) {
@@ -480,6 +521,67 @@ void Renderer::Init() {
     std::cout << "Framebuffer not complete!" << std::endl;
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+  /// bloom / post-light effects
+  glGenFramebuffers(1, &fbo_bloom_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
+
+  glGenTextures(1, &bloom_tex_);
+  glBindTexture(GL_TEXTURE_2D, bloom_tex_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
+               GL_RGBA, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         bloom_tex_, 0);
+  unsigned int bloom_attachment[1] = {GL_COLOR_ATTACHMENT0};
+  glDrawBuffers(1, bloom_attachment);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    std::cout << "Framebuffer not complete!" << std::endl;
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  /// bloom / post-light effects
+  glGenFramebuffers(1, &fbo_hdr_scene_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_hdr_scene_);
+
+  glGenTextures(1, &tex_hdr_scene_);
+  glBindTexture(GL_TEXTURE_2D, tex_hdr_scene_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
+               GL_RGBA, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         tex_hdr_scene_, 0);
+  unsigned int hdr_attachment[1] = {GL_COLOR_ATTACHMENT0};
+  glDrawBuffers(1, hdr_attachment);
+  unsigned int hdrDepth;
+  glGenRenderbuffers(1, &hdrDepth);
+  glBindRenderbuffer(GL_RENDERBUFFER, hdrDepth);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gWindowWidth,
+                        gWindowHeight);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, hdrDepth);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    std::cout << "Framebuffer not complete!" << std::endl;
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  /// gauss
+  glGenFramebuffers(2, fbo_ping_pong_);
+  glGenTextures(2, buffer_ping_pong_);
+  for (unsigned int i = 0; i < 2; i++) {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[i]);
+    glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[i]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth,
+      gWindowHeight, 0, GL_RGBA, GL_FLOAT, nullptr
+    );
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, buffer_ping_pong_[i], 0
+    );
+  }
+
   /// dir lights: shadowmap (sun)
   glGenTextures(cMaxDirLights, depth_maps_.data());
   float borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -529,6 +631,12 @@ void Renderer::Init() {
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_instanced_);
   glBufferData(GL_SHADER_STORAGE_BUFFER, cMaxInstances * sizeof(InstanceGpu),
+               nullptr, GL_DYNAMIC_DRAW);
+
+  glGenBuffers(1, &ssbo_instanced_rigged_);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_rigged_);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, ssbo_instanced_rigged_);
+  glBufferData(GL_SHADER_STORAGE_BUFFER, cMaxInstancesRigged * sizeof(InstanceGpuRigged),
                nullptr, GL_DYNAMIC_DRAW);
 
   glGenVertexArrays(1, &vao_lines_);

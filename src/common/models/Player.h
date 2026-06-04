@@ -5,62 +5,20 @@
 #include <jolt/Physics/Character/CharacterVirtual.h>
 
 #include "Scene.h"
-#include "Animator.h"
+
+class Animator;
 
 class Player {
  public:
-  enum class State { kIdle, kJumping, kFalling, kAttacking, kStunned };
-
-  enum class PlayerEventType {
-    None,
-    DealDamage,
-    OpenUI,
-    EnterIdle,
-    EnterIdleSitting,
+  enum class State {
+    kIdle, // stand, walk, run
+    kStunned // can't do anything
   };
 
-  Player();
-
-  ~Player();
-
-  void UpdateUbo();
-
-  void Jump(float strength);
-
-  void Kick();
-
-  void Rest();
-
-  void Stunned();
-
-  void Fall();  // internally called by ApplyGravity()
-
-  void ResetState();
-
-  void FireEvent(PlayerEventType e);
-
-  void DealDamage();
-
-  void EnterIdle();
-
-  void EnterIdleSitting();
-
-  struct Event {
-    float time = 0.f;
-    PlayerEventType type = PlayerEventType::None;
-    bool done = true;
-  };
-
-  Event next_event_;
-
-  [[nodiscard]] bool IsOnGround() const noexcept {
-    return state_ != State::kJumping && state_ != State::kFalling;
-  }
-
-  [[nodiscard]] bool IsIdle() const noexcept { return state_ == State::kIdle; }
+  Player() = default;
+  ~Player() = default;
 
   /// movement
-
   void ProcessMovement(int key, int action); // inside the glfwKeyCallback
 
   void SetMoveForward(bool pressed) { move_forward_ = pressed; }
@@ -70,12 +28,7 @@ class Player {
 
   /// other
 
-  // should be called in Render(), it updates skin ssbo
-  void UpdateAnimation();
-
-  void Render(float map_scale);
-
-  // void SetAnimator(Animator* animator) { animator_ = animator; }
+  void Render();
 
   bool switch_stance_triggered_ = false;
 
@@ -103,14 +56,19 @@ class Player {
   [[nodiscard]] const Scene::Model* GetModel() const noexcept {
     return model_;
   }
-  void SetModel(Scene::Model* model) {
+
+  void SetModel(const Scene::Model* model) {
     model_ = model;
   }
 
-  void FaceTo(glm::vec3 camera_forward);
+  void SetAnimator(Animator* animator);
+
+  int GetAnimationId() const noexcept {
+    return animation_id_;
+  }
 
  private:
-  Scene::Model* model_ = nullptr;
+  const Scene::Model* model_ = nullptr;
 
   State state_ = State::kIdle;
 
@@ -119,10 +77,8 @@ class Player {
   bool move_left_ = false;
   bool move_right_ = false;
 
-  float animation_time_ = 0.0f;
-  bool animation_looped_ = true;
-  // Animator* animator_ = nullptr;
-  Animation animation_id_ = Animation::kIdle;  // todo; merge with state_?
+  Animator* animator_;
+  int animation_id_ = 0;
 
   float default_speed_ = 6.0f;
   float speed_ = default_speed_;
@@ -131,8 +87,6 @@ class Player {
   JPH::Ref<JPH::CharacterVirtual> mCharacter;
   bool mAllowSliding = false;
   bool jump_triggered_ = false;
-
-  GLuint ubo_ = 0;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_PLAYER_H

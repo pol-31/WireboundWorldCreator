@@ -2,6 +2,7 @@
 layout(location = 0) in vec3 in_vertex;
 layout(location = 1) in vec3 in_normal;
 layout(location = 2) in vec2 in_texcoord;
+layout(location = 3) in vec4 in_tangent;
 
 struct InstanceData {
     mat4 modelMatrix;
@@ -26,6 +27,7 @@ out VS_OUT {
     vec3 Normal;
     vec2 TexCoords;
     vec4 vert_color;
+    mat3 TBN;
 } vs_out;
 
 void main() {
@@ -42,6 +44,12 @@ void main() {
     vs_out.FragPos = worldPos.xyz;
     vs_out.TexCoords = in_texcoord;
     vs_out.vert_color = color;
+
     mat3 normalMatrix = transpose(inverse(mat3(model)));
-    vs_out.Normal = normalMatrix * in_normal;
+    vec3 T = normalize(normalMatrix * in_tangent.xyz);
+    vec3 N = normalize(normalMatrix * in_normal);
+
+    T = normalize(T - dot(T, N) * N);
+    vec3 B = cross(N, T) * in_tangent.w;
+    vs_out.TBN = mat3(T, B, N);
 }

@@ -32,7 +32,8 @@ layout(std140, binding = 0) uniform Camera {
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
     vec3 Normal = texture(gNormal, TexCoords).rgb;
-    vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb * vec3(0.6f, 0.7f, 0.8f);
+    vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb;
+//    Diffuse *= vec3(0.6f, 0.7f, 0.8f);
     float Specular = texture(gAlbedoSpec, TexCoords).a;
 
     vec3 lighting  = Diffuse;
@@ -52,8 +53,9 @@ void main() {
 //        attenuation = 1.0f / dist;
         diffuse *= attenuation;
         specular *= attenuation;
-        lighting += diffuse + specular;
+//        break;
+        lighting += (diffuse + specular) * 0.5f;
     }
-    FragColor = vec4(lighting, 1.0);
+    FragColor = vec4(lighting * 0.6f, 1.0);
 //    FragColor = vec4(0.5);
 }

@@ -93,26 +93,12 @@ CharacterBaseTest::CharacterBaseTest(
     JPH::JobSystem *inJobSystem,
     JPH::TempAllocator *inTempAllocator,
     Renderer *inDebugRenderer)
-    : shader_mdl_("../shaders/Model.vert", "../shaders/Model.frag", {1}),
-      shader_animated_mdl_("../shaders/ModelAnimated.vert",
-      "../shaders/Model.frag", {1}),
-      // shader_mdl_color_("../shaders/Model.vert", "../shaders/ModelColor.frag",
-      //                   {}),
-      // shader_mdl_instanced_("../shaders/ModelInstanced.vert",
-      //                       "../shaders/Model.frag", {1}),
-      // shader_mdl_picking_("../shaders/ModelPicking.vert",
-      //                     "../shaders/ModelPicking.frag", {}),
-      // shader_animated_mdl_picking_("../shaders/ModelAnimatedPicking.vert",
-      //                              "../shaders/ModelPicking.frag", {}),
-      // shader_animated_mdl_color_("../shaders/ModelAnimated.vert",
-      //                            "../shaders/ModelColor.frag", {})
-      mPhysicsSystem(inPhysicsSystem),
+    : mPhysicsSystem(inPhysicsSystem),
       mBodyInterface(&inPhysicsSystem->GetBodyInterface()),
       mJobSystem(inJobSystem),
       mTempAllocator(inTempAllocator),
       renderer_(inDebugRenderer),
-      player_()
-{
+      player_() {
   Init();
 }
 
@@ -175,19 +161,24 @@ void CharacterBaseTest::CreateCollisionShapes() {
   mShapeToGeometry[JPH::EShapeSubType::Capsule] = 3; // capsule
 }
 
+void CharacterBaseTest::AddShotShere(JPH::BodyID body_id) {
+  shot_objects_.push_back(body_id);
+}
+
 void CharacterBaseTest::Init() {
   // auto mdl_tree =
       // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\MapMarker.gltf", 1);
   // auto mdl_human =
       // mdl_loader_.LoadScene("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf", 2);
-  auto scene =
-      mdl_loader_.LoadScene(
-        "C:\\Users\\Pavlo\\Desktop\\assets\\CollisionShapes.gltf",
-        "C:\\Users\\Pavlo\\Desktop\\assets\\Human_1.gltf",
+  mdl_loader_.LoadScene(
+        "C:\\Users\\Pavlo\\Desktop\\assets\\CollisionShapes1.gltf",
+        "C:\\Users\\Pavlo\\Desktop\\assets\\Human1.gltf",
         "C:\\Users\\Pavlo\\Desktop\\assets\\room4.gltf");
+  const auto scene = mdl_loader_.GetScene();
   renderer_->SetScene(scene);
 
   player_.SetModel(&scene->models_rigged[0]);
+  player_.SetAnimator(&scene->animator);
 
   for (int i = 0; i < 3; ++i) {
     // point_lights_.emplace_back(glm::vec3(1.0f), 1.0f, 1.0f);
@@ -207,6 +198,7 @@ void CharacterBaseTest::Init() {
 
   for (const auto& obj : scene->models) {
     JPH::Ref<JPH::Shape> local_shape;
+    JPH::Ref<JPH::Shape> local_shape_door_hinge;
 
     if (obj.collision_type == Scene::CollisionType::Sphere) {
       float radius = (obj.max[0] - obj.min[0]) * 0.5f;
@@ -214,13 +206,16 @@ void CharacterBaseTest::Init() {
 
       // Safely create via Jolt reference counting
       local_shape = sphere_settings.Create().Get();
+      local_shape_door_hinge = sphere_settings.Create().Get(); //TODO: remove (can't)
     }
     else {
       auto half_extend_glm = (obj.max - obj.min) / 2.0f;
       JPH::Vec3 half_extend(half_extend_glm.x, half_extend_glm.y, half_extend_glm.z);
+      JPH::Vec3 half_extend_hinge(half_extend_glm.x/5.0f, half_extend_glm.y, half_extend_glm.z/5.0f);
       JPH::BoxShapeSettings box_settings(half_extend);
-
       local_shape = box_settings.Create().Get();
+      JPH::BoxShapeSettings door_hinge_settings(half_extend_hinge);
+      local_shape_door_hinge = box_settings.Create().Get();
     }
 
     auto center_glm = (obj.max + obj.min) / 2.0f;
@@ -245,18 +240,43 @@ void CharacterBaseTest::Init() {
       JPH::EMotionType::Dynamic,
       Layers::MOVING
     );
+    JPH::BodyCreationSettings door_hinge_settings(
+    local_shape_door_hinge,
+          JPH::RVec3::sZero(),
+          JPH::Quat::sIdentity(),
+          JPH::EMotionType::Static,
+          Layers::NON_MOVING
+    );
 
     /// not for jolt (doesn't support dynamic bodies scaling)
     /// auto scale = glm::vec3{data.scale.x, data.scale.y, data.scale.z};
     for (const auto& data : obj.instances) {
-      if (obj.type == Scene::Type::Dynamic || obj.type == Scene::Type::Door ||
-        obj.type == Scene::Type::Bench) {
+      if (obj.type == Scene::Type::Dynamic || obj.type == Scene::Type::Bench) {
         dynamic_body_settings.mPosition = {data.position.x, data.position.y, data.position.z};
         dynamic_body_settings.mRotation = {data.rotation.x, data.rotation.y, data.rotation.z, data.rotation.w};
         dynamic_body_settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
         dynamic_body_settings.mMassPropertiesOverride.mMass = 10.0f;
         auto collision_id = mBodyInterface->CreateAndAddBody(dynamic_body_settings, JPH::EActivation::Activate);
           static_objects_.push_back({obj, collision_id});
+      } else if (obj.type == Scene::Type::Door) {
+        dynamic_body_settings.mPosition = {data.position.x, data.position.y, data.position.z};
+        dynamic_body_settings.mRotation = {data.rotation.x, data.rotation.y, data.rotation.z, data.rotation.w};
+        dynamic_body_settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+        dynamic_body_settings.mMassPropertiesOverride.mMass = 10.0f;
+        auto collision_id = mBodyInterface->CreateAndAddBody(dynamic_body_settings, JPH::EActivation::Activate);
+        static_objects_.push_back({obj, collision_id});
+
+        //TODO: hinge body:
+        door_hinge_settings.mPosition = {data.position.x, data.position.y, data.position.z - 1.5f};
+        door_hinge_settings.mRotation = {data.rotation.x, data.rotation.y, data.rotation.z, data.rotation.w};
+        JPH::BodyID b1 = mBodyInterface->CreateAndAddBody(
+          door_hinge_settings, JPH::EActivation::DontActivate);
+
+        // Connect the parts with a hinge
+        JPH::HingeConstraintSettings hinge;
+        hinge.mPoint1 = hinge.mPoint2 = JPH::RVec3(data.position.x, data.position.y, data.position.z - 1.5f);
+        hinge.mHingeAxis1 = hinge.mHingeAxis2 = JPH::Vec3::sAxisY();
+        mPhysicsSystem->AddConstraint(mBodyInterface->CreateConstraint(&hinge, b1, collision_id));
       } else {
         static_body_settings.mPosition = {data.position.x, data.position.y, data.position.z};
         static_body_settings.mRotation = {data.rotation.x, data.rotation.y, data.rotation.z, data.rotation.w};
@@ -269,6 +289,8 @@ void CharacterBaseTest::Init() {
       }
     }
   }
+  int shot_obj_id = mShapeToGeometry.at(JPH::EShapeSubType::Sphere);
+  shot_obj_model_ = &scene->models[shot_obj_id];
 
 
   // Create 'player' character
@@ -297,7 +319,7 @@ void CharacterBaseTest::Init() {
       JPH::Quat::sIdentity(), 0, mPhysicsSystem);
     npc->SetCharacterVsCharacterCollision(&mCharacterVsCharacterCollision);
     mCharacterVsCharacterCollision.Add(npc);
-    characters_.emplace_back(scene->models_rigged[0], npc);
+    characters_.emplace_back(scene->models_rigged[0], npc, scene->animator.AddInstance());
   }
 }
 
@@ -405,8 +427,6 @@ void CharacterBaseTest::PrePhysicsUpdate(float delta_time) {
     std::cout << num_contacts << ' ' << mActiveContacts.size() << std::endl;;
 	// JPH_ASSERT(num_contacts == mActiveContacts.size());
 #endif
-
-  player_.UpdateUbo();
 }
 
 void CharacterBaseTest::PostPhysicsUpdate(JPH::Vec3 camera_forward) {
@@ -464,33 +484,35 @@ void AddCharacterDebugInstance(const JPH::BodyLockInterface& bli,
   }
 }
 
+int GetShapeData(
+  const CharacterBaseTest::ShapeToGeometryMap& shapeToGeometry,
+  const JPH::Shape* shape, JPH::Vec3& out_scale) {
+  while (shape->GetSubType() == JPH::EShapeSubType::OffsetCenterOfMass ||
+           shape->GetSubType() == JPH::EShapeSubType::RotatedTranslated) {
+    if (shape->GetSubType() == JPH::EShapeSubType::OffsetCenterOfMass) {
+      shape = static_cast<const JPH::OffsetCenterOfMassShape*>(shape)->GetInnerShape();
+    } else {
+      shape = static_cast<const JPH::RotatedTranslatedShape*>(shape)->GetInnerShape();
+    }
+           }
+  out_scale = JPH::Vec3::sReplicate(1.0f);
+  if (shape->GetSubType() == JPH::EShapeSubType::Box) {
+    out_scale = static_cast<const JPH::BoxShape*>(shape)->GetHalfExtent();
+  } else if (shape->GetSubType() == JPH::EShapeSubType::Sphere) {
+    out_scale = JPH::Vec3::sReplicate(static_cast<const JPH::SphereShape*>(shape)->GetRadius());
+  }
+  return shapeToGeometry.at(shape->GetSubType());
+}
+
 void CharacterBaseTest::DebugDrawPhysics(bool is_first_face_mode) {
   const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
-  auto get_shape_data = [&](const JPH::Shape* shape, JPH::Vec3& out_scale, int& out_mesh_id) {
-    while (shape->GetSubType() == JPH::EShapeSubType::OffsetCenterOfMass ||
-           shape->GetSubType() == JPH::EShapeSubType::RotatedTranslated) {
-      if (shape->GetSubType() == JPH::EShapeSubType::OffsetCenterOfMass) {
-        shape = static_cast<const JPH::OffsetCenterOfMassShape*>(shape)->GetInnerShape();
-      } else {
-        shape = static_cast<const JPH::RotatedTranslatedShape*>(shape)->GetInnerShape();
-      }
-    }
-    out_scale = JPH::Vec3::sReplicate(1.0f);
-    if (shape->GetSubType() == JPH::EShapeSubType::Box) {
-      out_scale = static_cast<const JPH::BoxShape*>(shape)->GetHalfExtent();
-    } else if (shape->GetSubType() == JPH::EShapeSubType::Sphere) {
-      out_scale = JPH::Vec3::sReplicate(static_cast<const JPH::SphereShape*>(shape)->GetRadius());
-    }
-    out_mesh_id = mShapeToGeometry[shape->GetSubType()];
-  };
   auto process_debug_batch = [&](const JPH::BodyID& body_id, auto dispatch_render_fn) {
     JPH::BodyLockRead lock(bli, body_id);
     if (!lock.SucceededAndIsInBroadPhase()) return;
     const JPH::Body& body = lock.GetBody();
     JPH::RMat44 matrix = body.GetCenterOfMassTransform();
     JPH::Vec3 scale;
-    int mesh_id;
-    get_shape_data(body.GetShape(), scale, mesh_id);
+    int mesh_id = GetShapeData(mShapeToGeometry, body.GetShape(), scale);
     matrix = matrix.PreScaled(scale);
     JPH::AABox bounds = body.GetWorldSpaceBounds();
     JPH::Color color = DefineColor(body.GetMotionType(), body.GetID());
@@ -500,6 +522,9 @@ void CharacterBaseTest::DebugDrawPhysics(bool is_first_face_mode) {
 
   for (const auto& s : static_objects_) {
     process_debug_batch(s.body_id_, [&](const auto& info) { renderer_->AddInstance(info); });
+  }
+  for (const auto& id : shot_objects_) {
+    process_debug_batch(id, [&](const auto& info) { renderer_->AddInstance(info); });
   }
   for (const auto& l : point_lights_) {
     process_debug_batch(l.body_id_, [&](const auto& info) { renderer_->AddInstance(&l, info); });
@@ -516,7 +541,7 @@ void CharacterBaseTest::DebugDrawPhysics(bool is_first_face_mode) {
 
 void AddCharacterSceneInstance(const JPH::BodyLockInterface& bli,
   Renderer* renderer,
-  JPH::BodyID body_id, const Scene::Model* model) {
+  JPH::BodyID body_id, const Scene::Model* model, int bones_offset) {
   JPH::BodyLockRead lock(bli, body_id);
   if (!lock.SucceededAndIsInBroadPhase()) {
     return;
@@ -529,12 +554,14 @@ void AddCharacterSceneInstance(const JPH::BodyLockInterface& bli,
   auto start = model->primitives_offset;
   auto end = start + model->primitives_num;
   for (int i = start; i < end; ++i) {
-    renderer->AddCharacter(Renderer::InstanceInfo{
-    matrix, JPH::Color::sWhite, i, bounds});
+    renderer->AddCharacter(Renderer::InstanceInfoRigged{
+    matrix, JPH::Color::sWhite, i, bounds, bones_offset});
   }
 }
 
 void CharacterBaseTest::RenderScene(bool is_first_face_mode) {
+  mdl_loader_.GetScene()->animator.Update();
+
   const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
   auto process_render_batch = [&](const JPH::BodyID& body_id,
                                   const Scene::Model& model,
@@ -547,12 +574,23 @@ void CharacterBaseTest::RenderScene(bool is_first_face_mode) {
     int start = model.primitives_offset;
     int end = start + model.primitives_num;
     for (int i = start; i < end; ++i) {
-      Renderer::InstanceInfo info{matrix, JPH::Color::sWhite, i, bounds};
+      int mesh_id = i;
+      /// if jph shape, transform wrt its physics
+      if (i < mShapeToGeometry.size()) {
+        JPH::Vec3 scale;
+        mesh_id = GetShapeData(mShapeToGeometry, body.GetShape(), scale);
+        matrix = matrix.PreScaled(scale);
+      }
+      Renderer::InstanceInfo info{matrix, JPH::Color::sWhite, mesh_id, bounds};
       dispatch_render_fn(info);
     }
   };
   for (const auto& s : static_objects_) {
     process_render_batch(s.body_id_, s.model,
+      [&](const auto& info) { renderer_->AddInstance(info); });
+  }
+  for (const auto& id : shot_objects_) {
+    process_render_batch(id, *shot_obj_model_,
       [&](const auto& info) { renderer_->AddInstance(info); });
   }
   for (const auto& l : point_lights_) {
@@ -561,11 +599,14 @@ void CharacterBaseTest::RenderScene(bool is_first_face_mode) {
   }
   for (const auto& c : characters_) {
     AddCharacterSceneInstance(bli, renderer_,
-      c.jph_character_->GetInnerBodyID(), &c.model);
+      c.jph_character_->GetInnerBodyID(), &c.model,
+      mdl_loader_.GetScene()->animator.GetInstance(c.animation_id_).bones_offset);
   }
   if (!is_first_face_mode) {
     AddCharacterSceneInstance(bli, renderer_,
-      player_.GetJphCharacter()->GetInnerBodyID(), player_.GetModel());
+      player_.GetJphCharacter()->GetInnerBodyID(), player_.GetModel(),
+      mdl_loader_.GetScene()->animator.GetInstance(
+        player_.GetAnimationId()).bones_offset);
   }
 }
 

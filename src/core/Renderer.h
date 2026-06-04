@@ -33,6 +33,13 @@ class Renderer {
     int mesh_id;
     JPH::AABox bounds;
   };
+  struct InstanceInfoRigged {
+    JPH::RMat44 matrix;
+    JPH::Color color;
+    int mesh_id;
+    JPH::AABox bounds;
+    int bones_offset;
+  };
 
   Renderer();
 
@@ -42,7 +49,7 @@ class Renderer {
   // and actual scene. Only one scene can be set, it contains vao, vbo, ebo and
   // all primitives data (instances as well, since the whole scene
   // decorated and set up in Blender)
-  void SetScene(Scene* scene) {
+  void SetScene(const Scene* scene) {
     scene_ = scene;
   }
 
@@ -50,7 +57,7 @@ class Renderer {
 
   void AddInstance(const PointLight* point_light, InstanceInfo info);
 
-  void AddCharacter(InstanceInfo info);
+  void AddCharacter(InstanceInfoRigged info);
 
   void AddInstance(InstanceInfo info);
 
@@ -74,6 +81,7 @@ class Renderer {
 
   static const GLuint cShadowMapSize;
   static const int cMaxInstances;
+  static const int cMaxInstancesRigged;
   static const int cMaxLines;
 
  private:
@@ -83,13 +91,23 @@ class Renderer {
   void DrawDirectionalLightShadowPass();
   void DrawPointLightShadowPass();
 
-  Scene* scene_ = nullptr; // all models, meshes, vao data
+  const Scene* scene_ = nullptr; // all models, meshes, vao data
 
   struct InstanceGpu {
     JPH::Mat44 model;
     JPH::Vec4 color;
   };
   GLuint ssbo_instanced_ = 0;
+
+  struct InstanceGpuRigged {
+    JPH::Mat44 model;
+    JPH::Vec4 color;
+    uint32_t  boneOffset;    // Index where this instance's skeleton begins in the SSBO
+    uint32_t  padding1;    // std430 layout (16-byte alignment)
+    uint32_t  padding2;    // std430 layout (16-byte alignment)
+    uint32_t  padding3;    // std430 layout (16-byte alignment)
+  };
+  GLuint ssbo_instanced_rigged_ = 0;
 
   /// all needed for glDrawElementsInstancedBaseVertexBaseInstance
   struct SsboOffset {
@@ -103,7 +121,7 @@ class Renderer {
   //   const Character* object;
   //   InstanceInfo info;
   // };
-  std::vector<InstanceInfo> characters_;
+  std::vector<InstanceInfoRigged> characters_;
   SsboOffset character_offset;
 
   struct SsboOffsetData {
@@ -163,6 +181,21 @@ class Renderer {
   GLuint g_position_ = 0;
   GLuint g_normal_ = 0;
   GLuint g_albedo_spec_ = 0;
+
+  /// bloom / post-light effects
+  GLuint fbo_bloom_ = 0;
+  GLuint bloom_tex_ = 0;
+  Shader sh_bloom_;
+
+  GLuint fbo_hdr_scene_ = 0;
+  GLuint tex_hdr_scene_ = 0;
+
+  GLuint fbo_ping_pong_[2];
+  GLuint buffer_ping_pong_[2];
+  Shader sh_gauss_;
+
+  Shader sh_composite_;
+
 
   /// ui
   GLuint vao_ui_ = 0;

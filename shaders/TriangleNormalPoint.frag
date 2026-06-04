@@ -70,10 +70,10 @@ void main() {
     spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
     vec3 specular = spec * lightColor;
 
-    float shadow = 2.0f * ShadowCalculation(fs_in.FragPos);
+    float shadow = 1.0f * ShadowCalculation(fs_in.FragPos);
     vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;
 
 //    FragColor = vec4(1.0);
     vec3 toning = vec3(1.0f);
-    FragColor = vec4(lighting * toning, 1.0);
+    FragColor = vec4(lighting * toning * 1.0f, 1.0);
 }

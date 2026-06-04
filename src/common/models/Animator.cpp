@@ -6,7 +6,7 @@
 
 #include "../../io/Window.h"
 
-const int Animator::gMaxBones = 100;
+const int Animator::gMaxBones = 1000;
 
 int FindFrame(int count, const float* times, float t) {
   if (t <= times[0]) return 0;
@@ -43,23 +43,19 @@ float WrapTime(float t, const float* times, int count) {
   return start + std::fmod(t - start, duration);
 }
 
+//TODO: handle! we can't do this, need to add move ctor
 Animator::~Animator() {
-  glDeleteBuffers(1, &ubo_);
+  // glDeleteBuffers(1, &ssbo_);
 }
 
 Animator::Animator(tinygltf::Model model) {
-  //TODO: 1 huge ssbo, so wrong here
-  //TODO: 1 huge ssbo, so wrong here
-  //TODO: 1 huge ssbo, so wrong here
-
-  glDeleteBuffers(1, &ubo_);
-
-  glGenBuffers(1, &ubo_);
-  glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
-  glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4) * Animator::gMaxBones,
+  glDeleteBuffers(1, &ssbo_);
+  glGenBuffers(1, &ssbo_);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_);
+  glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * gMaxBones,
                nullptr, GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_UNIFORM_BUFFER, 10, ubo_);
-  glBindBuffer(GL_UNIFORM_BUFFER, 0);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, ssbo_);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
   model_ = std::move(model);
   if (model_.skins.size() != 1 || model_.animations.size() == 0) {
@@ -78,43 +74,70 @@ Animator::Animator(tinygltf::Model model) {
   BuildJointMatrices(skin_, globalPose, meshGlobal, jointMatrices);
 
   joints_zero_ = std::vector(gMaxBones, glm::mat4(1.0f));
-  SetZeroUbo();
+  Clear();
 }
 
-void Animator::SetZeroUbo() {
-  glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
-  glBufferSubData(GL_UNIFORM_BUFFER, 0, joints_zero_.size() * sizeof(glm::mat4),
-                  joints_zero_.data());
-  glBindBuffer(GL_UNIFORM_BUFFER, 0);
+void Animator::Clear() {
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_);
+  // glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, joints_zero_.size() * sizeof(glm::mat4),
+  // joints_zero_.data());
+  glBufferData(GL_SHADER_STORAGE_BUFFER,
+             joints_zero_.size() * sizeof(glm::mat4),
+             joints_zero_.data(),
+             GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
-/// throw data to ubo, buffer, so need to call Render() afterwards
-bool Animator::UpdateUbo(int id, float& time) {
-  if (id == static_cast<int>(Animation::kNone)) {
-    SetZeroUbo();
-    return false;
-  }
-  // buffers
-  std::vector<NodePose> localPose;
-  std::vector<glm::mat4> globalPose;
-  std::vector<glm::mat4> jointMatrices;
+void Animator::Start(int instance_id, Type type) {
+  auto& data = instances_[instance_id];
+  data.time = 0.0f;
+  data.is_looped = true; // TODO: separate
+  data.type = type;
+}
 
-  time += gDeltaTime * speed_;
-  InitLocalPose(model_, localPose);
-  float mod_time = ApplyAnimation(model_, id, time, localPose);
-  bool started_over = time > mod_time;
-  if (started_over) {
-    time = mod_time;
+void Animator::Update() {
+  // Clear();
+  // return;
+  std::vector<glm::mat4> all_jointMatrices;
+  for (auto& instance : instances_) {
+    instance.bones_offset = all_jointMatrices.size();
+    instance.time += gDeltaTime;
+    if (instance.time > 2.0f) {
+      if (instance.is_looped) {
+        instance.time = 0.0f;
+      } else {
+        instance.time = 1.0f;
+      }
+    }
+    std::vector<glm::mat4> jointMatrices;
+    std::vector<NodePose> localPose;
+    std::vector<glm::mat4> globalPose;
+    instance.time += gDeltaTime * speed_;
+    InitLocalPose(model_, localPose);
+    float mod_time = ApplyAnimation(model_,
+      static_cast<int>(instance.type), instance.time, localPose);
+    bool started_over = instance.time > mod_time;
+    if (started_over) {
+      instance.time = mod_time;
+    }
+    ComputeGlobals(model_, localPose, globalPose);
+    glm::mat4 meshGlobal{1.0f};  // TODO: wrong
+    BuildJointMatrices(skin_, globalPose, meshGlobal, jointMatrices);
+    all_jointMatrices.insert(all_jointMatrices.end(), jointMatrices.begin(), jointMatrices.end());
   }
-  ComputeGlobals(model_, localPose, globalPose);
-  glm::mat4 meshGlobal{1.0f};  // TODO: wrong
-  BuildJointMatrices(skin_, globalPose, meshGlobal, jointMatrices);
-  glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
-  glBufferSubData(GL_UNIFORM_BUFFER, 0,
-                  jointMatrices.size() * sizeof(glm::mat4),
-                  jointMatrices.data());
-  glBindBuffer(GL_UNIFORM_BUFFER, 0);
-  return started_over;
+  if (all_jointMatrices.size() > gMaxBones) {
+    std::cerr << "too much bones for ssbo" << std::endl;
+    all_jointMatrices.resize(gMaxBones);
+  }
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_);
+  // glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
+                  // all_jointMatrices.size() * sizeof(glm::mat4),
+                  // all_jointMatrices.data());
+  glBufferData(GL_SHADER_STORAGE_BUFFER,
+             all_jointMatrices.size() * sizeof(glm::mat4),
+             all_jointMatrices.data(),
+             GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
 void Animator::LoadSkin(const tinygltf::Model& model, Skin& skin) {

@@ -30,6 +30,15 @@ class Game {
 
   ~Game() { DeInit(); }
 
+  JPH::RefConst<JPH::Shape> CreateShootObjectShape();
+
+  void ShootObject();
+
+  bool CastProbe(float inProbeLength, float &outFraction,
+    JPH::RVec3 &outPosition, JPH::BodyID &outID);
+
+  bool shoot_object_triggered_ = false;
+
   void Run();
 
   /// input

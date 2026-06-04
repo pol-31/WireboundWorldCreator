@@ -7,28 +7,23 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../../io/Window.h"
+#include "Animator.h"
 
 constexpr bool sPlayerCanPushOtherCharacters = true;
 constexpr bool sOtherCharactersCanPushPlayer = true;
 
-Player::Player() {
-  glCreateBuffers(1, &ubo_);
-  glNamedBufferStorage(ubo_, sizeof(glm::vec3), nullptr,
-                       GL_DYNAMIC_STORAGE_BIT);
-  glBindBufferBase(GL_UNIFORM_BUFFER, 4, ubo_);
+void Player::SetAnimator(Animator* animator) {
+  animator_ = animator;
+  animation_id_ = animator_->AddInstance();
 }
 
-Player::~Player() {
-  //
-}
+void Player::Render() {
+  // bool started_over = animator_->UpdateUbo(animation_id_, animation_time_);
+  // if (started_over && !animation_looped_) {
+  //   ResetState();
+  // }
 
-void Player::UpdateUbo() {
-  // glNamedBufferSubData(ubo_, 0, sizeof(glm::vec3),
-                       // glm::value_ptr(GetPosition()));
-}
 
-void Player::Render(float map_scale) {
-  UpdateAnimation();
   // if reached time point OR animation's over (idle state)
   // if (!next_event_.done &&
       // (animation_time_ >= next_event_.time || state_ == State::kIdle)) {
@@ -39,12 +34,6 @@ void Player::Render(float map_scale) {
   // auto model = GenModelMat(map_scale);
   // glUniformMatrix4fv(0, 1, false, glm::value_ptr(model));
   // model_data_->RenderModelNodes();
-}
-
-void Player::FaceTo(glm::vec3 camera_forward) {
-  float target_yaw = std::atan2(camera_forward.x, camera_forward.z);
-  JPH::Quat target_rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisY(), target_yaw);
-  mCharacter->SetRotation(target_rotation);
 }
 
 void Player::Update(JPH::Vec3 camera_forward, JPH::Vec3 gravity) {
@@ -65,8 +54,6 @@ void Player::Update(JPH::Vec3 camera_forward, JPH::Vec3 gravity) {
   JPH::Quat rotation = JPH::Quat::sFromTo(JPH::Vec3::sAxisX(), cam_fwd);
   mControlInput = rotation * mControlInput;
 
-  // ---
-
   JPH::Vec3 mDesiredVelocity = JPH::Vec3::sZero();
 
   if (mCharacter->IsSupported()) {
@@ -75,11 +62,8 @@ void Player::Update(JPH::Vec3 camera_forward, JPH::Vec3 gravity) {
   } else {
     mAllowSliding = true;
   }
-
   JPH::Quat character_up_rotation = JPH::Quat::sEulerAngles(JPH::Vec3(0, 0, 0));
   mCharacter->SetUp(character_up_rotation.RotateAxisY());
-  // mCharacter->SetRotation(character_up_rotation);
-  // mCharacter->SetUp(JPH::Vec3::sAxisY());
   JPH::Quat target_rotation = JPH::Quat::sFromTo(JPH::Vec3::sAxisZ(), cam_fwd);
   mCharacter->SetRotation(target_rotation);
 
@@ -91,9 +75,13 @@ void Player::Update(JPH::Vec3 camera_forward, JPH::Vec3 gravity) {
   if (mCharacter->GetGroundState() == JPH::CharacterVirtual::EGroundState::OnGround &&
       (!mCharacter->IsSlopeTooSteep(mCharacter->GetGroundNormal()))) {
     new_velocity = ground_velocity;
+    if (state_ != State::kIdle) {
+      state_ = State::kIdle;
+    }
     if (jump_triggered_ && moving_towards_ground) {
       new_velocity += 1 * jump_speed_  * mCharacter->GetUp();
       jump_triggered_ = false;
+      state_ = State::kStunned;
     }
   } else
     new_velocity = current_vertical_velocity;
@@ -110,33 +98,25 @@ void Player::Update(JPH::Vec3 camera_forward, JPH::Vec3 gravity) {
   mCharacter->SetLinearVelocity(new_velocity);
 
 
-  // update for model mat at Render()
-  // auto jph_pos = mCharacter->GetPosition();
-  // position_ = glm::vec3(jph_pos.GetX(), jph_pos.GetY(), jph_pos.GetZ());
-  // glm::quat base_rotation = glm::quat(rotation.GetW(), rotation.GetX(), rotation.GetY(), rotation.GetZ());
-  // glm::quat visual_offset = glm::angleAxis(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-  // rotation_ = base_rotation * visual_offset;
-
-
   // --- animation walking
-  auto velocity_mag = new_velocity.Length();
-  bool is_moving = velocity_mag > 0.001f;
-  Animation new_animationd_id;
-  if (is_moving) {
-    if (velocity_mag < .35f) {
-      new_animationd_id = Animation::kWalk;
+  if (state_ == State::kIdle) {
+    const auto& animation_data = animator_->GetInstance(animation_id_);
+    auto velocity_mag = new_velocity.Length();
+    bool is_moving = velocity_mag > 0.01f;
+    Animator::Type new_type;
+    if (is_moving) {
+      if (velocity_mag < 1.0f) {
+        new_type = Animator::Type::kWalk;
+      } else {
+        new_type = Animator::Type::kRun;
+      }
+      // new_animationd_id = HumanAnimation::kCrouch;
     } else {
-      new_animationd_id = Animation::kRun;
+      new_type = Animator::Type::kIdle;
     }
-    // new_animationd_id = HumanAnimation::kCrouch;
-  } else {
-    new_animationd_id = Animation::kIdle;
-  }
-
-  if (IsIdle() && animation_id_ != new_animationd_id) {
-    animation_id_ = new_animationd_id;
-    animation_time_ = 0.0f;
-    animation_looped_ = true;
+    if (animation_data.type != new_type) {
+      animator_->Start(animation_id_, new_type);
+    }
   }
 }
 
@@ -151,13 +131,14 @@ void Player::ProcessMovement(int key, int action) {
     } else if (key == GLFW_KEY_D) {
       SetMoveRight(true);
     } else if (key == GLFW_KEY_SPACE) {
-      Jump(3.0f);
+      jump_triggered_ = true;
+      animator_->Start(animation_id_, Animator::Type::kJump);
     } else if (key == GLFW_KEY_EQUAL) {
-      Kick();
+      // Kick();
     } else if (key == GLFW_KEY_MINUS) {
-      Stunned();
+      // Stunned();
     } else if (key == GLFW_KEY_T) {
-      Rest();
+      // Rest();
     } else if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT) {
       speed_ = default_speed_ * 2.0f;
     } else if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL) {
@@ -180,113 +161,4 @@ void Player::ProcessMovement(int key, int action) {
       switch_stance_triggered_ = true;
     }
   }
-}
-
-// should be called in Render(), it updates skin ubo
-void Player::UpdateAnimation() {
-  // bool started_over = animator_->UpdateUbo(animation_id_, animation_time_);
-  // if (started_over && !animation_looped_) {
-  //   ResetState();
-  // }
-}
-
-void Player::Jump(float strength) {
-    jump_triggered_ = true;
-  return;
-  if (IsIdle()) {
-    // gravity_velocity_ = strength;
-    state_ = State::kJumping;
-    animation_time_ = 0.0f;
-    animation_id_ = Animation::kJump;
-    animation_looped_ = false;
-  }
-}
-
-/// --- states ---
-
-void Player::Kick() {
-  return;
-  if (IsIdle()) {
-    state_ = State::kAttacking;
-    animation_time_ = 0.0f;
-    animation_id_ = Animation::kKick;
-    animation_looped_ = false;
-    next_event_ = Event(0.7f, PlayerEventType::DealDamage, false);
-  }
-}
-
-void Player::Stunned() {
-  return;
-  if (IsIdle()) {
-    state_ = State::kStunned;
-    animation_time_ = 0.0f;
-    animation_id_ = Animation::kStunned;
-    animation_looped_ = false;
-  }
-}
-
-void Player::Rest() {
-  return;
-  if (IsIdle()) {
-    state_ = State::kStunned;
-    animation_time_ = 0.0f;
-    animation_id_ = Animation::kIdleSitting;
-    animation_looped_ = false;
-  }
-}
-
-void Player::Fall() {
-  return;
-  if (state_ != State::kFalling) {
-    state_ = State::kFalling;
-    animation_time_ = 0.0f;
-    animation_id_ = Animation::kFall;
-    animation_looped_ = true;
-  }
-}
-
-void Player::ResetState() {
-  animation_id_ = Animation::kIdle;
-  animation_time_ = 0.0f;
-  animation_looped_ = true;
-  state_ = State::kIdle;
-}
-
-void Player::FireEvent(PlayerEventType e) {
-  switch (e) {
-    case PlayerEventType::DealDamage:
-      DealDamage();
-      break;
-    case PlayerEventType::EnterIdle:
-      EnterIdle();
-      break;
-    case PlayerEventType::EnterIdleSitting:
-      EnterIdleSitting();
-      break;
-    default:
-      break;
-  }
-}
-
-void Player::DealDamage() {
-  // AttackEvent attack;
-  // attack.attacker = id_;
-  // attack.damage = 1.0f;
-  // attack.hitbox = GenWorldAabb();
-  // attack_queue_->push_back(attack);
-}
-
-void Player::EnterIdle() {
-  return;
-  state_ = State::kIdle;
-  animation_time_ = 0.0f;
-  animation_id_ = Animation::kIdle;
-  animation_looped_ = true;
-}
-
-void Player::EnterIdleSitting() {
-  // state_ = State::kFpv;
-  // animation_time_ = 0.0f;
-  // animation_id_ = Animation::kIdleSitting;
-  // animation_looped_ = true;
 }

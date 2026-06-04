@@ -8,25 +8,32 @@
 #include <glm/gtc/quaternion.hpp>
 #include <vector>
 
-enum class Animation {
-  kIdle,
-  kIdleSitting,
-  kWalk,
-  kRun,
-  kCrouch,
-  kKick,
-  kStunned,
-  kJump,
-  kFall,
-  kSlide,
-  kClimb,
-  kThrow,
-  kSwim,
-  kNone,
-};
-
 class Animator {
  public:
+  enum class Type {
+    kIdle,
+    kIdleSitting,
+    kWalk,
+    kRun,
+    kCrouch,
+    kKick,
+    kStunned,
+    kJump,
+    kFall,
+    kSlide,
+    kClimb,
+    kThrow,
+    kSwim,
+    kNone,
+  };
+
+  struct Instance {
+    float time = 0.0f;
+    bool is_looped = true;
+    Type type = Type::kIdle;
+    int bones_offset = 0;
+  };
+
   static const int gMaxBones;
 
   struct Joint {
@@ -50,14 +57,22 @@ class Animator {
 
   ~Animator();
 
-  /// throw data to ubo, buffer, so need to call Render() after.
-  /// returns was_looped
-  bool UpdateUbo(int id, float& time);
-
-  bool UpdateUbo(Animation animation, float& time) {
-    return UpdateUbo(static_cast<int>(animation), time);
+  /// return instance_id
+  size_t AddInstance() {
+    instances_.push_back({});
+    return instances_.size() - 1;
   }
 
+  const Instance& GetInstance(int id) const noexcept {
+    return instances_[id];
+  }
+
+  void Start(int instance_id, Type type);
+
+  /// updates all animations
+  void Update();
+
+ private:
   void LoadSkin(const tinygltf::Model& model, Skin& skin);
 
   void InitLocalPose(const tinygltf::Model& model,
@@ -75,14 +90,15 @@ class Animator {
                           const glm::mat4& meshGlobal,
                           std::vector<glm::mat4>& out);
 
- private:
-  void SetZeroUbo();
+  void Clear();
+
+  std::vector<Instance> instances_;
 
   tinygltf::Model model_;
   std::vector<glm::mat4> joints_zero_;
   float speed_ = 1.0f;
 
-  GLuint ubo_;
+  GLuint ssbo_ = 0;
   Skin skin_;
 };
 

@@ -22,7 +22,7 @@ class ModelLoader {
 
   ~ModelLoader();
 
-  Scene* LoadScene(
+  void LoadScene(
     std::string_view collisions_path,
     std::string_view characters_path,
     std::string_view scene_path);
@@ -31,12 +31,17 @@ class ModelLoader {
     std::vector<std::uint8_t> all_positions;
     std::vector<std::uint8_t> all_normals;
     std::vector<std::uint8_t> all_uvs;
+    std::vector<std::uint8_t> all_tangents;
     std::vector<std::uint8_t> all_weights;
     std::vector<std::uint8_t> all_joints;
     std::vector<std::uint8_t> all_indices;
     int current_base_vertex = 0;
     GLenum joints_type = GL_UNSIGNED_BYTE;
   };
+
+  Scene* GetScene() noexcept {
+    return scene_.get();
+  }
 
  private:
   // idx_offset inside meshes vector, so collisions has 0, scene has 4

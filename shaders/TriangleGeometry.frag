@@ -8,6 +8,7 @@ in VS_OUT {
     vec3 Normal;
     vec2 TexCoords;
     vec4 vert_color;
+    mat3 TBN;
 } fs_in;
 
 layout(std140, binding = 0) uniform Camera {
@@ -20,11 +21,16 @@ layout(std140, binding = 0) uniform Camera {
 } camera;
 
 layout (location = 0) uniform sampler2D texture_diffuse1;
-//layout (location = 1) uniform sampler2D texture_normal;
+layout (location = 1) uniform sampler2D texture_normal;
 
 void main() {
+    vec3 normalMapSample = texture(texture_normal, fs_in.TexCoords).rgb;
+    vec3 tangentNormal = normalMapSample * 2.0 - 1.0;
+    mat3 TBN = mat3(normalize(fs_in.TBN[0]), normalize(fs_in.TBN[1]), normalize(fs_in.TBN[2]));
+    gNormal = vec4(normalize(TBN * tangentNormal), 1.0f);
+
     gPosition = vec4(fs_in.FragPos, 1.0f);
-    gNormal = vec4(normalize(fs_in.Normal), 1.0f);
+
     gAlbedoSpec.rgb = texture(texture_diffuse1, fs_in.TexCoords).rgb * fs_in.vert_color.rgb;
 //    gAlbedoSpec.rgb = fs_in.vert_color.rgb;
     gAlbedoSpec.a = 1.0f;

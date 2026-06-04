@@ -55,6 +55,10 @@ class CharacterBaseTest : public JPH::ContactListener,
   Renderer *renderer_ = nullptr;
   JPH::TempAllocator *mTempAllocator = nullptr;
 
+  void AddShotShere(JPH::BodyID body_id);
+  std::vector<JPH::BodyID> shot_objects_;
+  const Scene::Model* shot_obj_model_ = nullptr;
+
  public:
 
   void CreateCharacterShapes();
@@ -91,14 +95,6 @@ class CharacterBaseTest : public JPH::ContactListener,
   JPH::RefConst<JPH::Shape> mCrouchingShape;
   JPH::RefConst<JPH::Shape> mInnerCrouchingShape;
   JPH::RefConst<JPH::Shape> mInnerStandingShape;
-
-  Shader shader_mdl_;
-  Shader shader_animated_mdl_;
-  // Shader shader_mdl_color_;
-  // Shader shader_mdl_instanced_;
-  // Shader shader_mdl_picking_;
-  // Shader shader_animated_mdl_picking_;
-  // Shader shader_animated_mdl_color_;
 
 public:
   /// ContactListener callbacks
