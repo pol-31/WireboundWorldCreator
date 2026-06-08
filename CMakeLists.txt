@@ -22,10 +22,12 @@ add_executable(WireboundWorldCreator
         src/io/Camera.cpp
         src/io/Window.cpp
         src/core/Game.cpp
+        src/core/ReadData.cpp
         src/common/Callbacks.cpp
         src/core/CharacterBaseTest.cpp
         src/core/Renderer.cpp
         src/core/ContactListenerImpl.cpp
+        src/core/Font.cpp
         src/common/models/Animator.cpp
         src/common/models/ModelLoader.cpp
         src/common/models/Scene.cpp

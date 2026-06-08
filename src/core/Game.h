@@ -165,6 +165,13 @@ class Game {
   // Timing
   JPH::uint mStepNumber = 0;  // Which step number we're accumulating
   std::chrono::microseconds mTotalTime{0};
+
+
+  float frameCount_ = 0;
+  float elapsedTime_ = 0;
+  float fps_ = 0;
+
+  void UpdateFPS(float deltaTime);
 };
 
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);

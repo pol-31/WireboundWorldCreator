@@ -357,7 +357,6 @@ void Game::Run() {
     // std::cout << player_pos.x << ' ' << player_pos.y << ' ' << player_pos.z
     // << ' ' << std::endl;
     camera_.Update(head_pos);
-    // TODO: update player jph rotation
 
     renderer_.DrawShadowPass(camera_.GetFrustum());
     renderer_.DrawGeometryPass();
@@ -366,6 +365,17 @@ void Game::Run() {
     // mTest->player_.Render(1.0f);
     // mTest->shader_mdl_.Bind();
     // RenderScene();
+
+    UpdateFPS(gDeltaTime);
+    std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps_));
+    renderer_.AddText(fpsText, glm::vec2(10.0f, 20.0f),
+      glm::vec2(1.0f), glm::vec4(1.0f));
+    float target_size = 32.0f;
+    float half_target_size = target_size / 2.0f;
+    renderer_.AddSprite("GoldenCircle",
+      glm::vec2(800.0f, 450.0f) - half_target_size,
+      glm::vec2(target_size),
+      glm::vec4(1.0f));
 
     renderer_.DrawLightPass();
 
@@ -381,6 +391,18 @@ void Game::Run() {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glfwPollEvents();
     glfwSwapBuffers(gWindow);
+  }
+}
+
+void Game::UpdateFPS(float delta_time) {
+  frameCount_++;
+  elapsedTime_ += delta_time;
+
+  if (elapsedTime_ >= 1.0f) {
+    fps_ = frameCount_ / elapsedTime_;
+    frameCount_ = 0;
+    elapsedTime_ = 0;
+    // std::cout << "FPS: " << fps << std::endl;
   }
 }
 

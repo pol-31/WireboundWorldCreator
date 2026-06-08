@@ -13,7 +13,6 @@ void main() {
 //    vec3 smtAverage = vec3(0.64, 0.46, 0.05);
 //    vec3 brown = vec3(0.2118, 0.1647, 0.0745);
 //    vec3 darkBrownGold = vec3(0.55, 0.40, 0.05);
-    float bitmap_value = texture(tex, texcoord).r;
-    FragColor = vec4(bitmap_value) * color;
-//    FragColor = vec4(1.0f);
+    vec4 texel = texture(tex, texcoord);
+    FragColor = texel * color;
 }

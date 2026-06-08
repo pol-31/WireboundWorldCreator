@@ -37,6 +37,7 @@ static Format sFormats[]{
     Format(0, 0, GL_RED, GL_R8, GL_UNSIGNED_BYTE),
     Format(0, 0, GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE),
     Format(0, 0, GL_RGBA, GL_RGBA16F, GL_FLOAT),
+    Format(0, 0, GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE),
 };
 
 void Texture::CreateOpenGlTexture(Type type, GLint filter, GLint wrap) {

@@ -16,6 +16,7 @@
 #include "../render/Shader.h"
 #include "../render/Texture.h"
 #include "Frustum.h"
+#include "Font.h"
 #include "vec3.hpp"
 
 class Scene;
@@ -45,10 +46,6 @@ class Renderer {
 
   ~Renderer() { DeInit(); }
 
-  // ModelLoader loads 3 files: collision shapes, characters (same rigging),
-  // and actual scene. Only one scene can be set, it contains vao, vbo, ebo and
-  // all primitives data (instances as well, since the whole scene
-  // decorated and set up in Blender)
   void SetScene(const Scene* scene) {
     scene_ = scene;
   }
@@ -73,6 +70,9 @@ class Renderer {
 
   /// Clear all primitives (to be called after drawing)
   void Clear();
+
+  void AddText(std::string_view text, glm::vec2 position, glm::vec2 scale, glm::vec4 color);
+  void AddSprite(const std::string& name, glm::vec2 position, glm::vec2 scale, glm::vec4 color);
 
   /// Unused func for composite draw (picked apart by lines/triangles)
   // void DrawLine(RVec3Arg inFrom, RVec3Arg inTo, ColorArg inColor);
@@ -116,11 +116,6 @@ class Renderer {
     int rename__id = 0;
   };
 
-  //TODO: separate render (+weights, +joints)
-  // struct CharacterData {
-  //   const Character* object;
-  //   InstanceInfo info;
-  // };
   std::vector<InstanceInfoRigged> characters_;
   SsboOffset character_offset;
 
@@ -132,12 +127,6 @@ class Renderer {
   using SsboMeshMap = std::map<int, SsboOffset>;
   using SsboDataMeshMap = std::map<int, SsboOffsetData>;
 
-  // struct StaticObjectData {
-  //   const StaticObject* object;
-  //   InstanceInfo info;
-  //   // SsboMeshMap objects; // TODO: duplicated mesh_id in ::info and ::instances
-  // };
-  // collected every frame, based on primitive id (before frustum culling)
   std::vector<InstanceInfo> objects_;
 
   /// std::vector<SsboOffset>, not map, because we need just render call,
@@ -214,4 +203,6 @@ class Renderer {
 
   Shader sh_lines_;
   JPH::Array<Line> mLines;
+
+  Font text_renderer_;
 };

@@ -27,6 +27,7 @@ class Texture {
     WindowR8,
     WindowRGBA8,
     WindowRGBA16F,
+    UiAtlas,
   };
 
   Texture() = default;

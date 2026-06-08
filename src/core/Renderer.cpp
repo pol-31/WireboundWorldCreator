@@ -1,6 +1,7 @@
 #include "Renderer.h"
 
 #include <iostream>
+#include <fstream>
 
 #include "../io/Window.h"
 #include "glm/glm.hpp"
@@ -437,6 +438,10 @@ void Renderer::DrawLightPass() {
   glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[!horizontal]);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+  glDisable(GL_DEPTH_TEST);
+  text_renderer_.Render();
+  glEnable(GL_DEPTH_TEST);
+
   /// lines
   if (!mLines.empty()) {
     sh_lines_.Bind();
@@ -445,6 +450,16 @@ void Renderer::DrawLightPass() {
     glBindVertexArray(vao_lines_);
     glDrawArrays(GL_LINES, 0, mLines.size());
   }
+}
+
+void Renderer::AddText(std::string_view text,
+  glm::vec2 position, glm::vec2 scale, glm::vec4 color) {
+  text_renderer_.AddText(text, position, scale, color);
+}
+
+void Renderer::AddSprite(const std::string& name,
+  glm::vec2 position, glm::vec2 scale, glm::vec4 color) {
+  text_renderer_.AddSprite(name, position, scale, color);
 }
 
 void Renderer::Clear() {

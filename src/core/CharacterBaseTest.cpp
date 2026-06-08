@@ -102,7 +102,6 @@ CharacterBaseTest::CharacterBaseTest(
   Init();
 }
 
-
 void CharacterBaseTest::DeInit() {
   // mCharacter->RemoveFromPhysicsSystem();
 }
