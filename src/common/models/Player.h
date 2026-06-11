@@ -18,6 +18,8 @@ class Player {
   Player() = default;
   ~Player() = default;
 
+  void Shoot();
+
   /// movement
   void ProcessMovement(int key, int action); // inside the glfwKeyCallback
 
@@ -56,9 +58,13 @@ class Player {
   [[nodiscard]] const Scene::Model* GetModel() const noexcept {
     return model_;
   }
+  [[nodiscard]] const Scene::Model* GetModelWeapon() const noexcept {
+    return model_weapon_;
+  }
 
-  void SetModel(const Scene::Model* model) {
-    model_ = model;
+  void SetModel(const Scene::Model* model_character, const Scene::Model* model_weapon) {
+    model_ = model_character;
+    model_weapon_ = model_weapon;
   }
 
   void SetAnimator(Animator* animator);
@@ -66,9 +72,13 @@ class Player {
   int GetAnimationId() const noexcept {
     return animation_id_;
   }
+  int GetAnimationIdWeapon() const noexcept {
+    return animation_id_weapon_;
+  }
 
  private:
   const Scene::Model* model_ = nullptr;
+  const Scene::Model* model_weapon_ = nullptr;
 
   State state_ = State::kIdle;
 
@@ -79,6 +89,7 @@ class Player {
 
   Animator* animator_;
   int animation_id_ = 0;
+  int animation_id_weapon_ = 0;
 
   float default_speed_ = 6.0f;
   float speed_ = default_speed_;

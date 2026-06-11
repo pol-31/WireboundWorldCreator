@@ -165,30 +165,16 @@ void CharacterBaseTest::AddShotShere(JPH::BodyID body_id) {
 }
 
 void CharacterBaseTest::Init() {
-  // auto mdl_tree =
-      // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\MapMarker.gltf", 1);
-  // auto mdl_human =
-      // mdl_loader_.LoadScene("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf", 2);
   mdl_loader_.LoadScene(
         "C:\\Users\\Pavlo\\Desktop\\assets\\CollisionShapes1.gltf",
         "C:\\Users\\Pavlo\\Desktop\\assets\\Human1.gltf",
-        "C:\\Users\\Pavlo\\Desktop\\assets\\room4.gltf");
+        "C:\\Users\\Pavlo\\Desktop\\assets\\Nagant.gltf",
+        "C:\\Users\\Pavlo\\Desktop\\assets\\room5.gltf");
   const auto scene = mdl_loader_.GetScene();
   renderer_->SetScene(scene);
 
-  player_.SetModel(&scene->models_rigged[0]);
+  player_.SetModel(&scene->models_rigged[0], &scene->models_rigged[1]);
   player_.SetAnimator(&scene->animator);
-
-  for (int i = 0; i < 3; ++i) {
-    // point_lights_.emplace_back(glm::vec3(1.0f), 1.0f, 1.0f);
-    // point_lights_.back().SetModelData(mdl_room);
-  }
-
-  // auto mdl_fpv =
-      // mdl_loader_.Load("C:\\Users\\Pavlo\\Desktop\\assets\\Fpv.gltf", 3);
-
-  // player_.SetModelData(scene);
-  // player_.SetAnimator(&animator_);
 
   // directional_light_dir_.push_back(glm::vec3(3.0f, 7.0f, 12.0f)); // TODO: SUN
 
@@ -250,6 +236,11 @@ void CharacterBaseTest::Init() {
     /// not for jolt (doesn't support dynamic bodies scaling)
     /// auto scale = glm::vec3{data.scale.x, data.scale.y, data.scale.z};
     for (const auto& data : obj.instances) {
+      if (obj.type == Scene::Type::Zone) {
+        zones_.push_back({obj.min * data.scale + data.position,
+          obj.max * data.scale + data.position});
+        continue;
+      }
       if (obj.type == Scene::Type::Dynamic || obj.type == Scene::Type::Bench) {
         dynamic_body_settings.mPosition = {data.position.x, data.position.y, data.position.z};
         dynamic_body_settings.mRotation = {data.rotation.x, data.rotation.y, data.rotation.z, data.rotation.w};
@@ -318,7 +309,7 @@ void CharacterBaseTest::Init() {
       JPH::Quat::sIdentity(), 0, mPhysicsSystem);
     npc->SetCharacterVsCharacterCollision(&mCharacterVsCharacterCollision);
     mCharacterVsCharacterCollision.Add(npc);
-    characters_.emplace_back(scene->models_rigged[0], npc, scene->animator.AddInstance());
+    characters_.emplace_back(scene->models_rigged[0], npc, scene->animator.AddInstanceCharacter());
   }
 }
 
@@ -558,6 +549,26 @@ void AddCharacterSceneInstance(const JPH::BodyLockInterface& bli,
   }
 }
 
+void AddWeapon(const JPH::BodyLockInterface& bli,
+  Renderer* renderer,
+  JPH::BodyID body_id, const Scene::Model* model, int bones_offset,
+  JPH::Vec3 view_offset, JPH::Quat view_rotation) {
+  JPH::BodyLockRead lock(bli, body_id);
+  if (!lock.SucceededAndIsInBroadPhase()) {
+    return;
+  }
+  const JPH::Body& body = lock.GetBody();
+  JPH::RMat44 matrix = JPH::Mat44::sRotationTranslation(view_rotation.Normalized(), view_offset);
+  JPH::Vec3 scale(0.1f, 0.1f, 0.1f);
+  matrix = matrix.PreScaled(scale);
+  auto start = model->primitives_offset;
+  auto end = start + model->primitives_num;
+  for (int i = start; i < end; ++i) {
+    renderer->AddWeapon(Renderer::InstanceInfoRigged{
+    matrix, JPH::Color::sWhite, i, JPH::AABox{}, bones_offset});
+  }
+}
+
 void CharacterBaseTest::RenderScene(bool is_first_face_mode) {
   mdl_loader_.GetScene()->animator.Update();
 
@@ -599,12 +610,19 @@ void CharacterBaseTest::RenderScene(bool is_first_face_mode) {
   for (const auto& c : characters_) {
     AddCharacterSceneInstance(bli, renderer_,
       c.jph_character_->GetInnerBodyID(), &c.model,
-      mdl_loader_.GetScene()->animator.GetInstance(c.animation_id_).bones_offset);
+      mdl_loader_.GetScene()->animator.GetInstanceCharacter(c.animation_id_).bones_offset);
   }
-  if (!is_first_face_mode) {
+
+  AddWeapon(bli, renderer_, player_.GetJphCharacter()->GetInnerBodyID(),
+    player_.GetModelWeapon(),
+    mdl_loader_.GetScene()->animator.GetInstanceWeapon(
+    player_.GetAnimationIdWeapon()).bones_offset,
+    weapon_pos_offset_, weapon_rotation_);
+  if (is_first_face_mode) {
+  } else {
     AddCharacterSceneInstance(bli, renderer_,
       player_.GetJphCharacter()->GetInnerBodyID(), player_.GetModel(),
-      mdl_loader_.GetScene()->animator.GetInstance(
+      mdl_loader_.GetScene()->animator.GetInstanceCharacter(
         player_.GetAnimationId()).bones_offset);
   }
 }

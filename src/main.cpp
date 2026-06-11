@@ -1,3 +1,15 @@
+#include <windows.h>
+
+// Force NVIDIA High-Performance GPU
+// extern "C" {
+//// _declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+//// }
+//
+// Force AMD High-Performance GPU
+extern "C" {
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+
 #include <stb_image.h>
 
 #include <iostream>

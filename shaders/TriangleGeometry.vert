@@ -7,6 +7,7 @@ layout(location = 3) in vec4 in_tangent;
 struct InstanceData {
     mat4 modelMatrix;
     vec4 modelColor;
+    uint materialId;
 };
 
 layout(std430, binding = 0) buffer InstanceBuffer {
@@ -28,6 +29,7 @@ out VS_OUT {
     vec2 TexCoords;
     vec4 vert_color;
     mat3 TBN;
+    flat uint material_id;
 } vs_out;
 
 void main() {
@@ -44,6 +46,7 @@ void main() {
     vs_out.FragPos = worldPos.xyz;
     vs_out.TexCoords = in_texcoord;
     vs_out.vert_color = color;
+    vs_out.material_id = instances[index].materialId;
 
     mat3 normalMatrix = transpose(inverse(mat3(model)));
     vec3 T = normalize(normalMatrix * in_tangent.xyz);

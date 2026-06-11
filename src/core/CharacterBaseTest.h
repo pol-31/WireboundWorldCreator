@@ -18,7 +18,6 @@
 
 #include "../common/models/ModelLoader.h"
 #include "../common/models/Player.h"
-#include "../common/models/DirLight.h"
 #include "../common/models/Character.h"
 #include "../common/models/PointLight.h"
 #include "../common/models/StaticObject.h"
@@ -72,12 +71,20 @@ class CharacterBaseTest : public JPH::ContactListener,
 
   void DeInit();
 
+  struct Zone {
+    glm::vec3 min;
+    glm::vec3 max;
+  };
+  std::vector<Zone> zones_;
+  int player_zone_ = 0;
+
+  bool is_aiming_ = false;
+
   ModelLoader mdl_loader_;
 
   Player player_;
   /// Loaded from scene.gltf
   std::vector<PointLight> point_lights_;
-  std::vector<DirLight> dir_lights_;
   std::vector<Character> characters_;
   std::vector<StaticObject> static_objects_;
 
@@ -95,6 +102,9 @@ class CharacterBaseTest : public JPH::ContactListener,
   JPH::RefConst<JPH::Shape> mCrouchingShape;
   JPH::RefConst<JPH::Shape> mInnerCrouchingShape;
   JPH::RefConst<JPH::Shape> mInnerStandingShape;
+
+  JPH::Vec3 weapon_pos_offset_;
+  JPH::Quat weapon_rotation_;
 
 public:
   /// ContactListener callbacks

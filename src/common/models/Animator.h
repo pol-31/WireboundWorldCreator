@@ -10,7 +10,7 @@
 
 class Animator {
  public:
-  enum class Type {
+  enum class CharacterType {
     kIdle,
     kIdleSitting,
     kWalk,
@@ -27,10 +27,15 @@ class Animator {
     kNone,
   };
 
+  enum class WeaponType {
+    Idle,
+    Shoot,
+  };
+
   struct Instance {
     float time = 0.0f;
     bool is_looped = true;
-    Type type = Type::kIdle;
+    int type = 0;
     int bones_offset = 0;
   };
 
@@ -53,53 +58,70 @@ class Animator {
   };
 
   Animator() = default;
-  Animator(tinygltf::Model model);
+  Animator(tinygltf::Model model_character, tinygltf::Model model_weapon);
 
   ~Animator();
 
-  /// return instance_id
-  size_t AddInstance() {
-    instances_.push_back({});
-    return instances_.size() - 1;
+  size_t AddInstanceCharacter() {
+    rigs_[0].instances_.push_back({});
+    return rigs_[0].instances_.size() - 1;
   }
 
-  const Instance& GetInstance(int id) const noexcept {
-    return instances_[id];
+  const Instance& GetInstanceCharacter(int id) const noexcept {
+    return rigs_[0].instances_[id];
   }
 
-  void Start(int instance_id, Type type);
+  size_t AddInstanceWeapon() {
+    rigs_[1].instances_.push_back({});
+    return rigs_[1].instances_.size() - 1;
+  }
+
+  const Instance& GetInstanceWeapon(int id) const noexcept {
+    return rigs_[1].instances_[id];
+  }
+
+  void Start(int instance_id, CharacterType type, bool looped) {
+    Start(instance_id, static_cast<int>(type), 0, looped);
+  }
+  void Start(int instance_id, WeaponType type, bool looped) {
+    Start(instance_id, static_cast<int>(type), 1, looped);
+  }
 
   /// updates all animations
   void Update();
 
  private:
-  void LoadSkin(const tinygltf::Model& model, Skin& skin);
+  void Start(int instance_id, int type, int rig_id, bool looped);
 
-  void InitLocalPose(const tinygltf::Model& model,
+  static void LoadSkin(const tinygltf::Model& model, Skin& skin);
+
+  static void InitLocalPose(const tinygltf::Model& model,
                      std::vector<NodePose>& localPose);
 
-  float ApplyAnimation(const tinygltf::Model& model, int animIndex, float time,
+  static float ApplyAnimation(const tinygltf::Model& model, int animIndex, float time,
                        std::vector<NodePose>& localPose);
 
-  void ComputeGlobals(const tinygltf::Model& model,
+  static void ComputeGlobals(const tinygltf::Model& model,
                       std::vector<NodePose>& localPose,
                       std::vector<glm::mat4>& globalPose);
 
-  void BuildJointMatrices(const Skin& skin,
+  static void BuildJointMatrices(const Skin& skin,
                           const std::vector<glm::mat4>& globalPose,
                           const glm::mat4& meshGlobal,
                           std::vector<glm::mat4>& out);
 
   void Clear();
 
-  std::vector<Instance> instances_;
+  struct Rig {
+    std::vector<Instance> instances_;
+    tinygltf::Model model_;
+    Skin skin_;
+  };
 
-  tinygltf::Model model_;
-  std::vector<glm::mat4> joints_zero_;
+  std::vector<Rig> rigs_;
+
   float speed_ = 1.0f;
-
   GLuint ssbo_ = 0;
-  Skin skin_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_ANIMATOR_H

@@ -11,7 +11,7 @@
 
 #include <glm/glm.hpp>
 
-#include "../common/models/DirLight.h"
+#include "../common/models/Sun.h"
 #include "../common/models/PointLight.h"
 #include "../render/Shader.h"
 #include "../render/Texture.h"
@@ -22,7 +22,6 @@
 class Scene;
 struct Character;
 class StaticObject;
-struct DirLight;
 struct PointLight;
 
 /// Implementation of DebugRenderer
@@ -50,11 +49,14 @@ class Renderer {
     scene_ = scene;
   }
 
-  void AddInstance(DirLight* dir_light, InstanceInfo info);
+  void UpdateSunFrustum(
+  JPH::Vec3 player_position, JPH::Vec3 player_down, JPH::Vec3 player_forward);
 
   void AddInstance(const PointLight* point_light, InstanceInfo info);
 
   void AddCharacter(InstanceInfoRigged info);
+
+  void AddWeapon(InstanceInfoRigged info);
 
   void AddInstance(InstanceInfo info);
 
@@ -93,19 +95,25 @@ class Renderer {
 
   const Scene* scene_ = nullptr; // all models, meshes, vao data
 
+  /// std430 layout (16-byte alignment)
   struct InstanceGpu {
     JPH::Mat44 model;
     JPH::Vec4 color;
+    uint32_t material_id;
+    uint32_t  padding1;
+    uint32_t  padding2;
+    uint32_t  padding3;
   };
   GLuint ssbo_instanced_ = 0;
 
+  /// std430 layout (16-byte alignment)
   struct InstanceGpuRigged {
     JPH::Mat44 model;
     JPH::Vec4 color;
-    uint32_t  boneOffset;    // Index where this instance's skeleton begins in the SSBO
-    uint32_t  padding1;    // std430 layout (16-byte alignment)
-    uint32_t  padding2;    // std430 layout (16-byte alignment)
-    uint32_t  padding3;    // std430 layout (16-byte alignment)
+    uint32_t  boneOffset;
+    uint32_t  materialId;
+    uint32_t  padding1;
+    uint32_t  padding2;
   };
   GLuint ssbo_instanced_rigged_ = 0;
 
@@ -117,7 +125,9 @@ class Renderer {
   };
 
   std::vector<InstanceInfoRigged> characters_;
+  InstanceInfoRigged weapon_;
   SsboOffset character_offset;
+  SsboOffset weapon_offset;
 
   struct SsboOffsetData {
     std::vector<InstanceGpu> instances; // auto num; no offset before linearizt
@@ -137,16 +147,12 @@ class Renderer {
   };
   CameraData camera_data_;
 
-  struct DirLightData {
-    DirLight* source;
-    std::vector<SsboOffset> objects;
-  };
-  static const int cMaxDirLights = 2;
-  std::array<GLuint, cMaxDirLights> depth_maps_;  // opengl ids
+  GLuint sun_depth_map_;
   Shader sh_shadow_dir_;
   Shader sh_shadow_dir_apply_;
   GLuint fbo_depth_map_ = 0;
-  std::vector<DirLightData> dir_lights_;
+  Sun sun_;
+  std::vector<SsboOffset> sun_objects;
 
   struct PointLightData {
     const PointLight* source;

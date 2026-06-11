@@ -32,6 +32,7 @@ add_executable(WireboundWorldCreator
         src/common/models/ModelLoader.cpp
         src/common/models/Scene.cpp
         src/common/models/Player.cpp
+        src/common/models/Sun.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

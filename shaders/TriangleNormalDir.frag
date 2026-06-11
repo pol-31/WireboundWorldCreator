@@ -69,8 +69,8 @@ void main() {
 
     // Вычисляем тень
     float shadow = ShadowCalculation(fs_in.FragPosLightSpace, normal, lightDir);
-    vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;
+    vec3 lighting = (ambient + (1.0 - shadow *  1.4f) * (diffuse + specular)) * color;
 
 //    FragColor = vec4(0.0);
-    FragColor = vec4(lighting, 1.0);
+    FragColor = vec4(lighting * 0.5f, 1.0);
 }

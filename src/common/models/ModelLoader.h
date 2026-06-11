@@ -25,6 +25,7 @@ class ModelLoader {
   void LoadScene(
     std::string_view collisions_path,
     std::string_view characters_path,
+    std::string_view weapon_path,
     std::string_view scene_path);
 
   struct BufferData {
@@ -55,26 +56,16 @@ class ModelLoader {
     BufferData& data,
     bool is_rigged);
 
-  // void BindMesh(tinygltf::Model& model, tinygltf::Mesh& mesh,
-  //               std::map<int, GLuint>& ebos,
-  //               std::vector<ModelData::Primitive>& primitives,
-  //                          std::vector<ModelData::Model>& models);
-  //
-  // void BindModelNodes(tinygltf::Model& model, tinygltf::Node& node,
-  //                     std::map<int, GLuint>& ebos,
-  //                     std::vector<ModelData::Primitive>& primitives,
-  //                          std::vector<ModelData::Model>& models);
-  //
-  // void BindModel(tinygltf::Model& model,
-  // std::vector<ModelData::Primitive>& primitives,
-  //           std::vector<ModelData::Model>& models);
+  Material LoadMaterial(std::string_view path, tinygltf::Model& model,
+    const tinygltf::Material& m);
 
-  // ptr (store uniq ptrs)
-  void LoadMaterials(std::string_view path, tinygltf::Model& model,
-    std::vector<Material>& materials);
+  MaterialArray LoadMaterials(std::string_view path, tinygltf::Model& model);
 
   Texture LoadTexture(std::string_view path, const tinygltf::Model& model,
                       int tex_id);
+
+  std::vector<uint8_t> LoadTextureRaw(
+    std::string_view path, const tinygltf::Model& model, int tex_id);
 
   tinygltf::TinyGLTF loader_;
   std::unique_ptr<Scene> scene_;

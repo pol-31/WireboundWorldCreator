@@ -28,8 +28,10 @@ struct Scene {
     Door,
     PointLight,
     Bench,
+    Zone,
   };
 
+  /// Mesh is geometry with 1 material
   struct Mesh {
     size_t index_count;
     size_t index_byte_offset;
@@ -37,10 +39,16 @@ struct Scene {
     GLenum index_type;
     glm::vec3 min;
     glm::vec3 max;
-    int material;
+    uint32_t material_id;
 
     void Render() const noexcept;
   };
+
+  /// if we got a model consist of few materials, that means
+  /// we have Model with vector<Mesh> which are single-materials geometry
+  ///
+  /// If we have few geometry data with same material, then
+  /// our our meshes just have the same material id
 
   struct Instance {
     glm::vec4 color;
@@ -53,7 +61,7 @@ struct Scene {
   struct Model {
     CollisionType collision_type;
     Type type = Type::Static;
-    std::string name; // identifying is it a door or a window
+    std::string name; // dbg
     int primitives_offset = 0;
     int primitives_num = 0;
     glm::vec3 min;
@@ -67,9 +75,9 @@ struct Scene {
 
   std::vector<Mesh> meshes;
   std::vector<Model> models;
-  std::vector<Material> materials;
+  MaterialArray materials;
 
-  // rigging (animated characters - NPCs)
+  // rigging (characters, weapon)
 
   GLuint vao_rigged = 0;
   GLuint vbo_rigged = 0;
@@ -77,7 +85,8 @@ struct Scene {
 
   std::vector<Mesh> meshes_rigged;
   std::vector<Model> models_rigged;
-  std::vector<Material> materials_rigged;
+  Material material_character;
+  Material material_gun;
 
   // moved inside the animator
   // GLuint ssbo_rigging = 0; // single large ssbo for everybody

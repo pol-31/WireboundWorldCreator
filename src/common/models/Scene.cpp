@@ -1,5 +1,7 @@
 #include "Scene.h"
 
+#include <iostream>
+
 void Scene::Mesh::Render() const noexcept {
   // glBindVertexArray(vao);
   // glDrawElements(mode, indexCount, indexType,
@@ -7,7 +9,8 @@ void Scene::Mesh::Render() const noexcept {
 }
 
 void Scene::BindTextures() const noexcept {
-  materials[0].albedo.BindSampler(1);
+  std::cerr << "DEPRECATED BindTexture()" << std::endl;
+  // materials[0].albedo.BindSampler(1);
   //  glActiveTexture(GL_TEXTURE1);
   //  material.emission.Bind();
   //  glActiveTexture(GL_TEXTURE2);

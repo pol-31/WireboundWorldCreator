@@ -183,3 +183,13 @@ Frustum Camera::GetFrustum() {
   return Frustum(cam_position, cam_inForward, cam_inUp,
     cam_fovx, cam_fovy, cam_inNear);
 }
+
+glm::quat Camera::GetRotation() {
+  glm::mat3 rot(
+    direction_right_,
+    direction_up_,
+    -direction_front_);
+
+  return glm::quat_cast(rot);
+  // return glm::quat(glm::vec3(pitch_, yaw_, 0.0f));
+}

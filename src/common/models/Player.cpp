@@ -12,9 +12,15 @@
 constexpr bool sPlayerCanPushOtherCharacters = true;
 constexpr bool sOtherCharactersCanPushPlayer = true;
 
+void Player::Shoot() {
+  animator_->Start(animation_id_weapon_, Animator::WeaponType::Shoot, false);
+  animator_->Start(animation_id_, Animator::CharacterType::kFall, false);
+}
+
 void Player::SetAnimator(Animator* animator) {
   animator_ = animator;
-  animation_id_ = animator_->AddInstance();
+  animation_id_ = animator_->AddInstanceCharacter();
+  animation_id_weapon_ = animator_->AddInstanceWeapon();
 }
 
 void Player::Render() {
@@ -100,22 +106,22 @@ void Player::Update(JPH::Vec3 camera_forward, JPH::Vec3 gravity) {
 
   // --- animation walking
   if (state_ == State::kIdle) {
-    const auto& animation_data = animator_->GetInstance(animation_id_);
+    const auto& animation_data = animator_->GetInstanceCharacter(animation_id_);
     auto velocity_mag = new_velocity.Length();
     bool is_moving = velocity_mag > 0.01f;
-    Animator::Type new_type;
+    Animator::CharacterType new_type;
     if (is_moving) {
       if (velocity_mag < 1.0f) {
-        new_type = Animator::Type::kWalk;
+        new_type = Animator::CharacterType::kWalk;
       } else {
-        new_type = Animator::Type::kRun;
+        new_type = Animator::CharacterType::kRun;
       }
       // new_animationd_id = HumanAnimation::kCrouch;
     } else {
-      new_type = Animator::Type::kIdle;
+      new_type = Animator::CharacterType::kIdle;
     }
-    if (animation_data.type != new_type) {
-      animator_->Start(animation_id_, new_type);
+    if (animation_data.type != static_cast<int>(new_type)) {
+      animator_->Start(animation_id_, new_type, true);
     }
   }
 }
@@ -132,7 +138,7 @@ void Player::ProcessMovement(int key, int action) {
       SetMoveRight(true);
     } else if (key == GLFW_KEY_SPACE) {
       jump_triggered_ = true;
-      animator_->Start(animation_id_, Animator::Type::kJump);
+      animator_->Start(animation_id_, Animator::CharacterType::kJump, false);
     } else if (key == GLFW_KEY_EQUAL) {
       // Kick();
     } else if (key == GLFW_KEY_MINUS) {

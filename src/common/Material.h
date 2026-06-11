@@ -21,18 +21,17 @@ struct Material {
    * TODO: occlusion & emission can be stored in the same RGBA texture
    */
   Texture albedo;
-  Texture emission;
-  Texture metal_rough;
+  // Texture emission;
+  Texture rough_metal_ao;
   Texture normal;
-  Texture occlusion;
 };
 
-struct TerrainMaterial {
+struct MaterialArray {
   GLuint albedo = 0;
-  GLuint emission = 0;
-  GLuint metal_rough = 0;
+  GLuint rough_metal_ao = 0;
   GLuint normal = 0;
-  GLuint occlusion = 0;
+  uint32_t count = 0;
+  // GLuint emission = 0;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_MATERIAL_H

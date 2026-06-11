@@ -77,6 +77,8 @@ class Camera {
 
   [[nodiscard]] glm::vec3 GetOrigin() const noexcept { return origin_; }
 
+  glm::quat GetRotation();
+
   void Reset();  // for all modes except UiPlayerMode
 
   void HideCursor();

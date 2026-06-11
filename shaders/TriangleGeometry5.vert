@@ -10,6 +10,7 @@ struct InstanceData {
     mat4 modelMatrix;
     vec4 modelColor;
     uint boneOffset;
+    uint materialId;
 };
 
 layout(std430, binding = 9) buffer InstanceBuffer {

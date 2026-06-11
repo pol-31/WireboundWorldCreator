@@ -68,15 +68,6 @@ void Game::UpdateDeltaTime() {
   auto current_frame = static_cast<float>(glfwGetTime());
   gDeltaTime = current_frame - last_frame;
   last_frame = current_frame;
-
-  // Calculate delta time
-  // chrono::high_resolution_clock::time_point time =
-  // chrono::high_resolution_clock::now(); chrono::microseconds delta =
-  // chrono::duration_cast<chrono::microseconds>(time - mLastUpdateTime);
-  // mLastUpdateTime = time;
-  // float clock_delta_time = 1.0e-6f * delta.count();
-  // float world_delta_time = world_delta_time = !mIsPaused || mSingleStep?
-  // clock_delta_time : 0.0f; mResidualDeltaTime = 0.0f; mSingleStep = false;
 }
 
 JPH::RefConst<JPH::Shape> Game::CreateShootObjectShape() {
@@ -175,6 +166,7 @@ void Game::Run() {
   glEnable(GL_STENCIL_TEST);
   glEnable(GL_CULL_FACE);
   glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
   while (!glfwWindowShouldClose(gWindow)) {
     glStencilFunc(GL_ALWAYS, 0, 0xFF);
     glStencilMask(0xFF);
@@ -198,7 +190,6 @@ void Game::Run() {
     auto glm_forward = camera_.GetDirectionFront();
     auto camera_forward = JPH::Vec3(glm_forward.x, glm_forward.y, glm_forward.z);
     const float cDragRayLength = 40.0f;
-
 
     if (gDeltaTime > 0.0f) {
       if (shoot_object_triggered_) {
@@ -330,63 +321,123 @@ void Game::Run() {
       }
       /// --- --- --- --- ---
 
-      bool first_face_mode = camera_.IsFirstFaceMode();
-      if (render_only_physics_) {
-        mTest->DebugDrawPhysics(first_face_mode);
-      } else {
-        mTest->RenderScene(first_face_mode);
-      }
 
       // update physics
       float delta_time = 1.0f / mUpdateFrequency;
       mTest->PrePhysicsUpdate(delta_time);
       mPhysicsSystem->Update(delta_time, mCollisionSteps, mTempAllocator,
                              mJobSystem);
-      auto fwd = camera_.GetDirectionFront();
-      JPH::Vec3 cam_inForward(fwd.x, fwd.y, fwd.z);
-      mTest->PostPhysicsUpdate(cam_inForward);
+      mTest->PostPhysicsUpdate(camera_forward); // camera forward to rotate only
+
+      auto player_pos = mTest->GetCharacterPosition(bi);
+      auto head_pos = player_pos;
+      float head_height =
+          (mTest->player_.GetModel()->max.y - mTest->player_.GetModel()->min.y) *
+          0.9f;
+      head_pos.y += head_height;
+      camera_.Update(head_pos);
+
+      /// now we update it, so apply it to weapon render
+      glm_pos = camera_.GetPosition();
+      camera_pos = JPH::Vec3(glm_pos.x, glm_pos.y, glm_pos.z);
+      glm_forward = camera_.GetDirectionFront();
+      camera_forward = JPH::Vec3(glm_forward.x, glm_forward.y, glm_forward.z);
+
+      auto camera_right_glm = camera_.GetDirectionRight();
+      auto camera_right = JPH::Vec3(camera_right_glm.x,
+        camera_right_glm.y,
+        camera_right_glm.z);
+      auto camera_up_glm = camera_.GetDirectionUp();
+      auto camera_up = JPH::Vec3(camera_up_glm.x,
+        camera_up_glm.y,
+        camera_up_glm.z);
+
+      if (mTest->is_aiming_) {
+        mTest->weapon_pos_offset_ = camera_pos + 0.5f * camera_forward
+        + -camera_up * 0.14f;
+      } else {
+        mTest->weapon_pos_offset_ = camera_pos + 0.5f * camera_forward
+      + camera_right * 0.2f + -camera_up * 0.2f;
+      }
+
+      auto camera_rot_glm = camera_.GetRotation();
+      auto camera_rot = JPH::Quat(
+        camera_rot_glm.x, camera_rot_glm.y, camera_rot_glm.z, camera_rot_glm.w).Normalized();
+      JPH::Quat correction =
+      JPH::Quat::sRotation(
+          JPH::Vec3::sAxisY(),
+          JPH::DegreesToRadians(180.0f));
+      mTest->weapon_rotation_ = camera_rot * correction;
+
+
+      bool first_face_mode = camera_.IsFirstFaceMode();
+      renderer_.UpdateSunFrustum(camera_pos, -camera_up, camera_forward);
+      if (render_only_physics_) {
+        mTest->DebugDrawPhysics(first_face_mode);
+      } else {
+        mTest->RenderScene(first_face_mode);
+      }
+
+      renderer_.DrawShadowPass(camera_.GetFrustum());
+      renderer_.DrawGeometryPass();
+
+      // mTest->shader_animated_mdl_.Bind();
+      // mTest->player_.Render(1.0f);
+      // mTest->shader_mdl_.Bind();
+      // RenderScene();
+
+      UpdateFPS(gDeltaTime);
+      std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps_));
+      renderer_.AddText(fpsText, glm::vec2(10.0f, 20.0f),
+        glm::vec2(1.0f), glm::vec4(1.0f));
+      float target_size = 32.0f;
+      float half_target_size = target_size / 2.0f;
+      if (!mTest->is_aiming_) {
+        renderer_.AddSprite("GoldenCircle",
+        glm::vec2(800.0f, 450.0f) - half_target_size,
+        glm::vec2(target_size), glm::vec4(1.0f));
+      }
+
+      const glm::vec2 start_hp_pos = glm::vec2(10.0f, 45.0f);
+      glm::vec2 hp_pos = start_hp_pos;
+      glm::vec2 hp_size = glm::vec2(16.0f);
+      for (int i = 0; i < 10; ++i) {
+        hp_pos.x += hp_size.x;
+        renderer_.AddSprite("FlowerWhite", hp_pos,
+          hp_size, glm::vec4(1.0f));
+      }
+      hp_pos = start_hp_pos;
+      hp_pos.y -= hp_size.y;
+      for (int i = 0; i < 10; ++i) {
+        hp_pos.x += hp_size.x;
+        renderer_.AddSprite("StaminaPoint", hp_pos,
+          hp_size, glm::vec4(1.0f));
+      }
+
+      hp_pos = glm::vec2(1380.0f, 25.0f);
+      for (int i = 0; i < 7; ++i) {
+        hp_pos.x += hp_size.x;
+        renderer_.AddSprite("HealthPoint", hp_pos,
+          hp_size * 2.0f, glm::vec4(1.0f));
+      }
+
+      renderer_.AddSprite("Gear", glm::vec2(1531.0f, 5.0f),
+        hp_size * 4.0f, glm::vec4(1.0f));
+
+
+
+      renderer_.DrawLightPass();
+
+      cubemap_.Render();
+      // Render();
+      // global_data_.UpdateCursorPos();
+      // global_data_.UpdateHoveredId();
+      // ui_renderer_.Render(&tile_renderer_);
+      // picking_fbo_.Bind();
+      // ui_renderer_.RenderPicking(&tile_renderer_);
+      // RenderPicking();
+
     }
-    // mDebugRenderer->DrawCoordinateSystem(RMat44::sIdentity());
-
-    auto player_pos = mTest->GetCharacterPosition(bi);
-    auto head_pos = player_pos;
-    float head_height =
-        (mTest->player_.GetModel()->max.y - mTest->player_.GetModel()->min.y) *
-        0.9f;
-    head_pos.y += head_height;
-    // std::cout << player_pos.x << ' ' << player_pos.y << ' ' << player_pos.z
-    // << ' ' << std::endl;
-    camera_.Update(head_pos);
-
-    renderer_.DrawShadowPass(camera_.GetFrustum());
-    renderer_.DrawGeometryPass();
-
-    // mTest->shader_animated_mdl_.Bind();
-    // mTest->player_.Render(1.0f);
-    // mTest->shader_mdl_.Bind();
-    // RenderScene();
-
-    UpdateFPS(gDeltaTime);
-    std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps_));
-    renderer_.AddText(fpsText, glm::vec2(10.0f, 20.0f),
-      glm::vec2(1.0f), glm::vec4(1.0f));
-    float target_size = 32.0f;
-    float half_target_size = target_size / 2.0f;
-    renderer_.AddSprite("GoldenCircle",
-      glm::vec2(800.0f, 450.0f) - half_target_size,
-      glm::vec2(target_size),
-      glm::vec4(1.0f));
-
-    renderer_.DrawLightPass();
-
-    cubemap_.Render();
-    // Render();
-    // global_data_.UpdateCursorPos();
-    // global_data_.UpdateHoveredId();
-    // ui_renderer_.Render(&tile_renderer_);
-    // picking_fbo_.Bind();
-    // ui_renderer_.RenderPicking(&tile_renderer_);
-    // RenderPicking();
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glfwPollEvents();
@@ -401,8 +452,9 @@ void Game::UpdateFPS(float delta_time) {
   if (elapsedTime_ >= 1.0f) {
     fps_ = frameCount_ / elapsedTime_;
     frameCount_ = 0;
-    elapsedTime_ = 0;
-    // std::cout << "FPS: " << fps << std::endl;
+
+    // Subtract instead of resetting to 0 to preserve the fraction overflow
+    elapsedTime_ -= 1.0f;
   }
 }
 
@@ -428,6 +480,8 @@ void Game::Init() {
   // jph
 
   // Allocate temp memory
+  mMaxConcurrentJobs = std::thread::hardware_concurrency();
+
   mTempAllocator = new JPH::TempAllocatorImpl(32 * 1024 * 1024);
   mJobSystem = new JPH::JobSystemThreadPool(
       JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, mMaxConcurrentJobs - 1);
@@ -499,7 +553,12 @@ void MouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
   // bool mod_ctrl = mods & GLFW_MOD_CONTROL;
   // bool mod_shift = mods & GLFW_MOD_SHIFT;
   if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
-    // game.Shoot();
+    game->shoot_object_triggered_ = true;
+    game->mTest->player_.Shoot();
+  } else if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_MIDDLE) {
+    game->mTest->is_aiming_ = true;
+  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_MIDDLE) {
+    game->mTest->is_aiming_ = false;
   }
 }
 
@@ -515,8 +574,6 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action,
       game->camera_.SwitchFaceMode();
     } else if (key == GLFW_KEY_F2) {
       game->SwitchRenderMode();
-    } else if (key == GLFW_KEY_E) {
-      game->shoot_object_triggered_ = true;
     }
   }
 
