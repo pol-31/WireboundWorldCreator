@@ -24,15 +24,30 @@ add_executable(WireboundWorldCreator
         src/core/Game.cpp
         src/core/ReadData.cpp
         src/common/Callbacks.cpp
-        src/core/CharacterBaseTest.cpp
         src/core/Renderer.cpp
         src/core/ContactListenerImpl.cpp
         src/core/Font.cpp
         src/common/models/Animator.cpp
         src/common/models/ModelLoader.cpp
         src/common/models/Scene.cpp
-        src/common/models/Player.cpp
-        src/common/models/Sun.h
+        src/common/models/Character.cpp
+        src/common/models/CharacterSharedData.cpp
+        src/common/models/CharacterSharedData.h
+        src/common/models/MechanicalObject.cpp
+        src/common/models/MechanicalObject.h
+        src/common/models/Weapon.h
+        src/common/models/Weapon.cpp
+        src/common/models/PlayerController.cpp
+        src/common/models/PlayerController.h
+        src/common/models/EnemyController.cpp
+        src/common/models/EnemyController.h
+        src/common/models/WorldManager.cpp
+        src/common/models/WorldManager.h
+        src/core/TerrainRenderer.cpp
+        src/core/TerrainRenderer.h
+        src/core/GeoClipmaps.cpp
+        src/core/GeoClipmaps.h
+        src/core/Cubemap.cpp
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

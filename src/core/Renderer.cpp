@@ -1,112 +1,81 @@
 #include "Renderer.h"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
+#include "../common/models/DirectedLight.h"
+#include "../common/models/EnemyController.h"
+#include "../common/models/PlayerController.h"
+#include "../common/models/PointLight.h"
+#include "../common/models/Scene.h"
+#include "../common/models/StaticObject.h"
+#include "../common/models/Weapon.h"
+#include "../io/Camera.h"
 #include "../io/Window.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
-#include "../common/models/Scene.h"
 
-const GLuint Renderer::cShadowMapSize = 256;
+// const GLuint Renderer::cShadowMapSize = 256;
 const int Renderer::cMaxInstances = 10000;
 const int Renderer::cMaxInstancesRigged = 10;
 const int Renderer::cMaxLines = 100 * 3;
 
-void Renderer::UpdateSunFrustum(
-    JPH::Vec3 player_position,
-    JPH::Vec3 player_down,
-    JPH::Vec3 player_forward)
-{
-  constexpr float fovx = glm::radians(120.0f);
-  constexpr float fovy = glm::radians(75.0f);
-  constexpr float near_distance = 0.1f;
+const int Renderer::cMaxDirectedLights = 4;
+const GLuint Renderer::cShadowCubeMapSize = 256;
+const int Renderer::cMaxPointLights = 32;
+const GLuint Renderer::cShadowMapSize = 256;
 
-  JPH::Vec3 up(0.0f, 1.0f, 0.0f);
-  player_forward = (player_forward - up * player_forward.Dot(up));
-  player_forward = player_forward.NormalizedOr(JPH::Vec3(0, 0, -1));
-
-  const JPH::Vec3 sun_position =
-      player_position +
-      JPH::Vec3(0.0f, 3.0f, 0.0f) +
-      player_forward * 4.0f;
-
-  JPH::Vec3 sun_dir(
-      sun_.dir.x,
-      sun_.dir.y,
-      sun_.dir.z);
-
-  sun_dir = sun_dir.Normalized();
-
-  JPH::Vec3 world_up(0.0f, 1.0f, 0.0f);
-
-  if (abs(sun_dir.Dot(world_up)) > 0.99f)
-  {
-    world_up = JPH::Vec3(1.0f, 0.0f, 0.0f);
-  }
-
-  sun_.frustum =
-      Frustum(
-          sun_position,
-          sun_dir,
-          world_up,
-          fovx,
-          fovy,
-          near_distance);
-
-  constexpr float near_plane = 1.0f;
-  constexpr float far_plane = 7.5f;
-
-  glm::mat4 lightProjection =
-      glm::ortho(
-          -10.0f, 10.0f,
-          -10.0f, 10.0f,
-          near_plane,
-          far_plane);
-
-  glm::vec3 sun_pos_glm(
-      sun_position.GetX(),
-      sun_position.GetY(),
-      sun_position.GetZ());
-
-  glm::vec3 sun_dir_glm(
-      sun_dir.GetX(),
-      sun_dir.GetY(),
-      sun_dir.GetZ());
-
-  glm::vec3 target =
-      sun_pos_glm + sun_dir_glm;
-
-  glm::mat4 lightView =
-      glm::lookAt(
-          sun_pos_glm,
-          target,
-          glm::vec3(0.0f, 1.0f, 0.0f));
-
-  sun_.lightSpaceMatrix =
-      lightProjection * lightView;
+GLuint CreateShadowMap() {
+  GLuint depth_map = 0;
+  glGenTextures(1, &depth_map);
+  float borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
+  glBindTexture(GL_TEXTURE_2D, depth_map);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+    Renderer::cShadowMapSize, Renderer::cShadowMapSize, 0,
+    GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+  glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+  return depth_map;
 }
 
-void Renderer::AddInstance(const PointLight* point_light, InstanceInfo info) {
-  // if (point_lights_.size() > 8) return;
-  point_lights_.push_back({point_light, info, {}});
+GLuint CreateShadowCubeMap() {
+  GLuint depth_cubemap = 0;
+  glGenTextures(1, &depth_cubemap);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, depth_cubemap);
+  for (unsigned int i = 0; i < 6; ++i)
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+      GL_DEPTH_COMPONENT, Renderer::cShadowMapSize,
+      Renderer::cShadowMapSize, 0, GL_DEPTH_COMPONENT,
+      GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+  return depth_cubemap;
 }
 
-void Renderer::AddCharacter(InstanceInfoRigged info) {
-  characters_.push_back(info);
-}
+Renderer::Renderer(const Scene* scene,
+  const Camera* camera,
+  const std::unique_ptr<PlayerController>* player,
+  const WorldManager::ZoneCulledData* culled_data)
+: scene_(scene),
+camera_(camera),
+culled_data_(culled_data),
+player_(player),
 
-void Renderer::AddWeapon(InstanceInfoRigged info) {
-  weapon_ = info;
-}
-
-void Renderer::AddInstance(InstanceInfo info) {
-  objects_.push_back(info);
-}
-
-Renderer::Renderer()
-: sh_lines_("../shaders/Line.vert", "../shaders/Line.frag", {}),
+sh_cubemap_("../shaders/Skybox.vert", "../shaders/Skybox.frag", {0}),
+sh_terrain_(
+      "../shaders/Terrain.vert",
+      "../shaders/Terrain.tesc",
+      "../shaders/Terrain.tese",
+      "../shaders/Terrain.frag",
+{0, 1, 2, 3}),
+sh_lines_("../shaders/Line.vert", "../shaders/Line.frag", {}),
 sh_shadow_dir_apply_("../shaders/TriangleNormalDir.vert",
                           "../shaders/TriangleNormalDir.frag", {1}),
 sh_shadow_point_apply_("../shaders/TriangleNormalPoint.vert",
@@ -130,151 +99,69 @@ sh_light_emitter_("../shaders/LightEmitter.vert",
   Init();
 }
 
-void Renderer::UpdateVboBuffer(Frustum frustum_camera) {
-  // if (!scene_) {
-    // return;
-  // }
-  SsboDataMeshMap instances_gpu_camera;
+//TODO: shadow maps / cubemaps.. we can't just create 10, or at scene init;
+// we need to act smarter.. chaches and so on
+// we need to act smarter.. chaches and so on
+// we need to act smarter.. chaches and so on
+// we need to act smarter.. chaches and so on
 
-  // map per light source - mesh:vector<InstanceGpu>
-  SsboDataMeshMap instances_gpu_sun;
-  std::vector<SsboDataMeshMap> instances_gpu_point_light(point_lights_.size());
-
-  // |camera|dir_light1|dir_light2|dir_lightN|point_light1|point_light2|...
-  for (int k = 0; k < objects_.size(); ++k) {
-    const auto& src_instance = objects_[k];
-    /// camera frustum
-    if (frustum_camera.Overlaps(src_instance.bounds)) {
-      instances_gpu_camera[src_instance.mesh_id].instances.push_back(
-        InstanceGpu{src_instance.matrix, src_instance.color.ToVec4(),
-        scene_->meshes[src_instance.mesh_id].material_id, 0, 0, 0});
-    }
-
-    /// sun
-    if (frustum_camera.Overlaps(src_instance.bounds) &&
-      sun_.frustum.Overlaps(src_instance.bounds)) {
-      instances_gpu_sun[src_instance.mesh_id].instances.push_back(
-      InstanceGpu{src_instance.matrix, src_instance.color.ToVec4(),
-        scene_->meshes[src_instance.mesh_id].material_id, 0, 0, 0});}
-
-    /// point light frustums
-    for (int l = 0; l < point_lights_.size(); ++l) {
-      if (l != 1 && l != 5 && l != 7 && l != 10) {
-        continue;
-      }
-      auto jph_pos = point_lights_[l].info.bounds.GetCenter();
-      if (!frustum_camera.Overlaps(JPH::AABox(jph_pos, point_lights_[l].source->radius_))) {
-        continue;
-      }
-      if (src_instance.bounds.Overlaps(
-            JPH::AABox(jph_pos, point_lights_[l].source->radius_)) &&
-            frustum_camera.Overlaps(src_instance.bounds)) {
-        instances_gpu_point_light[l][src_instance.mesh_id].instances.push_back(
-        InstanceGpu{src_instance.matrix, src_instance.color.ToVec4(),
-      scene_->meshes[src_instance.mesh_id].material_id, 0, 0, 0});
-            }
-    }
-  }
-
-  /// linealization - SsboOffsetData to SsboOffset (add offset:num)
-  std::vector<InstanceGpu> ssbo_data;
-  for (const auto& instance : instances_gpu_camera) {
-    int mesh_id = instance.first;
-    const auto& mesh_data = instance.second.instances;
-    camera_data_.objects.push_back(SsboOffset{
-      static_cast<int>(ssbo_data.size()),
-      static_cast<int>(mesh_data.size()),
-      mesh_id});
-    ssbo_data.insert(ssbo_data.end(), mesh_data.begin(), mesh_data.end());
-  }
-
-  /// now per each light need SsboOffset (instances offset, num, mesh_id)
-  for (const auto& instance : instances_gpu_sun) {
-    int mesh_id = instance.first;
-    const auto& mesh_data = instance.second.instances;
-    sun_objects.push_back(SsboOffset{
-      static_cast<int>(ssbo_data.size()),
-      static_cast<int>(mesh_data.size()),
-      mesh_id});
-    ssbo_data.insert(ssbo_data.end(), mesh_data.begin(), mesh_data.end());
-  }
-  for (int i = 0; i < instances_gpu_point_light.size(); ++i) {
-    for (const auto& instance : instances_gpu_point_light[i]) {
-      int mesh_id = instance.first;
-      const auto& mesh_data = instance.second.instances;
-      point_lights_[i].objects.push_back(SsboOffset{
-        static_cast<int>(ssbo_data.size()),
-        static_cast<int>(mesh_data.size()),
-        mesh_id});
-      ssbo_data.insert(ssbo_data.end(), mesh_data.begin(), mesh_data.end());
-    }
-  }
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
-  if (ssbo_data.size() > 0) {
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
-                    ssbo_data.size() * sizeof(InstanceGpu),
-                    ssbo_data.data());
-  }
-  ssbo_data.clear();
-
-  std::vector<InstanceGpuRigged> ssbo_data_rigged;
-  character_offset = SsboOffset{
-    static_cast<int>(ssbo_data_rigged.size()),
-    static_cast<int>(characters_.size()),
-    0};
-  for (const auto& c : characters_) {
-    ssbo_data_rigged.push_back({c.matrix, c.color.ToVec4(),
-      (uint32_t)c.bones_offset, 0, 0, 0});
-  }
-  weapon_offset = SsboOffset{
-    static_cast<int>(ssbo_data_rigged.size()),
-    1,
-    weapon_.mesh_id};
-  ssbo_data_rigged.push_back({weapon_.matrix, weapon_.color.ToVec4(),
-    (uint32_t)weapon_.bones_offset, 0, 0, 0});
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_rigged_);
-  if (ssbo_data_rigged.size() > 0) {
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
-                    ssbo_data_rigged.size() * sizeof(InstanceGpuRigged),
-                    ssbo_data_rigged.data());
-  }
-}
+// WE CAN'T CONNECT OPENGL_ID TO A LIGHT SOURCE!!!
 
 void Renderer::DrawDirectionalLightShadowPass() {
+  int num_to_add = shadow_maps_.size() - culled_data_->dir_lights.size();
+  for (int i = 0; i < num_to_add; ++i) {
+    shadow_maps_.push_back(CreateShadowMap());
+  }
+  if (culled_data_->dir_lights.empty()) {
+    return;
+  }
+  glViewport(0, 0, cShadowMapSize, cShadowMapSize);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_map_);
   glClear(GL_DEPTH_BUFFER_BIT);
   sh_shadow_dir_.Bind();
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,sun_depth_map_, 0);
-  glClear(GL_DEPTH_BUFFER_BIT);
-  glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(sun_.lightSpaceMatrix));
-  for (const auto& o : sun_objects) {
-    const auto& p = scene_->meshes[o.rename__id];
-    glDrawElementsInstancedBaseVertexBaseInstance(
-          GL_TRIANGLES,
-          p.index_count,
-          p.index_type,
-          (void*)p.index_byte_offset,
-          o.instances_num,
-          p.base_vertex,
-          o.instance_offset
-      );
+  for (int i = 0; i < culled_data_->dir_lights.size(); ++i) {
+    const auto& l = culled_data_->dir_lights[i];
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+      GL_TEXTURE_2D,shadow_maps_[i], 0);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(l.source->lightSpaceMatrix));
+    for (const auto& m : l.objects) {
+      const auto& p = scene_->scene_data_.meshes[m.mesh_id];
+      glDrawElementsInstancedBaseVertexBaseInstance(
+            GL_TRIANGLES,
+            p.index_count,
+            p.index_type,
+            (void*)p.index_byte_offset,
+            m.instances_num,
+            p.base_vertex,
+            m.instance_offset
+        );
+    }
   }
 }
 
 void Renderer::DrawPointLightShadowPass() {
+  int num_to_add = shadow_cubemaps_.size() - culled_data_->point_lights.size();
+  for (int i = 0; i < num_to_add; ++i) {
+    shadow_cubemaps_.push_back(CreateShadowCubeMap());
+  }
+  if (culled_data_->point_lights.empty()) {
+    return;
+  }
+  glViewport(0, 0, cShadowCubeMapSize, cShadowCubeMapSize);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_cubemap_);
   glClear(GL_DEPTH_BUFFER_BIT);
   sh_shadow_point_.Bind();
   float aspect = 1.0f;
   float near_plane = 1.0f;
-  for (int i = 0; i < point_lights_.size(); ++i) {
-    auto& l = point_lights_[i];  // ::not_visible optimization modified
+  for (int i = 0; i < culled_data_->point_lights.size(); ++i) {
+    const auto& l = culled_data_->point_lights[i];  // ::not_visible optimization modified
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                         depth_cubemaps_[i], 0);
+                         shadow_cubemaps_[i], 0);
     glClear(GL_DEPTH_BUFFER_BIT);
     glm::mat4 shadowProj =
         glm::perspective(glm::radians(90.0f), aspect, near_plane, l.source->far_plane_);
-    auto jph_pos = l.info.bounds.GetCenter();
+    auto jph_pos = l.source->object_->bounds.GetCenter();
     auto pos = glm::vec3(jph_pos.GetX(), jph_pos.GetY(), jph_pos.GetZ());
     std::vector<glm::mat4> shadowTransforms;
     shadowTransforms.push_back(shadowProj *
@@ -299,34 +186,37 @@ void Renderer::DrawPointLightShadowPass() {
                        glm::value_ptr(shadowTransforms[0]));
     glUniform3fv(0, 1, glm::value_ptr(pos));
     glUniform1f(1, l.source->far_plane_);
-    for (const auto& o : l.objects) {
-      const auto& p = scene_->meshes[o.rename__id];
+    for (const auto& m : l.objects) {
+      const auto& p = scene_->scene_data_.meshes[m.mesh_id];
       glDrawElementsInstancedBaseVertexBaseInstance(
             GL_TRIANGLES,
             p.index_count,
             p.index_type,
             (void*)p.index_byte_offset,
-            o.instances_num,
+            m.instances_num,
             p.base_vertex,
-            o.instance_offset
+            m.instance_offset
         );
     }
   }
 }
 
-void Renderer::DrawShadowPass(Frustum frustum_camera) {
-  UpdateVboBuffer(frustum_camera);
-
+void Renderer::DrawShadowPass() {
   glCullFace(GL_FRONT);
-  glViewport(0, 0, cShadowMapSize, cShadowMapSize);
-  glBindVertexArray(scene_->vao);
-
+  glBindVertexArray(scene_->scene_data_.vao);
   DrawDirectionalLightShadowPass();
   DrawPointLightShadowPass();
 }
 
 void Renderer::DrawGeometryPass() {
-  glBindVertexArray(scene_->vao);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
+  if (!culled_data_->ssbo_data.empty()) {
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
+    culled_data_->ssbo_data.size() * sizeof(WorldManager::InstanceGpu),
+    culled_data_->ssbo_data.data());
+  }
+
+  glBindVertexArray(scene_->scene_data_.vao);
   glBindFramebuffer(GL_FRAMEBUFFER, g_buffer_);
   glViewport(0, 0, gWindowWidth, gWindowHeight);
   glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -338,62 +228,132 @@ void Renderer::DrawGeometryPass() {
   glBindTextureUnit(1, scene_->materials.normal);
   glBindTextureUnit(2, scene_->materials.rough_metal_ao);
 
-  for (const auto& o : camera_data_.objects) {
-    const auto& p = scene_->meshes[o.rename__id];
+  for (const auto& m : culled_data_->camera.objects) {
+    const auto& p = scene_->scene_data_.meshes[m.mesh_id];
     glDrawElementsInstancedBaseVertexBaseInstance(
           GL_TRIANGLES,
           p.index_count,
           p.index_type,
           (void*)p.index_byte_offset,
-          o.instances_num,
+          m.instances_num,
           p.base_vertex,
-          o.instance_offset
+          m.instance_offset
       );
   }
-  glBindVertexArray(scene_->vao_rigged);
+
+  auto cam_frustum = camera_->GetFrustum();
+  for (const auto& w : culled_data_->camera.weapons) {
+    (*w)->Render(cam_frustum); // non-animated, rendered only if no owner_
+  }
+
   sh_geometry5_.Bind();
-  for (const auto& p1 : scene_->meshes_rigged) {
-    const auto& p = scene_->meshes_rigged[character_offset.rename__id];
-    glActiveTexture(GL_TEXTURE0);
-    scene_->material_character.albedo.BindSampler(0);
-    glActiveTexture(GL_TEXTURE1);
-    scene_->material_character.normal.BindSampler(1);
-    glDrawElementsInstancedBaseVertexBaseInstance(
-          GL_TRIANGLES,
-          p.index_count,
-          p.index_type,
-          (void*)p.index_byte_offset,
-          character_offset.instances_num+1,
-          p.base_vertex,
-          character_offset.instance_offset
-      );
-  }
-  for (int i = 0; i < 8; ++i) {
-    const auto& p = scene_->meshes_rigged[weapon_offset.rename__id + i];
-    // glActiveTexture(GL_TEXTURE0);
-    // scene_->material_gun.albedo.BindSampler(0);
-    // glActiveTexture(GL_TEXTURE1);
-    // scene_->material_gun.normal.BindSampler(1);
-    glDrawElementsInstancedBaseVertexBaseInstance(
-          GL_TRIANGLES,
-          p.index_count,
-          p.index_type,
-          (void*)p.index_byte_offset,
-          1, // weapon_offset.instances_num which is 1
-          p.base_vertex,
-          weapon_offset.instance_offset
-      );
+  (*player_)->GetBody()->RenderWithWeapon(cam_frustum);
+  
+  for (const auto& c : culled_data_->camera.characters) {
+    (*c)->GetBody()->RenderWithWeapon(cam_frustum); // both animated
   }
 }
 
-void Renderer::DrawLightPass() {
+int GetDbgShapeId(
+  const std::vector<Scene::Mesh>& dbg_meshes, Scene::CollisionType type) {
+  //TODO: we probably can do this just once
+  for (int i = 0; i < dbg_meshes.size(); i++) {
+    if (dbg_meshes[i].collision_type == type) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+void Renderer::RenderDebug() {
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
+  if (!culled_data_->ssbo_data.empty()) {
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
+    culled_data_->ssbo_data.size() * sizeof(WorldManager::InstanceGpu),
+    culled_data_->ssbo_data.data());
+  }
+
+  glBindVertexArray(scene_->scene_dbg_shapes_.vao);
+  glBindFramebuffer(GL_FRAMEBUFFER, g_buffer_);
+  glViewport(0, 0, gWindowWidth, gWindowHeight);
+  glClearColor(0.0, 0.0, 0.0, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glCullFace(GL_BACK);
+
+  sh_geometry_.Bind(); //TODO: probably different shader
+
+  glBindTextureUnit(0, scene_->materials.albedo);
+  glBindTextureUnit(1, scene_->materials.normal);
+  glBindTextureUnit(2, scene_->materials.rough_metal_ao);
+
+  for (const auto& m : culled_data_->camera.objects) {
+    const auto& mesh = scene_->scene_data_.meshes[m.mesh_id];
+    int dbg_shape_id = GetDbgShapeId(
+      scene_->scene_dbg_shapes_.meshes, mesh.collision_type);
+    const auto& p = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
+    glDrawElementsInstancedBaseVertexBaseInstance(
+          GL_TRIANGLES,
+          p.index_count,
+          p.index_type,
+          (void*)p.index_byte_offset,
+          m.instances_num,
+          p.base_vertex,
+          m.instance_offset
+      );
+  }
+
+  auto cam_frustum = camera_->GetFrustum();
+  for (const auto& w : culled_data_->camera.weapons) {
+    (*w)->Render(cam_frustum); // non-animated, rendered only if no owner_
+  }
+
+  sh_geometry5_.Bind();
+  for (const auto& c : culled_data_->camera.characters) {
+    (*c)->GetBody()->RenderWithWeapon(cam_frustum); // both animated
+  }
+}
+
+void Renderer::RenderTerrain(TerrainRenderData terrain) {
+  sh_terrain_.DebugUpdate();
+  if (glfwGetKey(gWindow, GLFW_KEY_1)) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  }
+  glEnable(GL_CULL_FACE);
+  sh_terrain_.Bind();
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, terrain.hmap_id);
+  glBindTextureUnit(1, scene_->materials.albedo);
+  glBindTextureUnit(2, scene_->materials.normal);
+  glBindTextureUnit(3, scene_->materials.rough_metal_ao);
+  glUniform1i(4, terrain.material_id);
+
+  glBindVertexArray(terrain.vao);
+  glPatchParameteri(GL_PATCH_VERTICES, 4);
+  glDrawArraysInstanced(GL_PATCHES, 0, 4, terrain.patch_num);
+
+  glDisable(GL_CULL_FACE);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+//TODO: ???wtf comment
+// we've set GL_LEQUAL by default for the whole app
+void Renderer::RenderCubemap(CubemapRenderData cubemap) {
+  sh_cubemap_.Bind();
+  glBindVertexArray(cubemap.vao);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture_id);
+  glDrawArrays(GL_TRIANGLES, 0, 36);
+  glBindVertexArray(0);
+}
+
+void Renderer::DrawLightPass(TerrainRenderData terrain, CubemapRenderData cubemap) {
   sh_deferred_shading_.DebugUpdate();
   sh_light_emitter_.DebugUpdate();
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_hdr_scene_);
-  // glDisable(GL_CULL_FACE);
-
-  // render fbo quad
+  glDisable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
   sh_deferred_shading_.Bind();
   glBindVertexArray(vao_ui_);
 
@@ -404,14 +364,25 @@ void Renderer::DrawLightPass() {
   glActiveTexture(GL_TEXTURE2);
   glBindTexture(GL_TEXTURE_2D, g_albedo_spec_);
 
-  glUniform1i(3, static_cast<int>(point_lights_.size()));
-  for (unsigned int i = 0; i < point_lights_.size(); i++) {
-    auto jph_pos = point_lights_[i].info.bounds.GetCenter();
+  glUniform1i(3, static_cast<int>(culled_data_->point_lights.size()));
+  for (unsigned int i = 0; i < culled_data_->point_lights.size(); i++) {
+    auto jph_pos = culled_data_->point_lights[i].source->object_->bounds.GetCenter();
     auto pos = glm::vec3(jph_pos.GetX(), jph_pos.GetY(), jph_pos.GetZ());
     glUniform3fv(4 + i * 2, 1, glm::value_ptr(pos));
-    glUniform3fv(4 + i * 2 + 1, 1, glm::value_ptr(point_lights_[i].source->color_));
+    glUniform3fv(4 + i * 2 + 1, 1, glm::value_ptr(glm::vec3(1.0f)));
+
+    //TODO:
+    glActiveTexture(GL_TEXTURE3 + i);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, shadow_cubemaps_[i]);
+    std::string samplerName = "shadowMaps[" + std::to_string(i) + "]";
+    glUniform1i(glGetUniformLocation(sh_deferred_shading_.GetId(),
+      samplerName.c_str()), 3 + i);
+    std::string farPlaneName = "farPlanes[" + std::to_string(i) + "]";
+    glUniform1f(glGetUniformLocation(sh_deferred_shading_.GetId(),
+      farPlaneName.c_str()), culled_data_->point_lights[i].source->far_plane_);
   }
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
 
   // blit DEPTH to bloom fbo
   glBindFramebuffer(GL_READ_FRAMEBUFFER, g_buffer_);
@@ -419,65 +390,22 @@ void Renderer::DrawLightPass() {
   glBlitFramebuffer(0, 0, gWindowWidth, gWindowHeight, 0, 0, gWindowWidth,
                     gWindowHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_hdr_scene_);
+  glEnable(GL_DEPTH_TEST);
 
-  // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_ONE, GL_ONE);
-  sh_shadow_dir_apply_.DebugUpdate();
-  sh_shadow_point_apply_.DebugUpdate();
-  glBindVertexArray(scene_->vao);
-  // sun
-  sh_shadow_dir_apply_.Bind();
-  glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(sun_.lightSpaceMatrix));
-  glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, sun_depth_map_);
-  glUniform3fv(2, 1, glm::value_ptr(sun_.dir));
-  for (const auto& o : sun_objects) {
-    const auto& p = scene_->meshes[o.rename__id];
-    glDrawElementsInstancedBaseVertexBaseInstance(
-          GL_TRIANGLES,
-          p.index_count,
-          p.index_type,
-          (void*)p.index_byte_offset,
-          o.instances_num,
-          p.base_vertex,
-          o.instance_offset
-      );
-  }
-  // point light
-  sh_shadow_point_apply_.Bind();
-  for (int i = 0; i < point_lights_.size(); ++i) {
-    // if (i != 0) continue;
-    const auto& l = point_lights_[i];
-    glUniform1f(0, l.source->far_plane_);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, depth_cubemaps_[i]);
-    auto jph_pos = point_lights_[i].info.bounds.GetCenter();
-    auto pos = glm::vec3(jph_pos.GetX(), jph_pos.GetY(), jph_pos.GetZ());
-    glUniform3fv(2, 1, glm::value_ptr(pos));
-    for (const auto& o : l.objects) {
-      const auto& p = scene_->meshes[o.rename__id];
-      glDrawElementsInstancedBaseVertexBaseInstance(
-            GL_TRIANGLES,
-            p.index_count,
-            p.index_type,
-            (void*)p.index_byte_offset,
-            o.instances_num,
-            p.base_vertex,
-            o.instance_offset
-        );
-    }
-  }
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  RenderTerrain(terrain);
+  glDepthFunc(GL_LEQUAL);
+  RenderCubemap(cubemap);
+  glDepthFunc(GL_LESS);
 
   /// light sources (point light)
-  glBindVertexArray(scene_->vao);
+  glBindVertexArray(scene_->scene_data_.vao);
   sh_light_emitter_.Bind();
-  for (const auto& l : point_lights_) {
-    const auto& p = scene_->meshes[l.info.mesh_id];
-    glUniformMatrix4fv(0, 1, GL_FALSE, reinterpret_cast<const float*>(&l.info.matrix));
-    JPH::Vec4 colorVec = l.info.color.ToVec4();
+  for (const auto& l : culled_data_->point_lights) {
+    const auto& p = scene_->scene_data_.meshes[l.source->object_->mesh_index];
+    glUniformMatrix4fv(0, 1, GL_FALSE,
+      reinterpret_cast<const float*>(&l.source->object_->global_transform));
+    // JPH::Vec4 colorVec = l.object_->color.ToVec4();
+    JPH::Vec4 colorVec = JPH::Vec4::sOne();
     glUniform4fv(1, 1, &colorVec.mF32[0]);
     glDrawElementsBaseVertex(
             GL_TRIANGLES,
@@ -487,7 +415,7 @@ void Renderer::DrawLightPass() {
             p.base_vertex
         );
   }
-
+  glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
   glClear(GL_COLOR_BUFFER_BIT);
   sh_bloom_.Bind();
@@ -511,7 +439,6 @@ void Renderer::DrawLightPass() {
     if (first_iteration)
       first_iteration = false;
   }
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -523,7 +450,6 @@ void Renderer::DrawLightPass() {
   glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[!horizontal]);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-  glDisable(GL_DEPTH_TEST);
   text_renderer_.Render();
   glEnable(GL_DEPTH_TEST);
 
@@ -535,6 +461,8 @@ void Renderer::DrawLightPass() {
     glBindVertexArray(vao_lines_);
     glDrawArrays(GL_LINES, 0, mLines.size());
   }
+
+  Clear();
 }
 
 void Renderer::AddText(std::string_view text,
@@ -549,11 +477,6 @@ void Renderer::AddSprite(const std::string& name,
 
 void Renderer::Clear() {
   mLines.clear();
-  characters_.clear();
-  objects_.clear();
-  camera_data_.objects.clear();
-  point_lights_.clear();
-  sun_objects.clear();
 }
 
 void Renderer::Init() {
@@ -682,44 +605,16 @@ void Renderer::Init() {
     );
   }
 
-  /// dir lights: shadowmap (sun)
-  glGenTextures(1, &sun_depth_map_);
-  float borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
-
-  glBindTexture(GL_TEXTURE_2D, sun_depth_map_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, cShadowMapSize,
-               cShadowMapSize, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-  glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-  glGenFramebuffers(1, &fbo_depth_map_);
+  /// dir lights: shadowmap (sun)  glGenFramebuffers(1, &fbo_depth_map_);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_map_);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                         sun_depth_map_, 0);
   glDrawBuffer(GL_NONE);
   glReadBuffer(GL_NONE);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   /// point lights: shadow cubemap
-  glGenTextures(cMaxPointLights, depth_cubemaps_.data());
-  for (GLuint tex : depth_cubemaps_) {
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
-    for (unsigned int i = 0; i < 6; ++i)
-      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
-                   cShadowMapSize, cShadowMapSize, 0, GL_DEPTH_COMPONENT,
-                   GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-  }
   glGenFramebuffers(1, &fbo_depth_cubemap_);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_cubemap_);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_cubemaps_[0],
-                       0);
+  // glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_cubemaps_[0], 0);
   glDrawBuffer(GL_NONE);
   glReadBuffer(GL_NONE);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -729,13 +624,8 @@ void Renderer::Init() {
   glGenBuffers(1, &ssbo_instanced_);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_instanced_);
-  glBufferData(GL_SHADER_STORAGE_BUFFER, cMaxInstances * sizeof(InstanceGpu),
-               nullptr, GL_DYNAMIC_DRAW);
-
-  glGenBuffers(1, &ssbo_instanced_rigged_);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_rigged_);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, ssbo_instanced_rigged_);
-  glBufferData(GL_SHADER_STORAGE_BUFFER, cMaxInstancesRigged * sizeof(InstanceGpuRigged),
+  glBufferData(GL_SHADER_STORAGE_BUFFER,
+    cMaxInstances * sizeof(WorldManager::InstanceGpu),
                nullptr, GL_DYNAMIC_DRAW);
 
   glGenVertexArrays(1, &vao_lines_);
@@ -752,9 +642,19 @@ void Renderer::Init() {
   glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, stride, GL_TRUE,
                         (void*)(sizeof(JPH::Float3)));
   glEnableVertexAttribArray(1);
+
+  // ... (all your setup code) ...
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDrawBuffer(GL_BACK);
+  glReadBuffer(GL_BACK);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
 }
 
-void Renderer::DeInit() {}
+void Renderer::DeInit() {
+  glDeleteTextures(shadow_maps_.size(), shadow_maps_.data());
+  glDeleteTextures(shadow_cubemaps_.size(), shadow_cubemaps_.data());
+}
 
 // void Renderer::DrawLine(RVec3Arg inFrom, RVec3Arg inTo,
 //                                 ColorArg inColor) {

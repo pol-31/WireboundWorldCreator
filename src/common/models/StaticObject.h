@@ -9,8 +9,9 @@
 #include "Scene.h"
 
 struct StaticObject {
-  const Scene::Model& model;
-  JPH::BodyID body_id_;
+  const Scene::ModelNode* object_;
+
+  StaticObject(const Scene::ModelNode* object) : object_(object) {}
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_STATICOBJECT_H

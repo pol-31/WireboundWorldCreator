@@ -7,7 +7,6 @@
 
 #include "../io/Camera.h"
 #include "../io/Window.h"
-#include "../core/Game.h"
 
 void RemoveMouseJump() {
   double xpos, ypos;

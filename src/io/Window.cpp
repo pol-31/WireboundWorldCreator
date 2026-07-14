@@ -16,6 +16,7 @@ float lastX = static_cast<float>(gWindowWidth) / 2.0;
 float lastY = static_cast<float>(gWindowHeight) / 2.0;
 
 float gDeltaTime = 0.0f;
+float gDeltaTimePhysics = 0.0f;
 float last_frame = 0.0f;
 
 double gEventMouseStartPosX = 0.0;
@@ -167,7 +168,8 @@ void SetupWindow() {
   }
   glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR,
                         GL_DEBUG_SEVERITY_HIGH, 0, nullptr, GL_TRUE);
-  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.5f, 1.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 }
 

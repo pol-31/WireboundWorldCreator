@@ -2,91 +2,91 @@
 #define WIREBOUNDWORLDCREATOR_GAME_H
 
 #include <unordered_map>
+#include <memory>
 #include <chrono>
 
 #include <glm/glm.hpp>
 #include <Jolt/Jolt.h>
+#include <Jolt/Core/JobSystem.h>
+#include <Jolt/Math/Real.h>
+#include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Character/Character.h>
+#include <Jolt/Physics/Character/CharacterVirtual.h>
+#include <Jolt/Physics/Collision/ContactListener.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Collision/Shape/SubShapeID.h>
 #include <Jolt/Skeleton/SkeletonPose.h>
 
+#include "../common/models/Animator.h"
+#include "../common/models/ModelLoader.h"
+#include "../common/models/PlayerController.h"
+#include "../common/models/EnemyController.h"
+#include "../common/models/PointLight.h"
+#include "../common/models/DirectedLight.h"
+#include "../common/models/StaticObject.h"
 #include "../common/GlfwContext.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
-// #include "CharacterBaseTest.h"
-// #include "ContactListenerImpl.h"
-#include "Cubemap.h"
 #include "Layers.h"
 #include "Renderer.h"
+#include "../common/models/CharacterSharedData.h"
+#include "TerrainRenderer.h"
+#include "Cubemap.h"
 
 class ContactListenerImpl;
-class CharacterBaseTest;
 
-class Game {
+class Game : public JPH::ContactListener,
+   public JPH::CharacterContactListener {
  public:
-  Game() { Init(); }
+  using ShapeToGeometryMap = std::unordered_map<JPH::EShapeSubType, int>;
+
+  Game();
 
   ~Game() { DeInit(); }
-
-  JPH::RefConst<JPH::Shape> CreateShootObjectShape();
-
-  void ShootObject();
 
   bool CastProbe(float inProbeLength, float &outFraction,
     JPH::RVec3 &outPosition, JPH::BodyID &outID);
 
-  bool shoot_object_triggered_ = false;
+  void RunRenderLoop();
 
-  void Run();
+  JPH::Ref<JPH::CharacterVirtual> CreateCharacter(Scene::ModelNode* node);
 
-  /// input
-  Camera camera_;  // "mouse"
-  // keyboard == callbacks
-  // window global (gWindow)
+  void ExitCover();
 
-  Cubemap cubemap_;
-  GlfwContext global_data_;
+  /// player cover
 
-  /// remder
-  Renderer renderer_;
+  void TryEnterCover();
 
-  std::chrono::high_resolution_clock::time_point mLastUpdateTime;
-  float mFPS = 0.0f;
-  float mRequestedDeltaTime = 0.0f;
-  float mResidualDeltaTime = 0.0f;
-  float mTotalDeltaTime = 0.0f;
-  int mNumFrames = 0;
+  void UpdateCoverState();
 
-  CharacterBaseTest* mTest = nullptr;
+  void HandleCoverMovement(float inputX, bool isShootingLMB);
 
-  void SwitchRenderMode() {
-    render_only_physics_ = !render_only_physics_;
+  /// mouse dragging
+
+  void StartObjectDragging();
+
+  void UpdateObjectDragging();
+
+  void ReleaseObjectDragging(float throwForce = 0.0f);
+
+  [[nodiscard]] bool IsDragging() const {
+    return mDragConstraint != nullptr || mDragVertexIndex != ~JPH::uint(0);
   }
 
-  bool render_only_physics_ = false;
+  void ResetMouseDragging();
 
  private:
   void Init();
 
   void DeInit();
 
-  void BindCallbacks();
 
-  /// throw an exception in case of uninitialized global_data_ members
-  void CheckGlobalData();
 
-  void UpdateDeltaTime();
-
-  void DebugDrawPhysics();
-
-  void UpdateInstances();
-
-  // Global settings
   int mMaxConcurrentJobs = 1;  // thread::hardware_concurrency();
-  float mUpdateFrequency = 60.0f;
-  int mCollisionSteps = 1;
   JPH::TempAllocator* mTempAllocator = nullptr;
   JPH::JobSystem* mJobSystem = nullptr;
   JPH::JobSystem* mJobSystemValidating = nullptr;
@@ -96,82 +96,138 @@ class Game {
   JPH::PhysicsSystem* mPhysicsSystem = nullptr;
   ContactListenerImpl* mContactListener = nullptr;
   JPH::PhysicsSettings mPhysicsSettings;
+  JPH::BodyInterface* mBodyInterface = nullptr;
 
-  bool mScaleShape = false;  // If the shape is scaled or not. When true
-                             // mShapeScale is taken into account.
-  JPH::Vec3 mShapeScale =
-      JPH::Vec3::sOne();  // Scale in local space for the probe shape.
-  JPH::EBackFaceMode mBackFaceModeTriangles =
-      JPH::EBackFaceMode::CollideWithBackFaces;  // How to handle back facing
-                                                 // triangles when doing a
-                                                 // collision probe check.
-  JPH::EBackFaceMode mBackFaceModeConvex =
-      JPH::EBackFaceMode::CollideWithBackFaces;  // How to handle back facing
-                                                 // convex shapes when doing a
-                                                 // collision probe check.
-  JPH::EActiveEdgeMode mActiveEdgeMode =
-      JPH::EActiveEdgeMode::CollideOnlyWithActive;  // How to handle active
-                                                    // edges when doing a
-                                                    // collision probe check.
-  JPH::ECollectFacesMode mCollectFacesMode =
-      JPH::ECollectFacesMode::NoFaces;  // If we should collect colliding faces
-  float mMaxSeparationDistance =
-      0.0f;  // Max separation distance for collide shape test
-  bool mTreatConvexAsSolid =
-      true;  // For ray casts if the shape should be treated as solid or if the
-             // ray should only collide with the surface
-  bool mReturnDeepestPoint =
-      true;  // For shape casts, when true this will return the deepest point
-  bool mUseShrunkenShapeAndConvexRadius =
-      false;  // Shrink then expand the shape by the convex radius
-  bool mDrawSupportingFace = false;  // Draw the result of GetSupportingFace
-  int mMaxHits =
-      10;  // The maximum number of hits to request for a collision probe.
-  bool mClosestHitPerBody =
-      false;  // If we are only interested in the closest hit for every body
+  JPH::Body* mDragAnchor = nullptr;
+  JPH::BodyID mDragBody = JPH::BodyID();
+  JPH::Ref<JPH::Constraint> mDragConstraint = nullptr;
+  JPH::uint mDragVertexIndex = ~JPH::uint(0);
+  float mDragVertexPreviousInvMass = 0.0f;
+  float mDragFraction = 0.0f;
 
-  float mShootObjectVelocity = 20.0f;  // Speed at which objects are ejected
-  JPH::EMotionQuality mShootObjectMotionQuality =
-      JPH::EMotionQuality::Discrete;  // Motion quality for the object that
-                                      // we're shooting
-  float mShootObjectFriction = 0.2f;  // Friction for the object that is shot
-  float mShootObjectRestitution =
-      0.0f;  // Restitution for the object that is shot
-  bool mShootObjectScaleShape = false;  // If the shape should be scaled
-  JPH::Vec3 mShootObjectShapeScale =
-      JPH::Vec3::sOne();  // Scale of the object to shoot
-  bool mWasShootKeyPressed =
-      false;  // Remembers if the shoot key was pressed last frame
+  bool mIsInCover = false;
+  JPH::BodyID mCoverBodyID;
+  JPH::Vec3 mCoverNormal;
+  JPH::Vec3 mCoverTangent;
+  float mPeekOffset = 0.0f;
+  const float cPlayerCoverRadius = 0.4f;
 
-  // Mouse dragging
-  JPH::Body* mDragAnchor =
-      nullptr;  // Rigid bodies only: A anchor point for the distance
-                // constraint. Corresponds to the current crosshair position.
-  JPH::BodyID mDragBody;  // The body ID of the body that the user is currently
-                          // dragging.
-  JPH::Ref<JPH::Constraint>
-      mDragConstraint;  // Rigid bodies only: The distance constraint that
-                        // connects the body to be dragged and the anchor point.
-  JPH::uint mDragVertexIndex =
-      ~JPH::uint(0);  // Soft bodies only: The vertex index of the body that the
-                      // user is currently dragging.
-  float mDragVertexPreviousInvMass =
-      0.0f;  // Soft bodies only: The inverse mass of the vertex that the user
-             // is currently dragging.
-  float mDragFraction;  // Fraction along cDragRayLength (see cpp) where the hit
-                        // occurred. This will be combined with the crosshair
-                        // position to get a 3d anchor point.
+  /// interface & fps
 
-  // Timing
-  JPH::uint mStepNumber = 0;  // Which step number we're accumulating
-  std::chrono::microseconds mTotalTime{0};
+  void RenderInterface();
 
+  void UpdateDeltaTime();
+
+  void UpdateFPS(float deltaTime);
 
   float frameCount_ = 0;
   float elapsedTime_ = 0;
   float fps_ = 0;
 
-  void UpdateFPS(float deltaTime);
+public:
+
+  bool is_aiming_ = false;
+
+  ModelLoader mdl_loader_;
+  Animator animator_;
+
+
+  TerrainRenderer terrain_renderer_;
+  Cubemap cubemap_;
+  Camera camera_;
+
+  std::unique_ptr<CharacterSharedData> character_shared_data_; // shapes
+
+  // owns the pointer, modifying the underlying data
+  std::unique_ptr<PlayerController> player_;
+  std::vector<std::unique_ptr<EnemyController>> characters_;
+
+  // player store ptr to it, so need ptr stability
+  std::vector<std::unique_ptr<Weapon>> weapons_;
+
+  // JPH::BodyID (we read bodies only once at Update() of render data matrices)
+  std::vector<PointLight> point_lights_;
+  std::vector<DirectedLight> dir_lights_;
+  std::vector<StaticObject> static_objects_;
+
+  GlfwContext global_data_;
+
+  bool render_physics_only_ = false;
+
+  using ContactSet = JPH::Array<JPH::CharacterVirtual::ContactKey>;
+  ContactSet mActiveContacts;
+
+  WorldManager world_manager_;
+  Renderer renderer_; // in the end
+
+  void CreateBodyForNode(Scene::ModelNode* node);
+
+public:
+  /// ContactListener callbacks
+  JPH::ContactListener* GetContactListener() {
+    return this;
+  }
+  JPH::CharacterContactListener* GetCharacterContactListener() {
+    return this;
+  }
+  void OnContactAdded(const JPH::Body &inBody1,
+                              const JPH::Body &inBody2,
+                              const JPH::ContactManifold &inManifold,
+                              JPH::ContactSettings &ioSettings) override;
+  void OnContactPersisted(const JPH::Body &inBody1,
+                                  const JPH::Body &inBody2,
+                                  const JPH::ContactManifold &inManifold,
+                                  JPH::ContactSettings &ioSettings) override;
+
+  /// CharacterContactListener callbacks
+  void OnAdjustBodyVelocity(const JPH::CharacterVirtual *inCharacter,
+                                    const JPH::Body &inBody2, JPH::Vec3 &ioLinearVelocity,
+                                    JPH::Vec3 &ioAngularVelocity) override;
+  void OnContactAdded(const JPH::CharacterVirtual *inCharacter,
+                              const JPH::BodyID &inBodyID2,
+                              const JPH::SubShapeID &inSubShapeID2,
+                              JPH::RVec3Arg inContactPosition,
+                              JPH::Vec3Arg inContactNormal,
+                              JPH::CharacterContactSettings &ioSettings) override;
+  void OnContactPersisted(
+      const JPH::CharacterVirtual *inCharacter, const JPH::BodyID &inBodyID2,
+      const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
+      JPH::Vec3Arg inContactNormal, JPH::CharacterContactSettings &ioSettings) override;
+  void OnContactRemoved(const JPH::CharacterVirtual *inCharacter,
+                                const JPH::BodyID &inBodyID2,
+                                const JPH::SubShapeID &inSubShapeID2) override;
+  void OnCharacterContactAdded(
+      const JPH::CharacterVirtual *inCharacter,
+      const JPH::CharacterVirtual *inOtherCharacter, const JPH::SubShapeID &inSubShapeID2,
+      JPH::RVec3Arg inContactPosition, JPH::Vec3Arg inContactNormal,
+      JPH::CharacterContactSettings &ioSettings) override;
+  void OnCharacterContactPersisted(
+      const JPH::CharacterVirtual *inCharacter,
+      const JPH::CharacterVirtual *inOtherCharacter, const JPH::SubShapeID &inSubShapeID2,
+      JPH::RVec3Arg inContactPosition, JPH::Vec3Arg inContactNormal,
+      JPH::CharacterContactSettings &ioSettings) override;
+  void OnCharacterContactRemoved(
+      const JPH::CharacterVirtual *inCharacter,
+      const JPH::CharacterID &inOtherCharacterID,
+      const JPH::SubShapeID &inSubShapeID2) override;
+  void OnContactSolve(
+      const JPH::CharacterVirtual *inCharacter, const JPH::BodyID &inBodyID2,
+      const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
+      JPH::Vec3Arg inContactNormal, JPH::Vec3Arg inContactVelocity,
+      const JPH::PhysicsMaterial *inContactMaterial, JPH::Vec3Arg inCharacterVelocity,
+      JPH::Vec3 &ioNewCharacterVelocity) override;
+
+ protected:
+  void OnContactCommon(const JPH::CharacterVirtual *inCharacter,
+                       const JPH::BodyID &inBodyID2, const JPH::SubShapeID &inSubShapeID2,
+                       JPH::RVec3Arg inContactPosition, JPH::Vec3Arg inContactNormal,
+                       JPH::CharacterContactSettings &ioSettings);
+  void OnCharacterContactCommon(const JPH::CharacterVirtual *inCharacter,
+                                const JPH::CharacterVirtual *inOtherCharacter,
+                                const JPH::SubShapeID &inSubShapeID2,
+                                JPH::RVec3Arg inContactPosition,
+                                JPH::Vec3Arg inContactNormal,
+                                JPH::CharacterContactSettings &ioSettings);
 };
 
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);

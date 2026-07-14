@@ -22,39 +22,40 @@ class ModelLoader {
 
   ~ModelLoader();
 
-  void LoadScene(
-    std::string_view collisions_path,
-    std::string_view characters_path,
-    std::string_view weapon_path,
-    std::string_view scene_path);
+  /// LoadDebugShapes BEFORE THE LoadScene,
+  /// because in the LoadScene we init nodes with dbg_shape
+  void LoadDebugShapes(std::string_view path);
+
+  void LoadScene(std::string_view path);
+
+  void LoadCharacters(std::string_view skeleton_path,
+    std::vector<std::string_view> skin_paths);
+
+  void LoadWeapon(std::vector<std::string_view> paths);
 
   struct BufferData {
     std::vector<std::uint8_t> all_positions;
     std::vector<std::uint8_t> all_normals;
     std::vector<std::uint8_t> all_uvs;
     std::vector<std::uint8_t> all_tangents;
-    std::vector<std::uint8_t> all_weights;
-    std::vector<std::uint8_t> all_joints;
     std::vector<std::uint8_t> all_indices;
     int current_base_vertex = 0;
+  };
+
+  struct BufferDataAnimated {
+    std::vector<std::uint8_t> all_weights;
+    std::vector<std::uint8_t> all_joints;
     GLenum joints_type = GL_UNSIGNED_BYTE;
   };
 
   Scene* GetScene() noexcept {
-    return scene_.get();
+    return &scene_;
   }
 
  private:
-  // idx_offset inside meshes vector, so collisions has 0, scene has 4
-  void BindModelNodesScene(tinygltf::Model& model, tinygltf::Node& node,
-    std::vector<Scene::Model>& models, int idx_offset);
-
-  /// is_rigged separates 3-component vbo from 5-component (weights, joints)
-  tinygltf::Model LoadBufferMerge(std::string_view path,
-    std::vector<Scene::Model>& primitives,
-    std::vector<Scene::Mesh>& meshes,
-    BufferData& data,
-    bool is_rigged);
+  BufferData LoadBuffers(const tinygltf::Model& model,
+    std::vector<Scene::Mesh>& meshes);
+  BufferDataAnimated LoadBuffersAnimated(const tinygltf::Model& model);
 
   Material LoadMaterial(std::string_view path, tinygltf::Model& model,
     const tinygltf::Material& m);
@@ -67,8 +68,14 @@ class ModelLoader {
   std::vector<uint8_t> LoadTextureRaw(
     std::string_view path, const tinygltf::Model& model, int tex_id);
 
+
+  Scene::Skin LoadSkin(const tinygltf::Model& model);
+
+  std::vector<Scene::Animation> LoadAnimations(
+    const tinygltf::Model& model);
+
   tinygltf::TinyGLTF loader_;
-  std::unique_ptr<Scene> scene_;
+  Scene scene_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_

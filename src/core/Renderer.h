@@ -9,82 +9,70 @@
 #include <Jolt/Math/Float2.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
 
+#include "../common/models/WorldManager.h"
+
 #include <glm/glm.hpp>
 
-#include "../common/models/Sun.h"
-#include "../common/models/PointLight.h"
 #include "../render/Shader.h"
 #include "../render/Texture.h"
 #include "Frustum.h"
 #include "Font.h"
 #include "vec3.hpp"
 
-class Scene;
-struct Character;
+#include "TerrainRenderer.h"
+#include "Cubemap.h"
+
+class Camera;
+struct Scene;
+class PlayerController;
+class EnemyController;
 class StaticObject;
-struct PointLight;
+class DirectedLight;
+class PointLight;
+class Weapon;
+
 
 /// Implementation of DebugRenderer
 class Renderer {
  public:
-  struct InstanceInfo {
-    JPH::RMat44 matrix;
-    JPH::Color color;
-    int mesh_id;
-    JPH::AABox bounds;
-  };
-  struct InstanceInfoRigged {
-    JPH::RMat44 matrix;
-    JPH::Color color;
-    int mesh_id;
-    JPH::AABox bounds;
-    int bones_offset;
-  };
-
-  Renderer();
+  Renderer(const Scene* scene,
+  const Camera* camera,
+  const std::unique_ptr<PlayerController>* player,
+  const WorldManager::ZoneCulledData* culled_data);
 
   ~Renderer() { DeInit(); }
 
-  void SetScene(const Scene* scene) {
-    scene_ = scene;
-  }
+  void RenderDebug();
 
-  void UpdateSunFrustum(
-  JPH::Vec3 player_position, JPH::Vec3 player_down, JPH::Vec3 player_forward);
-
-  void AddInstance(const PointLight* point_light, InstanceInfo info);
-
-  void AddCharacter(InstanceInfoRigged info);
-
-  void AddWeapon(InstanceInfoRigged info);
-
-  void AddInstance(InstanceInfo info);
-
-  /// order: updateVboBuffer -> shadow -> geometry -> light (separated for ui?)
-
-  void UpdateVboBuffer(Frustum frustum_camera);
-
-  void DrawShadowPass(Frustum frustum_camera);
+  /// we have culled objects from WorldManager, so we just
+  /// DrawShadowPass() -> DrawGeometryPass() -> DrawLightPass()
+  /// OR just RenderDebug();
+  void DrawShadowPass();
 
   void DrawGeometryPass();
 
-  void DrawLightPass();
+  void DrawLightPass(TerrainRenderData terrain, CubemapRenderData cubemap);
 
   /// Clear all primitives (to be called after drawing)
   void Clear();
-
   void AddText(std::string_view text, glm::vec2 position, glm::vec2 scale, glm::vec4 color);
   void AddSprite(const std::string& name, glm::vec2 position, glm::vec2 scale, glm::vec4 color);
 
-  /// Unused func for composite draw (picked apart by lines/triangles)
+  /// DBG Unused func for composite draw (picked apart by lines/triangles)
   // void DrawLine(RVec3Arg inFrom, RVec3Arg inTo, ColorArg inColor);
   // void DrawTriangle(
   // RVec3Arg inV1, RVec3Arg inV2, RVec3Arg inV3, ColorArg inColor);
 
-  static const GLuint cShadowMapSize;
+  // static const GLuint cShadowMapSize;
   static const int cMaxInstances;
   static const int cMaxInstancesRigged;
   static const int cMaxLines;
+
+
+  static const int cMaxDirectedLights;
+  static const GLuint cShadowCubeMapSize;
+  static const int cMaxPointLights;
+  static const GLuint cShadowMapSize;
 
  private:
   void Init();
@@ -93,78 +81,25 @@ class Renderer {
   void DrawDirectionalLightShadowPass();
   void DrawPointLightShadowPass();
 
-  const Scene* scene_ = nullptr; // all models, meshes, vao data
-
-  /// std430 layout (16-byte alignment)
-  struct InstanceGpu {
-    JPH::Mat44 model;
-    JPH::Vec4 color;
-    uint32_t material_id;
-    uint32_t  padding1;
-    uint32_t  padding2;
-    uint32_t  padding3;
-  };
   GLuint ssbo_instanced_ = 0;
 
-  /// std430 layout (16-byte alignment)
-  struct InstanceGpuRigged {
-    JPH::Mat44 model;
-    JPH::Vec4 color;
-    uint32_t  boneOffset;
-    uint32_t  materialId;
-    uint32_t  padding1;
-    uint32_t  padding2;
-  };
-  GLuint ssbo_instanced_rigged_ = 0;
+  const Scene* scene_;
+  const Camera* camera_; // to know is it 1st/3rd AND frustum
+  const std::unique_ptr<PlayerController>* player_;
 
-  /// all needed for glDrawElementsInstancedBaseVertexBaseInstance
-  struct SsboOffset {
-    int instance_offset = 0;
-    int instances_num = 0;
-    int rename__id = 0;
-  };
+  const WorldManager::ZoneCulledData* culled_data_ = nullptr;
 
-  std::vector<InstanceInfoRigged> characters_;
-  InstanceInfoRigged weapon_;
-  SsboOffset character_offset;
-  SsboOffset weapon_offset;
+  std::vector<GLuint> shadow_maps_; // point light
+  std::vector<GLuint> shadow_cubemaps_; // dir light
 
-  struct SsboOffsetData {
-    std::vector<InstanceGpu> instances; // auto num; no offset before linearizt
-  };
 
-  // key is mesh_id; need for index_count, index_type, base_vertex offset
-  using SsboMeshMap = std::map<int, SsboOffset>;
-  using SsboDataMeshMap = std::map<int, SsboOffsetData>;
-
-  std::vector<InstanceInfo> objects_;
-
-  /// std::vector<SsboOffset>, not map, because we need just render call,
-  /// don't care what order, just separated and grouped by primitives
-  struct CameraData {
-    Frustum frustum;
-    std::vector<SsboOffset> objects;
-  };
-  CameraData camera_data_;
-
-  GLuint sun_depth_map_;
   Shader sh_shadow_dir_;
   Shader sh_shadow_dir_apply_;
   GLuint fbo_depth_map_ = 0;
-  Sun sun_;
-  std::vector<SsboOffset> sun_objects;
 
-  struct PointLightData {
-    const PointLight* source;
-    InstanceInfo info;
-    std::vector<SsboOffset> objects;
-  };
-  static const int cMaxPointLights = 32;
-  std::array<GLuint, cMaxPointLights> depth_cubemaps_;  // opengl ids
   Shader sh_shadow_point_;
   Shader sh_shadow_point_apply_;
   GLuint fbo_depth_cubemap_ = 0;
-  std::vector<PointLightData> point_lights_;
 
   /// deferred lighting
   Shader sh_geometry_;
@@ -191,6 +126,11 @@ class Renderer {
 
   Shader sh_composite_;
 
+  void RenderTerrain(TerrainRenderData terrain);
+  void RenderCubemap(CubemapRenderData cubemap);
+
+  Shader sh_terrain_;
+  Shader sh_cubemap_;
 
   /// ui
   GLuint vao_ui_ = 0;

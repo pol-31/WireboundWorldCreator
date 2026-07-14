@@ -24,6 +24,7 @@ extern GLFWwindow* gWindow;
 extern float lastX;
 extern float lastY;
 extern float gDeltaTime;
+extern float gDeltaTimePhysics;
 extern float last_frame;
 
 extern double gEventMouseStartPosX;

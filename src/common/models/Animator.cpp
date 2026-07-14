@@ -8,9 +8,10 @@
 
 const int Animator::gMaxBones = 1000;
 
-int FindFrame(int count, const float* times, float t) {
+int FindFrame(const std::vector<float>& times, float t) {
   if (t <= times[0]) return 0;
 
+  auto count = times.size();
   for (int i = 0; i < count - 1; ++i) {
     if (t < times[i + 1]) return i;
   }
@@ -18,37 +19,46 @@ int FindFrame(int count, const float* times, float t) {
   return count - 2;  // last valid segment
 }
 
-glm::mat4 LocalMatrix(const Animator::NodePose& p) {
-  return glm::translate(glm::mat4(1), p.t) * glm::mat4_cast(p.r) *
-         glm::scale(glm::mat4(1), p.s);
-}
+void WrapTime(Animator::Instance& instance, const std::vector<float>& times) {
+  auto count = times.size();
+  // Safeguard: If there's no animation data or only 1 frame, clamp and return.
+  if (count <= 1) {
+    if (count == 1) instance.time = times[0];
+    return;
+  }
 
-const float* GetFloatData(const tinygltf::Model& model,
-                          const tinygltf::Accessor& acc) {
-  const auto& view = model.bufferViews[acc.bufferView];
-  const auto& buffer = model.buffers[view.buffer];
-
-  return reinterpret_cast<const float*>(buffer.data.data() + view.byteOffset +
-                                        acc.byteOffset);
-}
-
-float WrapTime(float t, const float* times, int count) {
   float start = times[0];
   float end = times[count - 1];
   float duration = end - start;
 
-  if (duration <= 0.0f) return start;
+  // Safeguard: Prevent division by zero in fmod if duration is extremely small
+  if (duration <= 0.00001f) {
+    instance.time = start;
+    return;
+  }
 
-  // keep phase, support large t
-  return start + std::fmod(t - start, duration);
+  if (instance.time > end) {
+    if (instance.is_looped) {
+      // Preserve the overflow time using fmod
+      instance.time = start + std::fmod(instance.time - start, duration);
+    } else {
+      // Clamp to the end and mark as idle
+      instance.is_idle = true;
+      instance.time = end;
+    }
+  }
+  // Optional: Handle the case where time is less than start
+  // (useful if your game allows playing animations in reverse)
+  else if (instance.time < start) {
+    if (instance.is_looped) {
+      instance.time = end - std::fmod(start - instance.time, duration);
+    } else {
+      instance.time = start;
+    }
+  }
 }
 
-//TODO: handle! we can't do this, need to add move ctor
-Animator::~Animator() {
-  // glDeleteBuffers(1, &ssbo_);
-}
-
-Animator::Animator(tinygltf::Model model_character, tinygltf::Model model_weapon) {
+void Animator::Init() {
   glDeleteBuffers(1, &ssbo_);
   glGenBuffers(1, &ssbo_);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_);
@@ -56,28 +66,11 @@ Animator::Animator(tinygltf::Model model_character, tinygltf::Model model_weapon
                nullptr, GL_DYNAMIC_DRAW);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, ssbo_);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-  for (auto m : {model_character, model_weapon}) {
-    Rig rig;
-    rig.model_ = std::move(m);
-    if (rig.model_.skins.size() != 1 || rig.model_.animations.size() == 0) {
-      throw "wrong animation data";
-    }
-    // buffers
-    std::vector<NodePose> localPose;
-    std::vector<glm::mat4> globalPose;
-    std::vector<glm::mat4> jointMatrices;
-
-    LoadSkin(rig.model_, rig.skin_);
-    InitLocalPose(rig.model_, localPose);
-
-    ComputeGlobals(rig.model_, localPose, globalPose);
-    glm::mat4 meshGlobal{1.0f};  // TODO: wrong
-    BuildJointMatrices(rig.skin_, globalPose, meshGlobal, jointMatrices);
-    rigs_.push_back(rig);
-  }
-
   Clear();
+}
+
+void Animator::DeInit() {
+  glDeleteBuffers(1, &ssbo_);
 }
 
 void Animator::Clear() {
@@ -93,51 +86,56 @@ void Animator::Clear() {
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
-void Animator::Start(int instance_id, int type, int rig_id, bool looped) {
-  auto& data = rigs_[rig_id].instances_[instance_id];
+size_t Animator::AddInstance(
+      const Scene::ModelNode* root_node,
+      const std::vector<Scene::ModelNode*>* nodes,
+      const Scene::Skin* skin) {
+  for (int i = 0; i < instances_.size(); ++i) {
+    auto& instance = instances_[i];
+    if (instance.is_dead) {
+      instance = Instance(); // resets is_dead as well
+      instance.root_node = root_node;
+      instance.nodes = nodes;
+      instance.skin = skin;
+      return i;
+    }
+  }
+  Instance instance;
+  instance.root_node = root_node;
+  instance.nodes = nodes;
+  instance.skin = skin;
+  instances_.push_back(instance);
+  return instances_.size() - 1;
+}
+
+void Animator::RemoveInstance(int id) {
+  instances_[id].is_dead = true;
+}
+
+void Animator::Start(int instance_id, int type, bool looped) {
+  auto& data = instances_[instance_id];
   data.time = 0.0f;
   data.is_looped = looped; // TODO: separate
   data.type = type;
+  data.is_idle = false;
 }
 
 void Animator::Update() {
-  // Clear();
-  // return;
-  std::vector<glm::mat4> all_jointMatrices;
-  for (auto& rig : rigs_) {
-    for (auto& instance : rig.instances_) {
-      instance.bones_offset = all_jointMatrices.size();
-      instance.time += gDeltaTime * speed_;
-      if (instance.time > 2.0f) {
-        if (instance.is_looped) {
-          instance.time = 0.0f;
-        } else {
-          instance.time = 1.0f;
-          instance.type = 0;
-        }
-      }
-      std::vector<glm::mat4> jointMatrices;
-      std::vector<NodePose> localPose;
-      std::vector<glm::mat4> globalPose;
-      InitLocalPose(rig.model_, localPose);
-      float mod_time = ApplyAnimation(rig.model_,
-        instance.type, instance.time, localPose);
-      // static_cast<int>(instance.type), instance.time, localPose);
-      bool started_over = instance.time > mod_time;
-      if (started_over) {
-        if (instance.is_looped) {
-          instance.time = mod_time;
-        } else {
-          instance.time = 1.0f;
-          instance.type = 0;
-        }
-      }
-      ComputeGlobals(rig.model_, localPose, globalPose);
-      glm::mat4 meshGlobal{1.0f};  // TODO: wrong
-      BuildJointMatrices(rig.skin_, globalPose, meshGlobal, jointMatrices);
-      all_jointMatrices.insert(all_jointMatrices.end(), jointMatrices.begin(), jointMatrices.end());
+  std::vector<JPH::Mat44> all_jointMatrices;
+  for (auto& instance : instances_) {
+    if (instance.is_dead) {
+      return;
     }
+    if (!instance.is_idle) {
+      instance.time += gDeltaTime * speed_;
+    }
+    instance.bones_offset = all_jointMatrices.size();
+    auto locals = InitLocals(instance);
+    instance.current_globals = ComputeGlobals(instance, locals);
+    auto joint_matrices = BuildJointMatrices(instance, instance.current_globals);
+    all_jointMatrices.insert(all_jointMatrices.end(), joint_matrices.begin(), joint_matrices.end());
   }
+
   if (all_jointMatrices.size() > gMaxBones) {
     std::cerr << "too much bones for ssbo" << std::endl;
     all_jointMatrices.resize(gMaxBones);
@@ -153,131 +151,93 @@ void Animator::Update() {
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
-void Animator::LoadSkin(const tinygltf::Model& model, Skin& skin) {
-  const tinygltf::Skin& gltfSkin = model.skins[0];
-
-  skin.skeletonRoot = gltfSkin.skeleton;
-
-  skin.joints.resize(gltfSkin.joints.size());
-
-  // Load inverse bind matrices
-  const tinygltf::Accessor& acc = model.accessors[gltfSkin.inverseBindMatrices];
-  const tinygltf::BufferView& bv = model.bufferViews[acc.bufferView];
-  const tinygltf::Buffer& buf = model.buffers[bv.buffer];
-
-  const float* data =
-      reinterpret_cast<const float*>(&buf.data[bv.byteOffset + acc.byteOffset]);
-
-  for (size_t i = 0; i < skin.joints.size(); ++i) {
-    skin.joints[i].node = gltfSkin.joints[i];
-    skin.joints[i].inverseBind = glm::make_mat4(data + i * 16);
+std::vector<Scene::NodePose> ReadInitLocals(
+    const std::vector<Scene::ModelNode*>& nodes) {
+  std::vector<Scene::NodePose> locals(nodes.size());
+  for (int i = 0; i < nodes.size(); ++i) {
+    locals[i] = nodes[i]->local_transform;
   }
+  return locals;
 }
 
-void Animator::InitLocalPose(const tinygltf::Model& model,
-                             std::vector<NodePose>& localPose) {
-  localPose.resize(model.nodes.size());
-
-  for (size_t i = 0; i < model.nodes.size(); ++i) {
-    const auto& n = model.nodes[i];
-
-    if (n.translation.size() == 3) {
-      localPose[i].t =
-          glm::vec3(float(n.translation[0]), float(n.translation[1]),
-                    float(n.translation[2]));
-    } else {
-      localPose[i].t = glm::vec3(0.0f);
-    }
-
-    if (n.rotation.size() == 4) {
-      localPose[i].r = glm::quat(float(n.rotation[3]),   // w
-                                 float(n.rotation[0]),   // x
-                                 float(n.rotation[1]),   // y
-                                 float(n.rotation[2]));  // z
-    } else {
-      localPose[i].r = glm::quat(1, 0, 0, 0);
-    }
-
-    if (n.scale.size() == 3) {
-      localPose[i].s =
-          glm::vec3(float(n.scale[0]), float(n.scale[1]), float(n.scale[2]));
-    } else {
-      localPose[i].s = glm::vec3(1.0f);
-    }
-  }
+JPH::Vec3 ReadVec3(const std::vector<float>& v, int index)
+{
+  return JPH::Vec3(
+      v[index * 3 + 0],
+      v[index * 3 + 1],
+      v[index * 3 + 2]);
 }
 
-float Animator::ApplyAnimation(const tinygltf::Model& model, int animIndex,
-                               float time, std::vector<NodePose>& localPose) {
-  const auto& anim = model.animations[animIndex];
+JPH::Quat ReadQuat(const std::vector<float>& v, int index)
+{
+  return JPH::Quat(
+      v[index * 4 + 0],
+      v[index * 4 + 1],
+      v[index * 4 + 2],
+      v[index * 4 + 3]);
+}
 
+std::vector<Scene::NodePose> Animator::InitLocals(Instance& instance) {
+  auto locals = ReadInitLocals(*instance.nodes);
+  const auto& anim = instance.skin->animations[instance.type];
+  float current_time = instance.time;
   for (const auto& channel : anim.channels) {
     const auto& sampler = anim.samplers[channel.sampler];
+    const auto& times = sampler.times;
+    const auto& values = sampler.values;
     int node = channel.target_node;
 
-    const tinygltf::Accessor& inAcc = model.accessors[sampler.input];
-    const tinygltf::Accessor& outAcc = model.accessors[sampler.output];
-
-    const float* times = GetFloatData(model, inAcc);
-    const float* values = GetFloatData(model, outAcc);
-
-    time = WrapTime(time, times, inAcc.count);
-
-    int frame = FindFrame(inAcc.count, times, time);
-    int next = std::min(frame + 1, int(inAcc.count - 1));
-
-    float alpha = (time - times[frame]) / (times[next] - times[frame]);
+    int frame = FindFrame(times, current_time);
+    int next = std::min(frame + 1, int(times.size() - 1));
+    float alpha = 0.0f;
+    if (times[next] > times[frame]) {
+      alpha = (current_time - times[frame]) / (times[next] - times[frame]);
+    }
 
     if (channel.target_path == "translation") {
-      glm::vec3 a = glm::make_vec3(values + frame * 3);
-      glm::vec3 b = glm::make_vec3(values + next * 3);
-      localPose[node].t = glm::mix(a, b, alpha);
-    }
-
-    if (channel.target_path == "rotation") {
-      glm::quat a = glm::make_quat(values + frame * 4);
-      glm::quat b = glm::make_quat(values + next * 4);
-      localPose[node].r = glm::normalize(glm::slerp(a, b, alpha));
-    }
-
-    if (channel.target_path == "scale") {
-      glm::vec3 a = glm::make_vec3(values + frame * 3);
-      glm::vec3 b = glm::make_vec3(values + next * 3);
-      localPose[node].s = glm::mix(a, b, alpha);
+      auto a = ReadVec3(values, frame);
+      auto b = ReadVec3(values, next);
+      locals[node].t = a + alpha * (b - a);
+    } else if (channel.target_path == "rotation") {
+      auto a = ReadQuat(values, frame);
+      auto b = ReadQuat(values, next);
+      locals[node].r = a.SLERP(b, alpha).Normalized();
+    } else if (channel.target_path == "scale") {
+      auto a = ReadVec3(values, frame);
+      auto b = ReadVec3(values, next);
+      locals[node].s = a + alpha * (b - a);
     }
   }
-  return time;
+  return locals;
 }
 
-void Animator::ComputeGlobals(const tinygltf::Model& model,
-                              std::vector<NodePose>& localPose,
-                              std::vector<glm::mat4>& globalPose) {
-  globalPose.resize(model.nodes.size());
-
-  std::function<void(int, const glm::mat4&)> dfs =
-      [&](int node, const glm::mat4& parent) {
-        glm::mat4 local = LocalMatrix(localPose[node]);
-        globalPose[node] = parent * local;
-
-        for (int child : model.nodes[node].children)
-          dfs(child, globalPose[node]);
+std::vector<JPH::Mat44> Animator::ComputeGlobals(
+    Instance& instance, const std::vector<Scene::NodePose>& locals) {
+  std::vector<JPH::Mat44>globals(instance.nodes->size());
+  std::function<void(const Scene::ModelNode*, const JPH::Mat44&)> dfs =
+      [&](const Scene::ModelNode* node, const JPH::Mat44& parent) {
+        auto id = node->node_id;
+        auto local = locals[id].Matrix();
+        globals[id] = parent * local;
+        for (auto child : (*instance.nodes)[id]->children) {
+          dfs(child, globals[id]);
+        }
       };
-
-  // Scene roots
-  for (int root : model.scenes[model.defaultScene].nodes)
-    dfs(root, glm::mat4(1));
+  dfs(instance.root_node, JPH::Mat44::sIdentity());
+  return globals;
 }
 
-void Animator::BuildJointMatrices(const Skin& skin,
-                                  const std::vector<glm::mat4>& globalPose,
-                                  const glm::mat4& meshGlobal,
-                                  std::vector<glm::mat4>& out) {
-  out.resize(skin.joints.size());
-
-  glm::mat4 invMesh = glm::inverse(meshGlobal);
-
-  for (size_t i = 0; i < skin.joints.size(); ++i) {
-    int node = skin.joints[i].node;
-    out[i] = invMesh * globalPose[node] * skin.joints[i].inverseBind;
+std::vector<JPH::Mat44> Animator::BuildJointMatrices(
+    Instance& instance, const std::vector<JPH::Mat44>& globals) {
+  std::vector<JPH::Mat44> out(instance.skin->joints.size());
+  JPH::Mat44 invMesh = instance.root_node->global_transform.Inversed();
+  for (size_t i = 0; i < instance.skin->joints.size(); ++i) {
+    int node = instance.skin->joints[i].node;
+    out[i] = invMesh * globals[node] * instance.skin->joints[i].inverseBind;
   }
+  return out;
+}
+
+JPH::Mat44 Animator::GetNodeGlobalTransform(uint32_t instance_id, int node_id) const {
+  return instances_[instance_id].current_globals[node_id];
 }

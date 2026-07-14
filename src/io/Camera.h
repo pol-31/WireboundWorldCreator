@@ -4,6 +4,8 @@
 #include <array>
 #include <memory>
 
+#include <Jolt/Jolt.h>
+
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
@@ -15,6 +17,10 @@
 /// forward y+
 /// back y-
 
+JPH::Vec3 ToJph(glm::vec3 val);
+
+JPH::Quat ToJph(glm::quat val);
+
 class Camera {
  public:
   Camera();
@@ -25,7 +31,7 @@ class Camera {
 
   [[nodiscard]] glm::mat4 GetProjMatrix() const noexcept;
 
-  void Update(glm::vec3 head_pos);
+  void Update(JPH::Mat44 head_mat);
 
   void UpdateViewMatrix() const;
 
@@ -36,6 +42,36 @@ class Camera {
   void MoveRotateView(float xoffset, float yoffset);
 
   void MovePanView(float xoffset, float yoffset);
+
+  void ZoomOriginDist(float yoffset);
+
+  void SetYaw(float yaw) { yaw_ = yaw; }
+
+  void SetPitch(float pitch) { pitch_ = pitch; }
+
+  void SetPosition(glm::vec3 position) { position_ = position; }
+
+  void SetOrigin(glm::vec3 origin) { origin_ = origin; }
+
+  void SetOriginDist(float origin_dist) { origin_dist_ = origin_dist; }
+
+  void Reset();  // for all modes except UiPlayerMode
+
+  void HideCursor();
+
+  void ShowCursor();
+
+  void ProcessMovement(int key, int action);
+
+  void SwitchFaceMode() {
+    first_face_mode_ = !first_face_mode_;
+  }
+
+  bool IsFirstFaceMode() const noexcept {
+    return first_face_mode_;
+  }
+
+  /// getters
 
   [[nodiscard]] glm::vec3 GetDirectionRight() const noexcept {
     return direction_right_;
@@ -57,18 +93,6 @@ class Camera {
     return direction_front_;
   }
 
-  void SetYaw(float yaw) { yaw_ = yaw; }
-
-  void SetPitch(float pitch) { pitch_ = pitch; }
-
-  void SetPosition(glm::vec3 position) { position_ = position; }
-
-  void SetOrigin(glm::vec3 origin) { origin_ = origin; }
-
-  void SetOriginDist(float origin_dist) { origin_dist_ = origin_dist; }
-
-  void ZoomOriginDist(float yoffset);
-
   [[nodiscard]] float GetYaw() const noexcept { return yaw_; }
 
   [[nodiscard]] float GetPitch() const noexcept { return pitch_; }
@@ -77,25 +101,9 @@ class Camera {
 
   [[nodiscard]] glm::vec3 GetOrigin() const noexcept { return origin_; }
 
-  glm::quat GetRotation();
+  glm::quat GetRotation() const;
 
-  void Reset();  // for all modes except UiPlayerMode
-
-  void HideCursor();
-
-  void ShowCursor();
-
-  void ProcessMovement(int key, int action);
-
-  Frustum GetFrustum();
-
-  void SwitchFaceMode() {
-    first_face_mode_ = !first_face_mode_;
-  }
-
-  bool IsFirstFaceMode() const noexcept {
-    return first_face_mode_;
-  }
+  Frustum GetFrustum() const noexcept;
 
  protected:
   void Init();

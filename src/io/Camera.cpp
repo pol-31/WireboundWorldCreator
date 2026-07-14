@@ -11,6 +11,21 @@
 #include "../common/Details.h"
 #include "Window.h"  // for frame rate (gDeltaTime)
 
+void Camera::ProcessMovement(int key, int action) {
+  std::cerr << "not that ProvcessMovement<, need plauer" << std::endl;
+}
+
+glm::vec3 ToGlm(JPH::Vec3 val) {
+  return glm::vec3(val.GetX(), val.GetY(), val.GetZ());
+}
+JPH::Vec3 ToJph(glm::vec3 val) {
+  return JPH::Vec3(val.x, val.y, val.z);
+}
+
+JPH::Quat ToJph(glm::quat val) {
+  return JPH::Quat(val.x, val.y, val.z, val.w).Normalized();
+}
+
 struct CameraUBO {
   glm::vec3 camPos;
   float _pad0;
@@ -42,7 +57,7 @@ void Camera::Init() {
                        GL_DYNAMIC_STORAGE_BIT);
   glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo_);
   MoveRotateView(0.0f, 0.0f);
-  Update(glm::vec3(0.0f));
+  Update(JPH::Mat44::sIdentity());
 }
 
 void Camera::DeInit() { glDeleteBuffers(1, &ubo_); }
@@ -64,7 +79,9 @@ void Camera::ZoomOriginDist(float yoffset) {
   origin_dist_ = glm::clamp(origin_dist_ - yoffset, 5.0f, 15.0f);
 }
 
-void Camera::Update(glm::vec3 head_pos) {
+void Camera::Update(JPH::Mat44 head_mat) {
+  auto head_pos = ToGlm(head_mat.GetTranslation());
+  // head_pos.y += 4.0f;
   if (first_face_mode_) {
     position_ = head_pos;
     origin_ = head_pos;
@@ -170,7 +187,7 @@ void Camera::ShowCursor() {
   glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
 
-Frustum Camera::GetFrustum() {
+Frustum Camera::GetFrustum() const noexcept {
   auto pos = GetOrigin();
   auto fwd = GetDirectionFront();
   auto up = GetDirectionUp();
@@ -184,12 +201,7 @@ Frustum Camera::GetFrustum() {
     cam_fovx, cam_fovy, cam_inNear);
 }
 
-glm::quat Camera::GetRotation() {
-  glm::mat3 rot(
-    direction_right_,
-    direction_up_,
-    -direction_front_);
-
+glm::quat Camera::GetRotation() const {
+  glm::mat3 rot(direction_right_, direction_up_, -direction_front_);
   return glm::quat_cast(rot);
-  // return glm::quat(glm::vec3(pitch_, yaw_, 0.0f));
 }

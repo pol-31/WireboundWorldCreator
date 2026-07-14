@@ -15,10 +15,12 @@ struct Light {
 const float LightLinear = 1.1;
 const float LightQuadratic = 0.2;
 
-const int MAX_LIGHTS = 32;
+const int MAX_LIGHTS = 8;
 layout (location = 3) uniform int lights_num;
 layout (location = 4) uniform Light lights[MAX_LIGHTS];
 
+uniform samplerCube shadowMaps[MAX_LIGHTS];
+uniform float farPlanes[MAX_LIGHTS];
 
 layout(std140, binding = 0) uniform Camera {
     vec3 pos;       float _pad0;
@@ -28,6 +30,17 @@ layout(std140, binding = 0) uniform Camera {
     mat4 view;
     mat4 proj;
 } camera;
+
+float ShadowCalculation(vec3 fragPos, vec3 lightPos, int lightIndex) {
+    vec3 fragToLight = fragPos - lightPos;
+    float closestDepth = texture(shadowMaps[lightIndex], fragToLight).r;
+    closestDepth *= farPlanes[lightIndex];
+    float currentDepth = length(fragToLight);
+
+    float bias = 0.05;
+    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    return shadow;
+}
 
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
@@ -54,7 +67,10 @@ void main() {
         diffuse *= attenuation;
         specular *= attenuation;
 //        break;
-        lighting += (diffuse + specular) * 0.5f;
+//        lighting += (diffuse + specular) * 0.5f;
+
+        float shadow = ShadowCalculation(FragPos, lights[i].Position, i);
+        lighting += (1.0 - shadow) * (diffuse + specular) * 0.5f;
     }
     FragColor = vec4(lighting * 0.6f, 1.0);
 //    FragColor = vec4(0.5);

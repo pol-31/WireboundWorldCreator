@@ -6,16 +6,9 @@ layout(location = 3) in vec4 in_tangent;
 layout(location = 4) in uvec4 in_joint;   // joint indices
 layout(location = 5) in vec4 in_weight;   // joint weights
 
-struct InstanceData {
-    mat4 modelMatrix;
-    vec4 modelColor;
-    uint boneOffset;
-    uint materialId;
-};
-
-layout(std430, binding = 9) buffer InstanceBuffer {
-    InstanceData instances[];
-};
+layout (location = 2) uniform mat4 modelMatrix;
+layout (location = 3) uniform vec4 modelColor;
+layout (location = 4) uniform uint boneOffset;
 
 layout(std430, binding = 10) buffer Bones {
     mat4 uBones[];
@@ -39,21 +32,23 @@ out VS_OUT {
 } vs_out;
 
 void main() {
-    uint index = gl_InstanceID + gl_BaseInstance;
+    uint index = gl_BaseInstance;
     mat4 skinMat =
 //                    mat4(1.0f);
-    in_weight.x * bones.uBones[instances[index].boneOffset + in_joint.x] +
-    in_weight.y * bones.uBones[instances[index].boneOffset + in_joint.y] +
-    in_weight.z * bones.uBones[instances[index].boneOffset + in_joint.z] +
-    in_weight.w * bones.uBones[instances[index].boneOffset + in_joint.w];
+    in_weight.x * bones.uBones[boneOffset + in_joint.x] +
+    in_weight.y * bones.uBones[boneOffset + in_joint.y] +
+    in_weight.z * bones.uBones[boneOffset + in_joint.z] +
+    in_weight.w * bones.uBones[boneOffset + in_joint.w];
+    skinMat = mat4(1.0f);
 
     vec4 skinned_pos = skinMat * vec4(in_vertex, 1.0);
     vec3 skinned_normal = mat3(skinMat) * in_normal;
     vec3 skinned_tangent = mat3(skinMat) * in_tangent.xyz; // Drop the W component for math
 
-    mat4 model = instances[index].modelMatrix;
-    vec4 color = instances[index].modelColor;
+    mat4 model = modelMatrix;
+    vec4 color = modelColor;
     vec4 worldPos = model * skinned_pos;
+//    worldPos = skinned_pos;
     gl_Position = camera.proj * camera.view * worldPos;
     vs_out.FragPos = worldPos.xyz;
     vs_out.TexCoords = in_texcoord;

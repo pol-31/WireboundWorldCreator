@@ -65,7 +65,7 @@ int main() {
   SetupWindow();
   {
     Game app;
-    app.Run();
+    app.RunRenderLoop();
   }
   glfwTerminate();
 

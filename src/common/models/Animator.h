@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <vector>
+#include "Scene.h"
 
 class Animator {
  public:
@@ -33,93 +34,68 @@ class Animator {
   };
 
   struct Instance {
+    const Scene::ModelNode* root_node = nullptr;
+    const std::vector<Scene::ModelNode*>* nodes = nullptr;
+    const Scene::Skin* skin = nullptr;
     float time = 0.0f;
     bool is_looped = true;
     int type = 0;
     int bones_offset = 0;
+    bool is_idle = false; // if true - it's over and keeps same position type::time
+    bool is_dead = false; // removed instance, nodes & skin invalid, skip
+    std::vector<JPH::Mat44> current_globals;
   };
 
   static const int gMaxBones;
 
-  struct Joint {
-    int node;               // index into model.nodes
-    glm::mat4 inverseBind;  // from glTF
-  };
-
-  struct Skin {
-    int skeletonRoot;  // node index or -1
-    std::vector<Joint> joints;
-  };
-
-  struct NodePose {
-    glm::vec3 t;
-    glm::quat r;
-    glm::vec3 s;
-  };
-
-  Animator() = default;
-  Animator(tinygltf::Model model_character, tinygltf::Model model_weapon);
-
-  ~Animator();
-
-  size_t AddInstanceCharacter() {
-    rigs_[0].instances_.push_back({});
-    return rigs_[0].instances_.size() - 1;
+  Animator() {
+    Init();
   }
 
-  const Instance& GetInstanceCharacter(int id) const noexcept {
-    return rigs_[0].instances_[id];
+  ~Animator() {
+    DeInit();
   }
 
-  size_t AddInstanceWeapon() {
-    rigs_[1].instances_.push_back({});
-    return rigs_[1].instances_.size() - 1;
+  Animator(const Animator& animator) = delete;
+  Animator(Animator&& animator) = delete;
+  Animator& operator=(const Animator& animator) = delete;
+  Animator& operator=(Animator&& animator) = delete;
+
+  size_t AddInstance(
+      const Scene::ModelNode* root_node,
+      const std::vector<Scene::ModelNode*>* nodes,
+      const Scene::Skin* skin);
+
+  void RemoveInstance(int id);
+
+  [[nodiscard]] const Instance& GetInstance(int id) const noexcept {
+    return instances_[id];
   }
 
-  const Instance& GetInstanceWeapon(int id) const noexcept {
-    return rigs_[1].instances_[id];
-  }
-
-  void Start(int instance_id, CharacterType type, bool looped) {
-    Start(instance_id, static_cast<int>(type), 0, looped);
-  }
-  void Start(int instance_id, WeaponType type, bool looped) {
-    Start(instance_id, static_cast<int>(type), 1, looped);
-  }
+  void Start(int instance_id, int type, bool looped);
 
   /// updates all animations
   void Update();
 
+  JPH::Mat44 GetNodeGlobalTransform(uint32_t instance_id, int node_id) const;
+
  private:
-  void Start(int instance_id, int type, int rig_id, bool looped);
+  void Init();
 
-  static void LoadSkin(const tinygltf::Model& model, Skin& skin);
+  void DeInit();
 
-  static void InitLocalPose(const tinygltf::Model& model,
-                     std::vector<NodePose>& localPose);
+  static std::vector<Scene::NodePose> InitLocals(
+    Instance& instance);
 
-  static float ApplyAnimation(const tinygltf::Model& model, int animIndex, float time,
-                       std::vector<NodePose>& localPose);
+  static std::vector<JPH::Mat44> ComputeGlobals(
+    Instance& instance, const std::vector<Scene::NodePose>& locals);
 
-  static void ComputeGlobals(const tinygltf::Model& model,
-                      std::vector<NodePose>& localPose,
-                      std::vector<glm::mat4>& globalPose);
-
-  static void BuildJointMatrices(const Skin& skin,
-                          const std::vector<glm::mat4>& globalPose,
-                          const glm::mat4& meshGlobal,
-                          std::vector<glm::mat4>& out);
+  static std::vector<JPH::Mat44> BuildJointMatrices(
+    Instance& instance, const std::vector<JPH::Mat44>& globals);
 
   void Clear();
 
-  struct Rig {
-    std::vector<Instance> instances_;
-    tinygltf::Model model_;
-    Skin skin_;
-  };
-
-  std::vector<Rig> rigs_;
-
+  std::vector<Instance> instances_;
   float speed_ = 1.0f;
   GLuint ssbo_ = 0;
 };
