@@ -48,43 +48,12 @@ class Game : public JPH::ContactListener,
 
   ~Game() { DeInit(); }
 
-  bool CastProbe(float inProbeLength, float &outFraction,
-    JPH::RVec3 &outPosition, JPH::BodyID &outID);
-
   void RunRenderLoop();
-
-  JPH::Ref<JPH::CharacterVirtual> CreateCharacter(Scene::ModelNode* node);
-
-  void ExitCover();
-
-  /// player cover
-
-  void TryEnterCover();
-
-  void UpdateCoverState();
-
-  void HandleCoverMovement(float inputX, bool isShootingLMB);
-
-  /// mouse dragging
-
-  void StartObjectDragging();
-
-  void UpdateObjectDragging();
-
-  void ReleaseObjectDragging(float throwForce = 0.0f);
-
-  [[nodiscard]] bool IsDragging() const {
-    return mDragConstraint != nullptr || mDragVertexIndex != ~JPH::uint(0);
-  }
-
-  void ResetMouseDragging();
 
  private:
   void Init();
 
   void DeInit();
-
-
 
   int mMaxConcurrentJobs = 1;  // thread::hardware_concurrency();
   JPH::TempAllocator* mTempAllocator = nullptr;
@@ -97,20 +66,6 @@ class Game : public JPH::ContactListener,
   ContactListenerImpl* mContactListener = nullptr;
   JPH::PhysicsSettings mPhysicsSettings;
   JPH::BodyInterface* mBodyInterface = nullptr;
-
-  JPH::Body* mDragAnchor = nullptr;
-  JPH::BodyID mDragBody = JPH::BodyID();
-  JPH::Ref<JPH::Constraint> mDragConstraint = nullptr;
-  JPH::uint mDragVertexIndex = ~JPH::uint(0);
-  float mDragVertexPreviousInvMass = 0.0f;
-  float mDragFraction = 0.0f;
-
-  bool mIsInCover = false;
-  JPH::BodyID mCoverBodyID;
-  JPH::Vec3 mCoverNormal;
-  JPH::Vec3 mCoverTangent;
-  float mPeekOffset = 0.0f;
-  const float cPlayerCoverRadius = 0.4f;
 
   /// interface & fps
 
@@ -125,9 +80,6 @@ class Game : public JPH::ContactListener,
   float fps_ = 0;
 
 public:
-
-  bool is_aiming_ = false;
-
   ModelLoader mdl_loader_;
   Animator animator_;
 

@@ -1,5 +1,7 @@
 #include "ModelLoader.h"
 
+#include <array>
+
 #include <stb_image.h>
 
 #include <filesystem>
@@ -71,10 +73,166 @@ ModelLoader::~ModelLoader() {
   // }
 }
 
-Scene::Skin ModelLoader::LoadSkin(const tinygltf::Model& model) {
+std::map<std::string, CharacterAnimType> character_anim_map_str_to_enum = {
+  {"01_idle", CharacterAnimType::Idle},
+{"02_idle_sitting", CharacterAnimType::IdleSitting},
+    {"03_walk", CharacterAnimType::Walk},
+    {"04_run", CharacterAnimType::Run},
+    {"05_crouch", CharacterAnimType::Crouch},
+    {"06_kick", CharacterAnimType::Kick},
+    {"07_stunned", CharacterAnimType::Stunned},
+    {"08_jump", CharacterAnimType::Jump},
+    {"09_falling", CharacterAnimType::Fall},
+    {"10_slide", CharacterAnimType::Slide},
+    {"11_climb", CharacterAnimType::Climb},
+    {"12_throw", CharacterAnimType::Throw},
+    {"13_swim", CharacterAnimType::Swim},
+    {"14_shoot", CharacterAnimType::Shoot},
+    {"pistol_idle", CharacterAnimType::PistolIdle},
+    {"pistol_jump", CharacterAnimType::PistolJump},
+    {"pistol_kneel_idle", CharacterAnimType::PistolKneelIdle},
+    {"pistol_kneel_to_sit", CharacterAnimType::PistolKneelToSit},
+    {"pistol_kneel_to_stand", CharacterAnimType::PistolKneelToStand},
+    {"pistol_run", CharacterAnimType::PistolRun},
+    {"pistol_run_backward", CharacterAnimType::PistolRunBackward},
+    {"pistol_strife_left", CharacterAnimType::PistolStrifeLeft},
+    {"pistol_strife_right", CharacterAnimType::PistolStrifeRight},
+{"pistol_walk_backward", CharacterAnimType::PistolWalkBackward},
+{"pistol_walk_forward", CharacterAnimType::PistolWalkForward},
+{"idle_center", CharacterAnimType::IdleCenter},
+{"idle_down", CharacterAnimType::IdleDown},
+{"idle_left", CharacterAnimType::IdleLeft},
+{"idle_right", CharacterAnimType::IdleRight},
+{"idle_up", CharacterAnimType::IdleUp},
+{"pistol_idle_center", CharacterAnimType::PistolIdleCenter},
+{"pistol_idle_down", CharacterAnimType::PistolIdleDown},
+{"pistol_idle_left", CharacterAnimType::PistolIdleLeft},
+{"pistol_idle_right", CharacterAnimType::PistolIdleRight},
+{"pistol_idle_up", CharacterAnimType::PistolIdleUp},
+};
+
+std::map<std::string, WeaponAnimType> weapon_anim_map_str_to_enum = {
+  {"Idle", WeaponAnimType::Idle},
+  {"Shoot", WeaponAnimType::Shoot},
+  {"Reload", WeaponAnimType::Reload},
+};
+
+std::map<CharacterAnimType, int> CreateCharacterAnimationMapping(
+  const std::vector<Scene::Animation>& animations) {
+  std::map<CharacterAnimType, int> map;
+  // inside the gltf they stored exactly like in vector_animations,
+  // so we take EVERY animation's name and bind enum by name to id
+  for (int id = 0; id < animations.size(); ++id) {
+    const auto& name = animations[id].name;
+    auto it = character_anim_map_str_to_enum.find(name);
+    if (it == character_anim_map_str_to_enum.end()) {
+      throw std::runtime_error("character animations name map inconsistency");
+    }
+    map[it->second] = id; // key[enum] = value[id]
+  }
+  return map;
+}
+
+std::map<WeaponAnimType, int> CreateWeaponAnimationMapping(
+  const std::vector<Scene::Animation>& animations) {
+  std::map<WeaponAnimType, int> map;
+  for (int id = 0; id < animations.size(); ++id) {
+    const auto& name = animations[id].name;
+    auto it = weapon_anim_map_str_to_enum.find(name);
+    if (it == weapon_anim_map_str_to_enum.end()) {
+      throw std::runtime_error("weapon animations name map inconsistency");
+    }
+    map[it->second] = id;
+  }
+  return map;
+}
+
+static JPH::Vec3 ReadVec3(const std::vector<float>& v, int index) {
+  return JPH::Vec3(
+      v[index * 3 + 0],
+      v[index * 3 + 1],
+      v[index * 3 + 2]);
+}
+
+static JPH::Quat ReadQuat(const std::vector<float>& v, int index) {
+  return JPH::Quat(
+      v[index * 4 + 0],
+      v[index * 4 + 1],
+      v[index * 4 + 2],
+      v[index * 4 + 3]);
+}
+
+void ReadPose(const Scene::Animation& anim,
+  std::vector<Scene::NodePose>& locals) {
+  for (const auto& channel : anim.channels) {
+    const auto& sampler = anim.samplers[channel.sampler];
+    const auto& values = sampler.values;
+    int node = channel.target_node;
+    int frame = 0;
+    if (channel.target_path == "translation") {
+      locals[node].t = ReadVec3(values, frame);
+    } else if (channel.target_path == "rotation") {
+      locals[node].r = ReadQuat(values, frame).Normalized();
+    } else if (channel.target_path == "scale") {
+      locals[node].s = ReadVec3(values, frame);
+    }
+  }
+}
+
+std::vector<Scene::NodePose> CalculateDelta(
+  const std::vector<Scene::NodePose>& starting_locals,
+  const std::vector<Scene::NodePose>& center_locals,
+  const Scene::Animation& anim) {
+  std::vector<Scene::NodePose> direction_locals = starting_locals;
+  ReadPose(anim, direction_locals);
+  for (int i = 0; i < center_locals.size(); ++i) {
+    direction_locals[i].t -= center_locals[i].t;
+    direction_locals[i].s = direction_locals[i].s / center_locals[i].s;
+    direction_locals[i].r = direction_locals[i].r * center_locals[i].r.Inversed();
+  }
+  return direction_locals;
+}
+
+void LoadDeltas(
+  const std::map<CharacterAnimType, int>& mapping,
+  const std::vector<Scene::Animation>& animations,
+  const std::vector<Scene::ModelNode*>& nodes,
+  Scene::PoseDeltas& default_deltas,
+  Scene::PoseDeltas& pistol_deltas) {
+  std::vector<Scene::NodePose> starting_locals(nodes.size());
+  for (int i = 0; i < nodes.size(); ++i) {
+    starting_locals[i] = nodes[i]->local_transform;
+  }
+
+  std::vector<Scene::NodePose> center_locals = starting_locals;
+  ReadPose(animations[mapping.at(CharacterAnimType::IdleCenter)],
+    center_locals);
+  default_deltas.left = CalculateDelta(starting_locals, center_locals,
+    animations[mapping.at(CharacterAnimType::IdleLeft)]);
+  default_deltas.right = CalculateDelta(starting_locals, center_locals,
+    animations[mapping.at(CharacterAnimType::IdleRight)]);
+  default_deltas.up = CalculateDelta(starting_locals, center_locals,
+    animations[mapping.at(CharacterAnimType::IdleUp)]);
+  default_deltas.down = CalculateDelta(starting_locals, center_locals,
+    animations[mapping.at(CharacterAnimType::IdleDown)]);
+
+  center_locals = starting_locals;
+  ReadPose(animations[mapping.at(CharacterAnimType::PistolIdleCenter)],
+    center_locals);
+  pistol_deltas.left = CalculateDelta(starting_locals, center_locals,
+    animations[mapping.at(CharacterAnimType::PistolIdleLeft)]);
+  pistol_deltas.right = CalculateDelta(starting_locals, center_locals,
+    animations[mapping.at(CharacterAnimType::PistolIdleRight)]);
+  pistol_deltas.up = CalculateDelta(starting_locals, center_locals,
+    animations[mapping.at(CharacterAnimType::PistolIdleUp)]);
+  pistol_deltas.down = CalculateDelta(starting_locals, center_locals,
+    animations[mapping.at(CharacterAnimType::PistolIdleDown)]);
+}
+
+Scene::CoreRig ModelLoader::LoadCoreRig(const tinygltf::Model& model) {
   const tinygltf::Skin& gltfSkin = model.skins[0];
-  Scene::Skin skin;
-  skin.skeletonRoot = gltfSkin.skeleton;
+  Scene::CoreRig skin;
+  skin.skeletonRoot = model.scenes[0].nodes[0]; // skin.skeleton invalid idk
   skin.joints.resize(gltfSkin.joints.size());
 
   // Load inverse bind matrices
@@ -90,9 +248,7 @@ Scene::Skin ModelLoader::LoadSkin(const tinygltf::Model& model) {
     skin.joints[i].inverseBind = JPH::Mat44::sLoadFloat4x4(
       reinterpret_cast<const JPH::Float4*>(data + i * 16));
   }
-
   skin.animations = LoadAnimations(model);
-
   return skin;
 }
 
@@ -127,14 +283,10 @@ std::vector<Scene::Animation> ModelLoader::LoadAnimations(
       const tinygltf::Accessor& out_acc = model.accessors[sampler.output];
       const float* times = GetFloatData(model, in_acc);
       const float* values = GetFloatData(model, out_acc);
-      // Time is always a SCALAR, so in_acc.count is safe.
       animations[i].samplers[j].times = std::vector<float>(times, times + in_acc.count);
-      // FIX: Multiply the count by the number of components (3 for VEC3, 4 for VEC4)
       int num_components = tinygltf::GetNumComponentsInType(out_acc.type);
       size_t total_floats = out_acc.count * num_components;
       animations[i].samplers[j].values = std::vector<float>(values, values + total_floats);
-      // animations[i].samplers[j].times = std::vector(times, times + in_acc.count);
-      // animations[i].samplers[j].values = std::vector(values, values + out_acc.count);
     }
   }
   return animations;
@@ -352,7 +504,7 @@ void ReadNodeHierarchy(
     const tinygltf::Node& gltfNode = model.nodes[i];
 
     for (int childIndex : gltfNode.children) {
-      nodes[i]->children.push_back(nodes[childIndex]);
+      //nodes[i]->children.push_back(nodes[childIndex]);
       nodes[childIndex]->parent = nodes[i];
     }
   }
@@ -405,15 +557,24 @@ void ModelLoader::LoadCharacters(std::string_view skeleton_path,
   }
 
   auto skeleton_model = LoadModel(loader_, skeleton_path);
-  scene_.character_rig_ = LoadSkin(skeleton_model);
+  scene_.character_rig_.core_rig = LoadCoreRig(skeleton_model);
+  scene_.character_rig_.mapping = CreateCharacterAnimationMapping(
+    scene_.character_rig_.core_rig.animations);
+  LoadDeltas(
+    scene_.character_rig_.mapping,
+    scene_.character_rig_.core_rig.animations,
+    scene_.character_skins_[0].nodes,
+    scene_.character_rig_.default_deltas,
+    scene_.character_rig_.pistol_deltas);
+
   for (int i = 0; i < skeleton_model.nodes.size(); ++i) {
     const auto& n = skeleton_model.nodes[i];
-    if (n.name == "mixamorig6:HeadTop_End") {
+    if (n.name == "mixamorig6:Camera") {
       scene_.character_rig_.head_bone_id = i;
-      std::cout << "head is " << i << std::endl;
-    } else if (n.name == "mixamorig6:RightHand") {
+      std::cout << "camera is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Weapon") {
       scene_.character_rig_.hand_bone_id = i;
-      std::cout << "hand is " << i << std::endl;
+      std::cout << "weapon is " << i << std::endl;
     }
   }
 }
@@ -433,7 +594,8 @@ void ModelLoader::LoadWeapon(std::vector<std::string_view> paths) {
 
     UploadBuffers(&weapon.vao, &weapon.vbo, &weapon.ebo,
       buffer_data, buffer_data_animated);
-    weapon.rig = LoadSkin(model);
+    weapon.rig.core_rig = LoadCoreRig(model);
+    weapon.rig.mapping = CreateWeaponAnimationMapping(weapon.rig.core_rig.animations);
     scene_.weapons_.push_back(std::move(weapon));
   }
 }
@@ -554,6 +716,9 @@ void LoadRiggedBuffers(
                  }
 }
 
+//TODO: mesh != primitive
+//TODO: render-nodes vector
+
 ModelLoader::BufferDataAnimated ModelLoader::LoadBuffersAnimated(
   const tinygltf::Model& model) {
   BufferDataAnimated data;
@@ -571,8 +736,9 @@ ModelLoader::BufferData ModelLoader::LoadBuffers(const tinygltf::Model& model,
   //TODO: are these extras of the node OR of the mesh?
   std::vector<int> tile_ids;
   for (const auto& mesh : model.meshes) {
-    auto collision_type = GetCollisionType(mesh);
-    auto mesh_type = GetModelType(mesh);
+    Scene::Mesh new_mesh;
+    new_mesh.collision_type = GetCollisionType(mesh);
+    new_mesh.type = GetModelType(mesh);
     glm::vec3 mesh_min(std::numeric_limits<float>::max());
     glm::vec3 mesh_max(std::numeric_limits<float>::min());
     for (const auto& primitive : mesh.primitives) {
@@ -601,12 +767,15 @@ ModelLoader::BufferData ModelLoader::LoadBuffers(const tinygltf::Model& model,
         material_id = 0;
       }
       material_id = 0;
-      meshes.push_back({idxAccessor.count, index_byte_offset,
-                        data.current_base_vertex, gl_idx_type, min, max,
-                        static_cast<uint32_t>(material_id), mesh_type, collision_type});
+      Scene::Primitive new_primitive(idxAccessor.count, index_byte_offset,
+                        data.current_base_vertex, gl_idx_type,
+                        static_cast<uint32_t>(material_id));
+      new_mesh.primitives.push_back(new_primitive);
       data.current_base_vertex += posAccessor.count;
-      break; //TODO: now we keep only one primitive per mesh
     }
+    new_mesh.min = mesh_min;
+    new_mesh.max = mesh_max;
+    meshes.push_back(new_mesh);
   }
   return data;
 }

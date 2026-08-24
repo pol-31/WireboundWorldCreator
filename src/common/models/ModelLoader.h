@@ -69,7 +69,7 @@ class ModelLoader {
     std::string_view path, const tinygltf::Model& model, int tex_id);
 
 
-  Scene::Skin LoadSkin(const tinygltf::Model& model);
+  Scene::CoreRig LoadCoreRig(const tinygltf::Model& model);
 
   std::vector<Scene::Animation> LoadAnimations(
     const tinygltf::Model& model);

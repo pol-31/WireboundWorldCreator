@@ -125,17 +125,19 @@ void Renderer::DrawDirectionalLightShadowPass() {
       GL_TEXTURE_2D,shadow_maps_[i], 0);
     glClear(GL_DEPTH_BUFFER_BIT);
     glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(l.source->lightSpaceMatrix));
-    for (const auto& m : l.objects) {
-      const auto& p = scene_->scene_data_.meshes[m.mesh_id];
-      glDrawElementsInstancedBaseVertexBaseInstance(
+    for (const auto& o : l.objects) {
+      const auto& m = scene_->scene_data_.meshes[o.mesh_id];
+      for (const auto& p : m.primitives) {
+        glDrawElementsInstancedBaseVertexBaseInstance(
             GL_TRIANGLES,
             p.index_count,
             p.index_type,
             (void*)p.index_byte_offset,
-            m.instances_num,
+            o.instances_num,
             p.base_vertex,
-            m.instance_offset
+            o.instance_offset
         );
+      }
     }
   }
 }
@@ -186,17 +188,19 @@ void Renderer::DrawPointLightShadowPass() {
                        glm::value_ptr(shadowTransforms[0]));
     glUniform3fv(0, 1, glm::value_ptr(pos));
     glUniform1f(1, l.source->far_plane_);
-    for (const auto& m : l.objects) {
-      const auto& p = scene_->scene_data_.meshes[m.mesh_id];
-      glDrawElementsInstancedBaseVertexBaseInstance(
+    for (const auto& o : l.objects) {
+      const auto& m = scene_->scene_data_.meshes[o.mesh_id];
+      for (const auto& p : m.primitives) {
+        glDrawElementsInstancedBaseVertexBaseInstance(
             GL_TRIANGLES,
             p.index_count,
             p.index_type,
             (void*)p.index_byte_offset,
-            m.instances_num,
+            o.instances_num,
             p.base_vertex,
-            m.instance_offset
+            o.instance_offset
         );
+      }
     }
   }
 }
@@ -206,6 +210,57 @@ void Renderer::DrawShadowPass() {
   glBindVertexArray(scene_->scene_data_.vao);
   DrawDirectionalLightShadowPass();
   DrawPointLightShadowPass();
+}
+
+void BindMaterial(const Material& material) {
+  glActiveTexture(GL_TEXTURE0);
+  material.albedo.BindSampler(0);
+  glActiveTexture(GL_TEXTURE0);
+  material.rough_metal_ao.BindSampler(1);
+  glActiveTexture(GL_TEXTURE0);
+  material.normal.BindSampler(2);
+}
+
+void BindAnimatedRenderData(const AnimatedRenderData& data) {
+  glUniformMatrix4fv(2, 1, false,
+    reinterpret_cast<const float*>(&data.transform));
+  glUniform4fv(3, 1, JPH::Vec4::sOne().mF32);
+  glUniform1i(4, data.bones_offset);
+  glBindVertexArray(data.vao);
+  BindMaterial(*data.material);
+}
+
+void RenderAnimatedPrimitive(const Scene::Primitive& p) {
+  glDrawElementsBaseVertex(
+          GL_TRIANGLES,
+          p.index_count,
+          p.index_type,
+          reinterpret_cast<void*>(p.index_byte_offset),
+          static_cast<GLint>(p.base_vertex)
+      );
+}
+
+void RenderAnimated(const AnimatedRenderData& data) {
+  BindAnimatedRenderData(data);
+  for (int i = 0; i < data.meshes->size(); ++i) {
+    const Scene::Mesh& m = (*data.meshes)[i];
+    for (const auto& p : m.primitives) {
+      RenderAnimatedPrimitive(p);
+    }
+  }
+}
+
+void RenderPlayer(const AnimatedRenderData& data) {
+  BindAnimatedRenderData(data);
+  for (int i = 0; i < data.meshes->size(); ++i) {
+    const Scene::Mesh& m = (*data.meshes)[i];
+    if (i == 2) {
+      continue; // for character only;
+    }
+    for (const auto& p : m.primitives) {
+      RenderAnimatedPrimitive(p);
+    }
+  }
 }
 
 void Renderer::DrawGeometryPass() {
@@ -228,29 +283,26 @@ void Renderer::DrawGeometryPass() {
   glBindTextureUnit(1, scene_->materials.normal);
   glBindTextureUnit(2, scene_->materials.rough_metal_ao);
 
-  for (const auto& m : culled_data_->camera.objects) {
-    const auto& p = scene_->scene_data_.meshes[m.mesh_id];
-    glDrawElementsInstancedBaseVertexBaseInstance(
+  for (const auto& o : culled_data_->camera.objects) {
+    const auto& m = scene_->scene_data_.meshes[o.mesh_id];
+    for (const auto& p : m.primitives) {
+      glDrawElementsInstancedBaseVertexBaseInstance(
           GL_TRIANGLES,
           p.index_count,
           p.index_type,
           (void*)p.index_byte_offset,
-          m.instances_num,
+          o.instances_num,
           p.base_vertex,
-          m.instance_offset
+          o.instance_offset
       );
-  }
-
-  auto cam_frustum = camera_->GetFrustum();
-  for (const auto& w : culled_data_->camera.weapons) {
-    (*w)->Render(cam_frustum); // non-animated, rendered only if no owner_
+    }
   }
 
   sh_geometry5_.Bind();
-  (*player_)->GetBody()->RenderWithWeapon(cam_frustum);
-  
-  for (const auto& c : culled_data_->camera.characters) {
-    (*c)->GetBody()->RenderWithWeapon(cam_frustum); // both animated
+  auto render_data = (*player_)->GetBody()->GetAnimatedRenderData();
+  RenderPlayer(render_data);
+  for (const auto& data : culled_data_->camera.object_animated) {
+    RenderAnimated(data);
   }
 }
 
@@ -286,31 +338,32 @@ void Renderer::RenderDebug() {
   glBindTextureUnit(1, scene_->materials.normal);
   glBindTextureUnit(2, scene_->materials.rough_metal_ao);
 
-  for (const auto& m : culled_data_->camera.objects) {
-    const auto& mesh = scene_->scene_data_.meshes[m.mesh_id];
+  for (const auto& o : culled_data_->camera.objects) {
+    const auto& m = scene_->scene_data_.meshes[o.mesh_id];
     int dbg_shape_id = GetDbgShapeId(
-      scene_->scene_dbg_shapes_.meshes, mesh.collision_type);
-    const auto& p = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
-    glDrawElementsInstancedBaseVertexBaseInstance(
+      scene_->scene_dbg_shapes_.meshes, m.collision_type);
+    const auto& m_dbg = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
+    for (const auto& p : m_dbg.primitives) {
+      glDrawElementsInstancedBaseVertexBaseInstance(
           GL_TRIANGLES,
           p.index_count,
           p.index_type,
           (void*)p.index_byte_offset,
-          m.instances_num,
+          o.instances_num,
           p.base_vertex,
-          m.instance_offset
+          o.instance_offset
       );
+    }
   }
-
-  auto cam_frustum = camera_->GetFrustum();
-  for (const auto& w : culled_data_->camera.weapons) {
-    (*w)->Render(cam_frustum); // non-animated, rendered only if no owner_
-  }
-
-  sh_geometry5_.Bind();
-  for (const auto& c : culled_data_->camera.characters) {
-    (*c)->GetBody()->RenderWithWeapon(cam_frustum); // both animated
-  }
+  // auto cam_frustum = camera_->GetFrustum();
+  // for (const auto& w : culled_data_->camera.weapons) {
+  //   (*w)->Render(cam_frustum); // non-animated, rendered only if no owner_
+  // }
+  //
+  // sh_geometry5_.Bind();
+  // for (const auto& c : culled_data_->camera.characters) {
+  //   (*c)->GetBody()->RenderWithWeapon(cam_frustum); // both animated
+  // }
 }
 
 void Renderer::RenderTerrain(TerrainRenderData terrain) {
@@ -401,19 +454,21 @@ void Renderer::DrawLightPass(TerrainRenderData terrain, CubemapRenderData cubema
   glBindVertexArray(scene_->scene_data_.vao);
   sh_light_emitter_.Bind();
   for (const auto& l : culled_data_->point_lights) {
-    const auto& p = scene_->scene_data_.meshes[l.source->object_->mesh_index];
+    const auto& m = scene_->scene_data_.meshes[l.source->object_->mesh_index];
     glUniformMatrix4fv(0, 1, GL_FALSE,
       reinterpret_cast<const float*>(&l.source->object_->global_transform));
     // JPH::Vec4 colorVec = l.object_->color.ToVec4();
     JPH::Vec4 colorVec = JPH::Vec4::sOne();
     glUniform4fv(1, 1, &colorVec.mF32[0]);
-    glDrawElementsBaseVertex(
+    for (const auto& p : m.primitives) {
+      glDrawElementsBaseVertex(
             GL_TRIANGLES,
             p.index_count,
             p.index_type,
             (void*)p.index_byte_offset,
             p.base_vertex
         );
+    }
   }
   glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);

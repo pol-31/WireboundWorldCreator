@@ -40,7 +40,9 @@ void WorldManager::PushFrustumCulled(
     [&](const Scene::ModelNode* node) {
       InstanceGpu new_instance;
       new_instance.model = node->global_transform;
-      new_instance.material_id = scene_data.meshes[node->mesh_index].material_id;
+      //TODO: primitives 0.... but maybe all our primitives have same mat id..
+      // so fix not for today
+      new_instance.material_id = scene_data.meshes[node->mesh_index].primitives[0].material_id;
       ssbo_data[node->mesh_index].push_back(std::move(new_instance));
       for (const Scene::ModelNode* child : node->children) {
         dfs(child);
@@ -53,6 +55,7 @@ void WorldManager::PushFrustumCulled(
 }
 
 void WorldManager::Cull() {
+
   // if (!cur_tile_) {
     // throw std::runtime_error("no zone set");
   // }
@@ -61,7 +64,19 @@ void WorldManager::Cull() {
   active_dir_lights_ = std::vector<FrustumCulledObjects>(dir_lights_.size());
   active_camera_ = FrustumCulledObjects();
   final_render_data_.ssbo_data.clear();
+
   final_render_data_.camera.objects.clear();
+  final_render_data_.camera.object_animated.clear();
+
+  for (const auto& c : characters_) {
+    final_render_data_.camera.object_animated.push_back(
+      c->GetBody()->GetAnimatedRenderData());
+  }
+  for (const auto& w : weapons_) {
+    final_render_data_.camera.object_animated.push_back(
+      w->GetAnimatedRenderData());
+  }
+
   final_render_data_.point_lights.clear();
   final_render_data_.point_lights.resize(active_point_lights_.size());
   final_render_data_.dir_lights.clear();

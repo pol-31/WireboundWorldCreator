@@ -1,16 +1,84 @@
 #include "Weapon.h"
 
-void Weapon::Render(const Frustum& frustum) {
-  //TODO: we don't have updated global transform or scene node
-  // we also don't have node hierarchy in case of non-owned...
-  // .... not ready
-  if (owner_) {
-    return;
-  }
-  //TODO: check frustum and render non-animated
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Body/BodyLockInterface.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+
+#include "Character.h"
+#include "Animator.h"
+#include "../../Core/Layers.h"
+
+Weapon::Weapon(
+  const Scene::WeaponData* model,
+  JPH::PhysicsSystem* physics_system,
+  Animator* animator)
+: model_(model),
+physics_system_(physics_system),
+animator_(animator) {
+  CreatePhysicBody(JPH::Vec3(1.0f, 1.0f, 1.0f));
 }
 
-void Weapon::Shoot(const JPH::Vec3& eye_pos, const JPH::Vec3& forward_dir) {
+void Weapon::CreatePhysicBody(const JPH::Vec3& position) {
+  const auto& mesh = model_->meshes[0];
+  auto half_extend_glm = (mesh.max - mesh.min) / 2.0f;
+  JPH::Vec3 half_extend(half_extend_glm.x, half_extend_glm.y, half_extend_glm.z);
+  JPH::BoxShapeSettings shape_settings(half_extend); // Approximate rifle box
+  JPH::ShapeSettings::ShapeResult shape_result = shape_settings.Create();
+  JPH::BodyCreationSettings creation_settings(
+      shape_result.Get(),
+      position,
+      JPH::Quat::sIdentity(),
+      JPH::EMotionType::Dynamic,
+      Layers::MOVING
+  );
+  auto& bi = physics_system_->GetBodyInterface();
+  jph_body_id_ = bi.CreateAndAddBody(creation_settings, JPH::EActivation::Activate);
+}
+
+void Weapon::DeletePhysicBody() {
+  JPH::BodyInterface& bi = physics_system_->GetBodyInterface();
+  if (!jph_body_id_.IsInvalid()) {
+    bi.RemoveBody(jph_body_id_);
+    bi.DestroyBody(jph_body_id_);
+    jph_body_id_ = JPH::BodyID();
+  }
+}
+
+//TODO 1: we don't render by dfs, but all meshes (wft - need by nodes with meshes)
+//TODO 2: weapon global transforms should be updated alongside with scene objects
+// (so in Scene::Update())
+//TODO 3: gltf::mesh != gltf::primitive
+
+
+
+AnimatedRenderData Weapon::GetAnimatedRenderData() const {
+  AnimatedRenderData data;
+  if (owner_) {
+    data.transform = owner_->GetWeaponSocketMatrix();
+  } else {
+  auto& bli = physics_system_->GetBodyLockInterface();
+    JPH::BodyLockRead lock(bli, jph_body_id_);
+    if (lock.SucceededAndIsInBroadPhase()) {
+      const JPH::Body& body = lock.GetBody();
+      //node->bounds = body.GetWorldSpaceBounds(); // update bounds
+      data.transform = body.GetWorldTransform();
+    }
+  }
+  if (animation_id_ == -1) {
+    data.bones_offset = -1;
+  } else {
+    data.bones_offset = animator_->GetInstanceWeapon(animation_id_).core_instance.bones_offset;
+  }
+  data.vao = model_->vao;
+  data.material = &model_->material;
+  data.meshes = &model_->meshes;
+  return data;
+}
+
+bool Weapon::TryShoot(const JPH::Vec3& eye_pos, const JPH::Vec3& forward_dir) {
   // if (op_state_ != OperationalState::Idle) {
   //   return;
   // }
@@ -19,33 +87,12 @@ void Weapon::Shoot(const JPH::Vec3& eye_pos, const JPH::Vec3& forward_dir) {
   //   //TODO: render ui message
   //   return;
   // }
-  // animator_->Start(animation_id_, (int)Animator::WeaponType::Shoot, false);
-  // JPH::RVec3 hit_position;
-  // JPH::BodyID hit_body_id;
-  // float hit_fraction = 1.0f;
-  // float maxDistance = 100.0f;
-  // if (CastProbe(maxDistance, hit_fraction, hit_position, hit_body_id)) {
-  //   float shotForce = 50.0f;
-  //   JPH::Vec3 impulse = ToJph(camera_.GetDirectionFront()) * shotForce;
-  //   JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
-  //   bool is_character = false;
-  //   //TODO: probably there's a better way
-  //   for (auto& c : characters_) {
-  //     if (c.GetJphCharacter()->GetInnerBodyID() == hit_body_id) {
-  //       is_character = true;
-  //       float stopping_power = 15.0f;
-  //       c.Death();
-  //       // c.external_impulse += ToJph(camera_.GetDirectionFront()) * stopping_power;
-  //     }
-  //   }
-  //   if (!is_character) {
-  //     bi.AddImpulse(hit_body_id, impulse, hit_position);
-  //   }
-  // }
-  //TODO: cast a ray
+  animator_->StartWeapon(animation_id_, WeaponAnimType::Shoot, false);
+  return true;
 }
 
 void Weapon::Reload() {
+  animator_->StartWeapon(animation_id_, WeaponAnimType::Reload, false);
   // if (op_state_ != OperationalState::Idle) {
   //   return;
   // }
@@ -66,33 +113,25 @@ void Weapon::Update(float dt) {
 }
 
 void Weapon::Equip(Character* new_owner) {
-  owner_ = new_owner;
-  phys_state_ = PhysicsState::Carried;
-
-  // Remove the weapon from the physics simulation so it doesn't collide with the player
-  if (!jph_body_id_.IsInvalid()) {
-    body_interface_.RemoveBody(jph_body_id_);
-    body_interface_.DestroyBody(jph_body_id_);
-    jph_body_id_ = JPH::BodyID(); // Reset
+  if (owner_) {
+    return;
   }
+  owner_ = new_owner;
+  DeletePhysicBody();
+
+  animation_id_ = animator_->AddInstanceWeapon(
+    model_->nodes[model_->rig.core_rig.skeletonRoot], &model_->nodes, &model_->rig);
+  animator_->StartWeapon(animation_id_, WeaponAnimType::Idle, false);
 }
 
 void Weapon::Drop(const JPH::Vec3& position, const JPH::Vec3& impulse) {
+  if (!owner_) {
+    return;
+  }
   owner_ = nullptr;
-  phys_state_ = PhysicsState::Dropped;
-
-  // // Create the Jolt body on the ground
-  // JPH::BoxShapeSettings shape_settings(JPH::Vec3(0.4f, 0.1f, 0.05f)); // Approximate rifle box
-  // JPH::ShapeSettings::ShapeResult shape_result = shape_settings.Create();
-  //
-  // JPH::BodyCreationSettings creation_settings(
-  //     shape_result.Get(),
-  //     ToJph(position),
-  //     JPH::Quat::sIdentity(),
-  //     JPH::EMotionType::Dynamic,
-  //     Layers::MOVING
-  // );
-  //
-  // jph_body_id_ = body_interface_.CreateAndAddBody(creation_settings, JPH::EActivation::Activate);
-  // body_interface_.SetLinearVelocity(jph_body_id_, ToJph(impulse));
+  CreatePhysicBody(position);
+  JPH::BodyInterface& bi = physics_system_->GetBodyInterface();
+  bi.SetLinearVelocity(jph_body_id_, impulse);
+  animator_->RemoveInstanceWeapon(animation_id_);
+  animation_id_ = -1; // making it inactive
 }

@@ -9,11 +9,10 @@ public:
   enum class EnemyType { ThugSplicer, SpiderSplicer, BigDaddy };
 
   EnemyController(
-JPH::Ref<JPH::CharacterVirtual> jph_character,
 CharacterSharedData* shared_data,
-const Scene::ModelNode* scene_node,
+Scene::ModelNode* scene_node,
 const Scene::CharacterData* model,
-const Scene::Skin* skin);
+const Scene::CharacterRig* skin);
 
   void UpdateLogic(const JPH::PhysicsSystem* physics_system, float dt);
 
@@ -26,11 +25,15 @@ const Scene::Skin* skin);
   }
 
 private:
+  static std::vector<JPH::Vec3> ParseCharacterPath(Scene::ModelNode* character_node);
+
   void UpdatePatrol(
       const JPH::PhysicsSystem* physics_system,
       float delta_time);
 
   std::vector<JPH::Vec3> patrol_;
+  JPH::Vec3 look_dir_ = JPH::Vec3::sAxisX(); // TODO: same as patrol by default
+
   EnemyType type_;
   Character character_; // Stored by value INSIDE the controller
 };

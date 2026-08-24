@@ -2,8 +2,14 @@
 
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
 
 #include "../../core/Layers.h"
+#include "Animator.h"
+#include "EnemyController.h"
+
+#include <iostream>
 
 constexpr float cCharacterHeightStanding = 1.35f;
 constexpr float cCharacterRadiusStanding = 0.3f;
@@ -29,14 +35,16 @@ CharacterSharedData::GetDefaultJphSettings() {
 }
 
 CharacterSharedData::CharacterSharedData(
-    const JPH::PhysicsSystem* physics_system,
+    JPH::PhysicsSystem* physics_system,
     JPH::TempAllocator* temp_allocator,
     JPH::CharacterContactListener* contact_listener,
-    Animator* animator)
+    Animator* animator,
+    std::vector<std::unique_ptr<EnemyController>>* characters)
       : physics_system_(physics_system),
   temp_allocator_(temp_allocator),
   contact_listener_(contact_listener),
-  animator_(animator) {
+  animator_(animator),
+  characters_(characters) {
   mStandingShape_ =
           JPH::RotatedTranslatedShapeSettings(
               JPH::Vec3(
@@ -89,4 +97,67 @@ CharacterSharedData::CharacterSharedData(
   // float diameter = capsule_shape->GetRadius();
   // JPH::Vec3 scale = JPH::Vec3(diameter, diameter, diameter);
   // matrix = matrix.PreScaled(scale);
+}
+
+bool CharacterSharedData::CastProbe(JPH::Vec3 pos, JPH::Vec3 dir,
+  float inProbeLength, float &outFraction,
+    JPH::RVec3 &outPosition, JPH::BodyID &outID, JPH::BodyID source_body_id) {
+  JPH::RVec3 start = pos;
+  JPH::Vec3 direction = inProbeLength * dir;
+
+  // Clear output
+  outPosition = start + direction;
+  outFraction = 1.0f;
+  outID = JPH::BodyID();
+
+  bool had_hit = false;
+  JPH::RRayCast ray{start, direction};
+  JPH::RayCastResult hit;
+  IgnoreSingleBodyFilter player_filter = IgnoreSingleBodyFilter(source_body_id);
+  had_hit = physics_system_->GetNarrowPhaseQuery().CastRay(
+    ray, hit, JPH::SpecifiedBroadPhaseLayerFilter(BroadPhaseLayers::MOVING),
+    JPH::SpecifiedObjectLayerFilter(Layers::MOVING), player_filter);
+
+  outPosition = ray.GetPointOnRay(hit.mFraction);
+  outFraction = hit.mFraction;
+  outID = hit.mBodyID;
+
+  // if (had_hit)
+  //   mDebugRenderer->DrawMarker(outPosition, JPH::Color::sYellow, 0.1f);
+  // else
+  //   mDebugRenderer->DrawMarker(pos + 0.1f * forward, JPH::Color::sRed, 0.001f);
+
+  if (had_hit) {
+    std::cout << "cast probe id : " << hit.mBodyID.GetIndex() << ' '
+    << std::boolalpha << had_hit << std::noboolalpha << std::endl;
+  }
+  return had_hit;
+}
+
+void CharacterSharedData::Shoot(JPH::Vec3 pos, JPH::Vec3 dir, JPH::BodyID source_body_id) {
+  JPH::RVec3 hit_position;
+  JPH::BodyID hit_body_id;
+  float hit_fraction = 1.0f;
+  float maxDistance = 100.0f;
+  if (CastProbe(pos, dir, maxDistance, hit_fraction,
+    hit_position, hit_body_id, source_body_id)) {
+    float shotForce = 50.0f;
+    JPH::Vec3 impulse = dir * shotForce;
+    JPH::BodyInterface &bi = physics_system_->GetBodyInterface();
+    bool is_character = false;
+    //TODO: probably there's a better way
+    for (auto& c : *characters_) {
+      if (c->GetBody()->GetJphCharacter()->GetInnerBodyID() == hit_body_id) {
+        is_character = true;
+        float stopping_power = 15.0f;
+        c->GetBody()->Death();
+        std::cout << "shot somebody" << std::endl;
+        // c.external_impulse += ToJph(camera_.GetDirectionFront()) * stopping_power;
+      }
+    }
+    if (!is_character) {
+      bi.AddImpulse(hit_body_id, impulse, hit_position);
+      std::cout << "shot something" << std::endl;
+    }
+  }
 }

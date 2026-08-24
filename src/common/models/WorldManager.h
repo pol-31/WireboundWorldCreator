@@ -126,8 +126,7 @@ private:
   };
   struct FinalCamera {
     std::vector<SsboOffsetObject> objects;
-    std::vector<std::unique_ptr<Weapon>*> weapons;
-    std::vector<std::unique_ptr<EnemyController>*> characters;
+    std::vector<AnimatedRenderData> object_animated;
   };
 
 public:

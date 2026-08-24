@@ -153,11 +153,13 @@ void Camera::MoveRotateView(float xoffset, float yoffset) {
   if (first_face_mode_) {
     float sensitivity = speed_ * gDeltaTime;
     yaw_ += xoffset * sensitivity;
+    yaw_ = std::remainder(yaw_, 360.0f);
     pitch_ += yoffset * sensitivity;
     pitch_ = glm::clamp(pitch_, -89.0f, 89.0f);
   } else {
     float sensitivity = speed_ * gDeltaTime;
     yaw_ -= xoffset * sensitivity;
+    yaw_ = std::remainder(yaw_, 360.0f);
     pitch_ -= yoffset * sensitivity;
     pitch_ = glm::clamp(pitch_, -89.0f, 89.0f);
 

@@ -9,41 +9,40 @@
 #include <vector>
 #include "Scene.h"
 
+class Character;
+
 class Animator {
  public:
-  enum class CharacterType {
-    kIdle,
-    kIdleSitting,
-    kWalk,
-    kRun,
-    kCrouch,
-    kKick,
-    kStunned,
-    kJump,
-    kFall,
-    kSlide,
-    kClimb,
-    kThrow,
-    kSwim,
-    kNone,
-  };
-
-  enum class WeaponType {
-    Idle,
-    Shoot,
-  };
-
-  struct Instance {
+  struct CoreInstance {
     const Scene::ModelNode* root_node = nullptr;
     const std::vector<Scene::ModelNode*>* nodes = nullptr;
-    const Scene::Skin* skin = nullptr;
     float time = 0.0f;
     bool is_looped = true;
     int type = 0;
     int bones_offset = 0;
+    bool is_alive = true;
     bool is_idle = false; // if true - it's over and keeps same position type::time
-    bool is_dead = false; // removed instance, nodes & skin invalid, skip
+    JPH::Mat44 identity = JPH::Mat44::sIdentity(); //  rutch for invalid models
+    std::vector<Scene::NodePose> current_locals;
+    std::vector<Scene::NodePose> current_locals_default; // for blending
     std::vector<JPH::Mat44> current_globals;
+    std::vector<JPH::Mat44> current_joint_matrices;
+  };
+
+  struct CharacterInstance {
+    CoreInstance core_instance;
+    bool has_pistol = false;
+    const Scene::CharacterRig* skin = nullptr;
+    const Character* character = nullptr;
+    // final render yaw (bone upper body already blended INTO the rig globals)
+    float body_yaw_ = 0.0f;
+    bool strafing_ = false;
+    JPH::Vec3 prev_input_dir = JPH::Vec3::sZero(); // in case no input, but inertia
+  };
+
+  struct WeaponInstance {
+    CoreInstance core_instance;
+    const Scene::WeaponRig* skin = nullptr;
   };
 
   static const int gMaxBones;
@@ -61,41 +60,59 @@ class Animator {
   Animator& operator=(const Animator& animator) = delete;
   Animator& operator=(Animator&& animator) = delete;
 
-  size_t AddInstance(
+  size_t AddInstanceCharacter(
       const Scene::ModelNode* root_node,
       const std::vector<Scene::ModelNode*>* nodes,
-      const Scene::Skin* skin);
+      const Scene::CharacterRig* skin,
+      const Character* character);
 
-  void RemoveInstance(int id);
+  size_t AddInstanceWeapon(
+      const Scene::ModelNode* root_node,
+      const std::vector<Scene::ModelNode*>* nodes,
+      const Scene::WeaponRig* skin);
 
-  [[nodiscard]] const Instance& GetInstance(int id) const noexcept {
-    return instances_[id];
+  void RemoveInstanceCharacter(int id);
+  void RemoveInstanceWeapon(int id);
+
+  void StartCharacter(int instance_id, CharacterAnimType type, bool looped);
+  void StartWeapon(int instance_id, WeaponAnimType type, bool looped);
+
+  [[nodiscard]] const CharacterInstance& GetInstanceCharacter(int id) const noexcept {
+    return instances_characters_[id];
+  }
+  [[nodiscard]] const WeaponInstance& GetInstanceWeapon(int id) const noexcept {
+    return instances_weapons_[id];
   }
 
-  void Start(int instance_id, int type, bool looped);
-
   /// updates all animations
-  void Update();
+  void Update(bool skip = false);
 
-  JPH::Mat44 GetNodeGlobalTransform(uint32_t instance_id, int node_id) const;
+  JPH::Mat44 GetNodeGlobalTransformCharacter(
+    uint32_t instance_id, int node_id) const;
+  JPH::Mat44 GetNodeGlobalTransformWeapon(
+    uint32_t instance_id, int node_id) const;
 
  private:
   void Init();
 
   void DeInit();
 
-  static std::vector<Scene::NodePose> InitLocals(
-    Instance& instance);
+  static void EvaluateWeightedAnimation(
+    CharacterInstance& instance, const Scene::Animation& animation, float weight);
 
-  static std::vector<JPH::Mat44> ComputeGlobals(
-    Instance& instance, const std::vector<Scene::NodePose>& locals);
+  void ApplyDeltas(CharacterInstance& instance, JPH::Vec3 prev_move_dir);
 
-  static std::vector<JPH::Mat44> BuildJointMatrices(
-    Instance& instance, const std::vector<JPH::Mat44>& globals);
+  static void InitLocalsCharacter(CharacterInstance& instance, const Scene::CoreRig& rig);
+  static void InitLocalsWeapon(CoreInstance& instance, const Scene::CoreRig& rig);
+
+  static void ComputeGlobals(CoreInstance& instance);
+
+  static void BuildJointMatrices(CoreInstance& instance, const Scene::CoreRig& rig);
 
   void Clear();
 
-  std::vector<Instance> instances_;
+  std::vector<WeaponInstance> instances_weapons_;
+  std::vector<CharacterInstance> instances_characters_;
   float speed_ = 1.0f;
   GLuint ssbo_ = 0;
 };

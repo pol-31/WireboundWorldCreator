@@ -1,14 +1,28 @@
 #include "EnemyController.h"
 
 EnemyController::EnemyController(
-JPH::Ref<JPH::CharacterVirtual> jph_character,
 CharacterSharedData* shared_data,
-const Scene::ModelNode* scene_node,
+Scene::ModelNode* scene_node,
 const Scene::CharacterData* model,
-const Scene::Skin* skin)
-: character_(jph_character, shared_data, scene_node, model, skin) {
-  //jph_character_->SetCharacterVsCharacterCollision(&shared_data_->mCharacterVsCharacterCollision_);
-  //jph_character_->SetListener(shared_data_->contact_listener_);
+const Scene::CharacterRig* skin)
+: character_(shared_data, scene_node, model, skin) {
+  character_.jph_character_->SetCharacterVsCharacterCollision(
+  &character_.shared_data_->mCharacterVsCharacterCollision_);
+  auto patrol_path = ParseCharacterPath(scene_node);
+  SetPatrol(patrol_path);
+}
+
+std::vector<JPH::Vec3> EnemyController::ParseCharacterPath(
+  Scene::ModelNode* character_node) {
+  std::vector<JPH::Vec3> path;
+  std::function<void(Scene::ModelNode*)> dfs = [&](Scene::ModelNode* node) {
+    if (!node->children.empty()) {
+      path.push_back(node->children[0]->local_transform.t);
+      dfs(node->children[0]); // only first, keep tricial for now
+    }
+  };
+  dfs(character_node);
+  return path;
 }
 
 void EnemyController::UpdateLogic(

@@ -8,7 +8,7 @@ layout(location = 5) in vec4 in_weight;   // joint weights
 
 layout (location = 2) uniform mat4 modelMatrix;
 layout (location = 3) uniform vec4 modelColor;
-layout (location = 4) uniform uint boneOffset;
+layout (location = 4) uniform int boneOffset;
 
 layout(std430, binding = 10) buffer Bones {
     mat4 uBones[];
@@ -33,13 +33,16 @@ out VS_OUT {
 
 void main() {
     uint index = gl_BaseInstance;
-    mat4 skinMat =
-//                    mat4(1.0f);
-    in_weight.x * bones.uBones[boneOffset + in_joint.x] +
-    in_weight.y * bones.uBones[boneOffset + in_joint.y] +
-    in_weight.z * bones.uBones[boneOffset + in_joint.z] +
-    in_weight.w * bones.uBones[boneOffset + in_joint.w];
-    skinMat = mat4(1.0f);
+    mat4 skinMat = mat4(1.0f);
+    if (boneOffset != -1) {
+        uint boneOffsetu = uint(boneOffset);
+        skinMat =
+        in_weight.x * bones.uBones[boneOffset + in_joint.x] +
+        in_weight.y * bones.uBones[boneOffset + in_joint.y] +
+        in_weight.z * bones.uBones[boneOffset + in_joint.z] +
+        in_weight.w * bones.uBones[boneOffset + in_joint.w];
+    }
+    //skinMat = mat4(1.0f);
 
     vec4 skinned_pos = skinMat * vec4(in_vertex, 1.0);
     vec3 skinned_normal = mat3(skinMat) * in_normal;

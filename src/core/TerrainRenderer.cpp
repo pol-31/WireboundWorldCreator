@@ -1,5 +1,7 @@
 #include "TerrainRenderer.h"
 
+#include <random>
+
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
@@ -58,6 +60,12 @@ Texture CreateTexture(float terrain_size, const std::vector<float>& height_data)
 void TerrainRenderer::InitializeBody(JPH::BodyInterface* body_interface) {
   const int terrain_size = 1024;
   std::vector<float> height_data(terrain_size * terrain_size, 0.0f);
+  std::mt19937 rng(std::random_device{}());
+  std::uniform_real_distribution<float> dist(0.0f, 1.0f); // Adjust max height here
+
+  for (float& h : height_data) {
+    h = 0.0f * 0.2f * dist(rng);
+  }
   hmap_ = CreateTexture(terrain_size, height_data);
   JPH::Vec3 offset(-512.0f, 0.0f, -512.0f);
   JPH::Vec3 scale(1.0f, 1.0f, 1.0f);

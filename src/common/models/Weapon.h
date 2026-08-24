@@ -1,21 +1,24 @@
 #ifndef WIREBOUNDWORLDCREATOR_WEAPON_H
 #define WIREBOUNDWORLDCREATOR_WEAPON_H
 
-#include <Jolt/Jolt.h>
-#include <Jolt/Physics/Body/BodyInterface.h>
-
 #include "Scene.h"
-#include "../../core/Frustum.h"
+
+namespace JPH {
+class PhysicsSystem;
+} // namespace JPH
+
+class Animator;
 
 class Weapon {
 public:
   enum class OperationalState { Idle, Reload, Shoot };
-  enum class PhysicsState { Carried, Dropped };
 
-  Weapon(const Scene::WeaponData* model, JPH::BodyInterface& bi)
-        : model_(model), body_interface_(bi) {}
+  Weapon(const Scene::WeaponData* model,
+    JPH::PhysicsSystem* physics_system,
+    Animator* animator);
 
-  void Shoot(const JPH::Vec3& eye_pos, const JPH::Vec3& forward_dir);
+  /// --- all interaction interface ---
+  bool TryShoot(const JPH::Vec3& eye_pos, const JPH::Vec3& forward_dir);
   void Reload();
   void Update(float dt);
 
@@ -24,16 +27,27 @@ public:
 
   const Scene::WeaponData* GetModel() const { return model_; }
 
-  void Render(const Frustum& frustum);
+  AnimatedRenderData GetAnimatedRenderData() const;
+
+  [[nodiscard]] bool HasOwner() const noexcept {
+    return static_cast<bool>(owner_);
+  }
 
 private:
-  JPH::BodyInterface& body_interface_;
+  void CreatePhysicBody(const JPH::Vec3& position);
+
+  void DeletePhysicBody();
+
+  JPH::PhysicsSystem* physics_system_; // to create & interact
   const Scene::WeaponData* model_;
 
+  int animation_id_ = -1;
+  Animator* animator_ = nullptr;
+
   OperationalState op_state_ = OperationalState::Idle;
-  PhysicsState phys_state_ = PhysicsState::Dropped;
 
   int bullets_left_ = 0;
+  int magazines_left_ = 0;
 
   // Only valid if PhysicsState::Dropped
   Character* owner_ = nullptr;
