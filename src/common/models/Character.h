@@ -117,6 +117,10 @@ const Scene::CharacterRig* skin);
     return is_aiming_;
   }
 
+  [[nodiscard]] bool IsCrouch() const noexcept {
+    return is_crouch_;
+  }
+
   [[nodiscard]] bool IsSprinting() const noexcept {
     return is_sprinting_;
   }
@@ -155,6 +159,7 @@ private:
 
   bool is_sprinting_ = false;
   bool is_aiming_ = false;
+  bool is_crouch_ = false;
 
   float head_yaw_ = 0.0f; // camera or mover
   float head_pitch_ = 0.0f; // camera of mover

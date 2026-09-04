@@ -37,12 +37,20 @@ class Animator {
     // final render yaw (bone upper body already blended INTO the rig globals)
     float body_yaw_ = 0.0f;
     bool strafing_ = false;
+    float armed_weight = 0.0f; // 0 - disarmed
+    float crouch_weight = 0.0f; // 0 - stand
     JPH::Vec3 prev_input_dir = JPH::Vec3::sZero(); // in case no input, but inertia
   };
 
   struct WeaponInstance {
     CoreInstance core_instance;
     const Scene::WeaponRig* skin = nullptr;
+  };
+
+  enum class AnimationLayerFilter {
+    AllNodes,
+    LowerBodyOnly,
+    UpperBodyOnly
   };
 
   static const int gMaxBones;
@@ -110,6 +118,8 @@ class Animator {
   static void BuildJointMatrices(CoreInstance& instance, const Scene::CoreRig& rig);
 
   void Clear();
+
+  void CompensateLowerToUpperSpines(CharacterInstance& instance);
 
   std::vector<WeaponInstance> instances_weapons_;
   std::vector<CharacterInstance> instances_characters_;

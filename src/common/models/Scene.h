@@ -17,47 +17,45 @@
 
 enum class CharacterAnimType {
   Idle,
-  IdleSitting,
-  Walk,
-  Run,
-  Crouch,
-  Kick,
-  Stunned,
-  Jump,
-  Fall,
-  Slide,
+  IdleNoArm,
   Climb,
-  Throw,
-  Swim,
+  IdleCrouch,
+  IdleCrouchNoArm,
+  Fall,
+  Holster,
+  Hurt,
+  Jump,
+  Kick,
+  MoveJump,
+  Reload,
   Shoot,
-
-  IdleCenter,
-  IdleDown,
-  IdleLeft,
-  IdleRight,
-  IdleUp,
-
-  PistolIdle,
-
-  PistolIdleCenter,
-  PistolIdleDown,
-  PistolIdleLeft,
-  PistolIdleRight,
-  PistolIdleUp,
-
-  PistolJump,
-  PistolKneelIdle,
-  PistolKneelToSit,
-  PistolKneelToStand,
-  PistolRun,
-  PistolRunBackward,
-  PistolStrifeLeft,
-  PistolStrifeRight,
-  PistolWalkBackward,
-  PistolWalkForward,
-
+  IdleSitting,
+  Slide,
+  WalkForward,
+  WalkBackward,
+  WalkLeft,
+  WalkRight,
+  RunForward,
+  RunBackward,
+  RunLeft,
+  RunRight,
+  CrouchForward,
+  CrouchBackward,
+  CrouchLeft,
+  CrouchRight,
+  PosesIdle,
+  PosesPistol,
 
   kNone,
+};
+
+/// order specified in gltf (default alphabet by now)
+enum class CharacterPoseDir {
+  Center,
+  Down,
+  Left,
+  Right,
+  Up,
 };
 
 enum class WeaponAnimType {
@@ -124,6 +122,7 @@ struct Scene {
 
   // upper body pose blend (neck / shoulders & neck)
   struct PoseDeltas {
+    std::vector<NodePose> center;
     std::vector<NodePose> left;
     std::vector<NodePose> right;
     std::vector<NodePose> up;
@@ -140,6 +139,10 @@ struct Scene {
     CoreRig core_rig;
     int head_bone_id = 0;
     int hand_bone_id = 0;
+    int hips_id = 0;
+    int spine0_id = 0;
+    int spine1_id = 0;
+    int spine2_id = 0;
     std::map<CharacterAnimType, int> mapping;
     PoseDeltas default_deltas;
     PoseDeltas pistol_deltas;

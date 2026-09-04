@@ -198,6 +198,7 @@ void Animator::StartWeapon(int instance_id, WeaponAnimType type, bool looped) {
 
 struct CharacterBlendingPoses {
   CharacterAnimType idle;
+  CharacterAnimType idle_no_arm;
   CharacterAnimType forward;
   CharacterAnimType backward;
   CharacterAnimType left;
@@ -207,35 +208,30 @@ struct CharacterBlendingPoses {
 
 static CharacterBlendingPoses cPoseWalk = {
   CharacterAnimType::Idle,
-  CharacterAnimType::Walk,
-  CharacterAnimType::PistolWalkBackward,
-  CharacterAnimType::PistolStrifeLeft,
-  CharacterAnimType::PistolStrifeRight,
+  CharacterAnimType::IdleNoArm,
+  CharacterAnimType::WalkForward,
+  CharacterAnimType::WalkBackward,
+  CharacterAnimType::WalkLeft,
+  CharacterAnimType::WalkRight,
   CharacterAnimType::Jump,
 };
 static CharacterBlendingPoses cPoseRun = {
   CharacterAnimType::Idle,
-  CharacterAnimType::Run,
-  CharacterAnimType::PistolWalkBackward,
-  CharacterAnimType::PistolStrifeLeft,
-  CharacterAnimType::PistolStrifeRight,
+  CharacterAnimType::IdleNoArm,
+  CharacterAnimType::RunForward,
+  CharacterAnimType::RunBackward,
+  CharacterAnimType::RunLeft,
+  CharacterAnimType::RunRight,
+  CharacterAnimType::MoveJump,
+};
+static CharacterBlendingPoses cPoseCrouch = {
+  CharacterAnimType::IdleCrouch,
+  CharacterAnimType::IdleCrouch,
+  CharacterAnimType::CrouchForward,
+  CharacterAnimType::CrouchBackward,
+  CharacterAnimType::CrouchLeft,
+  CharacterAnimType::CrouchRight,
   CharacterAnimType::Jump,
-};
-static CharacterBlendingPoses cPoseWalkAiming = {
-  CharacterAnimType::PistolIdle,
-  CharacterAnimType::PistolWalkForward,
-  CharacterAnimType::PistolWalkBackward,
-  CharacterAnimType::PistolStrifeLeft,
-  CharacterAnimType::PistolStrifeRight,
-  CharacterAnimType::PistolJump,
-};
-static CharacterBlendingPoses cPoseRunAiming = {
-  CharacterAnimType::PistolIdle,
-  CharacterAnimType::PistolRun,
-  CharacterAnimType::PistolRunBackward,
-  CharacterAnimType::PistolStrifeLeft,
-  CharacterAnimType::PistolStrifeRight,
-  CharacterAnimType::PistolJump,
 };
 
 CharacterBlendingPoses GetCharacterBlendingPose(JPH::Vec3 velocity, bool aiming) {
@@ -243,17 +239,65 @@ CharacterBlendingPoses GetCharacterBlendingPose(JPH::Vec3 velocity, bool aiming)
   auto hor_velocity_mag = hor_velocity.Length();
   CharacterAnimType type;
   if (hor_velocity_mag < Character::cWalkSpeed + 1.0f) {
-    if (aiming) {
-      return cPoseWalkAiming;
-    } else {
       return cPoseWalk;
-    }
   } else {
-    if (aiming) {
-      return cPoseRunAiming;
-    } else {
       return cPoseRun;
-    }
+  }
+}
+
+void Animator::CompensateLowerToUpperSpines(CharacterInstance& instance) {
+  /// --- DISTRIBUTED 3-AXIS UPPER BODY ALIGNMENT ---
+  auto hips_idx   = instance.skin->hips_id;
+  auto spine0_idx = instance.skin->spine0_id;
+  auto spine1_idx = instance.skin->spine1_id;
+  auto spine2_idx = instance.skin->spine2_id;
+
+  // 1. Fetch current raw animated local rotations
+  JPH::Quat q_hips   = instance.core_instance.current_locals[hips_idx].r;
+  JPH::Quat q_spine0 = instance.core_instance.current_locals[spine0_idx].r;
+  JPH::Quat q_spine1 = instance.core_instance.current_locals[spine1_idx].r;
+  JPH::Quat q_spine2 = instance.core_instance.current_locals[spine2_idx].r;
+
+  // 2. Compute RAW animated model-space transforms
+  JPH::Quat raw_m_hips   = q_hips;
+  JPH::Quat raw_m_spine0 = raw_m_hips   * q_spine0;
+  JPH::Quat raw_m_spine1 = raw_m_spine0 * q_spine1;
+  JPH::Quat raw_m_spine2 = raw_m_spine1 * q_spine2;
+
+  // 3. Fetch default rest pose locals
+  JPH::Quat d_spine0 = instance.core_instance.current_locals_default[spine0_idx].r;
+  JPH::Quat d_spine1 = instance.core_instance.current_locals_default[spine1_idx].r;
+  JPH::Quat d_spine2 = instance.core_instance.current_locals_default[spine2_idx].r;
+
+  // 4. Compute FULL IDEAL model-space chain
+  JPH::Quat ideal_hips   = JPH::Quat::sRotation(JPH::Vec3::sAxisX(), JPH::DegreesToRadians(-90.0f));
+  JPH::Quat ideal_spine0 = ideal_hips   * d_spine0;
+  JPH::Quat ideal_spine1 = ideal_spine0 * d_spine1;
+  JPH::Quat ideal_spine2 = ideal_spine1 * d_spine2;
+
+  // 5. Calculate sequential blend weights (1/3, 2/3, 3/3)
+  float w0 = (1.0f / 3.0f) * instance.armed_weight;
+  float w1 = (2.0f / 3.0f) * instance.armed_weight;
+  float w2 = (3.0f / 3.0f) * instance.armed_weight;
+
+  // 6. Compute TARGET model-space for each bone by blending RAW towards IDEAL
+  JPH::Quat target_m_spine0 = raw_m_spine0.SLERP(ideal_spine0, w0);
+  JPH::Quat target_m_spine1 = raw_m_spine1.SLERP(ideal_spine1, w1);
+  JPH::Quat target_m_spine2 = raw_m_spine2.SLERP(ideal_spine2, w2);
+
+  // 7. Extract new local rotations sequentially based on the newly corrected parents
+  // Spine0 connects to the untouched Hips
+  instance.core_instance.current_locals[spine0_idx].r = (raw_m_hips.Inversed() * target_m_spine0).Normalized();
+  // Spine1 connects to the new target Spine0
+  instance.core_instance.current_locals[spine1_idx].r = (target_m_spine0.Inversed() * target_m_spine1).Normalized();
+  // Spine2 connects to the new target Spine1
+  instance.core_instance.current_locals[spine2_idx].r = (target_m_spine1.Inversed() * target_m_spine2).Normalized();
+
+  // 8. Neutralize local translation dips evenly across ALL spine joints
+  for (auto idx : {spine0_idx, spine1_idx, spine2_idx}) {
+      const auto& a = instance.core_instance.current_locals[idx].t;
+      const auto& b = instance.core_instance.current_locals_default[idx].t;
+      instance.core_instance.current_locals[idx].t = a + (b - a) * instance.armed_weight;
   }
 }
 
@@ -270,9 +314,13 @@ void Animator::Update(bool skip) {
       instance.core_instance.time += gDeltaTime * speed_;
     }
     instance.core_instance.bones_offset = all_jointMatrices.size();
-    //InitLocalsWeapon(instance.core_instance, instance.skin->core_rig);
     auto prev_input_dir = instance.prev_input_dir;
+    auto input_dir = instance.character->GetMoveDirectionRaw();
+    float character_speed = input_dir.Length();
     InitLocalsCharacter(instance, instance.skin->core_rig);
+
+    CompensateLowerToUpperSpines(instance);
+
     ApplyDeltas(instance, prev_input_dir);
     ComputeGlobals(instance.core_instance);
     BuildJointMatrices(instance.core_instance, instance.skin->core_rig);
@@ -323,19 +371,28 @@ static JPH::Quat ReadQuat(const std::vector<float>& v, int index) {
 }
 
 void Animator::ApplyDeltas(CharacterInstance& instance, JPH::Vec3 prev_move_dir) {
-  const Scene::PoseDeltas& deltas = instance.has_pistol ?
-                                    instance.skin->pistol_deltas :
-                                    instance.skin->default_deltas;
+  // 1. Update the Armed Weight
+  float raise_speed = 6.0f;
+  // Ensure we dynamically target 1.0f or 0.0f based on character state
+  bool is_aiming = instance.character->IsAiming();
+  float target_armed_weight = is_aiming ? 1.0f : 0.0f;
+
+  if (instance.armed_weight < target_armed_weight) {
+    instance.armed_weight = std::min(instance.armed_weight + raise_speed * gDeltaTime, target_armed_weight);
+  } else if (instance.armed_weight > target_armed_weight) {
+    instance.armed_weight = std::max(instance.armed_weight - raise_speed * gDeltaTime, target_armed_weight);
+  }
+
+  // 2. Spine / Body Alignment Logic (Unchanged)
   float aim_yaw = instance.character->GetHeadYaw();
   float aim_pitch = instance.character->GetHeadPitch();
   if (instance.character->GetMoveDirection() != JPH::Vec3::sZero()) {
     auto strafe = instance.character->GetMoveDirectionRaw().GetZ();
-    float turn_speed = 10.0f; // Higher = faster body alignment while running
+    float turn_speed = 10.0f;
     float move_diff = std::remainder(aim_yaw + 90.0f - instance.body_yaw_, 360.0f);
     float diagonal_factor =
       instance.character->GetMoveDirectionRaw().GetX() > 0.0f ? 1.0f : -1.0f;
 
-    // if already strafing
     if (instance.strafing_) {
       if (std::abs(strafe) != 1.0f) {
         instance.strafing_ = false;
@@ -344,8 +401,6 @@ void Animator::ApplyDeltas(CharacterInstance& instance, JPH::Vec3 prev_move_dir)
         } else if (strafe < 0.0f) {
           move_diff = std::remainder(move_diff + diagonal_factor * 45.0f, 360.0f);
         }
-      } else {
-        // keep strafing
       }
     } else {
       if (std::abs(strafe) == 1.0f) {
@@ -369,43 +424,75 @@ void Animator::ApplyDeltas(CharacterInstance& instance, JPH::Vec3 prev_move_dir)
     instance.body_yaw_ += move_diff * (turn_speed * gDeltaTime);
     instance.body_yaw_ = std::remainder(instance.body_yaw_, 360.0f);
   }
+
   float diff = std::remainder(aim_yaw + 90.0f - instance.body_yaw_, 360.0f);
   if (diff > 90.0f) {
-    instance.body_yaw_ += (diff - 90.0f); // Shift body by the excess
-    diff = 90.0f;                         // Clamp diff to max spine twist
+    instance.body_yaw_ += (diff - 90.0f);
+    diff = 90.0f;
     instance.body_yaw_ = std::remainder(instance.body_yaw_, 360.0f);
   } else if (diff < -90.0f) {
-    instance.body_yaw_ += (diff + 90.0f); // diff is negative, so this shifts body by excess
-    diff = -90.0f;                         // Clamp diff to min spine twist
+    instance.body_yaw_ += (diff + 90.0f);
+    diff = -90.0f;
     instance.body_yaw_ = std::remainder(instance.body_yaw_, 360.0f);
   }
-  float yaw_weight = -diff / 90.0f; // Guaranteed to be in [-1.0, 1.0]
+
+  float yaw_weight = -diff / 90.0f;
   float pitch_weight = std::clamp(aim_pitch / 90.0f, -1.0f, 1.0f);
 
+  // 3. Blend and Apply Deltas
+  const auto& def_deltas = instance.skin->default_deltas;
+  const auto& pis_deltas = instance.skin->pistol_deltas;
+  float w = instance.armed_weight;
+
   for (size_t i = 0; i < instance.core_instance.current_locals.size(); ++i) {
-    JPH::Quat yaw_delta = JPH::Quat::sIdentity();
-    if (yaw_weight > 0.0f) {
-      yaw_delta = JPH::Quat::sIdentity().SLERP(deltas.right[i].r, yaw_weight);
-    } else if (yaw_weight < 0.0f) {
-      yaw_delta = JPH::Quat::sIdentity().SLERP(deltas.left[i].r, -yaw_weight);
+    // --- UNARMED CALCULATION ---
+    JPH::Quat yaw_def = JPH::Quat::sIdentity();
+    if (yaw_weight > 0.0f) yaw_def = JPH::Quat::sIdentity().SLERP(def_deltas.right[i].r, yaw_weight);
+    else if (yaw_weight < 0.0f) yaw_def = JPH::Quat::sIdentity().SLERP(def_deltas.left[i].r, -yaw_weight);
+
+    JPH::Quat pitch_def = JPH::Quat::sIdentity();
+    if (pitch_weight > 0.0f) pitch_def = JPH::Quat::sIdentity().SLERP(def_deltas.up[i].r, pitch_weight);
+    else if (pitch_weight < 0.0f) pitch_def = JPH::Quat::sIdentity().SLERP(def_deltas.down[i].r, -pitch_weight);
+
+    JPH::Quat comb_def = ((yaw_def * pitch_def).Normalized() * def_deltas.center[i].r).Normalized();
+
+    JPH::Vec3 t_def = def_deltas.center[i].t;
+    if (yaw_weight > 0.0f) t_def += def_deltas.right[i].t * yaw_weight;
+    else if (yaw_weight < 0.0f) t_def += def_deltas.left[i].t * -yaw_weight;
+    if (pitch_weight > 0.0f) t_def += def_deltas.up[i].t * pitch_weight;
+    else if (pitch_weight < 0.0f) t_def += def_deltas.down[i].t * -pitch_weight;
+
+    // --- ARMED CALCULATION ---
+    JPH::Quat yaw_pis = JPH::Quat::sIdentity();
+    if (yaw_weight > 0.0f) yaw_pis = JPH::Quat::sIdentity().SLERP(pis_deltas.right[i].r, yaw_weight);
+    else if (yaw_weight < 0.0f) yaw_pis = JPH::Quat::sIdentity().SLERP(pis_deltas.left[i].r, -yaw_weight);
+
+    JPH::Quat pitch_pis = JPH::Quat::sIdentity();
+    if (pitch_weight > 0.0f) pitch_pis = JPH::Quat::sIdentity().SLERP(pis_deltas.up[i].r, pitch_weight);
+    else if (pitch_weight < 0.0f) pitch_pis = JPH::Quat::sIdentity().SLERP(pis_deltas.down[i].r, -pitch_weight);
+
+    JPH::Quat comb_pis = ((yaw_pis * pitch_pis).Normalized() * pis_deltas.center[i].r).Normalized();
+
+    JPH::Vec3 t_pis = pis_deltas.center[i].t;
+    if (yaw_weight > 0.0f) t_pis += pis_deltas.right[i].t * yaw_weight;
+    else if (yaw_weight < 0.0f) t_pis += pis_deltas.left[i].t * -yaw_weight;
+    if (pitch_weight > 0.0f) t_pis += pis_deltas.up[i].t * pitch_weight;
+    else if (pitch_weight < 0.0f) t_pis += pis_deltas.down[i].t * -pitch_weight;
+
+    // --- FINAL BLEND ---
+    // Smoothly transition between the unarmed delta state and armed delta state
+    JPH::Quat final_comb_delta = comb_def.SLERP(comb_pis, w).Normalized();
+    JPH::Vec3 final_t_delta = (t_def * (1.0f - w)) + (t_pis * w);
+
+    // Apply to current locals
+    auto new_rot = final_comb_delta * instance.core_instance.current_locals[i].r;
+    if (new_rot.LengthSq() > 0.0001f) {
+      instance.core_instance.current_locals[i].r = new_rot.Normalized();
+    } else {
+      instance.core_instance.current_locals[i].r = JPH::Quat::sIdentity();
     }
 
-    JPH::Quat pitch_delta = JPH::Quat::sIdentity();
-    if (pitch_weight > 0.0f) {
-      pitch_delta = JPH::Quat::sIdentity().SLERP(deltas.up[i].r, pitch_weight);
-    } else if (pitch_weight < 0.0f) {
-      pitch_delta = JPH::Quat::sIdentity().SLERP(deltas.down[i].r, -pitch_weight);
-    }
-
-    JPH::Quat combined_delta = (yaw_delta * pitch_delta).Normalized();
-    instance.core_instance.current_locals[i].r = (combined_delta * instance.core_instance.current_locals[i].r).Normalized();
-
-    JPH::Vec3 t_delta(0.0f, 0.0f, 0.0f);
-    if (yaw_weight > 0.0f) t_delta += deltas.right[i].t * yaw_weight;
-    else if (yaw_weight < 0.0f) t_delta += deltas.left[i].t * -yaw_weight;
-    if (pitch_weight > 0.0f) t_delta += deltas.up[i].t * pitch_weight;
-    else if (pitch_weight < 0.0f) t_delta += deltas.down[i].t * -pitch_weight;
-    instance.core_instance.current_locals[i].t += t_delta;
+    instance.core_instance.current_locals[i].t += final_t_delta;
   }
 }
 
@@ -489,15 +576,38 @@ void Animator::InitLocalsCharacter(CharacterInstance& instance, const Scene::Cor
     weight_walk = 1.0f - weight_run;
   }
 
-  // Assuming input_dir is your cached vector from GetMovementDirection()
-  CharacterBlendingPoses pose_walk = cPoseWalk;
-  CharacterBlendingPoses pose_run = cPoseRun;
-  if (true || instance.character->IsAiming()) {
-    pose_walk = cPoseWalkAiming;
-    pose_run = cPoseRunAiming;
-  }
-  auto input_dir = instance.character->GetMoveDirectionRaw();
+  CharacterAnimType idle_stand_type = CharacterAnimType::Idle;
+  CharacterAnimType idle_crouch_type = CharacterAnimType::IdleCrouch;
+  bool character_crouch = instance.character->IsCrouch();
+  bool character_aiming = instance.character->IsAiming();
 
+  if (character_aiming) {
+    idle_stand_type = CharacterAnimType::IdleNoArm;
+    idle_crouch_type = CharacterAnimType::IdleCrouchNoArm;
+  }
+
+  const auto& idle_stand_anim = rig.animations[instance.skin->mapping.at(idle_stand_type)];
+  const auto& idle_crouch_anim = rig.animations[instance.skin->mapping.at(idle_crouch_type)];
+
+  float raise_speed = 6.0f;
+  float target_crouch_weight = character_crouch ? 1.0f : 0.0f;
+  if (instance.crouch_weight < target_crouch_weight) {
+    instance.crouch_weight = std::min(instance.crouch_weight + raise_speed * gDeltaTime, target_crouch_weight);
+  } else if (instance.crouch_weight > target_crouch_weight) {
+    instance.crouch_weight = std::max(instance.crouch_weight - raise_speed * gDeltaTime, target_crouch_weight);
+  }
+
+  bool is_crouch_transition = (character_crouch && instance.crouch_weight != 1.0f) ||
+    (!character_crouch && instance.crouch_weight != 0.0f);
+
+  if (weight_idle > 0.001f) {
+    float idle_crouch_weight = weight_idle * instance.crouch_weight;
+    float idle_stand_weight = weight_idle * (1.0f - instance.crouch_weight);
+    if (idle_crouch_weight > 0.001f) EvaluateWeightedAnimation(instance, idle_crouch_anim, idle_crouch_weight);
+    if (idle_stand_weight > 0.001f) EvaluateWeightedAnimation(instance, idle_stand_anim, idle_stand_weight);
+  }
+
+  auto input_dir = instance.character->GetMoveDirectionRaw();
   if (input_dir.GetZ() == 0.0f && input_dir.GetX() == 0.0f) {
     if (cur_speed > 0.001f) {
       input_dir = instance.prev_input_dir;
@@ -506,9 +616,6 @@ void Animator::InitLocalsCharacter(CharacterInstance& instance, const Scene::Cor
   auto dir_sideways = input_dir.GetZ();
   auto dir_forward = input_dir.GetX();
 
-  if (weight_idle > 0.001f) {
-    EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.idle)], weight_idle);
-  }
   if (instance.strafing_) {
     dir_sideways = (instance.prev_input_dir.GetZ() < 0.0f) ? -1.0f : 1.0f;
     dir_forward = 0.0f;
@@ -519,22 +626,49 @@ void Animator::InitLocalsCharacter(CharacterInstance& instance, const Scene::Cor
     dir_sideways = 0.0f;
   }
 
-  if (dir_sideways == 1.0f) { // Changed to > 0.5f just to be safe against float precision
-    if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.left)], weight_walk);
-    if (weight_run  > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_run.left)], weight_run);
-  }
-  else if (dir_sideways == -1.0f) {
-    if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.right)], weight_walk);
-    if (weight_run  > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_run.right)], weight_run);
-  }
-  else {
-    if (dir_forward > 0.5f) {
-      if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.forward)], weight_walk);
-      if (weight_run  > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_run.forward)], weight_run);
+  if (instance.crouch_weight != 0.0f) {
+    CharacterBlendingPoses pose_crouch = cPoseCrouch;
+    CharacterBlendingPoses pose_walk = cPoseWalk;
+    float weight_crouch = (weight_walk + weight_run) * instance.crouch_weight;
+    weight_walk = (weight_walk + weight_run) * (1.0f - instance.crouch_weight);
+    if (dir_sideways == 1.0f) { // Changed to > 0.5f just to be safe against float precision
+      if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.right)], weight_walk);
+      if (weight_crouch > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_crouch.right)], weight_crouch);
     }
-    else if (dir_forward < -0.5f) {
-      if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.backward)], weight_walk);
-      if (weight_run  > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_run.backward)], weight_run);
+    else if (dir_sideways == -1.0f) {
+      if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.left)], weight_walk);
+      if (weight_crouch > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_crouch.left)], weight_crouch);
+    }
+    else {
+      if (dir_forward > 0.5f) {
+        if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.forward)], weight_walk);
+        if (weight_crouch > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_crouch.forward)], weight_crouch);
+      }
+      else if (dir_forward < -0.5f) {
+        if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.backward)], weight_walk);
+        if (weight_crouch > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_crouch.backward)], weight_crouch);
+      }
+    }
+  } else {
+    CharacterBlendingPoses pose_walk = cPoseWalk;
+    CharacterBlendingPoses pose_run = cPoseRun;
+    if (dir_sideways == 1.0f) { // Changed to > 0.5f just to be safe against float precision
+      if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.right)], weight_walk);
+      if (weight_run  > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_run.right)], weight_run);
+    }
+    else if (dir_sideways == -1.0f) {
+      if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.left)], weight_walk);
+      if (weight_run  > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_run.left)], weight_run);
+    }
+    else {
+      if (dir_forward > 0.5f) {
+        if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.forward)], weight_walk);
+        if (weight_run  > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_run.forward)], weight_run);
+      }
+      else if (dir_forward < -0.5f) {
+        if (weight_walk > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_walk.backward)], weight_walk);
+        if (weight_run  > 0.001f) EvaluateWeightedAnimation(instance, rig.animations[instance.skin->mapping.at(pose_run.backward)], weight_run);
+      }
     }
   }
   for (int i = 0; i < instance.core_instance.nodes->size(); ++i) {

@@ -74,42 +74,37 @@ ModelLoader::~ModelLoader() {
 }
 
 std::map<std::string, CharacterAnimType> character_anim_map_str_to_enum = {
-  {"01_idle", CharacterAnimType::Idle},
-{"02_idle_sitting", CharacterAnimType::IdleSitting},
-    {"03_walk", CharacterAnimType::Walk},
-    {"04_run", CharacterAnimType::Run},
-    {"05_crouch", CharacterAnimType::Crouch},
-    {"06_kick", CharacterAnimType::Kick},
-    {"07_stunned", CharacterAnimType::Stunned},
-    {"08_jump", CharacterAnimType::Jump},
-    {"09_falling", CharacterAnimType::Fall},
-    {"10_slide", CharacterAnimType::Slide},
-    {"11_climb", CharacterAnimType::Climb},
-    {"12_throw", CharacterAnimType::Throw},
-    {"13_swim", CharacterAnimType::Swim},
-    {"14_shoot", CharacterAnimType::Shoot},
-    {"pistol_idle", CharacterAnimType::PistolIdle},
-    {"pistol_jump", CharacterAnimType::PistolJump},
-    {"pistol_kneel_idle", CharacterAnimType::PistolKneelIdle},
-    {"pistol_kneel_to_sit", CharacterAnimType::PistolKneelToSit},
-    {"pistol_kneel_to_stand", CharacterAnimType::PistolKneelToStand},
-    {"pistol_run", CharacterAnimType::PistolRun},
-    {"pistol_run_backward", CharacterAnimType::PistolRunBackward},
-    {"pistol_strife_left", CharacterAnimType::PistolStrifeLeft},
-    {"pistol_strife_right", CharacterAnimType::PistolStrifeRight},
-{"pistol_walk_backward", CharacterAnimType::PistolWalkBackward},
-{"pistol_walk_forward", CharacterAnimType::PistolWalkForward},
-{"idle_center", CharacterAnimType::IdleCenter},
-{"idle_down", CharacterAnimType::IdleDown},
-{"idle_left", CharacterAnimType::IdleLeft},
-{"idle_right", CharacterAnimType::IdleRight},
-{"idle_up", CharacterAnimType::IdleUp},
-{"pistol_idle_center", CharacterAnimType::PistolIdleCenter},
-{"pistol_idle_down", CharacterAnimType::PistolIdleDown},
-{"pistol_idle_left", CharacterAnimType::PistolIdleLeft},
-{"pistol_idle_right", CharacterAnimType::PistolIdleRight},
-{"pistol_idle_up", CharacterAnimType::PistolIdleUp},
+    {"idle", CharacterAnimType::Idle},
+    {"idle_no_arm", CharacterAnimType::IdleNoArm},
+    {"idle_climb", CharacterAnimType::Climb},
+    {"idle_crouch", CharacterAnimType::IdleCrouch},
+    {"idle_crouch_no_arm", CharacterAnimType::IdleCrouchNoArm},
+    {"idle_fall", CharacterAnimType::Fall},
+    {"idle_holster", CharacterAnimType::Holster},
+    {"idle_hurt", CharacterAnimType::Hurt},
+    {"idle_jump", CharacterAnimType::Jump},
+    {"idle_kick", CharacterAnimType::Kick},
+    {"idle_move_jump", CharacterAnimType::MoveJump},
+    {"idle_reload", CharacterAnimType::Reload},
+    {"idle_shoot", CharacterAnimType::Shoot},
+    {"idle_sitting", CharacterAnimType::IdleSitting},
+    {"idle_slide", CharacterAnimType::Slide},
+{"__walk_forward", CharacterAnimType::WalkForward},
+{"__walk_backward", CharacterAnimType::WalkBackward},
+{"__walk_left", CharacterAnimType::WalkLeft},
+{"__walk_right", CharacterAnimType::WalkRight},
+{"__run_forward", CharacterAnimType::RunForward},
+{"__run_backward", CharacterAnimType::RunBackward},
+{"__run_left", CharacterAnimType::RunLeft},
+{"__run_right", CharacterAnimType::RunRight},
+{"__crouch_forward", CharacterAnimType::CrouchForward},
+{"__crouch_backward", CharacterAnimType::CrouchBackward},
+{"__crouch_left", CharacterAnimType::CrouchLeft},
+{"__crouch_right", CharacterAnimType::CrouchRight},
+{"poses_idle", CharacterAnimType::PosesIdle},
+{"poses_pistol", CharacterAnimType::PosesPistol},
 };
+// poses order: center down left right up
 
 std::map<std::string, WeaponAnimType> weapon_anim_map_str_to_enum = {
   {"Idle", WeaponAnimType::Idle},
@@ -162,19 +157,49 @@ static JPH::Quat ReadQuat(const std::vector<float>& v, int index) {
       v[index * 4 + 3]);
 }
 
+// void ReadPose(const Scene::Animation& anim,
+//   std::vector<Scene::NodePose>& locals, CharacterPoseDir pose) {
+//   for (const auto& channel : anim.channels) {
+//     const auto& sampler = anim.samplers[channel.sampler];
+//     const auto& values = sampler.values;
+//     int node = channel.target_node;
+//     auto frame = static_cast<int>(pose);
+//     //frame = 0;
+//     if (channel.target_path == "translation") {
+//       locals[node].t = ReadVec3(values, frame);
+//     } else if (channel.target_path == "rotation") {
+//       locals[node].r = ReadQuat(values, frame).Normalized();
+//     } else if (channel.target_path == "scale") {
+//       locals[node].s = ReadVec3(values, frame);
+//     }
+//   }
+// }
+
 void ReadPose(const Scene::Animation& anim,
-  std::vector<Scene::NodePose>& locals) {
+  std::vector<Scene::NodePose>& locals, CharacterPoseDir pose) {
   for (const auto& channel : anim.channels) {
     const auto& sampler = anim.samplers[channel.sampler];
     const auto& values = sampler.values;
     int node = channel.target_node;
-    int frame = 0;
+    int frame = static_cast<int>(pose);
+
     if (channel.target_path == "translation") {
-      locals[node].t = ReadVec3(values, frame);
+      // 3 floats per translation keyframe
+      int max_frame = (values.size() / 3) - 1;
+      int safe_frame = std::max(0, std::min(frame, max_frame));
+      locals[node].t = ReadVec3(values, safe_frame);
+
     } else if (channel.target_path == "rotation") {
-      locals[node].r = ReadQuat(values, frame).Normalized();
+      // 4 floats per rotation keyframe
+      int max_frame = (values.size() / 4) - 1;
+      int safe_frame = std::max(0, std::min(frame, max_frame));
+      locals[node].r = ReadQuat(values, safe_frame).Normalized();
+
     } else if (channel.target_path == "scale") {
-      locals[node].s = ReadVec3(values, frame);
+      // 3 floats per scale keyframe
+      int max_frame = (values.size() / 3) - 1;
+      int safe_frame = std::max(0, std::min(frame, max_frame));
+      locals[node].s = ReadVec3(values, safe_frame);
     }
   }
 }
@@ -182,9 +207,9 @@ void ReadPose(const Scene::Animation& anim,
 std::vector<Scene::NodePose> CalculateDelta(
   const std::vector<Scene::NodePose>& starting_locals,
   const std::vector<Scene::NodePose>& center_locals,
-  const Scene::Animation& anim) {
+  const Scene::Animation& anim, CharacterPoseDir pose) {
   std::vector<Scene::NodePose> direction_locals = starting_locals;
-  ReadPose(anim, direction_locals);
+  ReadPose(anim, direction_locals, pose);
   for (int i = 0; i < center_locals.size(); ++i) {
     direction_locals[i].t -= center_locals[i].t;
     direction_locals[i].s = direction_locals[i].s / center_locals[i].s;
@@ -205,28 +230,32 @@ void LoadDeltas(
   }
 
   std::vector<Scene::NodePose> center_locals = starting_locals;
-  ReadPose(animations[mapping.at(CharacterAnimType::IdleCenter)],
-    center_locals);
+  const auto& poses_idle = animations[mapping.at(CharacterAnimType::PosesIdle)];
+  ReadPose(poses_idle, center_locals, CharacterPoseDir::Center);
+  default_deltas.center = CalculateDelta(starting_locals, starting_locals,
+    poses_idle, CharacterPoseDir::Center);
   default_deltas.left = CalculateDelta(starting_locals, center_locals,
-    animations[mapping.at(CharacterAnimType::IdleLeft)]);
+    poses_idle, CharacterPoseDir::Left);
   default_deltas.right = CalculateDelta(starting_locals, center_locals,
-    animations[mapping.at(CharacterAnimType::IdleRight)]);
+    poses_idle, CharacterPoseDir::Right);
   default_deltas.up = CalculateDelta(starting_locals, center_locals,
-    animations[mapping.at(CharacterAnimType::IdleUp)]);
+    poses_idle, CharacterPoseDir::Up);
   default_deltas.down = CalculateDelta(starting_locals, center_locals,
-    animations[mapping.at(CharacterAnimType::IdleDown)]);
+    poses_idle, CharacterPoseDir::Down);
 
   center_locals = starting_locals;
-  ReadPose(animations[mapping.at(CharacterAnimType::PistolIdleCenter)],
-    center_locals);
+  const auto& poses_pistol = animations[mapping.at(CharacterAnimType::PosesPistol)];
+  ReadPose(poses_pistol, center_locals, CharacterPoseDir::Center);
+  pistol_deltas.center = CalculateDelta(starting_locals, starting_locals,
+    poses_pistol, CharacterPoseDir::Center);
   pistol_deltas.left = CalculateDelta(starting_locals, center_locals,
-    animations[mapping.at(CharacterAnimType::PistolIdleLeft)]);
+    poses_pistol, CharacterPoseDir::Left);
   pistol_deltas.right = CalculateDelta(starting_locals, center_locals,
-    animations[mapping.at(CharacterAnimType::PistolIdleRight)]);
+    poses_pistol, CharacterPoseDir::Right);
   pistol_deltas.up = CalculateDelta(starting_locals, center_locals,
-    animations[mapping.at(CharacterAnimType::PistolIdleUp)]);
+    poses_pistol, CharacterPoseDir::Up);
   pistol_deltas.down = CalculateDelta(starting_locals, center_locals,
-    animations[mapping.at(CharacterAnimType::PistolIdleDown)]);
+    poses_pistol, CharacterPoseDir::Down);
 }
 
 Scene::CoreRig ModelLoader::LoadCoreRig(const tinygltf::Model& model) {
@@ -537,6 +566,19 @@ void ModelLoader::LoadScene(std::string_view path) {
     buffer_data);
 }
 
+void MarkLowerBodyNodes(Scene::ModelNode* node, const std::vector<Scene::ModelNode*>& nodes, std::vector<bool>& is_lower_body) {
+  is_lower_body[node->node_id] = true;
+  for (auto child : node->children) {
+    MarkLowerBodyNodes(child, nodes, is_lower_body);
+  }
+}
+
+void BuildLowerBodyMask(std::vector<bool>& is_lower_body, int pelvis_node_id, const std::vector<Scene::ModelNode*>& nodes) {
+  if (pelvis_node_id >= 0 && pelvis_node_id < static_cast<int>(nodes.size())) {
+    MarkLowerBodyNodes(nodes[pelvis_node_id], nodes, is_lower_body);
+  }
+}
+
 void ModelLoader::LoadCharacters(std::string_view skeleton_path,
     std::vector<std::string_view> skin_paths) {
   for (const auto& path : skin_paths) {
@@ -567,16 +609,35 @@ void ModelLoader::LoadCharacters(std::string_view skeleton_path,
     scene_.character_rig_.default_deltas,
     scene_.character_rig_.pistol_deltas);
 
+  //int hips_id = 0;
+  //int spine_id = 0;
   for (int i = 0; i < skeleton_model.nodes.size(); ++i) {
     const auto& n = skeleton_model.nodes[i];
+    // mixamorig6:RightUpLeg"
     if (n.name == "mixamorig6:Camera") {
       scene_.character_rig_.head_bone_id = i;
       std::cout << "camera is " << i << std::endl;
     } else if (n.name == "mixamorig6:Weapon") {
       scene_.character_rig_.hand_bone_id = i;
       std::cout << "weapon is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Hips") {
+      scene_.character_rig_.hips_id = i;
+      std::cout << "hips is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Spine") {
+      scene_.character_rig_.spine0_id = i;
+      std::cout << "spine0 is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Spine1") {
+      scene_.character_rig_.spine1_id = i;
+      std::cout << "spine1 is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Spine2") {
+      scene_.character_rig_.spine2_id = i;
+      std::cout << "spine2 is " << i << std::endl;
     }
   }
+  //auto& nodes = scene_.character_skins_[0].nodes;
+  //scene_.character_rig_.is_lower_body_mask = std::vector<bool>(nodes.size(), false);
+  //BuildLowerBodyMask(scene_.character_rig_.is_lower_body_mask, left_shoulder_id, nodes);
+  //BuildLowerBodyMask(scene_.character_rig_.is_lower_body_mask, right_shoulder_id, nodes);
 }
 
 void ModelLoader::LoadWeapon(std::vector<std::string_view> paths) {

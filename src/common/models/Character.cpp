@@ -12,7 +12,7 @@ const float Character::cJumpSpeed = 4.0f;
 void Character::Death() {
   if (state_ != State::kStunned) {
     shared_data_->animator_->StartCharacter(
-      animation_id_, CharacterAnimType::Stunned, false);
+      animation_id_, CharacterAnimType::Hurt, false);
     state_ = State::kStunned;
   }
 }
@@ -228,11 +228,13 @@ void Character::Run() {
 
   void Character::Crouch() {
     //speed_ *= 0.5f;
+    is_crouch_ = true;
     SwitchStance(false);
   }
 
   void Character::BackToWalk() {
   is_sprinting_ = false;
+    is_crouch_ = false;
     //speed_ = cWalkSpeed;
     SwitchStance(true);
   }
