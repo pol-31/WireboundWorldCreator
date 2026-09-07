@@ -148,6 +148,12 @@ static JPH::Vec3 ReadVec3(const std::vector<float>& v, int index) {
       v[index * 3 + 1],
       v[index * 3 + 2]);
 }
+static JPH::Vec3 ReadVec3(const std::vector<double>& v, int index) {
+  return JPH::Vec3(
+      static_cast<float>(v[index * 3 + 0]),
+      static_cast<float>(v[index * 3 + 1]),
+      static_cast<float>(v[index * 3 + 2]));
+}
 
 static JPH::Quat ReadQuat(const std::vector<float>& v, int index) {
   return JPH::Quat(
@@ -176,7 +182,7 @@ static JPH::Quat ReadQuat(const std::vector<float>& v, int index) {
 // }
 
 void ReadPose(const Scene::Animation& anim,
-  std::vector<Scene::NodePose>& locals, CharacterPoseDir pose) {
+  std::vector<SceneNodePose>& locals, CharacterPoseDir pose) {
   for (const auto& channel : anim.channels) {
     const auto& sampler = anim.samplers[channel.sampler];
     const auto& values = sampler.values;
@@ -204,11 +210,11 @@ void ReadPose(const Scene::Animation& anim,
   }
 }
 
-std::vector<Scene::NodePose> CalculateDelta(
-  const std::vector<Scene::NodePose>& starting_locals,
-  const std::vector<Scene::NodePose>& center_locals,
+std::vector<SceneNodePose> CalculateDelta(
+  const std::vector<SceneNodePose>& starting_locals,
+  const std::vector<SceneNodePose>& center_locals,
   const Scene::Animation& anim, CharacterPoseDir pose) {
-  std::vector<Scene::NodePose> direction_locals = starting_locals;
+  std::vector<SceneNodePose> direction_locals = starting_locals;
   ReadPose(anim, direction_locals, pose);
   for (int i = 0; i < center_locals.size(); ++i) {
     direction_locals[i].t -= center_locals[i].t;
@@ -221,15 +227,15 @@ std::vector<Scene::NodePose> CalculateDelta(
 void LoadDeltas(
   const std::map<CharacterAnimType, int>& mapping,
   const std::vector<Scene::Animation>& animations,
-  const std::vector<Scene::ModelNode*>& nodes,
+  const std::vector<SceneNode*>& nodes,
   Scene::PoseDeltas& default_deltas,
   Scene::PoseDeltas& pistol_deltas) {
-  std::vector<Scene::NodePose> starting_locals(nodes.size());
+  std::vector<SceneNodePose> starting_locals(nodes.size());
   for (int i = 0; i < nodes.size(); ++i) {
     starting_locals[i] = nodes[i]->local_transform;
   }
 
-  std::vector<Scene::NodePose> center_locals = starting_locals;
+  std::vector<SceneNodePose> center_locals = starting_locals;
   const auto& poses_idle = animations[mapping.at(CharacterAnimType::PosesIdle)];
   ReadPose(poses_idle, center_locals, CharacterPoseDir::Center);
   default_deltas.center = CalculateDelta(starting_locals, starting_locals,
@@ -449,16 +455,33 @@ void UploadBuffers(GLuint* vao, GLuint* vbo, GLuint* ebo,
   glBindVertexArray(0);
 }
 
-Scene::ModelNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id) {
-  std::function<Scene::ModelNode*(int)> dfs =
+
+void InitBounds(SceneNode* node, std::vector<Scene::Mesh>& meshes) {
+  auto mesh_index = node->mesh_index;
+  if (mesh_index == -1) {
+    return;
+  }
+  const auto& mesh = meshes[mesh_index];
+  node->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
+    JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
+}
+
+SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
+  const std::vector<Scene::Mesh>& meshes) {
+  std::function<SceneNode*(int)> dfs =
     [&](int id) {
-      auto node = new Scene::ModelNode();
+      auto node = new SceneNode();
       const auto& scene_node = model.nodes[id];
       node->mesh_index = scene_node.mesh;
       node->local_transform.r = GetNodeRotation(model.nodes[id]);
       node->local_transform.t = GetNodeTranslation(model.nodes[id]);
       node->local_transform.s = GetNodeScale(model.nodes[id]);
       node->node_id = id;
+      if (scene_node.mesh != -1) {
+        const auto& mesh = meshes[scene_node.mesh];
+        node->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
+        JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
+      }
       for (auto child_id : scene_node.children) {
         node->children.push_back(dfs(child_id));
       }
@@ -468,9 +491,88 @@ Scene::ModelNode* CreateObjectNode(const tinygltf::Model& model, int root_node_i
 }
 
 void ParseZone(const tinygltf::Model& model,
-  const tinygltf::Node& tile_node, Scene::Zone* zone) {
+const tinygltf::Node& tile_node, Scene::Zone* zone,
+const std::vector<Scene::Mesh>& meshes) {
   for (const auto& child_id : tile_node.children) {
-    zone->object_nodes.push_back(CreateObjectNode(model, child_id));
+    zone->object_nodes.push_back(CreateObjectNode(model, child_id, meshes));
+  }
+}
+
+void ParseCharacter(const tinygltf::Model& model,
+    int node_id, Scene::Tile* tile,
+    const std::vector<Scene::Mesh>& meshes) {
+  const auto& node = model.nodes[node_id];
+  tile->characters.push_back(CreateObjectNode(model, node_id, meshes));
+  // patrol path is linear thing, so directed line
+  // std::vector<JPH::Vec3> patrol_path;
+  // patrol_path.push_back(ReadVec3(node.translation, 0));
+  // auto dfs = [&](auto& self, const tinygltf::Node& node) -> void {
+  //   if (!node.children.empty()) {
+  //     const auto& child_node = model.nodes[node.children[0]];
+  //     if (!node.translation.empty()) {
+  //       patrol_path.push_back(ReadVec3(child_node.translation, 0));
+  //     }
+  //     self(self, child_node);
+  //   }
+  // };
+  // dfs(dfs, node);
+}
+
+void Scene::ConnectZonesWithPortals(int tile_id) {
+  std::vector<Scene::Zone*>& zones = scene_data_.tiles[0]->zones;
+  std::vector<Scene::Portal>& portals = scene_data_.tiles[0]->portals;
+
+  for (size_t p = 0; p < portals.size(); ++p) {
+    Scene::Portal& portal_data = portals[p];
+
+    // Safety check: ensure the portal node actually exists
+    if (!portal_data.portal) continue;
+
+    // 1. Expand the portal's AABB by a tiny epsilon.
+    // Because portals sit perfectly flush on the 2D boundary of two rooms,
+    // floating-point precision can cause strict AABB overlaps to fail.
+    JPH::Vec3 epsilon = JPH::Vec3::sReplicate(0.05f);
+    JPH::AABox expanded_portal_box;
+    auto offset = portal_data.position;
+    std::cout << offset << std::endl;
+    expanded_portal_box.mMin = portal_data.portal->bounds.mMin + offset - epsilon;
+    expanded_portal_box.mMin.SetY(std::numeric_limits<float>::lowest());
+    expanded_portal_box.mMax = portal_data.portal->bounds.mMax + offset + epsilon;
+    expanded_portal_box.mMax.SetY(std::numeric_limits<float>::max());
+
+    int connected_count = 0;
+
+    // 2. Test this portal against all zones
+    for (size_t z = 0; z < zones.size(); ++z) {
+      Scene::Zone* zone = zones[z];
+
+      if (zone->bounds.Overlaps(expanded_portal_box)) {
+
+        // 3. Link the Portal to the Zone
+        if (connected_count == 0) {
+          portal_data.connected_zone_index_1 = z;
+        } else if (connected_count == 1) {
+          portal_data.connected_zone_index_2 = z;
+        }
+
+        // 4. Link the Zone back to the Portal
+        // (This stores a pointer to the element in the portals vector)
+        zone->portals.push_back(&portal_data);
+
+        connected_count++;
+
+        // 5. Early exit: A portal can only connect two zones
+        if (connected_count == 2) {
+          break;
+        }
+      }
+    }
+
+    // 6. Validation Logging
+    if (connected_count < 2) {
+      std::cerr << "Warning: Portal Node ID " << portal_data.portal->node_id
+                << " connected to only " << connected_count << " zones.\n";
+    }
   }
 }
 
@@ -484,12 +586,33 @@ void ParseTile(const tinygltf::Model& model,
     Scene::Type type = meshes[node.mesh].type;
     if (type == Scene::Type::Zone) {
       auto zone = new Scene::Zone();
+      const auto& mesh = meshes[node.mesh];
+      zone->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
+        JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
       tile->zones.push_back(zone);
-      ParseZone(model, node, zone);
+      ParseZone(model, node, zone, meshes);
+    } else if (type == Scene::Type::Character) {
+      ParseCharacter(model, child_id, tile, meshes);
+    } else if (type == Scene::Type::Portal) {
+      //tile->portals.push_back(CreateObjectNode(model, child_id, meshes));
     } else {
-      tile->object_nodes.push_back(CreateObjectNode(model, child_id));
+      Scene::Portal portal;
+      portal.position = ReadVec3(node.translation, 0);
+      for (auto grand_child_id : node.children) {
+        const auto& child_node = model.nodes[grand_child_id];
+        Scene::Type child_type = meshes[child_node.mesh].type;
+        if (child_type == Scene::Type::None) {
+          portal.render = CreateObjectNode(model, grand_child_id, meshes);
+        } else if (child_type == Scene::Type::Portal) {
+          portal.portal = CreateObjectNode(model, grand_child_id, meshes);
+        } else {
+          std::cerr << "wrong obj type for the tile children" << std::endl;
+        }
+      }
+      tile->portals.push_back(portal);
     }
   }
+  //ConnectZonesWithPortals(tile->zones, tile->portals);
 }
 
 void ReadSceneHierarchy(
@@ -505,10 +628,15 @@ void ReadSceneHierarchy(
     Scene::Type type = meshes[mesh_id].type;
     if (type == Scene::Type::Tile) {
       auto tile = new Scene::Tile();
+
+      const auto& mesh = meshes[node.mesh];
+      tile->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
+        JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
+
       scene.tiles.push_back(tile);
       ParseTile(model, node, tile, meshes);
     } else if (type == Scene::Type::Player) {
-      scene.player_node = CreateObjectNode(model, i);
+      scene.player_node = CreateObjectNode(model, i, meshes);
     }
   }
   // for (size_t i = 0; i < model.nodes.size(); ++i) {
@@ -522,12 +650,13 @@ void ReadSceneHierarchy(
 }
 
 void ReadNodeHierarchy(
-  std::vector<Scene::ModelNode*>& nodes,
-  const tinygltf::Model& model) {
+  std::vector<SceneNode*>& nodes,
+  const tinygltf::Model& model,
+  const std::vector<Scene::Mesh>& meshes) {
   nodes.clear();
   nodes.resize(model.nodes.size());
   for (size_t i = 0; i < model.nodes.size(); ++i) {
-    nodes[i] = CreateObjectNode(model, i);
+    nodes[i] = CreateObjectNode(model, i, meshes);
   }
   for (size_t i = 0; i < model.nodes.size(); ++i) {
     const tinygltf::Node& gltfNode = model.nodes[i];
@@ -566,14 +695,14 @@ void ModelLoader::LoadScene(std::string_view path) {
     buffer_data);
 }
 
-void MarkLowerBodyNodes(Scene::ModelNode* node, const std::vector<Scene::ModelNode*>& nodes, std::vector<bool>& is_lower_body) {
+void MarkLowerBodyNodes(SceneNode* node, const std::vector<SceneNode*>& nodes, std::vector<bool>& is_lower_body) {
   is_lower_body[node->node_id] = true;
   for (auto child : node->children) {
     MarkLowerBodyNodes(child, nodes, is_lower_body);
   }
 }
 
-void BuildLowerBodyMask(std::vector<bool>& is_lower_body, int pelvis_node_id, const std::vector<Scene::ModelNode*>& nodes) {
+void BuildLowerBodyMask(std::vector<bool>& is_lower_body, int pelvis_node_id, const std::vector<SceneNode*>& nodes) {
   if (pelvis_node_id >= 0 && pelvis_node_id < static_cast<int>(nodes.size())) {
     MarkLowerBodyNodes(nodes[pelvis_node_id], nodes, is_lower_body);
   }
@@ -586,7 +715,7 @@ void ModelLoader::LoadCharacters(std::string_view skeleton_path,
     auto model = LoadModel(loader_, path);
     auto buffer_data = LoadBuffers(
     model, character.meshes);
-    ReadNodeHierarchy(character.nodes, model);
+    ReadNodeHierarchy(character.nodes, model, character.meshes);
     auto buffer_data_animated = LoadBuffersAnimated(model);
 
     stbi_set_flip_vertically_on_load(false);
@@ -646,7 +775,7 @@ void ModelLoader::LoadWeapon(std::vector<std::string_view> paths) {
     auto model = LoadModel(loader_, path);
     auto buffer_data = LoadBuffers(
     model, weapon.meshes);
-    ReadNodeHierarchy(weapon.nodes, model);
+    ReadNodeHierarchy(weapon.nodes, model, weapon.meshes);
     auto buffer_data_animated = LoadBuffersAnimated(model);
 
     stbi_set_flip_vertically_on_load(false);
@@ -671,9 +800,13 @@ Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
       type = Scene::Type::PointLight;
     } else if (collision_value == "hinge") {
       type = Scene::Type::Hinge;
+    } else if (collision_value == "door") {
+      type = Scene::Type::Door;
+    } else if (collision_value == "portal") {
+      type = Scene::Type::Portal;
     } else if (collision_value == "zone") {
       type = Scene::Type::Zone;
-    } else if (collision_value == "tile") {
+    } else if (collision_value.starts_with("tile")) {
       type = Scene::Type::Tile;
     } else if (collision_value == "terrain") {
       type = Scene::Type::Terrain;
@@ -681,6 +814,8 @@ Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
       type = Scene::Type::Character;
     } else if (collision_value == "player") {
       type = Scene::Type::Player;
+    } else if (collision_value == "none") {
+      type = Scene::Type::None;
     }
   }
   return type;
@@ -801,7 +936,7 @@ ModelLoader::BufferData ModelLoader::LoadBuffers(const tinygltf::Model& model,
     new_mesh.collision_type = GetCollisionType(mesh);
     new_mesh.type = GetModelType(mesh);
     glm::vec3 mesh_min(std::numeric_limits<float>::max());
-    glm::vec3 mesh_max(std::numeric_limits<float>::min());
+    glm::vec3 mesh_max(std::numeric_limits<float>::lowest());
     for (const auto& primitive : mesh.primitives) {
       const auto& posAccessor =
           LoadBufferSafely("POSITION", model, primitive, data.all_positions);

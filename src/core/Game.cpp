@@ -84,7 +84,7 @@ class TempAllocator;
 Game::Game()
   : terrain_renderer_(&(mdl_loader_.GetScene()->materials)),
     world_manager_(mdl_loader_.GetScene(), &camera_, player_,
-    characters_, weapons_, point_lights_, dir_lights_, static_objects_),
+    characters_, weapons_, dir_lights_),
     renderer_(mdl_loader_.GetScene(), &camera_, &player_, world_manager_.GetCulledData()){
   Init();
 }
@@ -92,7 +92,7 @@ Game::Game()
 void Game::RenderInterface() {
   float target_size = 32.0f;
   float half_target_size = target_size / 2.0f;
-  if (!player_->GetBody()->IsAiming()) {
+  if (player_->GetBody()->IsAiming()) {
     renderer_.AddSprite("GoldenCircle",
     glm::vec2(800.0f, 450.0f) - half_target_size,
     glm::vec2(target_size), glm::vec4(1.0f));
@@ -180,6 +180,23 @@ void Game::RunRenderLoop() {
     UpdateDeltaTime();
     UpdateFPS(gDeltaTime);
 
+    int characters_left = 0;
+    for (const auto& c : characters_) {
+      if (!c->GetBody()->IsDead()) {
+        ++characters_left;
+      }
+    }
+    if (characters_left == 0) {
+      for (auto& c : characters_) {
+        c->GetBody()->Revive();
+      }
+      characters_left = characters_.size();
+    }
+    std::string charactersLeftText = "enemies left: " + std::to_string(characters_left);
+    renderer_.AddText(charactersLeftText, glm::vec2(100.0f, 20.0f),
+      glm::vec2(1.0f), glm::vec4(1.0f));
+
+
     // Reinitialize the job system if the concurrency setting changed
     if (mMaxConcurrentJobs != mJobSystem->GetMaxConcurrency())
       static_cast<JPH::JobSystemThreadPool *>(mJobSystem)
@@ -194,8 +211,6 @@ void Game::RunRenderLoop() {
     /// pre physics update
     for (auto& c : characters_) {
       c->UpdateLogic(mPhysicsSystem, gDeltaTimePhysics);
-    }
-    for (auto& c : characters_) {
       c->GetBody()->PrePhysicsUpdate(mPhysicsSystem, mTempAllocator, gDeltaTimePhysics);
     }
 
@@ -208,8 +223,9 @@ void Game::RunRenderLoop() {
     /// physics update
     mPhysicsSystem->Update(gDeltaTimePhysics, 1, mTempAllocator, mJobSystem);
     const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
-    // mdl_loader_.GetScene()->UpdateRenderTransform(
-      // bli, mdl_loader_.GetScene()->scene_data_.tiles);
+    mdl_loader_.GetScene()->UpdateRenderTransform(
+      bli, mdl_loader_.GetScene()->scene_data_.tiles);
+
 
     /// post physics update
     for (auto& c : characters_) {
@@ -227,6 +243,7 @@ void Game::RunRenderLoop() {
 
     bool first_face_mode = camera_.IsFirstFaceMode();
 
+    world_manager_.UpdatePlayerZone(player_->GetBody()->GetPosition(), &bi);
     world_manager_.Cull();
     if (render_physics_only_) {
       renderer_.RenderDebug();
@@ -289,8 +306,8 @@ JPH::Ref<JPH::Shape> CreateMeshShape(const Scene::Mesh& mesh) {
 
 void InitSceneGlobalTransforms(
     std::vector<Scene::Tile*>& tiles) {
-  std::function<void(Scene::ModelNode*, const JPH::Mat44&)> dfs =
-      [&](Scene::ModelNode* node, const JPH::Mat44& parent) {
+  std::function<void(SceneNode*, const JPH::Mat44&)> dfs =
+      [&](SceneNode* node, const JPH::Mat44& parent) {
         auto local = node->local_transform.Matrix();
         auto global_transform = parent * local;
         node->global_transform = global_transform;
@@ -299,7 +316,11 @@ void InitSceneGlobalTransforms(
         }
   };
   for (auto& tile : tiles) {
-    for (auto node : tile->object_nodes) {
+    for (auto node : tile->portals) {
+      dfs(node.render, JPH::Mat44::sIdentity());
+      dfs(node.portal, JPH::Mat44::sIdentity());
+    }
+    for (auto node : tile->characters) {
       dfs(node, JPH::Mat44::sIdentity());
     }
     for (auto& zone : tile->zones) {
@@ -351,7 +372,8 @@ JPH::Color DefineColor(JPH::EMotionType body_type, JPH::BodyID body_id) {
   return color;
 }
 
-void Game::CreateBodyForNode(Scene::ModelNode* node) {
+// zone might be as well nullptr in case of character TODO: bear it out
+void Game::CreateBodyForNode(SceneNode* node, Scene::Zone* zone) {
   //TODO: should we do smt with it?... probably there shouldn't be those
   if (node->mesh_index == -1) return;
   const auto scene = mdl_loader_.GetScene();
@@ -364,8 +386,9 @@ void Game::CreateBodyForNode(Scene::ModelNode* node) {
     if (mesh.type == Scene::Type::Dynamic) {
       motion_type = JPH::EMotionType::Dynamic;
       object_layer = Layers::MOVING;
-      activation_state = JPH::EActivation::Activate;
-      static_objects_.emplace_back(node);
+      node->can_be_activated = true;
+      //activation_state = JPH::EActivation::Activate;
+      zone->static_objects_.emplace_back(node);
     } else if (mesh.type == Scene::Type::Character) {
       // return;
       characters_.push_back(std::make_unique<EnemyController>(
@@ -374,13 +397,20 @@ void Game::CreateBodyForNode(Scene::ModelNode* node) {
       weapons_.push_back(std::make_unique<Weapon>(
         &scene->weapons_[0], mPhysicsSystem, &animator_));
       characters_.back()->GetBody()->EquipWeapon(weapons_.back().get());
+      characters_.back()->GetBody()->SetPositionRotation(
+        node->global_transform.GetTranslation(),
+        node->global_transform.GetRotation().GetQuaternion().Normalized());
     } else {
       // no point light (it's not a ModelNode)
       if (mesh.type == Scene::Type::PointLight) {
-        point_lights_.emplace_back(node);
+        zone->point_lights_.emplace_back(node);
+      } else if (mesh.type == Scene::Type::None) {
+        zone->static_objects_.push_back(node);
+        //TODO: non-physics bodies
+        return;
       } else {
         // no difference for hinge now, it just static and have constraint later
-        static_objects_.push_back(node);
+        zone->static_objects_.push_back(node);
       }
     }
     // no scale component, so safe
@@ -473,23 +503,33 @@ void Game::Init() {
 
   const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
 
+
+  JPH::BodyInterface& bi = mPhysicsSystem->GetBodyInterface();
+
   InitSceneGlobalTransforms(scene->scene_data_.tiles);
+  mdl_loader_.GetScene()->UpdateRenderTransform(
+    bli, mdl_loader_.GetScene()->scene_data_.tiles);
+  mdl_loader_.GetScene()->ConnectZonesWithPortals(0);
 
   for (auto& tile : scene->scene_data_.tiles) {
     terrain_renderer_.InitializeBody(mBodyInterface);
     std::cout << "tile added" << std::endl;
-    for (auto node : tile->object_nodes) {
-      CreateBodyForNode(node);
+    for (auto node : tile->portals) {
+      //TODO: portals.. idk
+      //CreateBodyForNode(node.render);
     }
-    for (auto& zone : tile->zones) {
+    for (auto node : tile->characters) {
+      CreateBodyForNode(node, nullptr);
+    }
+    for (Scene::Zone* zone : tile->zones) {
       // world_manager_.AddZone(node);
       std::cout << "zone added" << std::endl;
       for (auto node : zone->object_nodes) {
-        CreateBodyForNode(node);
+        CreateBodyForNode(node, zone);
       }
-      break; // only first zone for now
+      //break; // only first zone for now
     }
-    break; // only one tile for now
+    //break; // only one tile for now
   }
   auto player_node = scene->scene_data_.player_node;
   player_ = std::make_unique<PlayerController>(
@@ -498,6 +538,8 @@ void Game::Init() {
   weapons_.push_back(std::make_unique<Weapon>(
     &scene->weapons_[0], mPhysicsSystem, &animator_));
   player_->GetBody()->EquipWeapon(weapons_.back().get());
+
+  world_manager_.UpdatePlayerZone(player_->GetBody()->GetPosition(), &bi);
 }
 
 void Game::DeInit() {

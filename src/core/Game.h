@@ -98,9 +98,7 @@ public:
   std::vector<std::unique_ptr<Weapon>> weapons_;
 
   // JPH::BodyID (we read bodies only once at Update() of render data matrices)
-  std::vector<PointLight> point_lights_;
   std::vector<DirectedLight> dir_lights_;
-  std::vector<StaticObject> static_objects_;
 
   GlfwContext global_data_;
 
@@ -112,7 +110,7 @@ public:
   WorldManager world_manager_;
   Renderer renderer_; // in the end
 
-  void CreateBodyForNode(Scene::ModelNode* node);
+  void CreateBodyForNode(SceneNode* node, Scene::Zone* zone);
 
 public:
   /// ContactListener callbacks

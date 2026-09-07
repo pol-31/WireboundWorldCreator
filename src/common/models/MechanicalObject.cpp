@@ -3,7 +3,7 @@
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 
-Scene::ModelNode* LookForHingesLevel(Scene::ModelNode* node) {
+SceneNode* LookForHingesLevel(SceneNode* node) {
   // Scene::ModelNode* hinge_level = nullptr; // that's where we separate bodies
   // for (auto child : node->children) {
   //   if (scene.meshes[child->mesh_index].type == Scene::Type::Hinge) {
@@ -22,13 +22,13 @@ Scene::ModelNode* LookForHingesLevel(Scene::ModelNode* node) {
   // return hinge_level;
 }
 
-JPH::AABox CalculateSumAabox(Scene::ModelNode* node) {
+JPH::AABox CalculateSumAabox(SceneNode* node) {
   JPH::AABox aabox;
   //TODO: recursively add
   return aabox;
 }
 
-MechanicalObject::MechanicalObject(Scene::ModelNode* model) {
+MechanicalObject::MechanicalObject(SceneNode* model) {
   // Scene::ModelNode* hinge_level = LookForHingesLevel(model);
   // if (!hinge_level) {
   //   throw std::runtime_error("model has no hinges");

@@ -15,6 +15,10 @@ class PointLight;
 class DirectedLight;
 class StaticObject;
 
+namespace JPH {
+class BodyInterface;
+} // namespace JPH
+
 /// I wanted to name it ZoneCuller, because the main job is to get
 /// all object, cull them based on our zone (or camera frustum ???)
 /// and put to another structures, so then we feed it to our Renderer
@@ -37,18 +41,26 @@ public:
     int mesh_id = 0;
   };
 
-  WorldManager(const Scene* scene,
+  WorldManager(
+    const Scene* scene,
   const Camera* camera,
   const std::unique_ptr<PlayerController>& player,
   const std::vector<std::unique_ptr<EnemyController>>& characters,
   const std::vector<std::unique_ptr<Weapon>>& weapons,
-  const std::vector<PointLight>& point_lights,
-  const std::vector<DirectedLight>& dir_lights,
-  const std::vector<StaticObject>& static_objects);
+  const std::vector<DirectedLight>& dir_lights);
 
   void Cull();
 
+  int FindNearestZone(JPH::Vec3 player_pos, JPH::BodyInterface* body_interface);
+
+  void UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* body_interface);
+
 private:
+
+  void ActivateZone(int zone_index, JPH::BodyInterface* body_interface);
+
+  void DeactivateZone(int zone_index, JPH::BodyInterface* body_interface);
+
   // struct Zone {
   //   Scene::ModelNode* scene_node = nullptr;
   //   std::vector<int> point_lights;
@@ -78,15 +90,15 @@ private:
   const std::unique_ptr<PlayerController>& player_; // TODO: only for shadows
   const std::vector<std::unique_ptr<EnemyController>>& characters_;
   const std::vector<std::unique_ptr<Weapon>>& weapons_;
-  const std::vector<PointLight>& point_lights_;
   const std::vector<DirectedLight>& dir_lights_;
-  const std::vector<StaticObject>& static_objects_;
   // std::vector<Zone> zones_;
   // int player_zone_ = 0;
   // std::vector<Tile> tiles_;
   // int player_tile_ = -1;
-  Scene::Zone* cur_zone_ = nullptr;
-  Scene::Tile* cur_tile_ = nullptr;
+  int cur_tile_id_ = -1;
+  int cur_zone_id_ = -1;
+  std::vector<int> active_zones_;
+  // relative to cur scene for sure
 
   /// TEMP --- 2 --- (not packed, but culled)
   /// Cull() before - all cleared

@@ -2,10 +2,11 @@
 #define WIREBOUNDWORLDCREATOR_POINTLIGHT_H
 
 #include <glm/glm.hpp>
-#include "Scene.h"
+
+class SceneNode;
 
 struct PointLight {
-  const Scene::ModelNode* object_;
+  const SceneNode* object_;
   glm::vec3 color_ = glm::vec3(1.0f);
   float factor_linear_ = 1.0f;
   float factor_quadratic_ = 1.0f;

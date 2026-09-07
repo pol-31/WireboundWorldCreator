@@ -106,8 +106,8 @@ void Animator::Clear() {
 }
 
 size_t Animator::AddInstanceCharacter(
-      const Scene::ModelNode* root_node,
-      const std::vector<Scene::ModelNode*>* nodes,
+      const SceneNode* root_node,
+      const std::vector<SceneNode*>* nodes,
       const Scene::CharacterRig* skin,
       const Character* character) {
   for (int i = 0; i < instances_characters_.size(); ++i) {
@@ -138,8 +138,8 @@ size_t Animator::AddInstanceCharacter(
 }
 
 size_t Animator::AddInstanceWeapon(
-      const Scene::ModelNode* root_node,
-      const std::vector<Scene::ModelNode*>* nodes,
+      const SceneNode* root_node,
+      const std::vector<SceneNode*>* nodes,
       const Scene::WeaponRig* skin) {
   for (int i = 0; i < instances_weapons_.size(); ++i) {
     auto& instance = instances_weapons_[i];
@@ -178,6 +178,7 @@ void Animator::StartCharacter(int instance_id, CharacterAnimType type, bool loop
   if (new_type == data.core_instance.type && !data.core_instance.is_idle) {
     return;
   }
+  data.state = CharacterState::FullBodyAction;
   data.core_instance.time = 0.0f;
   data.core_instance.is_looped = looped; // TODO: separate
   data.core_instance.type = new_type;
@@ -317,11 +318,19 @@ void Animator::Update(bool skip) {
     auto prev_input_dir = instance.prev_input_dir;
     auto input_dir = instance.character->GetMoveDirectionRaw();
     float character_speed = input_dir.Length();
-    InitLocalsCharacter(instance, instance.skin->core_rig);
 
-    CompensateLowerToUpperSpines(instance);
+    if (instance.state == CharacterState::Normal) {
+      InitLocalsCharacter(instance, instance.skin->core_rig);
+      CompensateLowerToUpperSpines(instance);
+      ApplyDeltas(instance, prev_input_dir);
+    } else {
+      // fullbodymotion
+      InitLocalsWeapon(instance.core_instance, instance.skin->core_rig);
+      if (instance.core_instance.is_idle && !instance.character->IsDead()) {
+        instance.state = CharacterState::Normal;
+      }
+    }
 
-    ApplyDeltas(instance, prev_input_dir);
     ComputeGlobals(instance.core_instance);
     BuildJointMatrices(instance.core_instance, instance.skin->core_rig);
     all_jointMatrices.insert(all_jointMatrices.end(),
@@ -503,7 +512,7 @@ void Animator::EvaluateWeightedAnimation(
   if (weight <= 0.001f) return;
 
   // 1. Create a temporary pose array filled with default transforms for THIS animation
-  std::vector<Scene::NodePose> temp_pose = instance.core_instance.current_locals_default;
+  std::vector<SceneNodePose> temp_pose = instance.core_instance.current_locals_default;
 
   float current_time = instance.core_instance.time;
   WrapTime(instance.core_instance, animation.samplers[animation.channels[0].sampler].times);
@@ -715,7 +724,7 @@ void Animator::InitLocalsWeapon(CoreInstance& instance, const Scene::CoreRig& ri
 
 void Animator::ComputeGlobals(CoreInstance& instance) {
   std::vector<int> used_ids;
-  auto dfs = [&](auto& self, const Scene::ModelNode* node, const JPH::Mat44& parent) -> void {
+  auto dfs = [&](auto& self, const SceneNode* node, const JPH::Mat44& parent) -> void {
     auto id = node->node_id;
     used_ids.push_back(id);
     auto local = instance.current_locals[id].Matrix();

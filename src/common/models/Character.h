@@ -18,16 +18,21 @@ class Character {
 public:
   enum class State {
     kIdle, // stand, walk, run
-    kStunned // can't do anything
+    kStunned, // can't do anything
+    Dead
   };
 
   [[nodiscard]] bool IsIdle() const noexcept {
     return state_ == State::kIdle;
   }
 
+  [[nodiscard]] bool IsDead() const noexcept {
+    return state_ == State::Dead;
+  }
+
   Character(
 CharacterSharedData* shared_data,
-Scene::ModelNode* scene_node,
+SceneNode* scene_node,
 const Scene::CharacterData* model,
 const Scene::CharacterRig* skin);
 
@@ -43,6 +48,8 @@ const Scene::CharacterRig* skin);
   void TakeDamage(float amount);
 
   void Death();
+
+  void Revive();
 
   /// we create weapon as a separate scene object
   void EquipWeapon(Weapon* weapon);
@@ -69,6 +76,8 @@ const Scene::CharacterRig* skin);
   JPH::Mat44 GetHandBoneMatrix() const;
   JPH::Mat44 GetCameraBoneMatrix() const;
   JPH::Mat44 GetWeaponSocketMatrix() const;
+
+  void SetPositionRotation(JPH::RVec3 pos, JPH::Quat rot);
 
   JPH::Vec3 GetPosition() const;
 
@@ -132,14 +141,15 @@ const Scene::CharacterRig* skin);
   static const float cWalkSpeed;
   static const float cRunSpeed;
   static const float cJumpSpeed;
+  static const float cMaxHealth;
 
 private:
   friend class EnemyController;
   friend class PlayerController;
 
-  JPH::Ref<JPH::CharacterVirtual> CreateJphCharacter(Scene::ModelNode* node);
+  JPH::Ref<JPH::CharacterVirtual> CreateJphCharacter(SceneNode* node);
 
-  const Scene::ModelNode* scene_node_;
+  const SceneNode* scene_node_;
   const Scene::CharacterData* model_ = nullptr;
   const Scene::CharacterRig* skin_ = nullptr;
   CharacterSharedData* shared_data_ = nullptr;
@@ -164,7 +174,7 @@ private:
   float head_yaw_ = 0.0f; // camera or mover
   float head_pitch_ = 0.0f; // camera of mover
 
-  float health_ = 100.0f;
+  float health_ = cMaxHealth;
   float speed_ = 0.0f;
   bool mAllowSliding = false;
 };

@@ -153,11 +153,10 @@ void CharacterSharedData::Shoot(JPH::Vec3 pos, JPH::Vec3 dir, JPH::BodyID source
         c->GetBody()->Death();
         std::cout << "shot somebody" << std::endl;
         // c.external_impulse += ToJph(camera_.GetDirectionFront()) * stopping_power;
+        return;
       }
     }
-    if (!is_character) {
       bi.AddImpulse(hit_body_id, impulse, hit_position);
       std::cout << "shot something" << std::endl;
-    }
   }
 }

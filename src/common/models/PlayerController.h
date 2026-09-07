@@ -11,7 +11,7 @@ public:
   PlayerController(
     const Camera* camera,
 CharacterSharedData* shared_data,
-Scene::ModelNode* scene_node,
+SceneNode* scene_node,
 const Scene::CharacterData* model,
 const Scene::CharacterRig* skin);
 

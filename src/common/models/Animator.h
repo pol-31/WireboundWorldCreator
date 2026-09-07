@@ -14,8 +14,8 @@ class Character;
 class Animator {
  public:
   struct CoreInstance {
-    const Scene::ModelNode* root_node = nullptr;
-    const std::vector<Scene::ModelNode*>* nodes = nullptr;
+    const SceneNode* root_node = nullptr;
+    const std::vector<SceneNode*>* nodes = nullptr;
     float time = 0.0f;
     bool is_looped = true;
     int type = 0;
@@ -23,13 +23,19 @@ class Animator {
     bool is_alive = true;
     bool is_idle = false; // if true - it's over and keeps same position type::time
     JPH::Mat44 identity = JPH::Mat44::sIdentity(); //  rutch for invalid models
-    std::vector<Scene::NodePose> current_locals;
-    std::vector<Scene::NodePose> current_locals_default; // for blending
+    std::vector<SceneNodePose> current_locals;
+    std::vector<SceneNodePose> current_locals_default; // for blending
     std::vector<JPH::Mat44> current_globals;
     std::vector<JPH::Mat44> current_joint_matrices;
   };
 
+  enum class CharacterState {
+    Normal, // movement blending
+    FullBodyAction,
+  };
+
   struct CharacterInstance {
+    CharacterState state = CharacterState::Normal;
     CoreInstance core_instance;
     bool has_pistol = false;
     const Scene::CharacterRig* skin = nullptr;
@@ -45,12 +51,6 @@ class Animator {
   struct WeaponInstance {
     CoreInstance core_instance;
     const Scene::WeaponRig* skin = nullptr;
-  };
-
-  enum class AnimationLayerFilter {
-    AllNodes,
-    LowerBodyOnly,
-    UpperBodyOnly
   };
 
   static const int gMaxBones;
@@ -69,14 +69,14 @@ class Animator {
   Animator& operator=(Animator&& animator) = delete;
 
   size_t AddInstanceCharacter(
-      const Scene::ModelNode* root_node,
-      const std::vector<Scene::ModelNode*>* nodes,
+      const SceneNode* root_node,
+      const std::vector<SceneNode*>* nodes,
       const Scene::CharacterRig* skin,
       const Character* character);
 
   size_t AddInstanceWeapon(
-      const Scene::ModelNode* root_node,
-      const std::vector<Scene::ModelNode*>* nodes,
+      const SceneNode* root_node,
+      const std::vector<SceneNode*>* nodes,
       const Scene::WeaponRig* skin);
 
   void RemoveInstanceCharacter(int id);

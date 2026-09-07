@@ -23,7 +23,7 @@ const float cDragRayLength = 40.0f;
 PlayerController::PlayerController(
     const Camera* camera,
 CharacterSharedData* shared_data,
-Scene::ModelNode* scene_node,
+SceneNode* scene_node,
 const Scene::CharacterData* model,
 const Scene::CharacterRig* skin)
 : character_(shared_data, scene_node, model, skin),

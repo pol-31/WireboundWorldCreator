@@ -8,13 +8,24 @@
 const float Character::cWalkSpeed = 3.0f;
 const float Character::cRunSpeed = 12.0f;
 const float Character::cJumpSpeed = 4.0f;
+const float Character::cMaxHealth = 100.0f;
+
+void Character::SetPositionRotation(JPH::RVec3 pos, JPH::Quat rot) {
+  jph_character_->SetPosition(pos);
+  jph_character_->SetRotation(rot);
+  jph_character_->SetLinearVelocity(JPH::Vec3::sZero());
+}
 
 void Character::Death() {
-  if (state_ != State::kStunned) {
-    shared_data_->animator_->StartCharacter(
-      animation_id_, CharacterAnimType::Hurt, false);
-    state_ = State::kStunned;
-  }
+  health_ = 0.0f;
+  state_ = State::Dead;
+  shared_data_->animator_->StartCharacter(
+    animation_id_, CharacterAnimType::Hurt, false);
+}
+
+void Character::Revive() {
+  health_ = cMaxHealth;
+  state_ = State::kIdle;
 }
 
 void Character::Shoot(JPH::Vec3 pos, JPH::Vec3 dir) {
@@ -39,12 +50,12 @@ JPH::Vec3 Character::GetLinearVelocity() const noexcept {
 }
 
 JPH::Ref<JPH::CharacterVirtual> Character::CreateJphCharacter(
-  Scene::ModelNode* node) {
+  SceneNode* node) {
   JPH::Ref<JPH::CharacterVirtualSettings> settings =
     shared_data_->GetDefaultJphSettings();
   auto npc_pos = JPH::RVec3::sZero();
   JPH::Ref<JPH::CharacterVirtual> character = new JPH::CharacterVirtual(
-      settings, npc_pos + JPH::RVec3(0, 0 + 1, 0),
+      settings, npc_pos + JPH::RVec3::sZero(),
       JPH::Quat::sIdentity(), 0, shared_data_->physics_system_);
   node->body_id = character->GetInnerBodyID();
   node->shape = settings->mShape;
@@ -54,7 +65,7 @@ JPH::Ref<JPH::CharacterVirtual> Character::CreateJphCharacter(
 
 Character::Character(
 CharacterSharedData* shared_data,
-Scene::ModelNode* scene_node,
+SceneNode* scene_node,
 const Scene::CharacterData* model,
 const Scene::CharacterRig* skin)
   : scene_node_(scene_node),
@@ -88,6 +99,9 @@ AnimatedRenderData Character::GetAnimatedRenderData() const {
 void Character::PrePhysicsUpdate(
     const JPH::PhysicsSystem* physics_system,
     JPH::TempAllocator* temp_allocator, float dt) {
+  if (IsDead()) {
+    return;
+  }
   auto character_up = jph_character_->GetUp();
   JPH::CharacterVirtual::ExtendedUpdateSettings update_settings;
   update_settings.mStickToFloorStepDown = -character_up * update_settings.mStickToFloorStepDown.Length();
@@ -107,6 +121,9 @@ void Character::PrePhysicsUpdate(
 // look dir
 
 void Character::PostPhysicsUpdate(JPH::Vec3 gravity, float dt) {
+  if (IsDead()) {
+    return;
+  }
   // 1. Calculate Target Speed based on input
   float target_speed = 0.0f;
   if (movement_direction_.Length() > 0.1f) {

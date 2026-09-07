@@ -4,7 +4,7 @@
 
 #include <jolt/Physics/Body/BodyLock.h>
 
-JPH::Mat44 Scene::NodePose::Matrix() const noexcept {
+JPH::Mat44 SceneNodePose::Matrix() const noexcept {
   return JPH::Mat44::sTranslation(t) *
          JPH::Mat44::sRotationTranslation(r, JPH::Vec3::sZero()) *
          JPH::Mat44::sScale(s);
@@ -16,8 +16,8 @@ JPH::Mat44 Scene::NodePose::Matrix() const noexcept {
 /// so everything in the hands of JPH since then
 void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
                                   std::vector<Tile*>& tiles) {
-  std::function<void(ModelNode*, const JPH::Mat44&)> dfs =
-      [&](ModelNode* node, const JPH::Mat44& parent) {
+  std::function<void(SceneNode*, const JPH::Mat44&)> dfs =
+      [&](SceneNode* node, const JPH::Mat44& parent) {
         auto local = node->local_transform.Matrix();
         JPH::Mat44 global_transform;
 
@@ -42,8 +42,12 @@ void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
       };
 
   for (auto& tile : tiles) {
-    for (auto node : tile->object_nodes) {
+    for (auto node : tile->characters) {
       dfs(node, JPH::Mat44::sIdentity());
+    }
+    for (auto node : tile->portals) {
+      dfs(node.render, JPH::Mat44::sIdentity());
+      dfs(node.portal, JPH::Mat44::sIdentity());
     }
     for (auto& zone : tile->zones) {
       for (auto node : zone->object_nodes) {

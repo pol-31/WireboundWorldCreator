@@ -6,12 +6,12 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Body/BodyID.h>
 
-#include "Scene.h"
+class SceneNode;
 
 struct StaticObject {
-  const Scene::ModelNode* object_;
+  const SceneNode* object_;
 
-  StaticObject(const Scene::ModelNode* object) : object_(object) {}
+  StaticObject(const SceneNode* object) : object_(object) {}
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_STATICOBJECT_H

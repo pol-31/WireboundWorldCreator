@@ -9,7 +9,7 @@
 
 class MechanicalObject {
 public:
-  MechanicalObject(Scene::ModelNode* model);
+  MechanicalObject(SceneNode* model);
 
   void UpdateRenderTransform(const JPH::BodyLockInterface& bli);
 
@@ -19,7 +19,7 @@ public:
 
 private:
   /// render hierarchy, includes all meshes with their types (hinge or what)
-  Scene::ModelNode* model;
+  SceneNode* model;
 
   /// size == model.nodes.size(), id invalid if node hasn't the body
   std::vector<JPH::BodyID> physics_bodies_;
