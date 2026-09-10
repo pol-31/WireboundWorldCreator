@@ -41,6 +41,25 @@ public:
     int mesh_id = 0;
   };
 
+  /// --- 3 ---
+  struct FinalPointLight {
+    const PointLight* source = nullptr;
+    /// objects, that cast a shadow, 6 faces
+    std::array<std::vector<SsboOffsetObject>, 6> objects; // by mesh, * is on gpu
+    std::array<std::vector<AnimatedRenderData>, 6> object_animated; // by mesh, * is on gpu
+  };
+  struct FinalDirLight {
+    const DirectedLight* source = nullptr;
+    /// objects, that cast a shadow
+    std::vector<SsboOffsetObject> objects;
+    std::vector<AnimatedRenderData> object_animated;
+  };
+  struct FinalCamera {
+    std::vector<SsboOffsetObject> objects;
+    std::vector<AnimatedRenderData> object_animated;
+  };
+
+
   WorldManager(
     const Scene* scene,
   const Camera* camera,
@@ -51,7 +70,10 @@ public:
 
   void Cull();
 
-  int FindNearestZone(JPH::Vec3 player_pos, JPH::BodyInterface* body_interface);
+  int FindNearestZone(JPH::Vec3 player_pos);
+
+
+  bool IsZoneCulled(JPH::Vec3 pos);
 
   void UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* body_interface);
 
@@ -60,6 +82,13 @@ private:
   void ActivateZone(int zone_index, JPH::BodyInterface* body_interface);
 
   void DeactivateZone(int zone_index, JPH::BodyInterface* body_interface);
+
+
+  void CullAnimatedObject(
+    const Frustum& frustum_camera,
+    const std::vector<PointLight>& zone_point_lights,
+    JPH::Vec3 pos,
+    const AnimatedRenderData& render_data);
 
   // struct Zone {
   //   Scene::ModelNode* scene_node = nullptr;
@@ -100,46 +129,15 @@ private:
   std::vector<int> active_zones_;
   // relative to cur scene for sure
 
-  /// TEMP --- 2 --- (not packed, but culled)
-  /// Cull() before - all cleared
-  /// Cull() start - only by zones (so source set)
-  /// Cull() end - all data filled
-  struct FrustumCulledObjects {
-    std::vector<int> objects;
-    std::vector<int> weapons;
-    std::vector<int> characters;
-    bool render_player = false; //1st 3rd for camera frustum
-  };
   void PushFrustumCulled(const std::vector<int>& objects,
     std::vector<std::vector<InstanceGpu>>& ssbo_data);
 
   // resized with zone lights num, so its array idx == (int)cur_zone.light,
   // so we don't need to store ptr to the source
-  std::vector<FrustumCulledObjects> active_point_lights_;
-  std::vector<FrustumCulledObjects> active_dir_lights_;
-  FrustumCulledObjects active_camera_;
+  std::vector<std::array<std::vector<int>, 6>> active_point_lights_;
+  std::vector<std::vector<int>> active_dir_lights_;
+  std::vector<int> active_camera_;
 
-  /// --- 3 ---
-  struct FinalPointLight {
-    const PointLight* source = nullptr;
-    /// objects, that cast a shadow
-    std::vector<SsboOffsetObject> objects; // by mesh, * is on gpu
-    std::vector<std::unique_ptr<Weapon>*> weapons;
-    std::vector<std::unique_ptr<EnemyController>*> characters;
-    bool render_player = false;
-  };
-  struct FinalDirLight {
-    const DirectedLight* source = nullptr;
-    /// objects, that cast a shadow
-    std::vector<SsboOffsetObject> objects;
-    std::vector<std::unique_ptr<Weapon>*> weapons;
-    std::vector<std::unique_ptr<EnemyController>*> characters;
-    bool render_player = false;
-  };
-  struct FinalCamera {
-    std::vector<SsboOffsetObject> objects;
-    std::vector<AnimatedRenderData> object_animated;
-  };
 
 public:
   /// output (just --- 3 --- struct):
@@ -147,6 +145,7 @@ public:
     std::vector<InstanceGpu> ssbo_data;
     std::vector<FinalPointLight> point_lights;
     std::vector<FinalDirLight> dir_lights;
+    std::vector<int> active_zones;
     FinalCamera camera;
   };
 

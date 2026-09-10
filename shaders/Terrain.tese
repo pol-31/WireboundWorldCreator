@@ -31,8 +31,6 @@ layout(std140, binding = 5) readonly buffer Patches {
 
 layout (location = 0) uniform sampler2D tex_displacement;
 
-//layout(location = 7) uniform mat4 transform;
-
 void main() {
     PatchGPU p = patches.patch_gpu[tes_in[0].patchID];
     vec2 uv = gl_TessCoord.xy;
@@ -42,12 +40,26 @@ void main() {
         mix(p.p0.zw, p.p1.zw, uv.x),
         uv.y
     );
-    //    worldXZ = vec2(ivec2(worldXZ * 16.0f + 512.0f)) / 16.0f - 32.0f;
     vec2 heightUV = (worldXZ + 32.0) / 64.0;
-    //    float h = textureLod(tex_displacement, hUV, p.heightLod).r;
     float h = texture(tex_displacement, heightUV).r;
-    //    h = 0.0f;
     tes_out.tc = vec3(worldXZ.x, h, worldXZ.y);
     gl_Position = camera.proj * camera.view * /**transform * */vec4(tes_out.tc, 1.0);
-    tes_out.tc = vec3(heightUV.x, h, heightUV.y);
 }
+//void main() {
+//    PatchGPU p = patches.patch_gpu[tes_in[0].patchID];
+//    vec2 uv = gl_TessCoord.xy;
+//    vec2 worldXZ =
+//    mix(
+//        mix(p.p0.xy, p.p1.xy, uv.x),
+//        mix(p.p0.zw, p.p1.zw, uv.x),
+//        uv.y
+//    );
+//    //    worldXZ = vec2(ivec2(worldXZ * 16.0f + 512.0f)) / 16.0f - 32.0f;
+//    vec2 heightUV = (worldXZ + 32.0) / 64.0;
+//    //    float h = textureLod(tex_displacement, hUV, p.heightLod).r;
+//    float h = texture(tex_displacement, heightUV).r;
+//    //    h = 0.0f;
+//    tes_out.tc = vec3(worldXZ.x, h, worldXZ.y);
+//    gl_Position = camera.proj * camera.view * /**transform * */vec4(tes_out.tc, 1.0);
+//    //tes_out.tc = vec3(heightUV.x, h, heightUV.y);
+//}

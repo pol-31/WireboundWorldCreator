@@ -14,8 +14,14 @@ layout(std430, binding = 0) buffer InstanceBuffer {
     InstanceData instances[];
 };
 
+layout(location = 7) uniform mat4 u_LightViewProj;
+
+out vec3 v_WorldPos;
+
 void main() {
     uint index = gl_InstanceID + gl_BaseInstance;
     mat4 model = instances[index].modelMatrix;
-    gl_Position = model * vec4(in_vertex, 1.0);
+    vec4 worldPos = model * vec4(in_vertex, 1.0);
+    v_WorldPos = worldPos.xyz;
+    gl_Position = u_LightViewProj * worldPos;
 }

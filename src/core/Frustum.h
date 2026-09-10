@@ -15,6 +15,12 @@ class Frustum {
   /// Empty constructor
   Frustum() = default;
 
+  Frustum(const Frustum& other) = default;
+  Frustum(Frustum&& other) = default;
+
+  Frustum& operator=(const Frustum& other) = default;
+  Frustum& operator=(Frustum&& other) = default;
+
   /// Construct frustum from position, forward, up, field of view x and y and
   /// near plane. Note that inUp does not need to be perpendicular to inForward
   /// but cannot be collinear.
@@ -59,6 +65,90 @@ class Frustum {
     }
 
     return true;
+  }
+
+  inline bool Overlaps(const JPH::AABox &inBox, JPH::Vec3Arg inCenter, float inRadius) const {
+    if (inBox.GetSqDistanceTo(inCenter) > inRadius * inRadius) {
+      return false;
+    }
+    for (const JPH::Plane &p : mPlanes) {
+      JPH::Vec3 support = inBox.GetSupport(p.GetNormal());
+      if (p.SignedDistance(support) < 0.0f) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // Checks if a specific point light cubemap face (0-5) overlaps this camera frustum
+  inline bool OverlapsLightFace(JPH::Vec3Arg inLightPos, float inRadius, int inFaceIndex) const {
+    JPH::Vec3 v[5];
+    v[0] = inLightPos; // The light center is always the apex of the pyramid
+
+    float r = inRadius;
+
+    // Generate the 4 far corners of the 90-degree face pyramid
+    switch (inFaceIndex) {
+      case 0: // +X face
+        v[1] = inLightPos + JPH::Vec3( r,  r,  r);
+        v[2] = inLightPos + JPH::Vec3( r,  r, -r);
+        v[3] = inLightPos + JPH::Vec3( r, -r,  r);
+        v[4] = inLightPos + JPH::Vec3( r, -r, -r);
+        break;
+      case 1: // -X face
+        v[1] = inLightPos + JPH::Vec3(-r,  r,  r);
+        v[2] = inLightPos + JPH::Vec3(-r,  r, -r);
+        v[3] = inLightPos + JPH::Vec3(-r, -r,  r);
+        v[4] = inLightPos + JPH::Vec3(-r, -r, -r);
+        break;
+      case 2: // +Y face
+        v[1] = inLightPos + JPH::Vec3( r,  r,  r);
+        v[2] = inLightPos + JPH::Vec3(-r,  r,  r);
+        v[3] = inLightPos + JPH::Vec3( r,  r, -r);
+        v[4] = inLightPos + JPH::Vec3(-r,  r, -r);
+        break;
+      case 3: // -Y face
+        v[1] = inLightPos + JPH::Vec3( r, -r,  r);
+        v[2] = inLightPos + JPH::Vec3(-r, -r,  r);
+        v[3] = inLightPos + JPH::Vec3( r, -r, -r);
+        v[4] = inLightPos + JPH::Vec3(-r, -r, -r);
+        break;
+      case 4: // +Z face
+        v[1] = inLightPos + JPH::Vec3( r,  r,  r);
+        v[2] = inLightPos + JPH::Vec3(-r,  r,  r);
+        v[3] = inLightPos + JPH::Vec3( r, -r,  r);
+        v[4] = inLightPos + JPH::Vec3(-r, -r,  r);
+        break;
+      case 5: // -Z face
+        v[1] = inLightPos + JPH::Vec3( r,  r, -r);
+        v[2] = inLightPos + JPH::Vec3(-r,  r, -r);
+        v[3] = inLightPos + JPH::Vec3( r, -r, -r);
+        v[4] = inLightPos + JPH::Vec3(-r, -r, -r);
+        break;
+      default:
+        return false;
+    }
+
+    // Test the 5 points against the 5 camera frustum planes
+    for (const JPH::Plane &p : mPlanes) {
+      bool all_points_behind_plane = true;
+
+      for (int i = 0; i < 5; ++i) {
+        // If even ONE point is in front of or inside the plane, it is NOT completely culled by this plane
+        if (p.SignedDistance(v[i]) >= 0.0f) {
+          all_points_behind_plane = false;
+          break;
+        }
+      }
+
+      // If all 5 points of the face are behind this camera plane, the face cannot be seen
+      if (all_points_behind_plane) {
+        return false;
+      }
+    }
+
+    return true; // Face passed all planes, it is visible!
   }
 
  private:

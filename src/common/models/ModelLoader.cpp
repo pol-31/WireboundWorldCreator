@@ -162,6 +162,13 @@ static JPH::Quat ReadQuat(const std::vector<float>& v, int index) {
       v[index * 4 + 2],
       v[index * 4 + 3]);
 }
+static JPH::Quat ReadQuat(const std::vector<double>& v, int index) {
+  return JPH::Quat(
+      static_cast<float>(v[index * 4 + 0]),
+      static_cast<float>(v[index * 4 + 1]),
+      static_cast<float>(v[index * 4 + 2]),
+      static_cast<float>(v[index * 4 + 3]));
+}
 
 // void ReadPose(const Scene::Animation& anim,
 //   std::vector<Scene::NodePose>& locals, CharacterPoseDir pose) {
@@ -455,17 +462,6 @@ void UploadBuffers(GLuint* vao, GLuint* vbo, GLuint* ebo,
   glBindVertexArray(0);
 }
 
-
-void InitBounds(SceneNode* node, std::vector<Scene::Mesh>& meshes) {
-  auto mesh_index = node->mesh_index;
-  if (mesh_index == -1) {
-    return;
-  }
-  const auto& mesh = meshes[mesh_index];
-  node->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
-    JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
-}
-
 SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
   const std::vector<Scene::Mesh>& meshes) {
   std::function<SceneNode*(int)> dfs =
@@ -479,7 +475,7 @@ SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
       node->node_id = id;
       if (scene_node.mesh != -1) {
         const auto& mesh = meshes[scene_node.mesh];
-        node->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
+        node->local_bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
         JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
       }
       for (auto child_id : scene_node.children) {
@@ -533,11 +529,9 @@ void Scene::ConnectZonesWithPortals(int tile_id) {
     // floating-point precision can cause strict AABB overlaps to fail.
     JPH::Vec3 epsilon = JPH::Vec3::sReplicate(0.05f);
     JPH::AABox expanded_portal_box;
-    auto offset = portal_data.position;
-    std::cout << offset << std::endl;
-    expanded_portal_box.mMin = portal_data.portal->bounds.mMin + offset - epsilon;
+    expanded_portal_box.mMin = portal_data.portal->global_bounds.mMin- epsilon;
     expanded_portal_box.mMin.SetY(std::numeric_limits<float>::lowest());
-    expanded_portal_box.mMax = portal_data.portal->bounds.mMax + offset + epsilon;
+    expanded_portal_box.mMax = portal_data.portal->global_bounds.mMax + epsilon;
     expanded_portal_box.mMax.SetY(std::numeric_limits<float>::max());
 
     int connected_count = 0;
@@ -583,6 +577,9 @@ void ParseTile(const tinygltf::Model& model,
   const std::vector<Scene::Mesh>& meshes) {
   for (const auto& child_id : tile_node.children) {
     const auto& node = model.nodes[child_id];
+    if (node.mesh == -1) {
+      continue;
+    }
     Scene::Type type = meshes[node.mesh].type;
     if (type == Scene::Type::Zone) {
       auto zone = new Scene::Zone();
@@ -597,7 +594,12 @@ void ParseTile(const tinygltf::Model& model,
       //tile->portals.push_back(CreateObjectNode(model, child_id, meshes));
     } else {
       Scene::Portal portal;
-      portal.position = ReadVec3(node.translation, 0);
+      if (!node.translation.empty()) {
+        portal.position = ReadVec3(node.translation, 0);
+      }
+      if (!node.rotation.empty()) {
+        portal.rotation = ReadQuat(node.rotation, 0);
+      }
       for (auto grand_child_id : node.children) {
         const auto& child_node = model.nodes[grand_child_id];
         Scene::Type child_type = meshes[child_node.mesh].type;

@@ -83,7 +83,8 @@ struct SceneNode {
   int mesh_index = -1;
   const JPH::Shape* shape = nullptr;
 
-  JPH::AABox bounds;
+  JPH::AABox local_bounds;
+  JPH::AABox global_bounds;
   // const, filled once (DO NOT OVERRIDE by animations)
   SceneNodePose local_transform;
   // used for global transform after the physics update
@@ -198,6 +199,7 @@ struct Scene {
     SceneNode* portal = nullptr; // area to pass
     SceneNode* render = nullptr; // e.g. door frame
     JPH::Vec3 position = JPH::Vec3::sZero();
+    JPH::Quat rotation = JPH::Quat::sIdentity();
     int connected_zone_index_1 = -1;
     int connected_zone_index_2 = -1;
   };

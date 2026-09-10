@@ -29,6 +29,8 @@ public:
 
   AnimatedRenderData GetAnimatedRenderData() const;
 
+  [[nodiscard]] JPH::Vec3 GetPosition() const;
+
   [[nodiscard]] bool HasOwner() const noexcept {
     return static_cast<bool>(owner_);
   }

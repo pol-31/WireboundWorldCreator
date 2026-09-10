@@ -24,11 +24,12 @@ void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
         JPH::BodyID body_id = node->body_id;
         if (body_id.IsInvalid()) {
           global_transform = parent * local;
+          node->global_bounds = node->local_bounds.Transformed(global_transform);
         } else {
           JPH::BodyLockRead lock(bli, body_id);
           if (lock.SucceededAndIsInBroadPhase()) {
             const JPH::Body& body = lock.GetBody();
-            node->bounds = body.GetWorldSpaceBounds();
+            node->global_bounds = body.GetWorldSpaceBounds();
             global_transform = body.GetWorldTransform();
           } else {
             global_transform = parent * local;
@@ -46,8 +47,9 @@ void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
       dfs(node, JPH::Mat44::sIdentity());
     }
     for (auto node : tile->portals) {
-      dfs(node.render, JPH::Mat44::sIdentity());
-      dfs(node.portal, JPH::Mat44::sIdentity());
+      auto mat = JPH::Mat44::sRotationTranslation(node.rotation, node.position);
+      dfs(node.render, mat);
+      dfs(node.portal, mat);
     }
     for (auto& zone : tile->zones) {
       for (auto node : zone->object_nodes) {

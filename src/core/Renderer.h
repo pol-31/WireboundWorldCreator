@@ -49,9 +49,9 @@ class Renderer {
   /// OR just RenderDebug();
   void DrawShadowPass();
 
-  void DrawGeometryPass();
+  void DrawGeometryPass(TerrainRenderData terrain);
 
-  void DrawLightPass(TerrainRenderData terrain, CubemapRenderData cubemap);
+  void DrawLightPass(CubemapRenderData cubemap);
 
   /// Clear all primitives (to be called after drawing)
   void Clear();
@@ -98,6 +98,7 @@ class Renderer {
   GLuint fbo_depth_map_ = 0;
 
   Shader sh_shadow_point_;
+  Shader sh_shadow_point5_;
   Shader sh_shadow_point_apply_;
   GLuint fbo_depth_cubemap_ = 0;
 
@@ -129,6 +130,9 @@ class Renderer {
   void RenderTerrain(TerrainRenderData terrain);
   void RenderCubemap(CubemapRenderData cubemap);
 
+  void InitializeProceduralWall();
+  void RenderWalls();
+
   Shader sh_terrain_;
   Shader sh_cubemap_;
 
@@ -151,4 +155,8 @@ class Renderer {
   JPH::Array<Line> mLines;
 
   Font text_renderer_;
+
+  Shader sh_wall_;
+  GLuint vao_wall_ = 0;
+  GLuint vbo_wall_ = 0;
 };

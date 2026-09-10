@@ -11,6 +11,8 @@ const float Character::cJumpSpeed = 4.0f;
 const float Character::cMaxHealth = 100.0f;
 
 void Character::SetPositionRotation(JPH::RVec3 pos, JPH::Quat rot) {
+  auto y = pos.GetY();
+  pos.SetY(y + 1.0f);
   jph_character_->SetPosition(pos);
   jph_character_->SetRotation(rot);
   jph_character_->SetLinearVelocity(JPH::Vec3::sZero());

@@ -198,7 +198,7 @@ Frustum Camera::GetFrustum() const noexcept {
   JPH::Vec3 cam_inUp(up.x, up.y, up.z);
   float cam_fovx = glm::radians(120.0f);
   float cam_fovy = glm::radians(75.0f);
-  float cam_inNear = 0.0f;
+  float cam_inNear = 0.01f;
   return Frustum(cam_position, cam_inForward, cam_inUp,
     cam_fovx, cam_fovy, cam_inNear);
 }

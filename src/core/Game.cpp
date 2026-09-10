@@ -241,16 +241,16 @@ void Game::RunRenderLoop() {
     camera_.Update(player_->GetBody()->GetCameraBoneMatrix());
     terrain_renderer_.Update(&camera_);
 
-    bool first_face_mode = camera_.IsFirstFaceMode();
-
-    world_manager_.UpdatePlayerZone(player_->GetBody()->GetPosition(), &bi);
+    auto player_pos = player_->GetBody()->GetPosition();
+    //std::cout << player_pos.GetX() << ' ' << player_pos.GetZ() << std::endl;
+    world_manager_.UpdatePlayerZone(player_pos, &bi);
     world_manager_.Cull();
     if (render_physics_only_) {
       renderer_.RenderDebug();
     } else {
       renderer_.DrawShadowPass();
-      renderer_.DrawGeometryPass();
-      renderer_.DrawLightPass(terrain_renderer_.GetRenderData(), cubemap_.GetRenderData());
+      renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData());
+      renderer_.DrawLightPass(cubemap_.GetRenderData());
     }
     RenderInterface();
 
@@ -316,12 +316,13 @@ void InitSceneGlobalTransforms(
         }
   };
   for (auto& tile : tiles) {
-    for (auto node : tile->portals) {
-      dfs(node.render, JPH::Mat44::sIdentity());
-      dfs(node.portal, JPH::Mat44::sIdentity());
-    }
     for (auto node : tile->characters) {
       dfs(node, JPH::Mat44::sIdentity());
+    }
+    for (auto node : tile->portals) {
+      auto mat = JPH::Mat44::sRotationTranslation(node.rotation, node.position);
+      dfs(node.render, mat);
+      dfs(node.portal, mat);
     }
     for (auto& zone : tile->zones) {
       for (auto node : zone->object_nodes) {
@@ -400,11 +401,14 @@ void Game::CreateBodyForNode(SceneNode* node, Scene::Zone* zone) {
       characters_.back()->GetBody()->SetPositionRotation(
         node->global_transform.GetTranslation(),
         node->global_transform.GetRotation().GetQuaternion().Normalized());
+      return;
     } else {
       // no point light (it's not a ModelNode)
       if (mesh.type == Scene::Type::PointLight) {
         zone->point_lights_.emplace_back(node);
-      } else if (mesh.type == Scene::Type::None) {
+        zone->point_lights_.back().radius_ = 25.0f;
+      } else if (mesh.type == Scene::Type::None || mesh.type == Scene::Type::Portal) {
+        // door frame is.... none?
         zone->static_objects_.push_back(node);
         //TODO: non-physics bodies
         return;
@@ -514,22 +518,18 @@ void Game::Init() {
   for (auto& tile : scene->scene_data_.tiles) {
     terrain_renderer_.InitializeBody(mBodyInterface);
     std::cout << "tile added" << std::endl;
-    for (auto node : tile->portals) {
-      //TODO: portals.. idk
-      //CreateBodyForNode(node.render);
-    }
     for (auto node : tile->characters) {
       CreateBodyForNode(node, nullptr);
     }
     for (Scene::Zone* zone : tile->zones) {
-      // world_manager_.AddZone(node);
       std::cout << "zone added" << std::endl;
       for (auto node : zone->object_nodes) {
         CreateBodyForNode(node, zone);
       }
-      //break; // only first zone for now
+      for (auto portal : zone->portals) {
+        CreateBodyForNode(portal->render, zone);
+      }
     }
-    //break; // only one tile for now
   }
   auto player_node = scene->scene_data_.player_node;
   player_ = std::make_unique<PlayerController>(

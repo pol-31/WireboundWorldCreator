@@ -1,12 +1,12 @@
 #version 460 core
 
-in vec4 FragPos;
+in vec3 v_WorldPos;
 
-layout (location = 0) uniform vec3 lightPos;
-layout (location = 1) uniform float far_plane;
+layout(location = 5) uniform vec3 u_LightPos;
+layout(location = 6) uniform float u_FarPlane;
 
 void main() {
-    float lightDistance = length(FragPos.xyz - lightPos);
-    lightDistance = lightDistance / far_plane;
+    float lightDistance = length(v_WorldPos - u_LightPos);
+    lightDistance = lightDistance / u_FarPlane;
     gl_FragDepth = lightDistance;
 }

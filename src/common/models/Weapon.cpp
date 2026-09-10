@@ -53,6 +53,20 @@ void Weapon::DeletePhysicBody() {
 //TODO 3: gltf::mesh != gltf::primitive
 
 
+JPH::Vec3 Weapon::GetPosition() const {
+  JPH::Vec3 transform = JPH::Vec3::sZero();
+  if (owner_) {
+    transform = owner_->GetPosition();
+  } else {
+  auto& bli = physics_system_->GetBodyLockInterface();
+    JPH::BodyLockRead lock(bli, jph_body_id_);
+    if (lock.SucceededAndIsInBroadPhase()) {
+      const JPH::Body& body = lock.GetBody();
+      transform = body.GetPosition();
+    }
+  }
+  return transform;
+}
 
 AnimatedRenderData Weapon::GetAnimatedRenderData() const {
   AnimatedRenderData data;
