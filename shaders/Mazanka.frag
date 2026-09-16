@@ -57,7 +57,7 @@ float fbm(vec2 uv) {
 }
 
 void main() {
-    //return;
+     return;
     // 1. SETUP
     vec3 viewDir = normalize(camera.pos - FragPos);
     vec3 baseNormal = normalize(Normal);

@@ -12,8 +12,8 @@
 #include "Animator.h"
 #include "ModelLoader.h"
 
-const int materialWidth = 2048;
-const int materialHeight = 2048;
+const int gMaterialWidth = 2048;
+const int gMaterialHeight = 2048;
 
 JPH::Vec3 GetNodeTranslation(const tinygltf::Node& node) {
   auto position = JPH::Vec3::sZero();
@@ -473,6 +473,9 @@ SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
       node->local_transform.t = GetNodeTranslation(model.nodes[id]);
       node->local_transform.s = GetNodeScale(model.nodes[id]);
       node->node_id = id;
+      if (scene_node.mesh == 18) {
+        std::cout << "yes <=-----" << std::endl;
+      }
       if (scene_node.mesh != -1) {
         const auto& mesh = meshes[scene_node.mesh];
         node->local_bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
@@ -489,6 +492,7 @@ SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
 void ParseZone(const tinygltf::Model& model,
 const tinygltf::Node& tile_node, Scene::Zone* zone,
 const std::vector<Scene::Mesh>& meshes) {
+
   for (const auto& child_id : tile_node.children) {
     zone->object_nodes.push_back(CreateObjectNode(model, child_id, meshes));
   }
@@ -590,9 +594,13 @@ void ParseTile(const tinygltf::Model& model,
       ParseZone(model, node, zone, meshes);
     } else if (type == Scene::Type::Character) {
       ParseCharacter(model, child_id, tile, meshes);
-    } else if (type == Scene::Type::Portal) {
-      //tile->portals.push_back(CreateObjectNode(model, child_id, meshes));
+    } else if (type == Scene::Type::Door) {
+      Scene::Portal portal;
+      portal.render = CreateObjectNode(model, child_id, meshes);
+      portal.portal = CreateObjectNode(model, child_id, meshes);
+      tile->portals.push_back(portal);
     } else {
+      continue;
       Scene::Portal portal;
       if (!node.translation.empty()) {
         portal.position = ReadVec3(node.translation, 0);
@@ -686,11 +694,8 @@ void ModelLoader::LoadDebugShapes(std::string_view path) {
 void ModelLoader::LoadScene(std::string_view path) {
   auto model = LoadModel(loader_, path);
   auto buffer_data = LoadBuffers(
-    model, scene_.scene_data_.meshes);
+    model, scene_.scene_data_.meshes, true);
   ReadSceneHierarchy(scene_.scene_data_, model);
-  stbi_set_flip_vertically_on_load(false);
-  scene_.materials = LoadMaterials(path, model);
-  stbi_set_flip_vertically_on_load(true);
   UploadBuffers(&scene_.scene_data_.vao,
     &scene_.scene_data_.vbo,
     &scene_.scene_data_.ebo,
@@ -804,6 +809,8 @@ Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
       type = Scene::Type::Hinge;
     } else if (collision_value == "door") {
       type = Scene::Type::Door;
+    } else if (collision_value == "wall") {
+      type = Scene::Type::Wall;
     } else if (collision_value == "portal") {
       type = Scene::Type::Portal;
     } else if (collision_value == "zone") {
@@ -927,8 +934,36 @@ ModelLoader::BufferDataAnimated ModelLoader::LoadBuffersAnimated(
   }
   return data;
 }
+
+//TOOD: add rgb color, so Mud could be taken from Clay
+
+std::map<std::string, MaterialIndex> material_str_to_enum = {
+  {"01_wood", MaterialIndex::Wood},
+  {"02_steel", MaterialIndex::Steel},
+  {"03_clay", MaterialIndex::Clay},
+  {"04_sticks", MaterialIndex::Sticks},
+  {"05_straw", MaterialIndex::Straw},
+  {"06_grass", MaterialIndex::Grass},
+  {"07_tablecloth", MaterialIndex::Tablecloth},
+  {"08_ryadno", MaterialIndex::Ryadno},
+  {"09_ryshnuk", MaterialIndex::Ryshnuk},
+  {"10_ribbons", MaterialIndex::Ribbons},
+};
+
+int MapSceneMaterial(int idx, const std::vector<tinygltf::Material>& materials) {
+  if (idx == -1) {
+    return 0;
+  }
+  //std::cout << idx << ' ' << materials[idx].name << std::endl;
+  int material_id = static_cast<int>(material_str_to_enum.at(materials[idx].name));
+  if (material_id >= 5) {
+    std::cerr << "at least one " << std::endl;
+  }
+  return material_id;
+}
+
 ModelLoader::BufferData ModelLoader::LoadBuffers(const tinygltf::Model& model,
-  std::vector<Scene::Mesh>& meshes) {
+  std::vector<Scene::Mesh>& meshes, bool map_materials) {
   BufferData data;
   //TODO: for some meshes we don't need the geometry (like zones/characters)
   //TODO: are these extras of the node OR of the mesh?
@@ -961,10 +996,9 @@ ModelLoader::BufferData ModelLoader::LoadBuffers(const tinygltf::Model& model,
               : GL_UNSIGNED_SHORT;
 
       int material_id = primitive.material;
-      if (material_id == -1) {
-        material_id = 0;
+      if (map_materials) {
+        material_id = MapSceneMaterial(material_id, model.materials);
       }
-      material_id = 0;
       Scene::Primitive new_primitive(idxAccessor.count, index_byte_offset,
                         data.current_base_vertex, gl_idx_type,
                         static_cast<uint32_t>(material_id));
@@ -982,17 +1016,42 @@ Material ModelLoader::LoadMaterial(std::string_view path,
                                    tinygltf::Model& model,
                                    const tinygltf::Material& m) {
   Material material;
+  material.albedo = LoadTexture(path, model,
+    m.pbrMetallicRoughness.baseColorTexture.index);
+  const auto& base_color = m.pbrMetallicRoughness.baseColorFactor;
+  if (!base_color.empty()) {
+    material.albedo_val = JPH::Vec3(
+      base_color[0], base_color[1], base_color[2]);
+  }
 
-  auto albedo_tex_id = m.pbrMetallicRoughness.baseColorTexture.index;
-  material.albedo = LoadTexture(path, model, albedo_tex_id);
+  material.normal = LoadTexture(path, model, m.normalTexture.index);
 
-  auto normal_tex_id = m.normalTexture.index;
-  material.normal = LoadTexture(path, model, normal_tex_id);
-
-  auto rough_metal_ao_tex_id = m.pbrMetallicRoughness.metallicRoughnessTexture.index;
-  material.rough_metal_ao = LoadTexture(path, model, rough_metal_ao_tex_id);
+  material.rough_metal_ao = LoadTexture(path, model,
+    m.pbrMetallicRoughness.metallicRoughnessTexture.index);
+  material.metal_val = m.pbrMetallicRoughness.metallicFactor;
+  material.rough_val = m.pbrMetallicRoughness.roughnessFactor;
 
   return material;
+}
+
+Texture ModelLoader::LoadTexture(std::string_view path,
+                                 const tinygltf::Model& model, int tex_id) {
+  if (tex_id == -1) {
+    std::cerr << "model textures load failed 1" << std::endl;
+    return {};
+  }
+  auto& texture = model.textures[tex_id];
+  auto image_index = texture.source;
+  if (image_index == -1) {
+    std::cerr << "model textures load failed 2" << std::endl;
+    return {};
+  }
+  namespace fs = std::filesystem;
+  fs::path tex_path{path};
+  tex_path = tex_path.parent_path();
+  fs::path image_uri{model.images[image_index].uri};
+  tex_path /= image_uri.make_preferred();
+  return Texture(tex_path.string(), Texture::Type::TerrainRGBA8);
 }
 
 GLuint CreateTextureArray(int width, int height, int layers,
@@ -1007,65 +1066,176 @@ GLuint CreateTextureArray(int width, int height, int layers,
   return tex;
 }
 
-MaterialArray ModelLoader::LoadMaterials(
-    std::string_view path, tinygltf::Model& model) {
-  MaterialArray pack;
-  pack.count = static_cast<uint32_t>(model.materials.size());
-  pack.count = 1;
-  pack.albedo =
-      CreateTextureArray(materialWidth, materialHeight, pack.count, GL_RGBA8);
-  pack.normal =
-      CreateTextureArray(materialWidth, materialHeight, pack.count, GL_RGBA8);
-  pack.rough_metal_ao =
-      CreateTextureArray(materialWidth, materialHeight, pack.count, GL_RGBA8);
-  for (int layer = 0; layer < pack.count; ++layer) {
-    const auto& m = model.materials[layer];
-    auto albedo = LoadTextureRaw(path, model, m.pbrMetallicRoughness.baseColorTexture.index);
-    auto normal = LoadTextureRaw(path, model, m.normalTexture.index);
-    auto ao_rough_metal = LoadTextureRaw(path, model, m.pbrMetallicRoughness.metallicRoughnessTexture.index);
-    glTextureSubImage3D(
-      pack.albedo, 0, 0, 0, layer, materialWidth, materialHeight, 1, GL_RGBA,
-      GL_UNSIGNED_BYTE, albedo.data());
-    glTextureSubImage3D(
-      pack.normal, 0, 0, 0, layer, materialWidth, materialHeight, 1, GL_RGBA,
-      GL_UNSIGNED_BYTE, normal.data());
-    glTextureSubImage3D(
-      pack.rough_metal_ao, 0, 0, 0, layer, materialWidth, materialHeight, 1, GL_RGBA,
-      GL_UNSIGNED_BYTE, ao_rough_metal.data());
-  }
-  glGenerateTextureMipmap(pack.albedo);
-  glGenerateTextureMipmap(pack.normal);
-  glGenerateTextureMipmap(pack.rough_metal_ao);
-  return pack;
+GLuint LoadTextureArrayFromFolder(std::string_view folder_path) {
+  namespace fs = std::filesystem;
+    std::vector<fs::path> texture_files;
+
+    // 1. Gather all files in the directory
+    if (!std::filesystem::exists(folder_path) || !fs::is_directory(folder_path)) {
+        std::cerr << "Folder not found: " << folder_path << std::endl;
+        return 0;
+    }
+
+    for (const auto& entry : fs::directory_iterator(folder_path)) {
+        if (entry.is_regular_file()) {
+            // Optional: check extension if you have non-image files in there
+            texture_files.push_back(entry.path());
+        }
+    }
+
+    if (texture_files.empty()) {
+        std::cerr << "No textures found in " << folder_path << std::endl;
+        return 0;
+    }
+
+    // 2. Determine array size using the FIRST image's header via stbi_info
+    int width, height, channels;
+    std::string first_file = texture_files[0].string();
+    if (!stbi_info(first_file.c_str(), &width, &height, &channels)) {
+        std::cerr << "Failed to read header of " << first_file << std::endl;
+        return 0;
+    }
+
+    int layer_count = texture_files.size();
+
+    // 3. Allocate the texture array dynamically
+    GLuint tex_array = CreateTextureArray(width, height, layer_count, GL_RGBA8);
+
+    if ((width & 3) || (height & 3)) {
+        // Just a warning, you'd still need to set glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        // before glTextureSubImage3D if this triggers.
+        std::cerr << "Note: GL_UNPACK_ALIGNMENT may be needed for " << folder_path
+                  << " (Size: " << width << "x" << height << ")" << std::endl;
+    }
+
+    // 4. Load the actual data layer by layer
+    int desired_channels = 4;
+    for (int layer_id = 0; layer_id < layer_count; ++layer_id) {
+        int got_width, got_height;
+        std::string current_file = texture_files[layer_id].string();
+
+        unsigned char* data_uc = stbi_load(
+            current_file.c_str(), &got_width, &got_height, &channels, desired_channels
+        );
+
+        if (!data_uc) {
+            std::cerr << "Failed to load texture " << current_file << std::endl;
+            continue; // Or handle the error differently (e.g., fill with magenta error texture)
+        }
+
+        // Safety check: Make sure this image matches the array dimensions!
+        if (got_width != width || got_height != height) {
+            std::cerr << "Size mismatch in " << folder_path << "! "
+                      << current_file << " is " << got_width << "x" << got_height
+                      << ", expected " << width << "x" << height << ". Skipping." << std::endl;
+            stbi_image_free(data_uc);
+            continue;
+        }
+
+        // Upload to the specific layer
+        glTextureSubImage3D(
+            tex_array, 0, 0, 0, layer_id,
+            width, height, 1, GL_RGBA,
+            GL_UNSIGNED_BYTE, data_uc
+        );
+
+        stbi_image_free(data_uc);
+    }
+
+    glGenerateTextureMipmap(tex_array);
+    return tex_array;
 }
 
-Texture ModelLoader::LoadTexture(std::string_view path,
-                                 const tinygltf::Model& model, int tex_id) {
-  if (tex_id == -1) {
-    throw "model textures load failed 1";
+void ModelLoader::LoadEmbroideryTextures(
+  std::string_view path_tablecloth,
+  std::string_view path_ryadno,
+  std::string_view path_ryshnuk,
+  std::string_view path_ribbons) {
+  scene_.material_tablecloth_ = LoadTextureArrayFromFolder(path_tablecloth);
+  scene_.material_ryadno_ = LoadTextureArrayFromFolder(path_ryadno);
+  scene_.material_ryshnuk_ = LoadTextureArrayFromFolder(path_ryshnuk);
+  scene_.material_ribbons_ = LoadTextureArrayFromFolder(path_ribbons);
+}
+
+void InitBackupMaterial(
+  std::vector<uint8_t>& albedo,
+  std::vector<uint8_t>& normal,
+  std::vector<uint8_t>& metal_rough_ao,
+  int width, int height, int channels) {
+  auto CreateFlatTexture = [=](std::vector<uint8_t>& pixels, unsigned char r, unsigned char g, unsigned char b, unsigned char a = 255) {
+    pixels.resize(width * height * channels);
+    for (size_t i = 0; i < pixels.size(); i += 4) {
+      pixels[i + 0] = r;
+      pixels[i + 1] = g;
+      pixels[i + 2] = b;
+      pixels[i + 3] = a;
+    }
+  };
+  CreateFlatTexture(albedo, 0, 0, 0, 255);
+  CreateFlatTexture(normal, 128, 128, 255, 255);
+  CreateFlatTexture(metal_rough_ao, 255, 0, 255, 255);
+}
+
+//
+// the problem is emb_textures aren't 2048x2048, has const rough metal
+// so...we need an alternative to our arrays, like SpecialMaterial
+//
+// so while ther's a lot of objects like stell tools or wooden, clay,
+// while embroidery is kind of a special and we have HeroMaterial for him,
+// while all default pbr are named 1_tex, 2_tex, embroidery is like 6_emb,
+// and Material.gltf SHOULD contain it, but... we should specify in extras
+// that it's a special material
+// SO: need to rename all materials with index
+
+
+void ModelLoader::LoadSceneMaterials(std::string_view path) {
+  auto model = LoadModel(loader_, path);
+  auto& pack = scene_.materials;
+  pack.count = static_cast<uint32_t>(MaterialIndex::TotalNormalMaterials);
+  for (GLuint* idx : {&pack.albedo, &pack.normal, &pack.rough_metal_ao}) {
+    *idx = CreateTextureArray(gMaterialWidth, gMaterialHeight, pack.count, GL_RGBA8);
   }
-  auto& texture = model.textures[tex_id];
-  auto image_index = texture.source;
-  if (image_index == -1) {
-    throw "model textures load failed";
+
+  auto bindLayer = [&](GLuint array_index, int tex_index, int layer) {
+    auto pixels = LoadTextureRaw(path, model, tex_index);
+    glTextureSubImage3D(
+      array_index, 0, 0, 0, layer,
+      gMaterialWidth, gMaterialHeight, 1, GL_RGBA,
+      GL_UNSIGNED_BYTE, pixels.data());
+    glGenerateTextureMipmap(array_index);
+  };
+
+  for (int i = 0; i < pack.count; ++i) {
+    const auto& m = model.materials[i];
+    auto layer = material_str_to_enum.at(m.name);
+    auto layer_id = static_cast<int>(layer);
+    switch (layer) {
+      case MaterialIndex::Tablecloth:
+        //scene_.material_embroidery_ = LoadMaterial(path, model, m);
+        break;
+      case MaterialIndex::Ryadno:
+        break;
+      case MaterialIndex::Ryshnuk:
+        break;
+      case MaterialIndex::Ribbons:
+        break;
+      default:
+        bindLayer(pack.albedo, m.pbrMetallicRoughness.baseColorTexture.index, layer_id);
+        bindLayer(pack.normal, m.normalTexture.index, layer_id);
+        bindLayer(pack.rough_metal_ao, m.pbrMetallicRoughness.metallicRoughnessTexture.index, layer_id);
+    }
   }
-  namespace fs = std::filesystem;
-  fs::path tex_path{path};
-  tex_path = tex_path.parent_path();
-  fs::path image_uri{model.images[image_index].uri};
-  tex_path /= image_uri.make_preferred();
-  return Texture(tex_path.string(), Texture::Type::TerrainRGBA8);
 }
 
 std::vector<uint8_t> ModelLoader::LoadTextureRaw(
     std::string_view path, const tinygltf::Model& model, int tex_id) {
   if (tex_id == -1) {
-    throw "model textures load failed 1";
+    throw std::runtime_error("model textures load failed 1");
   }
   auto& texture = model.textures[tex_id];
   auto image_index = texture.source;
   if (image_index == -1) {
-    throw "model textures load failed";
+    throw std::runtime_error("model textures load failed 2");
   }
   namespace fs = std::filesystem;
   fs::path tex_path{path};
@@ -1073,20 +1243,20 @@ std::vector<uint8_t> ModelLoader::LoadTextureRaw(
   fs::path image_uri{model.images[image_index].uri};
   tex_path /= image_uri.make_preferred();
 
-  int width, height;
+  int got_width, got_height;
   GLint channels;
   GLint desired_channels = 4;
-  std::vector<uint8_t> data(materialWidth * materialHeight * desired_channels);
+  std::vector<uint8_t> data(gMaterialWidth * gMaterialHeight * desired_channels);
   unsigned char* data_uc =
-    stbi_load(tex_path.string().data(), &width, &height, &channels, desired_channels);
+    stbi_load(tex_path.string().data(), &got_width, &got_height, &channels, desired_channels);
   if (!data_uc) {
     std::cerr << "failed to load texture " << tex_path << std::endl;
   }
   std::memcpy(data.data(), data_uc, data.size());
   stbi_image_free(data_uc);
-  if ((width & 3) || (height & 3)) {
-    std::cerr << "need GL_UNPACK_ALIGNMENT for size " << width << ' '
-              << height << std::endl;
+  if ((got_width & 3) || (got_height & 3)) {
+    std::cerr << "need GL_UNPACK_ALIGNMENT for size " << got_width << ' '
+              << got_height << std::endl;
   }
   return data;
 }

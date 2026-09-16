@@ -29,7 +29,7 @@ public:
     JPH::Mat44 model = JPH::Mat44::sIdentity();
     JPH::Vec4 color = JPH::Vec4::sOne();
     uint32_t material_id = 0;
-    uint32_t padding1 = 0;
+    uint32_t use_triplanar = 0;
     uint32_t padding2 = 0;
     uint32_t padding3 = 0;
   };
@@ -130,6 +130,9 @@ private:
   // relative to cur scene for sure
 
   void PushFrustumCulled(const std::vector<int>& objects,
+    std::vector<std::vector<InstanceGpu>>& ssbo_data);
+
+  void PushFrustumCulled(const SceneNode* node,
     std::vector<std::vector<InstanceGpu>>& ssbo_data);
 
   // resized with zone lights num, so its array idx == (int)cur_zone.light,

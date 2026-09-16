@@ -8,6 +8,9 @@ struct InstanceData {
     mat4 modelMatrix;
     vec4 modelColor;
     uint materialId;
+    uint useTriplanar;
+    uint padding2;
+    uint padding3;
 };
 
 layout(std430, binding = 0) buffer InstanceBuffer {
@@ -30,6 +33,7 @@ out VS_OUT {
     vec4 vert_color;
     mat3 TBN;
     flat uint material_id;
+    flat uint use_triplanar;
 } vs_out;
 
 void main() {
@@ -47,6 +51,7 @@ void main() {
     vs_out.TexCoords = in_texcoord;
     vs_out.vert_color = color;
     vs_out.material_id = instances[index].materialId;
+    vs_out.use_triplanar = instances[index].useTriplanar;
 
     mat3 normalMatrix = transpose(inverse(mat3(model)));
     vec3 T = normalize(normalMatrix * in_tangent.xyz);

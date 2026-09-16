@@ -70,6 +70,10 @@ class Texture {
 
   void Clear() const;
 
+  [[nodiscard]] bool IsValid() const noexcept {
+    return id_ != 0;
+  }
+
   [[nodiscard]] GLuint GetId() const { return id_; }
 
   [[nodiscard]] GLsizei GetWidth() const { return width_; }
@@ -83,8 +87,6 @@ class Texture {
   [[nodiscard]] GLsizei GetFormatInternal() const { return format_internal_; }
 
   [[nodiscard]] GLenum GetType() const { return type_; }
-
-  explicit operator bool() const { return id_ != 0; }
 
  private:
   void LoadImage8(std::string_view path);

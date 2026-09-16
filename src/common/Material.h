@@ -1,6 +1,9 @@
 #ifndef WIREBOUNDWORLDCREATOR_MATERIAL_H
 #define WIREBOUNDWORLDCREATOR_MATERIAL_H
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Core/Core.h>
+
 #include "../render/Texture.h"
 
 struct Material {
@@ -20,10 +23,17 @@ struct Material {
    * . emission - rgba
    * TODO: occlusion & emission can be stored in the same RGBA texture
    */
+
+  [[nodiscard]] bool IsOnlyAlbedo() const noexcept {
+    return !normal.IsValid();
+  }
+
   Texture albedo;
-  // Texture emission;
-  Texture rough_metal_ao;
   Texture normal;
+  Texture rough_metal_ao;
+  JPH::Vec3 albedo_val = JPH::Vec3::sOne();
+  float rough_val = 1.0f;
+  float metal_val = 0.0f;
 };
 
 struct MaterialArray {

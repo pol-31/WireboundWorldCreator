@@ -248,6 +248,7 @@ void Game::RunRenderLoop() {
     if (render_physics_only_) {
       renderer_.RenderDebug();
     } else {
+      renderer_.UpdateBuffer();
       renderer_.DrawShadowPass();
       renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData());
       renderer_.DrawLightPass(cubemap_.GetRenderData());
@@ -493,6 +494,14 @@ void Game::Init() {
 
   mdl_loader_.LoadDebugShapes("C:\\Users\\Pavlo\\Desktop\\assets\\DebugShapes.gltf");
   mdl_loader_.LoadScene( "C:\\Users\\Pavlo\\Desktop\\assets\\SceneBackyard.gltf");
+  mdl_loader_.LoadSceneMaterials( "C:\\Users\\Pavlo\\Desktop\\assets\\Materials.gltf");
+  // mdl_loader_.LoadEmbroideryTextures("C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery");
+  mdl_loader_.LoadEmbroideryTextures(
+    "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\tablecloth",
+    "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryadno",
+    "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryshnuk",
+    "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ribbons"
+    );
   mdl_loader_.LoadCharacters(
         "C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf",
         {"C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf"});

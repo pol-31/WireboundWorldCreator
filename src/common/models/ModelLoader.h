@@ -28,6 +28,14 @@ class ModelLoader {
 
   void LoadScene(std::string_view path);
 
+  void LoadSceneMaterials(std::string_view path);
+
+  void LoadEmbroideryTextures(
+  std::string_view path_tablecloth,
+  std::string_view path_ryadno,
+  std::string_view path_ryshnuk,
+  std::string_view path_ribbons);
+
   void LoadCharacters(std::string_view skeleton_path,
     std::vector<std::string_view> skin_paths);
 
@@ -54,13 +62,11 @@ class ModelLoader {
 
  private:
   BufferData LoadBuffers(const tinygltf::Model& model,
-    std::vector<Scene::Mesh>& meshes);
+    std::vector<Scene::Mesh>& meshes, bool map_materials = false);
   BufferDataAnimated LoadBuffersAnimated(const tinygltf::Model& model);
 
   Material LoadMaterial(std::string_view path, tinygltf::Model& model,
     const tinygltf::Material& m);
-
-  MaterialArray LoadMaterials(std::string_view path, tinygltf::Model& model);
 
   Texture LoadTexture(std::string_view path, const tinygltf::Model& model,
                       int tex_id);

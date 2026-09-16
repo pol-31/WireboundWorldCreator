@@ -44,6 +44,8 @@ class Renderer {
 
   void RenderDebug();
 
+  void UpdateBuffer();
+
   /// we have culled objects from WorldManager, so we just
   /// DrawShadowPass() -> DrawGeometryPass() -> DrawLightPass()
   /// OR just RenderDebug();

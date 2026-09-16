@@ -45,7 +45,8 @@ void main() {
     // 1. CLEANER UVs:
     // fs_in.tc is already in world space. You don't need convoluted math to get UVs.
     // Just divide world XZ by your desired tile scale (e.g., 64.0 meters)
-    vec2 uv = fs_in.tc.xz / 64.0;
+    //vec2 uv = fs_in.tc.xz / 64.0;
+    vec2 uv = fs_in.tc.xz / 16.0;
 
     // 2. Sample the textures
     vec3 albedo = texture(material_albedo, vec3(uv, material_id)).rgb;

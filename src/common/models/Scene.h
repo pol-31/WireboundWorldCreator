@@ -74,6 +74,22 @@ struct SceneNodePose {
   JPH::Mat44 Matrix() const noexcept;
 };
 
+
+enum class MaterialIndex {
+  Wood,
+  Steel,
+  Clay, // +terrain, +walls
+  Sticks,
+  Straw,
+  Grass, // +terrain
+  TotalNormalMaterials,
+  // the rest are special with specific size or usage
+  Tablecloth, // special
+  Ryadno, // special
+  Ryshnuk, // special
+  Ribbons, // special
+};
+
 /// for animated there's no children and global_transform used as model_mat
 struct SceneNode {
   std::vector<SceneNode*> children;
@@ -112,6 +128,7 @@ struct Scene {
     Zone,
     Tile,
     Terrain,
+    Wall,
     Character,
     Player,
   };
@@ -266,6 +283,12 @@ struct Scene {
     std::string mesh_name;
   };
   std::vector<WeaponData> weapons_;
+
+  Material material_embroidery_; // DEPRECATED
+  GLuint material_tablecloth_ = 0;
+  GLuint material_ryadno_ = 0;
+  GLuint material_ryshnuk_ = 0;
+  GLuint material_ribbons_ = 0;
 
   void UpdateRenderTransform(const JPH::BodyLockInterface& bli,
   std::vector<Tile*>& tiles);

@@ -68,12 +68,16 @@ GLuint CreateShadowCubeMapArray() {
 }
 
 void BindMaterial(const Material& material) {
-  glActiveTexture(GL_TEXTURE0);
-  material.albedo.BindSampler(0);
-  glActiveTexture(GL_TEXTURE0);
-  material.rough_metal_ao.BindSampler(1);
-  glActiveTexture(GL_TEXTURE0);
-  material.normal.BindSampler(2);
+  //glUniform3fv(0, 1, albedo_val.mF32);
+  material.albedo.BindSampler(0); // always valid
+  auto is_only_albedo = material.IsOnlyAlbedo();
+  //glUniform1i(10, static_cast<int>(is_only_albedo));
+  if (!is_only_albedo) {
+    // glUniform1f(2, rough_val);
+    // glUniform1f(3, metal_val);
+    material.normal.BindSampler(2);
+    material.rough_metal_ao.BindSampler(1);
+  }
 }
 
 void BindAnimatedRenderData(const AnimatedRenderData& data) {
@@ -147,7 +151,7 @@ sh_shadow_point_("../shaders/TriangleShadowPoint.vert",
 sh_shadow_point5_("../shaders/TriangleShadowPoint5.vert",
                           "../shaders/TriangleShadowPoint.frag", {}),
 sh_geometry_("../shaders/TriangleGeometry.vert",
-                      "../shaders/TriangleGeometry.frag", {0, 1, 2}),
+                      "../shaders/TriangleGeometry.frag", {0, 1, 2, 3, 4, 5, 6}),
 sh_geometry5_("../shaders/TriangleGeometry5.vert",
                       "../shaders/TriangleGeometry5.frag", {0, 1}),
 sh_deferred_shading_("../shaders/DeferredShading.vert",
@@ -299,6 +303,15 @@ void Renderer::DrawPointLightShadowPass() {
   }
 }
 
+void Renderer::UpdateBuffer() {
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
+  if (!culled_data_->ssbo_data.empty()) {
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
+    culled_data_->ssbo_data.size() * sizeof(WorldManager::InstanceGpu),
+    culled_data_->ssbo_data.data());
+  }
+}
+
 void Renderer::DrawShadowPass() {
   glCullFace(GL_FRONT);
   DrawDirectionalLightShadowPass();
@@ -319,24 +332,22 @@ void RenderPlayer(const AnimatedRenderData& data) {
 }
 
 void Renderer::DrawGeometryPass(TerrainRenderData terrain) {
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
-  if (!culled_data_->ssbo_data.empty()) {
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
-    culled_data_->ssbo_data.size() * sizeof(WorldManager::InstanceGpu),
-    culled_data_->ssbo_data.data());
-  }
-
   glBindVertexArray(scene_->scene_data_.vao);
   glBindFramebuffer(GL_FRAMEBUFFER, g_buffer_);
   glViewport(0, 0, gWindowWidth, gWindowHeight);
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glCullFace(GL_BACK);
+  sh_geometry_.DebugUpdate();
   sh_geometry_.Bind();
 
   glBindTextureUnit(0, scene_->materials.albedo);
   glBindTextureUnit(1, scene_->materials.normal);
   glBindTextureUnit(2, scene_->materials.rough_metal_ao);
+  glBindTextureUnit(3, scene_->material_tablecloth_);
+  glBindTextureUnit(4, scene_->material_ryadno_);
+  glBindTextureUnit(5, scene_->material_ryshnuk_);
+  glBindTextureUnit(6, scene_->material_ribbons_);
 
   for (const auto& o : culled_data_->camera.objects) {
     const auto& m = scene_->scene_data_.meshes[o.mesh_id];
@@ -359,8 +370,8 @@ void Renderer::DrawGeometryPass(TerrainRenderData terrain) {
 
   // we need the shader.. probably we have both files
 
-  RenderWalls();
-  RenderTerrain(terrain);
+  //RenderWalls();
+  //RenderTerrain(terrain);
   sh_geometry5_.Bind();
   auto render_data = (*player_)->GetBody()->GetAnimatedRenderData();
   RenderPlayer(render_data);

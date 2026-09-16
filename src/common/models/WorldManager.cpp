@@ -34,27 +34,35 @@ WorldManager::WorldManager(
 // frame loop is going to eat your CPU budget
 //TODO: so need to flatten to culled_nodes (not all scene nodes)
 void WorldManager::PushFrustumCulled(
-  const std::vector<int>& objects,
+  const SceneNode* node,
   std::vector<std::vector<InstanceGpu>>& ssbo_data) {
   const Scene::SceneData& scene_data = scene_->scene_data_;
-  std::function<void(const SceneNode*)> dfs =
-    [&](const SceneNode* node) {
-      InstanceGpu new_instance;
-      new_instance.model = node->global_transform;
-      //TODO: primitives 0.... but maybe all our primitives have same mat id..
-      // so fix not for today
-      new_instance.material_id = scene_data.meshes[node->mesh_index].primitives[0].material_id;
-      ssbo_data[node->mesh_index].push_back(std::move(new_instance));
-      for (const SceneNode* child : node->children) {
-        dfs(child);
-      }
-  };
+  InstanceGpu new_instance;
+  new_instance.model = node->global_transform;
+  //TODO: primitives 0.... but maybe all our primitives have same mat id..
+  // so fix not for today
+  new_instance.material_id = scene_data.meshes[node->mesh_index].primitives[0].material_id;
+  if (scene_data.meshes[node->mesh_index].type == Scene::Type::Wall) {
+    if (new_instance.material_id == static_cast<int>(MaterialIndex::Clay)) {
+      new_instance.use_triplanar = 40;
+    } else {
+      new_instance.use_triplanar = 7;
+    }
+  }
+  ssbo_data[node->mesh_index].push_back(std::move(new_instance));
+  for (const SceneNode* child : node->children) {
+    PushFrustumCulled(child, ssbo_data);
+  }
+}
 
+void WorldManager::PushFrustumCulled(
+  const std::vector<int>& objects,
+  std::vector<std::vector<InstanceGpu>>& ssbo_data) {
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
   const Scene::Zone* zone = zones[cur_zone_id_];
   for (int idx : objects) {
     const SceneNode* node = zone->static_objects_[idx].object_;
-    dfs(node);
+    PushFrustumCulled(node, ssbo_data);
   }
 }
 
@@ -176,6 +184,9 @@ void WorldManager::Cull() {
 
   /// HERE packed by object ids withing the current zone (not packed by meshes)
   //TODO: (dbg) obj->color.ToVec4(),
+
+
+
   for (int idx = 0; idx < static_objects_.size(); ++idx) {
     const auto& obj = static_objects_[idx];
     if (frustum_camera.Overlaps(obj.object_->global_bounds)) {
@@ -211,6 +222,15 @@ void WorldManager::Cull() {
   auto ssbo_data_pl = std::vector<std::array<std::vector<std::vector<InstanceGpu>>, 6>>();
   auto ssbo_data_dl = std::vector<std::vector<std::vector<InstanceGpu>>>();
   PushFrustumCulled(active_camera_, ssbo_data_cam);
+  //std::cout << zone->portals.size() << std::endl;
+  for (const auto& p : scene_data.tiles[0]->portals) {
+      PushFrustumCulled(p.render, ssbo_data_cam);
+    continue;
+    //if (frustum_camera.Overlaps(p->render->global_bounds)) {
+    //  PushFrustumCulled(p->render, ssbo_data_cam);
+    //}
+  }
+
   for (int i = 0; i < active_point_lights_.size(); ++i) {
       ssbo_data_pl.push_back(std::array<std::vector<std::vector<InstanceGpu>>, 6>());
     for (int face = 0; face < 6; ++face) {
