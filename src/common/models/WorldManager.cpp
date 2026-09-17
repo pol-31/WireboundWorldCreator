@@ -56,12 +56,10 @@ void WorldManager::PushFrustumCulled(
 }
 
 void WorldManager::PushFrustumCulled(
-  const std::vector<int>& objects,
+  const std::vector<const SceneNode*>& objects,
   std::vector<std::vector<InstanceGpu>>& ssbo_data) {
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
-  const Scene::Zone* zone = zones[cur_zone_id_];
-  for (int idx : objects) {
-    const SceneNode* node = zone->static_objects_[idx].object_;
+  for (auto node : objects) {
     PushFrustumCulled(node, ssbo_data);
   }
 }
@@ -82,7 +80,7 @@ JPH::AABox GetDefaultBounds() {
 
 void WorldManager::CullAnimatedObject(
     const Frustum& frustum_camera,
-    const std::vector<PointLight>& zone_point_lights,
+    const std::vector<PointLight*>& zone_point_lights,
     JPH::Vec3 pos,
     const AnimatedRenderData& render_data) {
   if (IsZoneCulled(pos)) {
@@ -101,12 +99,12 @@ void WorldManager::CullAnimatedObject(
   }
   for (int light_id = 0; light_id < zone_point_lights.size(); ++light_id) {
     const auto& light = zone_point_lights[light_id];
-    auto light_pos = light.object_->global_bounds.GetCenter();
+    auto light_pos = light->object_->global_bounds.GetCenter();
     for (int face = 0; face < 6; ++face) {
-      if (!light.frustum_[face].is_visible) {
+      if (!light->frustum_[face].is_visible) {
         continue;
       }
-      if (light.frustum_[face].frustum.Overlaps(bounds, light_pos, light.radius_)) {
+      if (light->frustum_[face].frustum.Overlaps(bounds, light_pos, light->radius_)) {
         final_render_data_.point_lights[light_id].object_animated[face].push_back(render_data);
       }
     }
@@ -153,15 +151,21 @@ void WorldManager::Cull() {
 
   //TODO: check active zones as well;
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
-  const Scene::Zone* zone = zones[cur_zone_id_];
-  const auto& point_lights_ = zone->point_lights_;
+  //const SceneZone* zone = zones[cur_zone_id_];
 
 
-  const auto& static_objects_ = zone->static_objects_;
+  std::vector<PointLight*> point_lights;
+  for (int zone_id : active_zones_) {
+    auto* zone = zones[zone_id];
+    for (auto& l : zone->point_lights_) {
+      point_lights.push_back(&l);
+    }
+  }
 
-  active_point_lights_ = std::vector<std::array<std::vector<int>, 6>>(point_lights_.size());
-  active_dir_lights_ = std::vector<std::vector<int>>(dir_lights_.size());
-  active_camera_ = std::vector<int>();
+
+  active_point_lights_ = std::vector<std::array<std::vector<const SceneNode*>, 6>>(point_lights.size());
+  active_dir_lights_ = std::vector<std::vector<const SceneNode*>>(dir_lights_.size());
+  active_camera_ = std::vector<const SceneNode*>();
   final_render_data_.ssbo_data.clear();
 
   final_render_data_.camera.objects.clear();
@@ -172,45 +176,82 @@ void WorldManager::Cull() {
   final_render_data_.dir_lights.clear();
   final_render_data_.dir_lights.resize(active_dir_lights_.size());
 
+  for (int zone_id : active_zones_) {
+    const auto* zone = zones[zone_id];
+    const auto& static_objects = zone->static_objects_;
 
-  for (const auto& c : characters_) {
-    CullAnimatedObject(frustum_camera, point_lights_, c->GetBody()->GetPosition(),
-      c->GetBody()->GetAnimatedRenderData());
-  }
-  for (const auto& w : weapons_) {
-    CullAnimatedObject(frustum_camera, point_lights_, w->GetPosition(),
-      w->GetAnimatedRenderData());
-  }
+    for (const auto& c : characters_) {
+      CullAnimatedObject(frustum_camera, point_lights, c->GetBody()->GetPosition(),
+        c->GetBody()->GetAnimatedRenderData());
+    }
+    for (const auto& w : weapons_) {
+      CullAnimatedObject(frustum_camera, point_lights, w->GetPosition(),
+        w->GetAnimatedRenderData());
+    }
 
-  /// HERE packed by object ids withing the current zone (not packed by meshes)
-  //TODO: (dbg) obj->color.ToVec4(),
-
-
-
-  for (int idx = 0; idx < static_objects_.size(); ++idx) {
-    const auto& obj = static_objects_[idx];
+    for (const auto& obj : static_objects) {
     if (frustum_camera.Overlaps(obj.object_->global_bounds)) {
-      active_camera_.push_back(idx);
+      active_camera_.push_back(obj.object_);
     }
     for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
       const auto& light = dir_lights_[light_id];
       if (light.frustum.Overlaps(obj.object_->global_bounds)) {
-        active_dir_lights_[light_id].push_back(idx);
+        active_dir_lights_[light_id].push_back(obj.object_);
       }
     }
-    for (int light_id = 0; light_id < point_lights_.size(); ++light_id) {
-      const auto& light = point_lights_[light_id];
-      auto light_pos = light.object_->global_bounds.GetCenter();
+    for (int light_id = 0; light_id < point_lights.size(); ++light_id) {
+      const auto& light = point_lights[light_id];
+      auto light_pos = light->object_->global_bounds.GetCenter();
       for (int face = 0; face < 6; ++face) {
-        if (!light.frustum_[face].is_visible) {
+        if (!light->frustum_[face].is_visible) {
           continue;
         }
-        if (light.frustum_[face].frustum.Overlaps(obj.object_->global_bounds, light_pos, light.radius_)) {
-          active_point_lights_[light_id][face].push_back(idx);
+        if (light->frustum_[face].frustum.Overlaps(obj.object_->global_bounds, light_pos, light->radius_)) {
+          active_point_lights_[light_id][face].push_back(obj.object_);
         }
       }
     }
   }
+
+
+  for (const auto* p : zone->portals) {
+    auto bounds = p->frame->global_bounds;
+    if (frustum_camera.Overlaps(bounds)) {
+      active_camera_.push_back(p->desk);
+      active_camera_.push_back(p->frame);
+      for (const auto* o : p->obj) {
+        active_camera_.push_back(o);
+      }
+    }
+    for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
+      const auto& light = dir_lights_[light_id];
+      if (light.frustum.Overlaps(bounds)) {
+        active_dir_lights_[light_id].push_back(p->desk);
+        active_dir_lights_[light_id].push_back(p->frame);
+        for (const auto* o : p->obj) {
+          active_dir_lights_[light_id].push_back(o);
+        }
+      }
+    }
+    for (int light_id = 0; light_id < point_lights.size(); ++light_id) {
+      const auto& light = point_lights[light_id];
+      auto light_pos = light->object_->global_bounds.GetCenter();
+      for (int face = 0; face < 6; ++face) {
+        if (!light->frustum_[face].is_visible) {
+          continue;
+        }
+        if (light->frustum_[face].frustum.Overlaps(bounds, light_pos, light->radius_)) {
+          active_point_lights_[light_id][face].push_back(p->desk);
+          active_point_lights_[light_id][face].push_back(p->frame);
+          for (const auto* o : p->obj) {
+            active_point_lights_[light_id][face].push_back(o);
+        }
+        }
+      }
+    }
+  }
+  }
+
 
   /// linealization (we have FrustumCulledObjects, now
   /// need to generate only solid InstanceGpu block, what now is BY MESH,
@@ -223,13 +264,6 @@ void WorldManager::Cull() {
   auto ssbo_data_dl = std::vector<std::vector<std::vector<InstanceGpu>>>();
   PushFrustumCulled(active_camera_, ssbo_data_cam);
   //std::cout << zone->portals.size() << std::endl;
-  for (const auto& p : scene_data.tiles[0]->portals) {
-      PushFrustumCulled(p.render, ssbo_data_cam);
-    continue;
-    //if (frustum_camera.Overlaps(p->render->global_bounds)) {
-    //  PushFrustumCulled(p->render, ssbo_data_cam);
-    //}
-  }
 
   for (int i = 0; i < active_point_lights_.size(); ++i) {
       ssbo_data_pl.push_back(std::array<std::vector<std::vector<InstanceGpu>>, 6>());
@@ -258,7 +292,7 @@ void WorldManager::Cull() {
   }
   for (int i = 0; i < active_point_lights_.size(); ++i) {
     auto& l_out = final_render_data_.point_lights[i];
-    l_out.source = &point_lights_[i];
+    l_out.source = point_lights[i];
     for (int face = 0; face < 6; ++face) {
       const auto& face_data = ssbo_data_pl[i][face];
       for (int mesh_id = 0; mesh_id < face_data.size(); ++mesh_id) {
@@ -336,12 +370,12 @@ void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* bo
 
   // 3. O(K) Transition Path: We stepped out. Check connected zones via portals.
   int new_zone_index = -1;
-  for (const Scene::Portal* portal : zones[cur_zone_id_]->portals) {
-    if (zones[portal->connected_zone_index_1]->bounds.Contains(player_pos)) {
+  for (const ScenePortal* portal : zones[cur_zone_id_]->portals) {
+    if (portal->connected_zone_index_1 != -1 && zones[portal->connected_zone_index_1]->bounds.Contains(player_pos)) {
       new_zone_index = portal->connected_zone_index_1;
       break;
     }
-    if (zones[portal->connected_zone_index_2]->bounds.Contains(player_pos)) {
+    if (portal->connected_zone_index_2 != -1 && zones[portal->connected_zone_index_2]->bounds.Contains(player_pos)) {
       new_zone_index = portal->connected_zone_index_2;
       break;
     }
@@ -385,20 +419,33 @@ void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* bo
 }
 
 void WorldManager::ActivateZone(int zone_index, JPH::BodyInterface* body_interface) {
-  const auto& zones = scene_->scene_data_.tiles[0]->zones;
-  const Scene::Zone* zone = zones[zone_index];
-  for (const SceneNode* obj : zone->object_nodes) {
-    JPH::BodyID body_id = obj->body_id;
-    if (!body_id.IsInvalid() && obj->can_be_activated) {
+  auto dfs = [&](auto& self, SceneNode* node) -> void {
+    JPH::BodyID body_id = node->body_id;
+    if (!body_id.IsInvalid() && node->can_be_activated) {
       body_interface->ActivateBody(body_id);
     }
+    for (auto* child : node->children) {
+      self(self, child);
+    }
+  };
+  const auto& zones = scene_->scene_data_.tiles[0]->zones;
+  const SceneZone* zone = zones[zone_index];
+  for (SceneNode* obj : zone->object_nodes) {
+    dfs(dfs, obj);
   }
   active_zones_.push_back(zone_index);
+    // for (const auto& obj : scene_->scene_data_.tiles[0]->portals) {
+    //   dfs(dfs, obj.desk);
+    //   dfs(dfs, obj.frame);
+    //   for (auto& child : obj.obj) {
+    //     dfs(dfs, child);
+    //   }
+    // }
 }
 
 void WorldManager::DeactivateZone(int zone_index, JPH::BodyInterface* body_interface) {
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
-  const Scene::Zone* zone = zones[zone_index];
+  const SceneZone* zone = zones[zone_index];
   for (const SceneNode* obj : zone->object_nodes) {
     JPH::BodyID body_id = obj->body_id;
     if (!body_id.IsInvalid() && obj->can_be_activated) {

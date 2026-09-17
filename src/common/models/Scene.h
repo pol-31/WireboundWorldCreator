@@ -109,6 +109,38 @@ struct SceneNode {
   bool can_be_activated = false;
 };
 
+struct ScenePortal {
+  /// THIS node is a portal, same as with zones;
+  /// we just unpacked the name and the bounds
+  JPH::AABox bounds;
+  std::string name;
+
+  SceneNode* frame = nullptr;
+  SceneNode* desk = nullptr;
+  std::vector<SceneNode*> obj;
+  JPH::Vec3 position = JPH::Vec3::sZero();
+  JPH::Quat rotation = JPH::Quat::sIdentity();
+  int connected_zone_index_1 = -1;
+  int connected_zone_index_2 = -1;
+};
+
+struct SceneZone {
+  std::vector<SceneNode*> object_nodes;
+  std::vector<ScenePortal*> portals;
+  JPH::AABox bounds;
+  std::string name;
+  std::vector<PointLight> point_lights_;
+  std::vector<StaticObject> static_objects_;
+};
+struct SceneTile {
+  std::vector<SceneZone*> zones;
+  std::vector<ScenePortal> portals;
+  std::vector<SceneNode*> characters;
+  JPH::AABox bounds;
+  std::string name;
+  std::string hmap_path;
+};
+
 struct Scene {
   enum class CollisionType {
     Cube,
@@ -119,11 +151,12 @@ struct Scene {
 
   enum class Type {
     Static,
-    None,
     Dynamic,
     PointLight,
+    None,
     Hinge,
-    Door,
+    HingeBase,
+    HingeMoving,
     Portal,
     Zone,
     Tile,
@@ -212,35 +245,10 @@ struct Scene {
     CollisionType collision_type; // defines how to reinterpret in dbg render
   };
 
-  struct Portal {
-    SceneNode* portal = nullptr; // area to pass
-    SceneNode* render = nullptr; // e.g. door frame
-    JPH::Vec3 position = JPH::Vec3::sZero();
-    JPH::Quat rotation = JPH::Quat::sIdentity();
-    int connected_zone_index_1 = -1;
-    int connected_zone_index_2 = -1;
-  };
-  struct Zone {
-    std::vector<SceneNode*> object_nodes;
-    std::vector<Portal*> portals;
-    JPH::AABox bounds;
-    std::string name;
-    std::vector<PointLight> point_lights_;
-    std::vector<StaticObject> static_objects_;
-  };
-  struct Tile {
-    std::vector<Zone*> zones;
-    std::vector<Portal> portals;
-    std::vector<SceneNode*> characters;
-    JPH::AABox bounds;
-    std::string name;
-    std::string hmap_path;
-  };
-
   struct SceneData {
     std::vector<Mesh> meshes;
 
-    std::vector<Tile*> tiles;
+    std::vector<SceneTile*> tiles;
     SceneNode* player_node;
 
     // std::vector<ModelNode*> nodes;
@@ -291,7 +299,7 @@ struct Scene {
   GLuint material_ribbons_ = 0;
 
   void UpdateRenderTransform(const JPH::BodyLockInterface& bli,
-  std::vector<Tile*>& tiles);
+  std::vector<SceneTile*>& tiles);
 
   void ConnectZonesWithPortals(int tile_id);
 };

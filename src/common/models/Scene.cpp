@@ -15,7 +15,7 @@ JPH::Mat44 SceneNodePose::Matrix() const noexcept {
 /// because we created it on that first global pos,
 /// so everything in the hands of JPH since then
 void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
-                                  std::vector<Tile*>& tiles) {
+                                  std::vector<SceneTile*>& tiles) {
   std::function<void(SceneNode*, const JPH::Mat44&)> dfs =
       [&](SceneNode* node, const JPH::Mat44& parent) {
         auto local = node->local_transform.Matrix();
@@ -48,8 +48,11 @@ void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
     }
     for (auto node : tile->portals) {
       auto mat = JPH::Mat44::sRotationTranslation(node.rotation, node.position);
-      dfs(node.render, mat);
-      dfs(node.portal, mat);
+      dfs(node.desk, mat);
+      dfs(node.frame, mat);
+      for (auto* o : node.obj) {
+        dfs(o, mat);
+      }
     }
     for (auto& zone : tile->zones) {
       for (auto node : zone->object_nodes) {

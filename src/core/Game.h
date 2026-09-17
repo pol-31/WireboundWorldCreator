@@ -36,6 +36,7 @@
 #include "../common/models/CharacterSharedData.h"
 #include "TerrainRenderer.h"
 #include "Cubemap.h"
+#include "../common/models/Door.h"
 
 class ContactListenerImpl;
 
@@ -110,7 +111,9 @@ public:
   WorldManager world_manager_;
   Renderer renderer_; // in the end
 
-  void CreateBodyForNode(SceneNode* node, Scene::Zone* zone);
+  std::vector<Door> doors_;
+
+  void CreateBodyForNode(SceneNode* node, SceneZone* zone);
 
 public:
   /// ContactListener callbacks

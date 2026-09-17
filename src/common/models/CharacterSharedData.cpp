@@ -39,11 +39,13 @@ CharacterSharedData::CharacterSharedData(
     JPH::TempAllocator* temp_allocator,
     JPH::CharacterContactListener* contact_listener,
     Animator* animator,
+    std::vector<Door>* doors,
     std::vector<std::unique_ptr<EnemyController>>* characters)
       : physics_system_(physics_system),
   temp_allocator_(temp_allocator),
   contact_listener_(contact_listener),
   animator_(animator),
+doors_(doors),
   characters_(characters) {
   mStandingShape_ =
           JPH::RotatedTranslatedShapeSettings(
@@ -155,6 +157,9 @@ void CharacterSharedData::Shoot(JPH::Vec3 pos, JPH::Vec3 dir, JPH::BodyID source
         // c.external_impulse += ToJph(camera_.GetDirectionFront()) * stopping_power;
         return;
       }
+    }
+    for (auto& d : *doors_) {
+      d.TakeDamage(hit_body_id, impulse, 100.0f);
     }
       bi.AddImpulse(hit_body_id, impulse, hit_position);
       std::cout << "shot something" << std::endl;

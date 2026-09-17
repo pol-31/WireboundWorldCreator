@@ -24,7 +24,8 @@ layout(std140, binding = 0) uniform Camera {
 
 layout(binding = 0) uniform sampler2DArray uAlbedo;
 layout(binding = 1) uniform sampler2DArray uNormal;
-layout(binding = 2) uniform sampler2DArray uRoughMetalAo;
+layout(binding = 2) uniform sampler2DArray uAoRoughMetal;
+// DEPRECATED: uRoughMetalAo;
 
 layout(binding = 3) uniform sampler2DArray uAlbedoEmbroidery1;
 layout(binding = 4) uniform sampler2DArray uAlbedoEmbroidery2;
@@ -34,7 +35,7 @@ layout(binding = 6) uniform sampler2DArray uAlbedoEmbroidery4;
 void main() {
     vec3 baseAlbedo = vec3(1.0f);
     vec3 normalMapSample = vec3(0.5f, 0.5f, 1.0f);
-    vec3 rough_metal_ao = vec3(0.0f, 0.0f, 0.0f);
+    vec3 ao_rough_metal = vec3(1.0f, 0.0f, 0.0f);
 
     if (fs_in.use_triplanar != 0) {
         // --- TRIPLANAR LOGIC ---
@@ -44,6 +45,7 @@ void main() {
         blendWeights /= (blendWeights.x + blendWeights.y + blendWeights.z);
 
         float worldScale = 1.0f / fs_in.use_triplanar;
+        worldScale *= 4.0f;
         vec3 scaledPos = fs_in.FragPos * worldScale;
         float layer = float(fs_in.material_id);
 
@@ -63,8 +65,14 @@ void main() {
         vec4 normY = texture(uNormal, uvY);
         vec4 normZ = texture(uNormal, uvZ);
         normalMapSample = (normX * blendWeights.x + normY * blendWeights.y + normZ * blendWeights.z).rgb;
+
+        vec4 roughX = texture(uAoRoughMetal, uvX);
+        vec4 roughY = texture(uAoRoughMetal, uvY);
+        vec4 roughZ = texture(uAoRoughMetal, uvZ);
+        ao_rough_metal = (roughX * blendWeights.x + roughY * blendWeights.y + roughZ * blendWeights.z).rgb;
+
         if (fs_in.material_id == 2) {
-            baseAlbedo = vec3(0.8f);
+            //baseAlbedo = vec3(0.8f);
         }
     } else {
         // --- STANDARD UV LOGIC ---
@@ -72,28 +80,33 @@ void main() {
 
         if (fs_in.material_id < 5) {
             normalMapSample = texture(uNormal, tc).rgb;
-            rough_metal_ao = texture(uRoughMetalAo, tc).rgb;
+            ao_rough_metal = texture(uAoRoughMetal, tc).rgb;
+//            ao_rough_metal.b = 1.0f - ao_rough_metal.b;
+//            ao_rough_metal.g = 1.0f - ao_rough_metal.g;
             baseAlbedo = texture(uAlbedo, tc).rgb;
-        } else if (fs_in.material_id == 7) {
-            baseAlbedo = texture(uAlbedoEmbroidery1, tc).rgb;
-        } else if (fs_in.material_id == 8) {
-            baseAlbedo = texture(uAlbedoEmbroidery2, tc).rgb;
-        } else if (fs_in.material_id == 9) {
-            baseAlbedo = texture(uAlbedoEmbroidery3, tc).rgb;
-        } else if (fs_in.material_id == 10) {
-            baseAlbedo = texture(uAlbedoEmbroidery4, tc).rgb;
         } else {
-            baseAlbedo = vec3(1.0f);
+            if (fs_in.material_id == 7) {
+                baseAlbedo = texture(uAlbedoEmbroidery1, tc).rgb;
+            } else if (fs_in.material_id == 8) {
+                baseAlbedo = texture(uAlbedoEmbroidery2, tc).rgb;
+            } else if (fs_in.material_id == 9) {
+                baseAlbedo = texture(uAlbedoEmbroidery3, tc).rgb;
+            } else if (fs_in.material_id == 10) {
+                baseAlbedo = texture(uAlbedoEmbroidery4, tc).rgb;
+            } else {
+                baseAlbedo = vec3(1.0f);
+            }
         }
     }
 
-    // Apply vertex color tinting once at the end
-    gAlbedoSpec.rgb = baseAlbedo * fs_in.vert_color.rgb;
+    ao_rough_metal.r = 1.0f;
+    ao_rough_metal.g = 0.9f;
+    ao_rough_metal.b = 1.0f;
 
+
+    gPosition = vec4(fs_in.FragPos, ao_rough_metal.g);
     vec3 tangentNormal = normalMapSample * 2.0 - 1.0;
     mat3 TBN = mat3(normalize(fs_in.TBN[0]), normalize(fs_in.TBN[1]), normalize(fs_in.TBN[2]));
-
-    gNormal = vec4(normalize(TBN * tangentNormal), 1.0f);
-    gPosition = vec4(fs_in.FragPos, 1.0f);
-    gAlbedoSpec.a = 1.0f;
+    gNormal = vec4(normalize(TBN * tangentNormal), ao_rough_metal.b);
+    gAlbedoSpec = vec4(baseAlbedo * fs_in.vert_color.rgb, ao_rough_metal.r);
 }

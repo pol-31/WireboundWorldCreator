@@ -90,7 +90,7 @@ Game::Game()
 }
 
 void Game::RenderInterface() {
-  float target_size = 32.0f;
+  float target_size = 16.0f;
   float half_target_size = target_size / 2.0f;
   if (player_->GetBody()->IsAiming()) {
     renderer_.AddSprite("GoldenCircle",
@@ -306,7 +306,7 @@ JPH::Ref<JPH::Shape> CreateMeshShape(const Scene::Mesh& mesh) {
 }
 
 void InitSceneGlobalTransforms(
-    std::vector<Scene::Tile*>& tiles) {
+    std::vector<SceneTile*>& tiles) {
   std::function<void(SceneNode*, const JPH::Mat44&)> dfs =
       [&](SceneNode* node, const JPH::Mat44& parent) {
         auto local = node->local_transform.Matrix();
@@ -322,8 +322,11 @@ void InitSceneGlobalTransforms(
     }
     for (auto node : tile->portals) {
       auto mat = JPH::Mat44::sRotationTranslation(node.rotation, node.position);
-      dfs(node.render, mat);
-      dfs(node.portal, mat);
+      dfs(node.desk, mat);
+      dfs(node.frame, mat);
+      for (auto* o : node.obj) {
+        dfs(o, mat);
+      }
     }
     for (auto& zone : tile->zones) {
       for (auto node : zone->object_nodes) {
@@ -375,7 +378,7 @@ JPH::Color DefineColor(JPH::EMotionType body_type, JPH::BodyID body_id) {
 }
 
 // zone might be as well nullptr in case of character TODO: bear it out
-void Game::CreateBodyForNode(SceneNode* node, Scene::Zone* zone) {
+void Game::CreateBodyForNode(SceneNode* node, SceneZone* zone) {
   //TODO: should we do smt with it?... probably there shouldn't be those
   if (node->mesh_index == -1) return;
   const auto scene = mdl_loader_.GetScene();
@@ -385,12 +388,17 @@ void Game::CreateBodyForNode(SceneNode* node, Scene::Zone* zone) {
     JPH::ObjectLayer object_layer = Layers::NON_MOVING;
     JPH::Ref<JPH::Shape> shape_settings = local_shape;
     JPH::EActivation activation_state = JPH::EActivation::DontActivate;
-    if (mesh.type == Scene::Type::Dynamic) {
+    if (mesh.type == Scene::Type::Dynamic ||
+        mesh.type == Scene::Type::HingeMoving) {
       motion_type = JPH::EMotionType::Dynamic;
       object_layer = Layers::MOVING;
       node->can_be_activated = true;
       //activation_state = JPH::EActivation::Activate;
       zone->static_objects_.emplace_back(node);
+    } else if (mesh.type == Scene::Type::Hinge) {
+        motion_type = JPH::EMotionType::Kinematic;
+        object_layer = Layers::MOVING;
+        zone->static_objects_.emplace_back(node);
     } else if (mesh.type == Scene::Type::Character) {
       // return;
       characters_.push_back(std::make_unique<EnemyController>(
@@ -408,12 +416,17 @@ void Game::CreateBodyForNode(SceneNode* node, Scene::Zone* zone) {
       if (mesh.type == Scene::Type::PointLight) {
         zone->point_lights_.emplace_back(node);
         zone->point_lights_.back().radius_ = 25.0f;
-      } else if (mesh.type == Scene::Type::None || mesh.type == Scene::Type::Portal) {
+      } else if (mesh.type == Scene::Type::Portal
+          || mesh.type == Scene::Type::None
+          || mesh.type == Scene::Type::HingeBase
+          ) {
         // door frame is.... none?
         zone->static_objects_.push_back(node);
         //TODO: non-physics bodies
         return;
       } else {
+        // hinge base is static?
+        //TODO: so hinge as a static?
         // no difference for hinge now, it just static and have constraint later
         zone->static_objects_.push_back(node);
       }
@@ -512,7 +525,7 @@ void Game::Init() {
   const auto scene = mdl_loader_.GetScene();
 
   character_shared_data_ = std::make_unique<CharacterSharedData>(
-    mPhysicsSystem, mTempAllocator, this, &animator_, &characters_);
+    mPhysicsSystem, mTempAllocator, this, &animator_, &doors_, &characters_);
 
   const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
 
@@ -530,16 +543,31 @@ void Game::Init() {
     for (auto node : tile->characters) {
       CreateBodyForNode(node, nullptr);
     }
-    for (Scene::Zone* zone : tile->zones) {
+    for (SceneZone* zone : tile->zones) {
       std::cout << "zone added" << std::endl;
       for (auto node : zone->object_nodes) {
         CreateBodyForNode(node, zone);
       }
       for (auto portal : zone->portals) {
-        CreateBodyForNode(portal->render, zone);
+        CreateBodyForNode(portal->desk, zone);
+        for (auto child : portal->desk->children) {
+          CreateBodyForNode(child, zone);
+        }
+        CreateBodyForNode(portal->frame, zone);
+        for (auto child : portal->frame->children) {
+          CreateBodyForNode(child, zone);
+        }
+        for (const auto* o : portal->obj) {
+          CreateBodyForNode(0, zone);
+        }
       }
     }
+    for (auto& portal : tile->portals) {
+      doors_.emplace_back(mPhysicsSystem, scene, &portal);
+      std::cout << "---- + 1 door" << std::endl;
+    }
   }
+
   auto player_node = scene->scene_data_.player_node;
   player_ = std::make_unique<PlayerController>(
     &camera_, character_shared_data_.get(), player_node,

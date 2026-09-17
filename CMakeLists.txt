@@ -33,8 +33,6 @@ add_executable(WireboundWorldCreator
         src/common/models/Character.cpp
         src/common/models/CharacterSharedData.cpp
         src/common/models/CharacterSharedData.h
-        src/common/models/MechanicalObject.cpp
-        src/common/models/MechanicalObject.h
         src/common/models/Weapon.h
         src/common/models/Weapon.cpp
         src/common/models/PlayerController.cpp
@@ -48,6 +46,8 @@ add_executable(WireboundWorldCreator
         src/core/GeoClipmaps.cpp
         src/core/GeoClipmaps.h
         src/core/Cubemap.cpp
+        src/common/models/Door.cpp
+        src/common/models/Door.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

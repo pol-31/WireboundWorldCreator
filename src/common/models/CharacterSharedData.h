@@ -6,6 +6,8 @@
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 
+#include "Door.h"
+
 class Animator;
 class EnemyController;
 
@@ -15,6 +17,7 @@ public:
     JPH::TempAllocator* temp_allocator,
     JPH::CharacterContactListener* contact_listener,
     Animator* animator,
+    std::vector<Door>* doors,
     std::vector<std::unique_ptr<EnemyController>>* characters);
 
   JPH::Ref<JPH::CharacterVirtualSettings> GetDefaultJphSettings();
@@ -37,6 +40,7 @@ public:
   JPH::RefConst<JPH::Shape> mInnerStandingShape_;
 
   std::vector<std::unique_ptr<EnemyController>>* characters_;
+  std::vector<Door>* doors_;
 };
 
 class IgnoreSingleBodyFilter : public JPH::BodyFilter {

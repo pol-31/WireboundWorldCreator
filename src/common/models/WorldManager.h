@@ -86,7 +86,7 @@ private:
 
   void CullAnimatedObject(
     const Frustum& frustum_camera,
-    const std::vector<PointLight>& zone_point_lights,
+    const std::vector<PointLight*>& zone_point_lights,
     JPH::Vec3 pos,
     const AnimatedRenderData& render_data);
 
@@ -129,7 +129,7 @@ private:
   std::vector<int> active_zones_;
   // relative to cur scene for sure
 
-  void PushFrustumCulled(const std::vector<int>& objects,
+  void PushFrustumCulled(const std::vector<const SceneNode*>& objects,
     std::vector<std::vector<InstanceGpu>>& ssbo_data);
 
   void PushFrustumCulled(const SceneNode* node,
@@ -137,9 +137,9 @@ private:
 
   // resized with zone lights num, so its array idx == (int)cur_zone.light,
   // so we don't need to store ptr to the source
-  std::vector<std::array<std::vector<int>, 6>> active_point_lights_;
-  std::vector<std::vector<int>> active_dir_lights_;
-  std::vector<int> active_camera_;
+  std::vector<std::array<std::vector<const SceneNode*>, 6>> active_point_lights_;
+  std::vector<std::vector<const SceneNode*>> active_dir_lights_;
+  std::vector<const SceneNode*> active_camera_;
 
 
 public:

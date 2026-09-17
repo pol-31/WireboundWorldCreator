@@ -490,16 +490,21 @@ SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
 }
 
 void ParseZone(const tinygltf::Model& model,
-const tinygltf::Node& tile_node, Scene::Zone* zone,
-const std::vector<Scene::Mesh>& meshes) {
-
-  for (const auto& child_id : tile_node.children) {
+    const tinygltf::Node& node,
+    SceneTile* tile,
+    const std::vector<Scene::Mesh>& meshes) {
+  auto zone = new SceneZone();
+  const auto& mesh = meshes[node.mesh];
+  zone->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
+    JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
+  tile->zones.push_back(zone);
+  for (const auto& child_id : node.children) {
     zone->object_nodes.push_back(CreateObjectNode(model, child_id, meshes));
   }
 }
 
 void ParseCharacter(const tinygltf::Model& model,
-    int node_id, Scene::Tile* tile,
+    int node_id, SceneTile* tile,
     const std::vector<Scene::Mesh>& meshes) {
   const auto& node = model.nodes[node_id];
   tile->characters.push_back(CreateObjectNode(model, node_id, meshes));
@@ -519,30 +524,30 @@ void ParseCharacter(const tinygltf::Model& model,
 }
 
 void Scene::ConnectZonesWithPortals(int tile_id) {
-  std::vector<Scene::Zone*>& zones = scene_data_.tiles[0]->zones;
-  std::vector<Scene::Portal>& portals = scene_data_.tiles[0]->portals;
+  std::vector<SceneZone*>& zones = scene_data_.tiles[0]->zones;
+  std::vector<ScenePortal>& portals = scene_data_.tiles[0]->portals;
 
   for (size_t p = 0; p < portals.size(); ++p) {
-    Scene::Portal& portal_data = portals[p];
+    ScenePortal& portal_data = portals[p];
 
     // Safety check: ensure the portal node actually exists
-    if (!portal_data.portal) continue;
+    //if (!portal_data.portal) continue;
 
     // 1. Expand the portal's AABB by a tiny epsilon.
     // Because portals sit perfectly flush on the 2D boundary of two rooms,
     // floating-point precision can cause strict AABB overlaps to fail.
     JPH::Vec3 epsilon = JPH::Vec3::sReplicate(0.05f);
-    JPH::AABox expanded_portal_box;
-    expanded_portal_box.mMin = portal_data.portal->global_bounds.mMin- epsilon;
+    JPH::AABox expanded_portal_box = portal_data.bounds;
+    expanded_portal_box.mMin = portal_data.bounds.mMin + portal_data.position - epsilon;
     expanded_portal_box.mMin.SetY(std::numeric_limits<float>::lowest());
-    expanded_portal_box.mMax = portal_data.portal->global_bounds.mMax + epsilon;
+    expanded_portal_box.mMax = portal_data.bounds.mMax + portal_data.position + epsilon;
     expanded_portal_box.mMax.SetY(std::numeric_limits<float>::max());
 
     int connected_count = 0;
 
     // 2. Test this portal against all zones
     for (size_t z = 0; z < zones.size(); ++z) {
-      Scene::Zone* zone = zones[z];
+      SceneZone* zone = zones[z];
 
       if (zone->bounds.Overlaps(expanded_portal_box)) {
 
@@ -568,7 +573,7 @@ void Scene::ConnectZonesWithPortals(int tile_id) {
 
     // 6. Validation Logging
     if (connected_count < 2) {
-      std::cerr << "Warning: Portal Node ID " << portal_data.portal->node_id
+      std::cerr << "Warning: Portal Node ID " << portal_data.name
                 << " connected to only " << connected_count << " zones.\n";
     }
   }
@@ -576,50 +581,54 @@ void Scene::ConnectZonesWithPortals(int tile_id) {
 
 //TODO: leak new
 
+
+void ParsePortal(const tinygltf::Model& model,
+    const tinygltf::Node& node,
+    SceneTile* tile,
+    const std::vector<Scene::Mesh>& meshes) {
+  ScenePortal portal;
+  const auto& mesh = meshes[node.mesh];
+  portal.bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
+    JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
+  portal.name = node.name;
+  if (!node.translation.empty()) {
+    portal.position = ReadVec3(node.translation, 0);
+  }
+  if (!node.rotation.empty()) {
+    portal.rotation = ReadQuat(node.rotation, 0);
+  }
+  for (auto grand_child_id : node.children) {
+    const auto& child_node = model.nodes[grand_child_id];
+    Scene::Type child_type = meshes[child_node.mesh].type;
+    if (child_type == Scene::Type::HingeBase) {
+      portal.frame = CreateObjectNode(model, grand_child_id, meshes);
+    } else if (child_type == Scene::Type::HingeMoving) {
+      portal.desk = CreateObjectNode(model, grand_child_id, meshes);
+    } else {
+      portal.obj.push_back(CreateObjectNode(model, grand_child_id, meshes));
+    }
+  }
+  tile->portals.push_back(portal);
+}
+
 void ParseTile(const tinygltf::Model& model,
-  const tinygltf::Node& tile_node, Scene::Tile* tile,
+  const tinygltf::Node& tile_node, SceneTile* tile,
   const std::vector<Scene::Mesh>& meshes) {
   for (const auto& child_id : tile_node.children) {
     const auto& node = model.nodes[child_id];
-    if (node.mesh == -1) {
-      continue;
-    }
+    //if (node.mesh == -1) {
+    //  continue;
+    //}
     Scene::Type type = meshes[node.mesh].type;
     if (type == Scene::Type::Zone) {
-      auto zone = new Scene::Zone();
-      const auto& mesh = meshes[node.mesh];
-      zone->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
-        JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
-      tile->zones.push_back(zone);
-      ParseZone(model, node, zone, meshes);
+      ParseZone(model, node, tile, meshes);
     } else if (type == Scene::Type::Character) {
       ParseCharacter(model, child_id, tile, meshes);
-    } else if (type == Scene::Type::Door) {
-      Scene::Portal portal;
-      portal.render = CreateObjectNode(model, child_id, meshes);
-      portal.portal = CreateObjectNode(model, child_id, meshes);
-      tile->portals.push_back(portal);
+    } else if (type == Scene::Type::Portal) {
+      ParsePortal(model, node, tile, meshes);
     } else {
-      continue;
-      Scene::Portal portal;
-      if (!node.translation.empty()) {
-        portal.position = ReadVec3(node.translation, 0);
-      }
-      if (!node.rotation.empty()) {
-        portal.rotation = ReadQuat(node.rotation, 0);
-      }
-      for (auto grand_child_id : node.children) {
-        const auto& child_node = model.nodes[grand_child_id];
-        Scene::Type child_type = meshes[child_node.mesh].type;
-        if (child_type == Scene::Type::None) {
-          portal.render = CreateObjectNode(model, grand_child_id, meshes);
-        } else if (child_type == Scene::Type::Portal) {
-          portal.portal = CreateObjectNode(model, grand_child_id, meshes);
-        } else {
-          std::cerr << "wrong obj type for the tile children" << std::endl;
-        }
-      }
-      tile->portals.push_back(portal);
+      std::cerr << "another type" << std::endl;
+      // idk
     }
   }
   //ConnectZonesWithPortals(tile->zones, tile->portals);
@@ -637,7 +646,7 @@ void ReadSceneHierarchy(
     }
     Scene::Type type = meshes[mesh_id].type;
     if (type == Scene::Type::Tile) {
-      auto tile = new Scene::Tile();
+      auto tile = new SceneTile();
 
       const auto& mesh = meshes[node.mesh];
       tile->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
@@ -805,10 +814,14 @@ Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
       type = Scene::Type::Dynamic;
     } else if (collision_value == "light") {
       type = Scene::Type::PointLight;
+    } else if (collision_value == "none") {
+      type = Scene::Type::None;
     } else if (collision_value == "hinge") {
       type = Scene::Type::Hinge;
-    } else if (collision_value == "door") {
-      type = Scene::Type::Door;
+    } else if (collision_value == "hinge_base") {
+      type = Scene::Type::HingeBase;
+    } else if (collision_value == "hinge_moving") {
+      type = Scene::Type::HingeMoving;
     } else if (collision_value == "wall") {
       type = Scene::Type::Wall;
     } else if (collision_value == "portal") {
@@ -823,8 +836,6 @@ Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
       type = Scene::Type::Character;
     } else if (collision_value == "player") {
       type = Scene::Type::Player;
-    } else if (collision_value == "none") {
-      type = Scene::Type::None;
     }
   }
   return type;
