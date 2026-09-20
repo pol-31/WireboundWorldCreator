@@ -55,8 +55,9 @@ void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
       }
     }
     for (auto& zone : tile->zones) {
+      auto mat = JPH::Mat44::sTranslation(zone->translate);
       for (auto node : zone->object_nodes) {
-        dfs(node, JPH::Mat44::sIdentity());
+        dfs(node, mat);
       }
     }
   }

@@ -14,7 +14,7 @@ struct PointLight {
   };
 
   const SceneNode* object_;
-  glm::vec3 color_ = glm::vec3(1.0f);
+  glm::vec3 color_ = glm::vec3(20.0f);
   float factor_linear_ = 0.09f;
   float factor_quadratic_ = 0.032f;
   float radius_ = 5.0f;

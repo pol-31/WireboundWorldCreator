@@ -61,8 +61,8 @@ class ModelLoader {
   }
 
  private:
-  BufferData LoadBuffers(const tinygltf::Model& model,
-    std::vector<Scene::Mesh>& meshes, bool map_materials = false);
+  void LoadBuffers(const tinygltf::Model& model,
+    std::vector<Scene::Mesh>& meshes);
   BufferDataAnimated LoadBuffersAnimated(const tinygltf::Model& model);
 
   Material LoadMaterial(std::string_view path, tinygltf::Model& model,

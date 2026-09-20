@@ -53,7 +53,11 @@ class Renderer {
 
   void DrawGeometryPass(TerrainRenderData terrain);
 
+  void DrawSsaoPass();
+
   void DrawLightPass(CubemapRenderData cubemap);
+
+  void DrawUi();
 
   /// Clear all primitives (to be called after drawing)
   void Clear();
@@ -82,6 +86,16 @@ class Renderer {
 
   void DrawDirectionalLightShadowPass();
   void DrawPointLightShadowPass();
+
+  void InitSsaoNoise();
+
+  void InitSsaoFbo();
+
+  Texture ssao_tex_noise_;
+  GLuint ssao_fbo_ = 0;
+  Texture ssao_tex_color_;
+  Shader sh_ssao_;
+  std::vector<glm::vec3> ssao_kernel_;
 
   GLuint ssbo_instanced_ = 0;
 

@@ -7,6 +7,7 @@ in vec2 TexCoords;
 layout (location = 0) uniform sampler2D gPosition;    // .rgb = Pos, .a = Roughness
 layout (location = 1) uniform sampler2D gNormal;      // .rgb = Norm, .a = Metallic
 layout (location = 2) uniform sampler2D gAlbedoSpec;  // .rgb = Albedo, .a = AO
+layout (location = 3) uniform sampler2D gSsao;  // .rgb = Albedo, .a = AO
 
 struct Light {
     vec3 Position;
@@ -18,8 +19,8 @@ const float LightQuadratic = 0.032;
 const float PI = 3.14159265359;
 
 const int MAX_LIGHTS = 8;
-layout (location = 3) uniform int lights_num;
-layout (location = 4) uniform Light lights[MAX_LIGHTS];
+layout (location = 4) uniform int lights_num;
+layout (location = 5) uniform Light lights[MAX_LIGHTS];
 
 uniform samplerCubeArray shadowMaps[MAX_LIGHTS];
 uniform float farPlanes[MAX_LIGHTS];
@@ -33,17 +34,43 @@ layout(std140, binding = 0) uniform Camera {
     mat4 proj;
 } camera;
 
-// --- Your Existing Shadow Math ---
-float ShadowCalculation(int lightIndex, vec3 fragPos, vec3 lightPos) {
-    vec3 fragToLight = fragPos - lightPos;
-    float closestDepth = texture(shadowMaps[lightIndex], vec4(fragToLight, 0)).r;
-    closestDepth *= farPlanes[lightIndex];
-    float currentDepth = length(fragToLight);
+const vec3 sampleOffsetDirections[20] = vec3[](
+vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1),
+vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+);
 
-    float bias = 0.05;
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+float ShadowCalculation(int lightIndex, vec3 fragPos, vec3 lightPos, float NdotL) {
+    vec3 fragToLight = fragPos - lightPos;
+    float currentDepth = length(fragToLight);
+    float bias = max(0.5 * (1.0 - NdotL), 0.05);
+    float farPlane = farPlanes[lightIndex];
+    float diskRadius = (1.0 + (currentDepth / farPlane)) / 25.0;
+    float shadow = 0.0;
+    int samples = 20;
+    for (int i = 0; i < samples; ++i) {
+        vec3 sampleDir = fragToLight + sampleOffsetDirections[i] * diskRadius;
+        float closestDepth = texture(shadowMaps[lightIndex], vec4(sampleDir, 0)).r * farPlane;
+        if (currentDepth - bias > closestDepth) {
+            shadow += 1.0;
+        }
+    }
+    shadow /= float(samples);
     return shadow;
 }
+
+// --- Your Existing Shadow Math ---
+//float ShadowCalculation(int lightIndex, vec3 fragPos, vec3 lightPos, float NdotL) {
+//    vec3 fragToLight = fragPos - lightPos;
+//    float closestDepth = texture(shadowMaps[lightIndex], vec4(fragToLight, 0)).r;
+//    closestDepth *= farPlanes[lightIndex];
+//    float currentDepth = length(fragToLight);
+//    float bias = max(0.5 * (1.0 - NdotL), 0.05);
+//    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+//    return shadow;
+//}
 
 // --- PBR Functions ---
 float DistributionGGX(vec3 N, vec3 H, float roughness) {
@@ -77,13 +104,22 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+vec3 ACESFilm(vec3 x) {
+    float a = 2.51;
+    float b = 0.03;
+    float c = 2.43;
+    float d = 0.59;
+    float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
 void main() {
     // 1. Unpack G-Buffer
     vec4 posData = texture(gPosition, TexCoords);
     vec3 FragPos = posData.rgb;
     float Roughness = posData.a;
-    // Fallback if roughness is 0 (prevent pitch black artifacts)
     Roughness = max(Roughness, 0.05);
+    // Fallback if roughness is 0 (prevent pitch black artifacts)
 
     vec4 normData = texture(gNormal, TexCoords);
     vec3 Normal = normData.rgb;
@@ -91,6 +127,10 @@ void main() {
 
     vec4 albedoData = texture(gAlbedoSpec, TexCoords);
     vec3 Albedo = albedoData.rgb;
+
+    float AmbientOcclusion = texture(gSsao, TexCoords).r;
+    Albedo *= vec3(0.2 * AmbientOcclusion);
+
     float AO = albedoData.a;
 
     vec3 N = normalize(Normal);
@@ -131,19 +171,30 @@ void main() {
         float NdotL = max(dot(N, L), 0.0);
 
         // Apply your shadow calculation
-        float shadow = ShadowCalculation(i, FragPos, lights[i].Position);
+        float shadow = ShadowCalculation(i, FragPos, lights[i].Position, NdotL);
 
         // Accumulate light (Notice how shadow just scales the final radiance)
         Lo += (1.0 - shadow) * (kD * Albedo / PI + specular) * radiance * NdotL;
     }
 
     // 4. Ambient Lighting
-    vec3 ambient = vec3(0.03) * Albedo * AO;
+    //vec3 ambient = vec3(0.03) * Albedo * AO;
+    vec3 skyColor = vec3(0.1, 0.15, 0.25);   // Cool ambient from above
+    vec3 groundColor = vec3(0.05, 0.03, 0.01); // Warm ambient bounced from below
+    float upFactor = N.y * 0.5 + 0.5; // 0.0 to 1.0 based on surface facing
+    vec3 ambientLight = mix(groundColor, skyColor, upFactor);
+    vec3 ambient = ambientLight * Albedo * AO * (1.0 - Metallic);
+
     vec3 color = ambient + Lo;
 
+    color *= 0.5f;
+
     // 5. Tonemapping and Gamma Correction (Mandatory for PBR)
-    color = color / (color + vec3(1.0)); // Reinhard tonemapping
+
+    // At the end of main():
+    color = ACESFilm(color);
     color = pow(color, vec3(1.0/2.2));   // Gamma correction
 
     FragColor = vec4(color, 1.0);
+    //FragColor = vec4(AmbientOcclusion, AmbientOcclusion, AmbientOcclusion, 1.0f);
 }

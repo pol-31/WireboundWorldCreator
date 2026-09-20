@@ -58,6 +58,7 @@ Texture CreateTexture(float terrain_size, const std::vector<float>& height_data)
 }
 
 void TerrainRenderer::InitializeBody(JPH::BodyInterface* body_interface) {
+  return;
   const int terrain_size = 1024;
   std::vector<float> height_data(terrain_size * terrain_size, 0.0f);
   std::mt19937 rng(std::random_device{}());

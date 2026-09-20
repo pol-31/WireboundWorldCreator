@@ -1,9 +1,8 @@
 #include "ModelLoader.h"
 
-#include <array>
-
 #include <stb_image.h>
 
+#include <array>
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -473,9 +472,6 @@ SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
       node->local_transform.t = GetNodeTranslation(model.nodes[id]);
       node->local_transform.s = GetNodeScale(model.nodes[id]);
       node->node_id = id;
-      if (scene_node.mesh == 18) {
-        std::cout << "yes <=-----" << std::endl;
-      }
       if (scene_node.mesh != -1) {
         const auto& mesh = meshes[scene_node.mesh];
         node->local_bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
@@ -497,6 +493,9 @@ void ParseZone(const tinygltf::Model& model,
   const auto& mesh = meshes[node.mesh];
   zone->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
     JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
+  if (!node.translation.empty()) {
+    zone->translate = ReadVec3(node.translation, 0);
+  }
   tile->zones.push_back(zone);
   for (const auto& child_id : node.children) {
     zone->object_nodes.push_back(CreateObjectNode(model, child_id, meshes));
@@ -508,19 +507,6 @@ void ParseCharacter(const tinygltf::Model& model,
     const std::vector<Scene::Mesh>& meshes) {
   const auto& node = model.nodes[node_id];
   tile->characters.push_back(CreateObjectNode(model, node_id, meshes));
-  // patrol path is linear thing, so directed line
-  // std::vector<JPH::Vec3> patrol_path;
-  // patrol_path.push_back(ReadVec3(node.translation, 0));
-  // auto dfs = [&](auto& self, const tinygltf::Node& node) -> void {
-  //   if (!node.children.empty()) {
-  //     const auto& child_node = model.nodes[node.children[0]];
-  //     if (!node.translation.empty()) {
-  //       patrol_path.push_back(ReadVec3(child_node.translation, 0));
-  //     }
-  //     self(self, child_node);
-  //   }
-  // };
-  // dfs(dfs, node);
 }
 
 void Scene::ConnectZonesWithPortals(int tile_id) {
@@ -530,12 +516,6 @@ void Scene::ConnectZonesWithPortals(int tile_id) {
   for (size_t p = 0; p < portals.size(); ++p) {
     ScenePortal& portal_data = portals[p];
 
-    // Safety check: ensure the portal node actually exists
-    //if (!portal_data.portal) continue;
-
-    // 1. Expand the portal's AABB by a tiny epsilon.
-    // Because portals sit perfectly flush on the 2D boundary of two rooms,
-    // floating-point precision can cause strict AABB overlaps to fail.
     JPH::Vec3 epsilon = JPH::Vec3::sReplicate(0.05f);
     JPH::AABox expanded_portal_box = portal_data.bounds;
     expanded_portal_box.mMin = portal_data.bounds.mMin + portal_data.position - epsilon;
@@ -545,36 +525,24 @@ void Scene::ConnectZonesWithPortals(int tile_id) {
 
     int connected_count = 0;
 
-    // 2. Test this portal against all zones
     for (size_t z = 0; z < zones.size(); ++z) {
       SceneZone* zone = zones[z];
-
       if (zone->bounds.Overlaps(expanded_portal_box)) {
-
-        // 3. Link the Portal to the Zone
         if (connected_count == 0) {
           portal_data.connected_zone_index_1 = z;
         } else if (connected_count == 1) {
           portal_data.connected_zone_index_2 = z;
         }
-
-        // 4. Link the Zone back to the Portal
-        // (This stores a pointer to the element in the portals vector)
         zone->portals.push_back(&portal_data);
-
         connected_count++;
-
-        // 5. Early exit: A portal can only connect two zones
         if (connected_count == 2) {
           break;
         }
       }
     }
-
-    // 6. Validation Logging
     if (connected_count < 2) {
-      std::cerr << "Warning: Portal Node ID " << portal_data.name
-                << " connected to only " << connected_count << " zones.\n";
+      std::cerr << portal_data.name << " connected to only "
+      << connected_count << " zones" << std::endl;;
     }
   }
 }
@@ -658,14 +626,6 @@ void ReadSceneHierarchy(
       scene.player_node = CreateObjectNode(model, i, meshes);
     }
   }
-  // for (size_t i = 0; i < model.nodes.size(); ++i) {
-  //   const tinygltf::Node& gltfNode = model.nodes[i];
-  //
-  //   for (int childIndex : gltfNode.children) {
-  //     nodes[i]->children.push_back(nodes[childIndex]);
-  //     nodes[childIndex]->parent = nodes[i];
-  //   }
-  // }
 }
 
 void ReadNodeHierarchy(
@@ -687,123 +647,31 @@ void ReadNodeHierarchy(
   }
 }
 
-void ModelLoader::LoadDebugShapes(std::string_view path) {
-  scene_.scene_data_ = Scene::SceneData(); //TODO: separate func?
+//TOOD: add rgb color, so Mud could be taken from Clay
 
-  auto model = LoadModel(loader_, path);
-  auto buffer_data = LoadBuffers(
-  model, scene_.scene_dbg_shapes_.meshes);
-  ReadSceneHierarchy(scene_.scene_dbg_shapes_, model);
-  UploadBuffers(&scene_.scene_dbg_shapes_.vao,
-    &scene_.scene_dbg_shapes_.vbo,
-    &scene_.scene_dbg_shapes_.ebo,
-    buffer_data);
-}
+std::map<std::string, MaterialIndex> material_str_to_enum = {
+  {"01_wood", MaterialIndex::Wood},
+  {"02_steel", MaterialIndex::Steel},
+  {"03_clay", MaterialIndex::Clay},
+  {"04_sticks", MaterialIndex::Sticks},
+  {"05_straw", MaterialIndex::Straw},
+  {"06_grass", MaterialIndex::Grass},
+  {"07_tablecloth", MaterialIndex::Tablecloth},
+  {"08_ryadno", MaterialIndex::Ryadno},
+  {"09_ryshnuk", MaterialIndex::Ryshnuk},
+  {"10_ribbons", MaterialIndex::Ribbons},
+};
 
-void ModelLoader::LoadScene(std::string_view path) {
-  auto model = LoadModel(loader_, path);
-  auto buffer_data = LoadBuffers(
-    model, scene_.scene_data_.meshes, true);
-  ReadSceneHierarchy(scene_.scene_data_, model);
-  UploadBuffers(&scene_.scene_data_.vao,
-    &scene_.scene_data_.vbo,
-    &scene_.scene_data_.ebo,
-    buffer_data);
-}
-
-void MarkLowerBodyNodes(SceneNode* node, const std::vector<SceneNode*>& nodes, std::vector<bool>& is_lower_body) {
-  is_lower_body[node->node_id] = true;
-  for (auto child : node->children) {
-    MarkLowerBodyNodes(child, nodes, is_lower_body);
+int MapSceneMaterial(int idx, const std::vector<tinygltf::Material>& materials) {
+  if (idx == -1) {
+    return 0;
   }
-}
-
-void BuildLowerBodyMask(std::vector<bool>& is_lower_body, int pelvis_node_id, const std::vector<SceneNode*>& nodes) {
-  if (pelvis_node_id >= 0 && pelvis_node_id < static_cast<int>(nodes.size())) {
-    MarkLowerBodyNodes(nodes[pelvis_node_id], nodes, is_lower_body);
+  //std::cout << idx << ' ' << materials[idx].name << std::endl;
+  int material_id = static_cast<int>(material_str_to_enum.at(materials[idx].name));
+  if (material_id >= 5) {
+    // std::cerr << "at least one " << std::endl;
   }
-}
-
-void ModelLoader::LoadCharacters(std::string_view skeleton_path,
-    std::vector<std::string_view> skin_paths) {
-  for (const auto& path : skin_paths) {
-    Scene::CharacterData character;
-    auto model = LoadModel(loader_, path);
-    auto buffer_data = LoadBuffers(
-    model, character.meshes);
-    ReadNodeHierarchy(character.nodes, model, character.meshes);
-    auto buffer_data_animated = LoadBuffersAnimated(model);
-
-    stbi_set_flip_vertically_on_load(false);
-    character.material = LoadMaterial(path, model, model.materials[0]);
-    stbi_set_flip_vertically_on_load(true);
-
-    UploadBuffers(&character.vao, &character.vbo, &character.ebo,
-      buffer_data, buffer_data_animated);
-    scene_.character_skins_.push_back(std::move(character));
-  }
-
-  auto skeleton_model = LoadModel(loader_, skeleton_path);
-  scene_.character_rig_.core_rig = LoadCoreRig(skeleton_model);
-  scene_.character_rig_.mapping = CreateCharacterAnimationMapping(
-    scene_.character_rig_.core_rig.animations);
-  LoadDeltas(
-    scene_.character_rig_.mapping,
-    scene_.character_rig_.core_rig.animations,
-    scene_.character_skins_[0].nodes,
-    scene_.character_rig_.default_deltas,
-    scene_.character_rig_.pistol_deltas);
-
-  //int hips_id = 0;
-  //int spine_id = 0;
-  for (int i = 0; i < skeleton_model.nodes.size(); ++i) {
-    const auto& n = skeleton_model.nodes[i];
-    // mixamorig6:RightUpLeg"
-    if (n.name == "mixamorig6:Camera") {
-      scene_.character_rig_.head_bone_id = i;
-      std::cout << "camera is " << i << std::endl;
-    } else if (n.name == "mixamorig6:Weapon") {
-      scene_.character_rig_.hand_bone_id = i;
-      std::cout << "weapon is " << i << std::endl;
-    } else if (n.name == "mixamorig6:Hips") {
-      scene_.character_rig_.hips_id = i;
-      std::cout << "hips is " << i << std::endl;
-    } else if (n.name == "mixamorig6:Spine") {
-      scene_.character_rig_.spine0_id = i;
-      std::cout << "spine0 is " << i << std::endl;
-    } else if (n.name == "mixamorig6:Spine1") {
-      scene_.character_rig_.spine1_id = i;
-      std::cout << "spine1 is " << i << std::endl;
-    } else if (n.name == "mixamorig6:Spine2") {
-      scene_.character_rig_.spine2_id = i;
-      std::cout << "spine2 is " << i << std::endl;
-    }
-  }
-  //auto& nodes = scene_.character_skins_[0].nodes;
-  //scene_.character_rig_.is_lower_body_mask = std::vector<bool>(nodes.size(), false);
-  //BuildLowerBodyMask(scene_.character_rig_.is_lower_body_mask, left_shoulder_id, nodes);
-  //BuildLowerBodyMask(scene_.character_rig_.is_lower_body_mask, right_shoulder_id, nodes);
-}
-
-void ModelLoader::LoadWeapon(std::vector<std::string_view> paths) {
-  for (const auto& path : paths) {
-    Scene::WeaponData weapon;
-    auto model = LoadModel(loader_, path);
-    auto buffer_data = LoadBuffers(
-    model, weapon.meshes);
-    ReadNodeHierarchy(weapon.nodes, model, weapon.meshes);
-    auto buffer_data_animated = LoadBuffersAnimated(model);
-
-    stbi_set_flip_vertically_on_load(false);
-    weapon.material = LoadMaterial(path, model, model.materials[0]);
-    stbi_set_flip_vertically_on_load(true);
-
-    UploadBuffers(&weapon.vao, &weapon.vbo, &weapon.ebo,
-      buffer_data, buffer_data_animated);
-    weapon.rig.core_rig = LoadCoreRig(model);
-    weapon.rig.mapping = CreateWeaponAnimationMapping(weapon.rig.core_rig.animations);
-    scene_.weapons_.push_back(std::move(weapon));
-  }
+  return material_id;
 }
 
 Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
@@ -914,6 +782,215 @@ const tinygltf::Accessor& LoadBufferSafely(
   return accessor;
 }
 
+std::vector<Scene::Primitive> LoadPrimitives(const tinygltf::Model& model,
+  std::string_view name, Scene::Mesh& new_mesh,
+  ModelLoader::BufferData& data, bool map_materials = false) {
+  auto found_it = model.meshes.end();
+  for (auto it = model.meshes.begin(); it != model.meshes.end(); ++it) {
+    if (it->name == name) {
+      found_it = it;
+    }
+  }
+  if (found_it == model.meshes.end()) {
+    throw std::runtime_error("mesh name not found");
+  }
+
+  const tinygltf::Mesh& mesh = *found_it;
+  std::vector<Scene::Primitive> new_primitives;
+  glm::vec3 mesh_min(std::numeric_limits<float>::max());
+  glm::vec3 mesh_max(std::numeric_limits<float>::lowest());
+  for (const auto& primitive : mesh.primitives) {
+    const auto& posAccessor =
+        LoadBufferSafely("POSITION", model, primitive, data.all_positions);
+    LoadBufferSafely("NORMAL", model, primitive, data.all_normals);
+    LoadBufferSafely("TEXCOORD_0", model, primitive, data.all_uvs);
+    LoadBufferSafely("TANGENT", model, primitive, data.all_tangents);
+    glm::vec3 min(posAccessor.minValues[0], posAccessor.minValues[1],
+                  posAccessor.minValues[2]);
+    glm::vec3 max(posAccessor.maxValues[0], posAccessor.maxValues[1],
+                  posAccessor.maxValues[2]);
+    mesh_min = glm::min(mesh_min, min);
+    mesh_max = glm::max(mesh_max, max);
+
+    size_t index_byte_offset = data.all_indices.size();
+    const auto& idxAccessor =
+        LoadIndexBuffer(model, primitive, data.all_indices);
+    GLenum gl_idx_type =
+        (idxAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
+            ? GL_UNSIGNED_INT
+            : GL_UNSIGNED_SHORT;
+
+    int material_id = primitive.material;
+    if (map_materials) {
+      material_id = MapSceneMaterial(material_id, model.materials);
+    }
+    Scene::Primitive new_primitive(idxAccessor.count, index_byte_offset,
+                      data.current_base_vertex, gl_idx_type,
+                      static_cast<uint32_t>(material_id));
+    new_primitives.push_back(new_primitive);
+    data.current_base_vertex += posAccessor.count;
+  }
+  new_mesh.min = mesh_min;
+  new_mesh.max = mesh_max;
+  return new_primitives;
+}
+
+void ModelLoader::LoadBuffers(const tinygltf::Model& model,
+  std::vector<Scene::Mesh>& meshes) {
+  //TODO: for some meshes we don't need the geometry (like zones/characters)
+  //TODO: are these extras of the node OR of the mesh?
+  std::vector<int> tile_ids;
+  for (const auto& mesh : model.meshes) {
+    Scene::Mesh new_mesh;
+    new_mesh.collision_type = GetCollisionType(mesh);
+    new_mesh.type = GetModelType(mesh);
+    new_mesh.name = mesh.name;
+    meshes.push_back(new_mesh);
+  }
+}
+
+ModelLoader::BufferData LoadMeshes(const tinygltf::Model& model,
+    std::vector<Scene::Mesh>& meshes, bool load_lods, bool map_materials) {
+  ModelLoader::BufferData buffer;
+  if (load_lods) {
+    for (auto& m : meshes) {
+      std::string name = m.name;
+      //TODO: if has _log_0 or _lod_1 or _lod_n in general, remove the suffix
+      m.primitives_lod_0 = LoadPrimitives(model, name + "_lod_0)", m, buffer, map_materials);
+      m.primitives_lod_1 = LoadPrimitives(model, name + "_lod_1)", m, buffer, map_materials);
+      m.primitives_lod_2 = LoadPrimitives(model, name + "_lod_2)", m, buffer, map_materials);
+    }
+  } else {
+    for (auto& m : meshes) {
+      m.primitives_lod_0 = LoadPrimitives(model, m.name, m, buffer, map_materials);
+    }
+  }
+  return buffer;
+}
+
+void ModelLoader::LoadDebugShapes(std::string_view path) {
+  scene_.scene_data_ = Scene::SceneData(); //TODO: separate func?
+
+  auto model = LoadModel(loader_, path);
+  LoadBuffers(model, scene_.scene_dbg_shapes_.meshes);
+  BufferData buffer_data = LoadMeshes(model, scene_.scene_dbg_shapes_.meshes, false, false);
+
+  ReadSceneHierarchy(scene_.scene_dbg_shapes_, model);
+  UploadBuffers(&scene_.scene_dbg_shapes_.vao,
+    &scene_.scene_dbg_shapes_.vbo,
+    &scene_.scene_dbg_shapes_.ebo,
+    buffer_data);
+}
+
+void ModelLoader::LoadScene(std::string_view path) {
+  auto model = LoadModel(loader_, path);
+  LoadBuffers(model, scene_.scene_data_.meshes);
+  BufferData buffer_data = LoadMeshes(model, scene_.scene_data_.meshes, false, true);
+
+  ReadSceneHierarchy(scene_.scene_data_, model);
+  UploadBuffers(&scene_.scene_data_.vao,
+    &scene_.scene_data_.vbo,
+    &scene_.scene_data_.ebo,
+    buffer_data);
+}
+
+void MarkLowerBodyNodes(SceneNode* node, const std::vector<SceneNode*>& nodes, std::vector<bool>& is_lower_body) {
+  is_lower_body[node->node_id] = true;
+  for (auto child : node->children) {
+    MarkLowerBodyNodes(child, nodes, is_lower_body);
+  }
+}
+
+void BuildLowerBodyMask(std::vector<bool>& is_lower_body, int pelvis_node_id, const std::vector<SceneNode*>& nodes) {
+  if (pelvis_node_id >= 0 && pelvis_node_id < static_cast<int>(nodes.size())) {
+    MarkLowerBodyNodes(nodes[pelvis_node_id], nodes, is_lower_body);
+  }
+}
+
+void ModelLoader::LoadCharacters(std::string_view skeleton_path,
+    std::vector<std::string_view> skin_paths) {
+  for (const auto& path : skin_paths) {
+    Scene::CharacterData character;
+    auto model = LoadModel(loader_, path);
+    LoadBuffers(model, character.meshes);
+    BufferData buffer_data = LoadMeshes(model, character.meshes, false, false);
+
+    ReadNodeHierarchy(character.nodes, model, character.meshes);
+    auto buffer_data_animated = LoadBuffersAnimated(model);
+
+    stbi_set_flip_vertically_on_load(false);
+    character.material = LoadMaterial(path, model, model.materials[0]);
+    stbi_set_flip_vertically_on_load(true);
+
+    UploadBuffers(&character.vao, &character.vbo, &character.ebo,
+      buffer_data, buffer_data_animated);
+    scene_.character_skins_.push_back(std::move(character));
+  }
+
+  auto skeleton_model = LoadModel(loader_, skeleton_path);
+  scene_.character_rig_.core_rig = LoadCoreRig(skeleton_model);
+  scene_.character_rig_.mapping = CreateCharacterAnimationMapping(
+    scene_.character_rig_.core_rig.animations);
+  LoadDeltas(
+    scene_.character_rig_.mapping,
+    scene_.character_rig_.core_rig.animations,
+    scene_.character_skins_[0].nodes,
+    scene_.character_rig_.default_deltas,
+    scene_.character_rig_.pistol_deltas);
+
+  //int hips_id = 0;
+  //int spine_id = 0;
+  for (int i = 0; i < skeleton_model.nodes.size(); ++i) {
+    const auto& n = skeleton_model.nodes[i];
+    // mixamorig6:RightUpLeg"
+    if (n.name == "mixamorig6:Camera") {
+      scene_.character_rig_.head_bone_id = i;
+      //std::cout << "camera is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Weapon") {
+      scene_.character_rig_.hand_bone_id = i;
+      //std::cout << "weapon is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Hips") {
+      scene_.character_rig_.hips_id = i;
+      //std::cout << "hips is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Spine") {
+      scene_.character_rig_.spine0_id = i;
+      //std::cout << "spine0 is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Spine1") {
+      scene_.character_rig_.spine1_id = i;
+      //std::cout << "spine1 is " << i << std::endl;
+    } else if (n.name == "mixamorig6:Spine2") {
+      scene_.character_rig_.spine2_id = i;
+      //std::cout << "spine2 is " << i << std::endl;
+    }
+  }
+  //auto& nodes = scene_.character_skins_[0].nodes;
+  //scene_.character_rig_.is_lower_body_mask = std::vector<bool>(nodes.size(), false);
+  //BuildLowerBodyMask(scene_.character_rig_.is_lower_body_mask, left_shoulder_id, nodes);
+  //BuildLowerBodyMask(scene_.character_rig_.is_lower_body_mask, right_shoulder_id, nodes);
+}
+
+void ModelLoader::LoadWeapon(std::vector<std::string_view> paths) {
+  for (const auto& path : paths) {
+    Scene::WeaponData weapon;
+    auto model = LoadModel(loader_, path);
+    LoadBuffers(model, weapon.meshes);
+    BufferData buffer_data = LoadMeshes(model, weapon.meshes, false, false);
+
+    ReadNodeHierarchy(weapon.nodes, model, weapon.meshes);
+    auto buffer_data_animated = LoadBuffersAnimated(model);
+
+    stbi_set_flip_vertically_on_load(false);
+    weapon.material = LoadMaterial(path, model, model.materials[0]);
+    stbi_set_flip_vertically_on_load(true);
+
+    UploadBuffers(&weapon.vao, &weapon.vbo, &weapon.ebo,
+      buffer_data, buffer_data_animated);
+    weapon.rig.core_rig = LoadCoreRig(model);
+    weapon.rig.mapping = CreateWeaponAnimationMapping(weapon.rig.core_rig.animations);
+    scene_.weapons_.push_back(std::move(weapon));
+  }
+}
+
 void LoadRiggedBuffers(
     const tinygltf::Model& model,
     const tinygltf::Primitive& primitive,
@@ -942,83 +1019,6 @@ ModelLoader::BufferDataAnimated ModelLoader::LoadBuffersAnimated(
     for (const auto& primitive : mesh.primitives) {
       LoadRiggedBuffers(model, primitive, data);
     }
-  }
-  return data;
-}
-
-//TOOD: add rgb color, so Mud could be taken from Clay
-
-std::map<std::string, MaterialIndex> material_str_to_enum = {
-  {"01_wood", MaterialIndex::Wood},
-  {"02_steel", MaterialIndex::Steel},
-  {"03_clay", MaterialIndex::Clay},
-  {"04_sticks", MaterialIndex::Sticks},
-  {"05_straw", MaterialIndex::Straw},
-  {"06_grass", MaterialIndex::Grass},
-  {"07_tablecloth", MaterialIndex::Tablecloth},
-  {"08_ryadno", MaterialIndex::Ryadno},
-  {"09_ryshnuk", MaterialIndex::Ryshnuk},
-  {"10_ribbons", MaterialIndex::Ribbons},
-};
-
-int MapSceneMaterial(int idx, const std::vector<tinygltf::Material>& materials) {
-  if (idx == -1) {
-    return 0;
-  }
-  //std::cout << idx << ' ' << materials[idx].name << std::endl;
-  int material_id = static_cast<int>(material_str_to_enum.at(materials[idx].name));
-  if (material_id >= 5) {
-    std::cerr << "at least one " << std::endl;
-  }
-  return material_id;
-}
-
-ModelLoader::BufferData ModelLoader::LoadBuffers(const tinygltf::Model& model,
-  std::vector<Scene::Mesh>& meshes, bool map_materials) {
-  BufferData data;
-  //TODO: for some meshes we don't need the geometry (like zones/characters)
-  //TODO: are these extras of the node OR of the mesh?
-  std::vector<int> tile_ids;
-  for (const auto& mesh : model.meshes) {
-    Scene::Mesh new_mesh;
-    new_mesh.collision_type = GetCollisionType(mesh);
-    new_mesh.type = GetModelType(mesh);
-    glm::vec3 mesh_min(std::numeric_limits<float>::max());
-    glm::vec3 mesh_max(std::numeric_limits<float>::lowest());
-    for (const auto& primitive : mesh.primitives) {
-      const auto& posAccessor =
-          LoadBufferSafely("POSITION", model, primitive, data.all_positions);
-      LoadBufferSafely("NORMAL", model, primitive, data.all_normals);
-      LoadBufferSafely("TEXCOORD_0", model, primitive, data.all_uvs);
-      LoadBufferSafely("TANGENT", model, primitive, data.all_tangents);
-      glm::vec3 min(posAccessor.minValues[0], posAccessor.minValues[1],
-                    posAccessor.minValues[2]);
-      glm::vec3 max(posAccessor.maxValues[0], posAccessor.maxValues[1],
-                    posAccessor.maxValues[2]);
-      mesh_min = glm::min(mesh_min, min);
-      mesh_max = glm::max(mesh_max, max);
-
-      size_t index_byte_offset = data.all_indices.size();
-      const auto& idxAccessor =
-          LoadIndexBuffer(model, primitive, data.all_indices);
-      GLenum gl_idx_type =
-          (idxAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
-              ? GL_UNSIGNED_INT
-              : GL_UNSIGNED_SHORT;
-
-      int material_id = primitive.material;
-      if (map_materials) {
-        material_id = MapSceneMaterial(material_id, model.materials);
-      }
-      Scene::Primitive new_primitive(idxAccessor.count, index_byte_offset,
-                        data.current_base_vertex, gl_idx_type,
-                        static_cast<uint32_t>(material_id));
-      new_mesh.primitives.push_back(new_primitive);
-      data.current_base_vertex += posAccessor.count;
-    }
-    new_mesh.min = mesh_min;
-    new_mesh.max = mesh_max;
-    meshes.push_back(new_mesh);
   }
   return data;
 }
@@ -1203,9 +1203,10 @@ void ModelLoader::LoadSceneMaterials(std::string_view path) {
   auto model = LoadModel(loader_, path);
   auto& pack = scene_.materials;
   pack.count = static_cast<uint32_t>(MaterialIndex::TotalNormalMaterials);
-  for (GLuint* idx : {&pack.albedo, &pack.normal, &pack.rough_metal_ao}) {
-    *idx = CreateTextureArray(gMaterialWidth, gMaterialHeight, pack.count, GL_RGBA8);
-  }
+
+  pack.albedo = CreateTextureArray(gMaterialWidth, gMaterialHeight, pack.count, GL_SRGB8_ALPHA8);
+  pack.normal = CreateTextureArray(gMaterialWidth, gMaterialHeight, pack.count, GL_RGBA8);
+  pack.rough_metal_ao = CreateTextureArray(gMaterialWidth, gMaterialHeight, pack.count, GL_RGBA8);
 
   auto bindLayer = [&](GLuint array_index, int tex_index, int layer) {
     auto pixels = LoadTextureRaw(path, model, tex_index);
@@ -1213,7 +1214,6 @@ void ModelLoader::LoadSceneMaterials(std::string_view path) {
       array_index, 0, 0, 0, layer,
       gMaterialWidth, gMaterialHeight, 1, GL_RGBA,
       GL_UNSIGNED_BYTE, pixels.data());
-    glGenerateTextureMipmap(array_index);
   };
 
   for (int i = 0; i < pack.count; ++i) {
@@ -1236,6 +1236,16 @@ void ModelLoader::LoadSceneMaterials(std::string_view path) {
         bindLayer(pack.rough_metal_ao, m.pbrMetallicRoughness.metallicRoughnessTexture.index, layer_id);
     }
   }
+
+  auto setupTextureDSA = [](GLuint texId) {
+    glGenerateTextureMipmap(texId);
+    glTextureParameterf(texId, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
+    glTextureParameteri(texId, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTextureParameteri(texId, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  };
+  setupTextureDSA(pack.albedo);
+  setupTextureDSA(pack.normal);
+  setupTextureDSA(pack.rough_metal_ao);
 }
 
 std::vector<uint8_t> ModelLoader::LoadTextureRaw(

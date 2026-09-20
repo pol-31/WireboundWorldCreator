@@ -245,15 +245,23 @@ void Game::RunRenderLoop() {
     //std::cout << player_pos.GetX() << ' ' << player_pos.GetZ() << std::endl;
     world_manager_.UpdatePlayerZone(player_pos, &bi);
     world_manager_.Cull();
+
+    glDisable(GL_BLEND);
     if (render_physics_only_) {
       renderer_.RenderDebug();
     } else {
       renderer_.UpdateBuffer();
       renderer_.DrawShadowPass();
       renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData());
+      //renderer_.DrawSsaoPass();
       renderer_.DrawLightPass(cubemap_.GetRenderData());
     }
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     RenderInterface();
+    renderer_.DrawUi();
+    glEnable(GL_DEPTH_TEST);
 
     // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glfwPollEvents();
@@ -329,8 +337,9 @@ void InitSceneGlobalTransforms(
       }
     }
     for (auto& zone : tile->zones) {
+      auto mat = JPH::Mat44::sTranslation(zone->translate);
       for (auto node : zone->object_nodes) {
-        dfs(node, JPH::Mat44::sIdentity());
+        dfs(node, mat);
       }
     }
   }
@@ -425,10 +434,14 @@ void Game::CreateBodyForNode(SceneNode* node, SceneZone* zone) {
         //TODO: non-physics bodies
         return;
       } else {
-        // hinge base is static?
-        //TODO: so hinge as a static?
-        // no difference for hinge now, it just static and have constraint later
-        zone->static_objects_.push_back(node);
+          zone->static_objects_.push_back(node);
+        if (mesh.type == Scene::Type::Wall) {
+          // return;
+//          zone->walls.push_back(node);
+        } else {
+          // zone->static_objects_.push_back(node);
+  //        zone->static_objects_.push_back(node);
+        }
       }
     }
     // no scale component, so safe
@@ -458,7 +471,6 @@ void Game::Init() {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glEnable(GL_BLEND);
   glClearColor(0.2f, 0.7f, 0.1f, 1.0f);
 
   camera_.HideCursor();
@@ -539,12 +551,12 @@ void Game::Init() {
 
   for (auto& tile : scene->scene_data_.tiles) {
     terrain_renderer_.InitializeBody(mBodyInterface);
-    std::cout << "tile added" << std::endl;
+    //std::cout << "tile added" << std::endl;
     for (auto node : tile->characters) {
       CreateBodyForNode(node, nullptr);
     }
     for (SceneZone* zone : tile->zones) {
-      std::cout << "zone added" << std::endl;
+      //std::cout << "zone added" << std::endl;
       for (auto node : zone->object_nodes) {
         CreateBodyForNode(node, zone);
       }
@@ -564,7 +576,7 @@ void Game::Init() {
     }
     for (auto& portal : tile->portals) {
       doors_.emplace_back(mPhysicsSystem, scene, &portal);
-      std::cout << "---- + 1 door" << std::endl;
+      //std::cout << "---- + 1 door" << std::endl;
     }
   }
 

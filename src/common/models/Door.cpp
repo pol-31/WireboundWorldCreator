@@ -61,7 +61,7 @@ Door::Door(JPH::PhysicsSystem* physics_system,
 
     // Store it so we can break it later
     hinges_.push_back({ h_node->body_id, constraint, false });
-    std::cout << h_node->body_id.GetIndex() << std::endl;
+    //std::cout << h_node->body_id.GetIndex() << std::endl;
   }
 }
 

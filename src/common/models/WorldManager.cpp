@@ -41,12 +41,12 @@ void WorldManager::PushFrustumCulled(
   new_instance.model = node->global_transform;
   //TODO: primitives 0.... but maybe all our primitives have same mat id..
   // so fix not for today
-  new_instance.material_id = scene_data.meshes[node->mesh_index].primitives[0].material_id;
+  new_instance.material_id = scene_data.meshes[node->mesh_index].primitives_lod_0[0].material_id;
   if (scene_data.meshes[node->mesh_index].type == Scene::Type::Wall) {
     if (new_instance.material_id == static_cast<int>(MaterialIndex::Clay)) {
       new_instance.use_triplanar = 40;
     } else {
-      new_instance.use_triplanar = 7;
+      new_instance.use_triplanar = 15;
     }
   }
   ssbo_data[node->mesh_index].push_back(std::move(new_instance));
@@ -214,7 +214,10 @@ void WorldManager::Cull() {
   }
 
 
+    //.. seems we don't need to render them, because we CreateBodyForNode
+    // for each zone and so physics objects are copied
   for (const auto* p : zone->portals) {
+    continue;
     auto bounds = p->frame->global_bounds;
     if (frustum_camera.Overlaps(bounds)) {
       active_camera_.push_back(p->desk);
@@ -355,7 +358,7 @@ int WorldManager::FindNearestZone(JPH::Vec3 player_pos) {
 
 void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* body_interface) {
     const auto& zones = scene_->scene_data_.tiles[0]->zones;
-  cur_tile_id_ = 0;
+  //cur_tile_id_ = 0;
   // 1. Initial Spawn State
   if (cur_zone_id_ == -1) {
     cur_zone_id_ = FindNearestZone(player_pos);
@@ -389,27 +392,8 @@ void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* bo
   // 5. Trigger the state change
   if (new_zone_index != cur_zone_id_) {
     DeactivateZone(cur_zone_id_, body_interface);
-    for (auto p : zones[cur_zone_id_]->portals) {
-      auto near_zone_id = p->connected_zone_index_1;
-      if (near_zone_id == cur_zone_id_) {
-        near_zone_id = p->connected_zone_index_2;
-      }
-      if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) != active_zones_.end()) {
-        DeactivateZone(near_zone_id, body_interface);
-      }
-    }
     cur_zone_id_ = new_zone_index;
     ActivateZone(cur_zone_id_, body_interface);
-    std::cout << "Player entered Zone: " << cur_zone_id_ << std::endl;
-    for (auto p : zones[cur_zone_id_]->portals) {
-      auto near_zone_id = p->connected_zone_index_1;
-      if (near_zone_id == cur_zone_id_) {
-        near_zone_id = p->connected_zone_index_2;
-      }
-      if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) == active_zones_.end()) {
-          ActivateZone(near_zone_id, body_interface);
-      }
-    }
   }
   std::cout << "Active zones: ";
   for (auto id : active_zones_) {
@@ -434,6 +418,16 @@ void WorldManager::ActivateZone(int zone_index, JPH::BodyInterface* body_interfa
     dfs(dfs, obj);
   }
   active_zones_.push_back(zone_index);
+  std::cout << "Player entered Zone: " << cur_zone_id_ << std::endl;
+  for (auto p : zones[cur_zone_id_]->portals) {
+    auto near_zone_id = p->connected_zone_index_1;
+    if (near_zone_id == cur_zone_id_) {
+      near_zone_id = p->connected_zone_index_2;
+    }
+    if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) == active_zones_.end()) {
+      ActivateZone(near_zone_id, body_interface);
+    }
+  }
     // for (const auto& obj : scene_->scene_data_.tiles[0]->portals) {
     //   dfs(dfs, obj.desk);
     //   dfs(dfs, obj.frame);
@@ -453,4 +447,13 @@ void WorldManager::DeactivateZone(int zone_index, JPH::BodyInterface* body_inter
     }
   }
   std::erase(active_zones_, zone_index);
+  for (auto p : zones[cur_zone_id_]->portals) {
+    auto near_zone_id = p->connected_zone_index_1;
+    if (near_zone_id == cur_zone_id_) {
+      near_zone_id = p->connected_zone_index_2;
+    }
+    if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) != active_zones_.end()) {
+      DeactivateZone(near_zone_id, body_interface);
+    }
+  }
 }

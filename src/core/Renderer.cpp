@@ -103,7 +103,7 @@ void RenderAnimated(const AnimatedRenderData& data) {
   BindAnimatedRenderData(data);
   for (int i = 0; i < data.meshes->size(); ++i) {
     const Scene::Mesh& m = (*data.meshes)[i];
-    for (const auto& p : m.primitives) {
+    for (const auto& p : m.primitives_lod_0) {
       RenderAnimatedPrimitive(p);
     }
   }
@@ -155,12 +155,13 @@ sh_geometry_("../shaders/TriangleGeometry.vert",
 sh_geometry5_("../shaders/TriangleGeometry5.vert",
                       "../shaders/TriangleGeometry5.frag", {0, 1}),
 sh_deferred_shading_("../shaders/DeferredShading.vert",
-                              "../shaders/DeferredShading.frag", {0, 1, 2}),
+                              "../shaders/DeferredShading.frag", {0, 1, 2, 3}),
 sh_bloom_("../shaders/DeferredShading.vert", "../shaders/Bloom.frag", {0}),
 sh_gauss_("../shaders/DeferredShading.vert", "../shaders/Gauss.frag", {0}),
 sh_composite_("../shaders/DeferredShading.vert", "../shaders/FinalComposite.frag", {0, 1}),
 sh_light_emitter_("../shaders/LightEmitter.vert",
                            "../shaders/LightEmitter.frag", {}),
+sh_ssao_("../shaders/DeferredShading.vert", "../shaders/Ssao.frag", {0, 1, 2}),
 sh_wall_("../shaders/Mazanka.vert", "../shaders/Mazanka.frag", {}) {
   Init();
 }
@@ -195,7 +196,7 @@ void Renderer::DrawDirectionalLightShadowPass() {
     glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(l.source->lightSpaceMatrix));
     for (const auto& o : l.objects) {
       const auto& m = scene_->scene_data_.meshes[o.mesh_id];
-      for (const auto& p : m.primitives) {
+      for (const auto& p : m.primitives_lod_0) {
         glDrawElementsInstancedBaseVertexBaseInstance(
             GL_TRIANGLES,
             p.index_count,
@@ -268,7 +269,7 @@ void Renderer::DrawPointLightShadowPass() {
 
       for (const auto& o : l.objects[face]) {
         const auto& m = scene_->scene_data_.meshes[o.mesh_id];
-        for (const auto& p : m.primitives) {
+        for (const auto& p : m.primitives_lod_0) {
           glDrawElementsInstancedBaseVertexBaseInstance(
               GL_TRIANGLES,
               p.index_count,
@@ -313,9 +314,19 @@ void Renderer::UpdateBuffer() {
 }
 
 void Renderer::DrawShadowPass() {
-  glCullFace(GL_FRONT);
-  DrawDirectionalLightShadowPass();
-  DrawPointLightShadowPass();
+  // glEnable(GL_DEPTH_TEST);
+  // glCullFace(GL_BACK);
+  // glEnable(GL_POLYGON_OFFSET_FILL);
+  // glPolygonOffset(1.1f, 4.0f);
+  // DrawDirectionalLightShadowPass();
+  // DrawPointLightShadowPass();
+  // glDisable(GL_POLYGON_OFFSET_FILL);
+
+  glDisable(GL_CULL_FACE);
+  //glCullFace(GL_FRONT);
+   DrawDirectionalLightShadowPass();
+   DrawPointLightShadowPass();
+  glEnable(GL_CULL_FACE);
 }
 
 void RenderPlayer(const AnimatedRenderData& data) {
@@ -325,10 +336,25 @@ void RenderPlayer(const AnimatedRenderData& data) {
     if (i == 2) {
       continue; // for character only;
     }
-    for (const auto& p : m.primitives) {
+    for (const auto& p : m.primitives_lod_0) {
       RenderAnimatedPrimitive(p);
     }
   }
+}
+
+void Renderer::DrawSsaoPass() {
+  glBindFramebuffer(GL_FRAMEBUFFER, ssao_fbo_);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, g_position_);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, g_normal_);
+  ssao_tex_noise_.BindSampler(2);
+  sh_ssao_.Bind();
+  glUniform3fv(3, static_cast<GLsizei>(ssao_kernel_.size()), glm::value_ptr(ssao_kernel_[0]));
+  glBindVertexArray(vao_ui_);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::DrawGeometryPass(TerrainRenderData terrain) {
@@ -351,7 +377,7 @@ void Renderer::DrawGeometryPass(TerrainRenderData terrain) {
 
   for (const auto& o : culled_data_->camera.objects) {
     const auto& m = scene_->scene_data_.meshes[o.mesh_id];
-    for (const auto& p : m.primitives) {
+    for (const auto& p : m.primitives_lod_0) {
       glDrawElementsInstancedBaseVertexBaseInstance(
           GL_TRIANGLES,
           p.index_count,
@@ -417,7 +443,7 @@ void Renderer::RenderDebug() {
     int dbg_shape_id = GetDbgShapeId(
       scene_->scene_dbg_shapes_.meshes, m.collision_type);
     const auto& m_dbg = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
-    for (const auto& p : m_dbg.primitives) {
+    for (const auto& p : m_dbg.primitives_lod_0) {
       glDrawElementsInstancedBaseVertexBaseInstance(
           GL_TRIANGLES,
           p.index_count,
@@ -522,12 +548,13 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap) {
   glBindTexture(GL_TEXTURE_2D, g_normal_);
   glActiveTexture(GL_TEXTURE2);
   glBindTexture(GL_TEXTURE_2D, g_albedo_spec_);
+  ssao_tex_color_.BindSampler(3);
 
   // --- Deferred Render Pass Execution ---
   sh_deferred_shading_.Bind();
 
   const uint32_t num_lights = static_cast<uint32_t>(culled_data_->point_lights.size());
-  glUniform1i(3, num_lights);
+  glUniform1i(4, num_lights);
 
   if (num_lights > 0) {
     std::vector<glm::vec3> lightPositions;
@@ -545,8 +572,8 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap) {
       auto jph_pos = light.source->object_->global_bounds.GetCenter();
 
       auto pos = glm::vec3(jph_pos.GetX(), jph_pos.GetY(), jph_pos.GetZ());
-      glUniform3fv(4 + i * 2, 1, glm::value_ptr(pos));
-      glUniform3fv(4 + i * 2 + 1, 1, glm::value_ptr(glm::vec3(1.0f)));
+      glUniform3fv(5 + i * 2, 1, glm::value_ptr(pos));
+      glUniform3fv(5 + i * 2 + 1, 1, glm::value_ptr(glm::vec3(1.0f)));
 
       //TODO:
       std::string samplerName = "shadowMaps[" + std::to_string(i) + "]";
@@ -582,7 +609,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap) {
     // JPH::Vec4 colorVec = l.object_->color.ToVec4();
     JPH::Vec4 colorVec = JPH::Vec4::sOne();
     glUniform4fv(1, 1, &colorVec.mF32[0]);
-    for (const auto& p : m.primitives) {
+    for (const auto& p : m.primitives_lod_0) {
       glDrawElementsBaseVertex(
             GL_TRIANGLES,
             p.index_count,
@@ -627,19 +654,22 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap) {
   glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[!horizontal]);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+  // glEnable(GL_DEPTH_TEST);
+  //
+  // /// lines
+  // if (!mLines.empty()) {
+  //   sh_lines_.Bind();
+  //   glBindBuffer(GL_ARRAY_BUFFER, vbo_lines_);
+  //   glBufferSubData(GL_ARRAY_BUFFER, 0, mLines.size(), mLines.data());
+  //   glBindVertexArray(vao_lines_);
+  //   glDrawArrays(GL_LINES, 0, mLines.size());
+  // }
+  //
+  // Clear();
+}
+
+void Renderer::DrawUi() {
   text_renderer_.Render();
-  glEnable(GL_DEPTH_TEST);
-
-  /// lines
-  if (!mLines.empty()) {
-    sh_lines_.Bind();
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines_);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, mLines.size(), mLines.data());
-    glBindVertexArray(vao_lines_);
-    glDrawArrays(GL_LINES, 0, mLines.size());
-  }
-
-  Clear();
 }
 
 void Renderer::AddText(std::string_view text,
@@ -901,11 +931,73 @@ void Renderer::Init() {
 
   //
   InitializeProceduralWall();
+
+  InitSsaoNoise();
+  InitSsaoFbo();
+}
+
+
+void Renderer::InitSsaoNoise() {
+  std::uniform_real_distribution<float> randomFloats(0.0, 1.0);
+  std::default_random_engine generator;
+
+  for (unsigned int i = 0; i < 64; ++i) {
+    glm::vec3 sample(
+        randomFloats(generator) * 2.0 - 1.0,
+        randomFloats(generator) * 2.0 - 1.0,
+        randomFloats(generator)
+    );
+    sample = glm::normalize(sample);
+    sample *= randomFloats(generator);
+    auto scale = static_cast<float>(i) / 64.0;
+    scale = std::lerp(0.1f, 1.0f, scale * scale);
+    sample *= scale;
+    ssao_kernel_.push_back(sample);
+  }
+
+  std::vector<glm::vec3> ssaoNoise;
+  for (unsigned int i = 0; i < 16; ++ i) {
+    glm::vec3 noise(
+        randomFloats(generator) * 2.0 - 1.0,
+        randomFloats(generator) * 2.0 - 1.0,
+        0.0f);
+    ssaoNoise.push_back(noise);
+  }
+  GLuint noise_tex_id = 0;
+  glGenTextures(1, &noise_tex_id);
+  glBindTexture(GL_TEXTURE_2D, noise_tex_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4,
+    0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  ssao_tex_noise_ = Texture(noise_tex_id, 4, 4, GL_RGB, GL_RGBA16F, GL_FLOAT);
+}
+
+void Renderer::InitSsaoFbo() {
+  glGenFramebuffers(1, &ssao_fbo_);
+  glBindFramebuffer(GL_FRAMEBUFFER, ssao_fbo_);
+
+  GLuint color_buffer_id = 0;
+  glGenTextures(1, &color_buffer_id);
+  glBindTexture(GL_TEXTURE_2D, color_buffer_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, gWindowWidth, gWindowHeight,
+    0, GL_RED, GL_FLOAT, nullptr);
+  std::cout << gWindowWidth << ' ' << gWindowHeight << std::endl;
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+    GL_TEXTURE_2D, color_buffer_id, 0);
+
+  ssao_tex_color_ = Texture(color_buffer_id, gWindowWidth, gWindowHeight, GL_RED, GL_RED, GL_FLOAT);
 }
 
 void Renderer::DeInit() {
   glDeleteTextures(shadow_maps_.size(), shadow_maps_.data());
   glDeleteTextures(shadow_cubemaps_.size(), shadow_cubemaps_.data());
+  glDeleteFramebuffers(1, &ssao_fbo_);
 }
 
 // void Renderer::DrawLine(RVec3Arg inFrom, RVec3Arg inTo,

@@ -127,10 +127,12 @@ struct ScenePortal {
 struct SceneZone {
   std::vector<SceneNode*> object_nodes;
   std::vector<ScenePortal*> portals;
+  JPH::Vec3 translate;
   JPH::AABox bounds;
   std::string name;
   std::vector<PointLight> point_lights_;
   std::vector<StaticObject> static_objects_;
+  std::vector<StaticObject> walls;
 };
 struct SceneTile {
   std::vector<SceneZone*> zones;
@@ -238,10 +240,15 @@ struct Scene {
   };
 
   struct Mesh {
-    std::vector<Primitive> primitives;
-    Type type = Type::Static;
+    std::string name;
+    std::vector<Primitive> primitives_lod_0; // near
+    std::vector<Primitive> primitives_lod_1;
+    std::vector<Primitive> primitives_lod_2;
     glm::vec3 min;
     glm::vec3 max;
+
+    //TODO: now they all based on mesh name? probably...
+    Type type = Type::Static;
     CollisionType collision_type; // defines how to reinterpret in dbg render
   };
 
