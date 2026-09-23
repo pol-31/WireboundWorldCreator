@@ -159,6 +159,7 @@ sh_deferred_shading_("../shaders/DeferredShading.vert",
 sh_bloom_("../shaders/DeferredShading.vert", "../shaders/Bloom.frag", {0}),
 sh_gauss_("../shaders/DeferredShading.vert", "../shaders/Gauss.frag", {0}),
 sh_composite_("../shaders/DeferredShading.vert", "../shaders/FinalComposite.frag", {0, 1}),
+sh_pass_through_("../shaders/DeferredShading.vert", "../shaders/PassThrough.frag", {0}),
 sh_light_emitter_("../shaders/LightEmitter.vert",
                            "../shaders/LightEmitter.frag", {}),
 sh_ssao_("../shaders/DeferredShading.vert", "../shaders/Ssao.frag", {0, 1, 2}),
@@ -535,7 +536,7 @@ void Renderer::RenderCubemap(CubemapRenderData cubemap) {
 void Renderer::DrawLightPass(CubemapRenderData cubemap) {
   sh_deferred_shading_.DebugUpdate();
   sh_light_emitter_.DebugUpdate();
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_hdr_scene_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_scene_);
   glDisable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -589,10 +590,10 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap) {
 
   // blit DEPTH to bloom fbo
   glBindFramebuffer(GL_READ_FRAMEBUFFER, g_buffer_);
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_hdr_scene_);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_scene_);
   glBlitFramebuffer(0, 0, gWindowWidth, gWindowHeight, 0, 0, gWindowWidth,
                     gWindowHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_hdr_scene_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_scene_);
   glEnable(GL_DEPTH_TEST);
 
   glDepthFunc(GL_LEQUAL);
@@ -625,7 +626,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap) {
   sh_bloom_.Bind();
   glBindVertexArray(vao_ui_);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, tex_hdr_scene_);
+  glBindTexture(GL_TEXTURE_2D, tex_scene_);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   bool horizontal = true;
@@ -644,46 +645,323 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap) {
       first_iteration = false;
   }
 
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_composite_);
+  glClear(GL_COLOR_BUFFER_BIT);
   sh_composite_.Bind();
   glBindVertexArray(vao_ui_);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, tex_hdr_scene_);
+  glBindTexture(GL_TEXTURE_2D, tex_scene_);
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[!horizontal]);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-  // glEnable(GL_DEPTH_TEST);
+
+  /// lines
+  if (!mLines.empty()) {
+    sh_lines_.Bind();
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines_);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, mLines.size(), mLines.data());
+    glBindVertexArray(vao_lines_);
+    glDrawArrays(GL_LINES, 0, mLines.size());
+  }
+
+  Clear();
+}
+
+void Renderer::DrawBloom() {
   //
-  // /// lines
-  // if (!mLines.empty()) {
-  //   sh_lines_.Bind();
-  //   glBindBuffer(GL_ARRAY_BUFFER, vbo_lines_);
-  //   glBufferSubData(GL_ARRAY_BUFFER, 0, mLines.size(), mLines.data());
-  //   glBindVertexArray(vao_lines_);
-  //   glDrawArrays(GL_LINES, 0, mLines.size());
-  // }
-  //
-  // Clear();
 }
 
-void Renderer::DrawUi() {
-  text_renderer_.Render();
-}
-
-void Renderer::AddText(std::string_view text,
-  glm::vec2 position, glm::vec2 scale, glm::vec4 color) {
-  text_renderer_.AddText(text, position, scale, color);
-}
-
-void Renderer::AddSprite(const std::string& name,
-  glm::vec2 position, glm::vec2 scale, glm::vec4 color) {
-  text_renderer_.AddSprite(name, position, scale, color);
+void Renderer::RenderToTheScreen() {
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  sh_pass_through_.Bind();
+  glBindVertexArray(vao_ui_);
+  tex_composite_.BindSampler(0);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
 void Renderer::Clear() {
   mLines.clear();
+}
+
+void Renderer::DeInit() {
+  glDeleteTextures(shadow_maps_.size(), shadow_maps_.data());
+  glDeleteTextures(shadow_cubemaps_.size(), shadow_cubemaps_.data());
+  glDeleteFramebuffers(1, &ssao_fbo_);
+}
+
+void Renderer::Init() {
+  InitUi();
+
+  InitGBuffer();
+  InitBloom();
+  InitScene();
+  InitGauss();
+  InitLights();
+
+  InitInstancedBuffer();
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDrawBuffer(GL_BACK);
+  glReadBuffer(GL_BACK);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+
+  InitializeProceduralWall();
+
+  InitSsaoNoise();
+  InitSsaoFbo();
+
+  InitCompositeFbo();
+}
+
+void Renderer::InitCompositeFbo() {
+  glGenFramebuffers(1, &fbo_composite_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_composite_);
+
+  GLuint tex_composite_id = 0;
+  glGenTextures(1, &tex_composite_id);
+  glBindTexture(GL_TEXTURE_2D, tex_composite_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gWindowWidth, gWindowHeight, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         tex_composite_id, 0);
+  unsigned int bloom_attachment[1] = {GL_COLOR_ATTACHMENT0};
+  glDrawBuffers(1, bloom_attachment);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    std::cout << "Framebuffer not complete!" << std::endl;
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  tex_composite_ = Texture(tex_composite_id, gWindowWidth, gWindowHeight,
+    GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE);
+}
+
+void Renderer::InitGBuffer() {
+  glGenFramebuffers(1, &g_buffer_);
+  glBindFramebuffer(GL_FRAMEBUFFER, g_buffer_);
+
+  glGenTextures(1, &g_position_);
+  glBindTexture(GL_TEXTURE_2D, g_position_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
+               GL_RGBA, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         g_position_, 0);
+
+  glGenTextures(1, &g_normal_);
+  glBindTexture(GL_TEXTURE_2D, g_normal_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
+               GL_RGBA, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                         g_normal_, 0);
+
+  glGenTextures(1, &g_albedo_spec_);
+  glBindTexture(GL_TEXTURE_2D, g_albedo_spec_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gWindowWidth, gWindowHeight, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
+                         g_albedo_spec_, 0);
+
+  unsigned int attachments[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
+                                 GL_COLOR_ATTACHMENT2};
+  glDrawBuffers(3, attachments);
+
+  unsigned int rboDepth;
+  glGenRenderbuffers(1, &rboDepth);
+  glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gWindowWidth,
+                        gWindowHeight);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, rboDepth);
+
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    std::cout << "Framebuffer not complete!" << std::endl;
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::InitUi() {
+  float quadVertices[] = {
+    -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+    1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f,
+  };
+  glGenVertexArrays(1, &vao_ui_);
+  glGenBuffers(1, &vbo_ui_);
+  glBindVertexArray(vao_ui_);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices,
+               GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                        (void*)(3 * sizeof(float)));
+
+  glGenVertexArrays(1, &vao_lines_);
+  glBindVertexArray(vao_lines_);
+
+  glGenBuffers(1, &vbo_lines_);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_lines_);
+  glBufferData(GL_ARRAY_BUFFER, cMaxLines * sizeof(Line) / 2, nullptr,
+               GL_DYNAMIC_DRAW);
+
+  auto stride = sizeof(JPH::Float3) + sizeof(JPH::Color);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, stride, GL_TRUE,
+                        (void*)(sizeof(JPH::Float3)));
+  glEnableVertexAttribArray(1);
+}
+
+void Renderer::InitGauss() {
+  glGenFramebuffers(2, fbo_ping_pong_);
+  glGenTextures(2, buffer_ping_pong_);
+  for (unsigned int i = 0; i < 2; i++) {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[i]);
+    glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[i]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth,
+      gWindowHeight, 0, GL_RGBA, GL_FLOAT, nullptr
+    );
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, buffer_ping_pong_[i], 0
+    );
+  }
+}
+
+void Renderer::InitBloom() {
+  glGenFramebuffers(1, &fbo_bloom_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
+
+  glGenTextures(1, &bloom_tex_);
+  glBindTexture(GL_TEXTURE_2D, bloom_tex_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
+               GL_RGBA, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         bloom_tex_, 0);
+  unsigned int bloom_attachment[1] = {GL_COLOR_ATTACHMENT0};
+  glDrawBuffers(1, bloom_attachment);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    std::cout << "Framebuffer not complete!" << std::endl;
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::InitScene() {
+  glGenFramebuffers(1, &fbo_scene_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_scene_);
+
+  glGenTextures(1, &tex_scene_);
+  glBindTexture(GL_TEXTURE_2D, tex_scene_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
+               GL_RGBA, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         tex_scene_, 0);
+  unsigned int hdr_attachment[1] = {GL_COLOR_ATTACHMENT0};
+  glDrawBuffers(1, hdr_attachment);
+  unsigned int hdrDepth;
+  glGenRenderbuffers(1, &hdrDepth);
+  glBindRenderbuffer(GL_RENDERBUFFER, hdrDepth);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gWindowWidth,
+                        gWindowHeight);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, hdrDepth);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    std::cout << "Framebuffer not complete!" << std::endl;
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::InitLights() {
+  /// dir lights: shadowmap (sun)  glGenFramebuffers(1, &fbo_depth_map_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_map_);
+  glDrawBuffer(GL_NONE);
+  glReadBuffer(GL_NONE);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  /// point lights: shadow cubemap
+  glGenFramebuffers(1, &fbo_depth_cubemap_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_cubemap_);
+  glDrawBuffer(GL_NONE);
+  glReadBuffer(GL_NONE);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::InitInstancedBuffer() {
+  glGenBuffers(1, &ssbo_instanced_);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_instanced_);
+  glBufferData(GL_SHADER_STORAGE_BUFFER,
+    cMaxInstances * sizeof(WorldManager::InstanceGpu),
+               nullptr, GL_DYNAMIC_DRAW);
+}
+
+void Renderer::InitSsaoNoise() {
+  std::uniform_real_distribution<float> randomFloats(0.0, 1.0);
+  std::default_random_engine generator;
+
+  for (unsigned int i = 0; i < 64; ++i) {
+    glm::vec3 sample(
+        randomFloats(generator) * 2.0 - 1.0,
+        randomFloats(generator) * 2.0 - 1.0,
+        randomFloats(generator)
+    );
+    sample = glm::normalize(sample);
+    sample *= randomFloats(generator);
+    auto scale = static_cast<float>(i) / 64.0;
+    scale = std::lerp(0.1f, 1.0f, scale * scale);
+    sample *= scale;
+    ssao_kernel_.push_back(sample);
+  }
+
+  std::vector<glm::vec3> ssaoNoise;
+  for (unsigned int i = 0; i < 16; ++ i) {
+    glm::vec3 noise(
+        randomFloats(generator) * 2.0 - 1.0,
+        randomFloats(generator) * 2.0 - 1.0,
+        0.0f);
+    ssaoNoise.push_back(noise);
+  }
+  GLuint noise_tex_id = 0;
+  glGenTextures(1, &noise_tex_id);
+  glBindTexture(GL_TEXTURE_2D, noise_tex_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4,
+    0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  ssao_tex_noise_ = Texture(noise_tex_id, 4, 4, GL_RGB, GL_RGBA16F, GL_FLOAT);
+}
+
+void Renderer::InitSsaoFbo() {
+  glGenFramebuffers(1, &ssao_fbo_);
+  glBindFramebuffer(GL_FRAMEBUFFER, ssao_fbo_);
+
+  GLuint color_buffer_id = 0;
+  glGenTextures(1, &color_buffer_id);
+  glBindTexture(GL_TEXTURE_2D, color_buffer_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, gWindowWidth, gWindowHeight,
+    0, GL_RED, GL_FLOAT, nullptr);
+  std::cout << gWindowWidth << ' ' << gWindowHeight << std::endl;
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+    GL_TEXTURE_2D, color_buffer_id, 0);
+
+  ssao_tex_color_ = Texture(color_buffer_id, gWindowWidth, gWindowHeight, GL_RED, GL_RED, GL_FLOAT);
 }
 
 void Renderer::InitializeProceduralWall() {
@@ -757,281 +1035,3 @@ void Renderer::InitializeProceduralWall() {
 
     glBindVertexArray(0);
 }
-
-void Renderer::Init() {
-  /// ui
-  float quadVertices[] = {
-      -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-      1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f,
-  };
-  glGenVertexArrays(1, &vao_ui_);
-  glGenBuffers(1, &vbo_ui_);
-  glBindVertexArray(vao_ui_);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_ui_);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices,
-               GL_STATIC_DRAW);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        (void*)(3 * sizeof(float)));
-
-  /// g-buffer
-  glGenFramebuffers(1, &g_buffer_);
-  glBindFramebuffer(GL_FRAMEBUFFER, g_buffer_);
-
-  glGenTextures(1, &g_position_);
-  glBindTexture(GL_TEXTURE_2D, g_position_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
-               GL_RGBA, GL_FLOAT, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         g_position_, 0);
-
-  glGenTextures(1, &g_normal_);
-  glBindTexture(GL_TEXTURE_2D, g_normal_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
-               GL_RGBA, GL_FLOAT, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         g_normal_, 0);
-
-  glGenTextures(1, &g_albedo_spec_);
-  glBindTexture(GL_TEXTURE_2D, g_albedo_spec_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gWindowWidth, gWindowHeight, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
-                         g_albedo_spec_, 0);
-
-  unsigned int attachments[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
-                                 GL_COLOR_ATTACHMENT2};
-  glDrawBuffers(3, attachments);
-
-  unsigned int rboDepth;
-  glGenRenderbuffers(1, &rboDepth);
-  glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gWindowWidth,
-                        gWindowHeight);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, rboDepth);
-
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    std::cout << "Framebuffer not complete!" << std::endl;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  /// bloom / post-light effects
-  glGenFramebuffers(1, &fbo_bloom_);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
-
-  glGenTextures(1, &bloom_tex_);
-  glBindTexture(GL_TEXTURE_2D, bloom_tex_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
-               GL_RGBA, GL_FLOAT, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         bloom_tex_, 0);
-  unsigned int bloom_attachment[1] = {GL_COLOR_ATTACHMENT0};
-  glDrawBuffers(1, bloom_attachment);
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    std::cout << "Framebuffer not complete!" << std::endl;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  /// bloom / post-light effects
-  glGenFramebuffers(1, &fbo_hdr_scene_);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_hdr_scene_);
-
-  glGenTextures(1, &tex_hdr_scene_);
-  glBindTexture(GL_TEXTURE_2D, tex_hdr_scene_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
-               GL_RGBA, GL_FLOAT, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         tex_hdr_scene_, 0);
-  unsigned int hdr_attachment[1] = {GL_COLOR_ATTACHMENT0};
-  glDrawBuffers(1, hdr_attachment);
-  unsigned int hdrDepth;
-  glGenRenderbuffers(1, &hdrDepth);
-  glBindRenderbuffer(GL_RENDERBUFFER, hdrDepth);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gWindowWidth,
-                        gWindowHeight);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, hdrDepth);
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    std::cout << "Framebuffer not complete!" << std::endl;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  /// gauss
-  glGenFramebuffers(2, fbo_ping_pong_);
-  glGenTextures(2, buffer_ping_pong_);
-  for (unsigned int i = 0; i < 2; i++) {
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[i]);
-    glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[i]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth,
-      gWindowHeight, 0, GL_RGBA, GL_FLOAT, nullptr
-    );
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glFramebufferTexture2D(
-        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, buffer_ping_pong_[i], 0
-    );
-  }
-
-  /// dir lights: shadowmap (sun)  glGenFramebuffers(1, &fbo_depth_map_);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_map_);
-  glDrawBuffer(GL_NONE);
-  glReadBuffer(GL_NONE);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  /// point lights: shadow cubemap
-  glGenFramebuffers(1, &fbo_depth_cubemap_);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_cubemap_);
-  // glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_cubemaps_[0], 0);
-  glDrawBuffer(GL_NONE);
-  glReadBuffer(GL_NONE);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  /// instanced ssbo
-
-  glGenBuffers(1, &ssbo_instanced_);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_instanced_);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-    cMaxInstances * sizeof(WorldManager::InstanceGpu),
-               nullptr, GL_DYNAMIC_DRAW);
-
-  glGenVertexArrays(1, &vao_lines_);
-  glBindVertexArray(vao_lines_);
-
-  glGenBuffers(1, &vbo_lines_);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_lines_);
-  glBufferData(GL_ARRAY_BUFFER, cMaxLines * sizeof(Line) / 2, nullptr,
-               GL_DYNAMIC_DRAW);
-
-  auto stride = sizeof(JPH::Float3) + sizeof(JPH::Color);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, stride, GL_TRUE,
-                        (void*)(sizeof(JPH::Float3)));
-  glEnableVertexAttribArray(1);
-
-  // ... (all your setup code) ...
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glDrawBuffer(GL_BACK);
-  glReadBuffer(GL_BACK);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
-
-  //
-  InitializeProceduralWall();
-
-  InitSsaoNoise();
-  InitSsaoFbo();
-}
-
-
-void Renderer::InitSsaoNoise() {
-  std::uniform_real_distribution<float> randomFloats(0.0, 1.0);
-  std::default_random_engine generator;
-
-  for (unsigned int i = 0; i < 64; ++i) {
-    glm::vec3 sample(
-        randomFloats(generator) * 2.0 - 1.0,
-        randomFloats(generator) * 2.0 - 1.0,
-        randomFloats(generator)
-    );
-    sample = glm::normalize(sample);
-    sample *= randomFloats(generator);
-    auto scale = static_cast<float>(i) / 64.0;
-    scale = std::lerp(0.1f, 1.0f, scale * scale);
-    sample *= scale;
-    ssao_kernel_.push_back(sample);
-  }
-
-  std::vector<glm::vec3> ssaoNoise;
-  for (unsigned int i = 0; i < 16; ++ i) {
-    glm::vec3 noise(
-        randomFloats(generator) * 2.0 - 1.0,
-        randomFloats(generator) * 2.0 - 1.0,
-        0.0f);
-    ssaoNoise.push_back(noise);
-  }
-  GLuint noise_tex_id = 0;
-  glGenTextures(1, &noise_tex_id);
-  glBindTexture(GL_TEXTURE_2D, noise_tex_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4,
-    0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  ssao_tex_noise_ = Texture(noise_tex_id, 4, 4, GL_RGB, GL_RGBA16F, GL_FLOAT);
-}
-
-void Renderer::InitSsaoFbo() {
-  glGenFramebuffers(1, &ssao_fbo_);
-  glBindFramebuffer(GL_FRAMEBUFFER, ssao_fbo_);
-
-  GLuint color_buffer_id = 0;
-  glGenTextures(1, &color_buffer_id);
-  glBindTexture(GL_TEXTURE_2D, color_buffer_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, gWindowWidth, gWindowHeight,
-    0, GL_RED, GL_FLOAT, nullptr);
-  std::cout << gWindowWidth << ' ' << gWindowHeight << std::endl;
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-    GL_TEXTURE_2D, color_buffer_id, 0);
-
-  ssao_tex_color_ = Texture(color_buffer_id, gWindowWidth, gWindowHeight, GL_RED, GL_RED, GL_FLOAT);
-}
-
-void Renderer::DeInit() {
-  glDeleteTextures(shadow_maps_.size(), shadow_maps_.data());
-  glDeleteTextures(shadow_cubemaps_.size(), shadow_cubemaps_.data());
-  glDeleteFramebuffers(1, &ssao_fbo_);
-}
-
-// void Renderer::DrawLine(RVec3Arg inFrom, RVec3Arg inTo,
-//                                 ColorArg inColor) {
-//   RVec3 offset = RVec3{0.0f, 0.0f, 0.0f};
-//   Line line;
-//   Vec3(inFrom - offset).StoreFloat3(&line.mFrom);
-//   line.mFromColor = inColor;
-//   Vec3(inTo - offset).StoreFloat3(&line.mTo);
-//   line.mToColor = inColor;
-//   mLines.push_back(line);
-// }
-//
-// void Renderer::DrawTriangle(
-//     RVec3Arg inV1, RVec3Arg inV2, RVec3Arg inV3, ColorArg inColor) {
-//   RVec3 offset = RVec3(0.0f, 0.0f, 0.0f);
-//
-//   Vec3 v1(inV1 - offset);
-//   Vec3 v2(inV2 - offset);
-//   Vec3 v3(inV3 - offset);
-//
-//   // Set alpha to zero if we don't want to cast shadows to notify the pixel
-//   // shader
-//   Color color(inColor, 0xff);
-//
-//   // Construct triangle in separate buffer and then copy it to the target
-//   memory
-//   // block (may be uncached memory)
-//   Triangle triangle(v1, v2, v3, color);
-//   *(Triangle *)mLockedVertices = triangle;
-//   mLockedVertices += 3;
-//
-//   // Update bounding box
-//   mLockedPrimitiveBounds.Encapsulate(v1);
-//   mLockedPrimitiveBounds.Encapsulate(v2);
-//   mLockedPrimitiveBounds.Encapsulate(v3);
-// }

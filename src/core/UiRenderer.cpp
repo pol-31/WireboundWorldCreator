@@ -1,17 +1,16 @@
-#include "Font.h"
+#include "UiRenderer.h"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #include <glm/gtc/type_ptr.hpp>
 
 #include "ReadData.h"
 #include "../io/Window.h"
 
-const int Font::cMaxRenderChars = 1000;
+const int UiRenderer::cMaxRenderChars = 1000;
 
-Font::Font()
-: mCharHeight(24),
+UiRenderer::UiRenderer() : mCharHeight(24),
   shader_text_("../shaders/Ui.vert", "../shaders/Text.frag", {0}),
   shader_ui_("../shaders/Ui.vert", "../shaders/Ui.frag", {0}),
   texture_ui_("../assets/TexAtlas.png", Texture::Type::UiAtlas) {
@@ -88,8 +87,7 @@ Font::Font()
   LoadAtlasInfo("../assets/TexCoordsInfo.txt");
 }
 
-
-void Font::LoadAtlasInfo(const std::string& filepath) {
+void UiRenderer::LoadAtlasInfo(const std::string& filepath) {
   std::ifstream file(filepath);
   if (!file.is_open()) {
     throw std::runtime_error("Unable to open atlas info file: " + filepath);
@@ -115,52 +113,53 @@ void Font::LoadAtlasInfo(const std::string& filepath) {
     };
   }
 }
-void Font::UpdateVbo() {
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    int text_bytes = vbo_data_text_.size() * sizeof(Vertex);
-    if (text_bytes > 0) {
-        glBufferSubData(GL_ARRAY_BUFFER, 0, text_bytes, vbo_data_text_.data());
-    }
-    int ui_bytes = vbo_data_ui_.size() * sizeof(Vertex);
-    if (ui_bytes > 0) {
-        glBufferSubData(GL_ARRAY_BUFFER, text_bytes, ui_bytes, vbo_data_ui_.data());
-    }
+void UiRenderer::UpdateVbo() {
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+  int text_bytes = vbo_data_text_.size() * sizeof(Vertex);
+  if (text_bytes > 0) {
+    glBufferSubData(GL_ARRAY_BUFFER, 0, text_bytes, vbo_data_text_.data());
+  }
+  int ui_bytes = vbo_data_ui_.size() * sizeof(Vertex);
+  if (ui_bytes > 0) {
+    glBufferSubData(GL_ARRAY_BUFFER, text_bytes, ui_bytes, vbo_data_ui_.data());
+  }
 }
 
-void Font::Render() {
-    if (vbo_data_text_.empty() && vbo_data_ui_.empty()) return;
-    shader_text_.DebugUpdate();
-    shader_ui_.DebugUpdate();
-    UpdateVbo();
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(gWindowWidth),
-                                      static_cast<float>(gWindowHeight), 0.0f,
-                                      -1.0f, 1.0f);
-    glBindVertexArray(vao_);
-    if (!vbo_data_text_.empty()) {
-        shader_text_.Bind();
-        glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(projection));
-        glActiveTexture(GL_TEXTURE0);
-        texture_text_.BindSampler(0);
-        GLsizei text_indices = static_cast<GLsizei>((vbo_data_text_.size() / 4) * 6);
-        glDrawElements(GL_TRIANGLES, text_indices, GL_UNSIGNED_INT, nullptr);
-    }
-    if (!vbo_data_ui_.empty()) {
-        shader_ui_.Bind();
-        glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(projection));
-        glActiveTexture(GL_TEXTURE0);
-        texture_ui_.BindSampler(0);
-        GLsizei ui_indices = static_cast<GLsizei>((vbo_data_ui_.size() / 4) * 6);
-        size_t text_index_count = (vbo_data_text_.size() / 4) * 6;
-      // text_index_count = 0;
-        void* ebo_byte_offset = reinterpret_cast<void*>(text_index_count * sizeof(GLuint));
-        glDrawElements(GL_TRIANGLES, ui_indices, GL_UNSIGNED_INT, ebo_byte_offset);
-    }
-    glBindVertexArray(0);
-    vbo_data_text_.clear();
-    vbo_data_ui_.clear();
+
+void UiRenderer::Render() {
+  if (vbo_data_text_.empty() && vbo_data_ui_.empty()) return;
+  shader_text_.DebugUpdate();
+  shader_ui_.DebugUpdate();
+  UpdateVbo();
+  glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(gWindowWidth),
+                                    static_cast<float>(gWindowHeight), 0.0f,
+                                    -1.0f, 1.0f);
+  glBindVertexArray(vao_);
+  if (!vbo_data_text_.empty()) {
+    shader_text_.Bind();
+    glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(projection));
+    glActiveTexture(GL_TEXTURE0);
+    texture_text_.BindSampler(0);
+    GLsizei text_indices = static_cast<GLsizei>((vbo_data_text_.size() / 4) * 6);
+    glDrawElements(GL_TRIANGLES, text_indices, GL_UNSIGNED_INT, nullptr);
+  }
+  if (!vbo_data_ui_.empty()) {
+    shader_ui_.Bind();
+    glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(projection));
+    glActiveTexture(GL_TEXTURE0);
+    texture_ui_.BindSampler(0);
+    GLsizei ui_indices = static_cast<GLsizei>((vbo_data_ui_.size() / 4) * 6);
+    size_t text_index_count = (vbo_data_text_.size() / 4) * 6;
+    // text_index_count = 0;
+    void* ebo_byte_offset = reinterpret_cast<void*>(text_index_count * sizeof(GLuint));
+    glDrawElements(GL_TRIANGLES, ui_indices, GL_UNSIGNED_INT, ebo_byte_offset);
+  }
+  glBindVertexArray(0);
+  vbo_data_text_.clear();
+  vbo_data_ui_.clear();
 }
 
-void Font::AddSprite(const std::string& name, glm::vec2 position_pix, glm::vec2 size_pix, glm::vec4 color) {
+void UiRenderer::AddSprite(const std::string& name, glm::vec2 position_pix, glm::vec2 size_pix, glm::vec4 color) {
   auto it = sprite_atlas_.find(name);
   if (it == sprite_atlas_.end()) {
     std::cerr << "Warning: Sprite not found: " << name << "\n";
@@ -184,7 +183,7 @@ void Font::AddSprite(const std::string& name, glm::vec2 position_pix, glm::vec2 
   vbo_data_ui_.push_back(v3);
 }
 
-void Font::AddText(std::string_view text, glm::vec2 position_pix,
+void UiRenderer::AddText(std::string_view text, glm::vec2 position_pix,
   glm::vec2 scale, glm::vec4 color) {
   if ((vbo_data_text_.size() / 4) + text.length() > static_cast<size_t>(cMaxRenderChars)) {
     return;
@@ -214,7 +213,7 @@ void Font::AddText(std::string_view text, glm::vec2 position_pix,
   }
 }
 
-glm::vec2 Font::MeasureText(std::string_view text) const {
+glm::vec2 UiRenderer::MeasureText(std::string_view text) const {
   float cursor_x = 0.0f;
   float cursor_y = 0.0f;
 

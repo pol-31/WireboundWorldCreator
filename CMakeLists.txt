@@ -23,10 +23,9 @@ add_executable(WireboundWorldCreator
         src/io/Window.cpp
         src/core/Game.cpp
         src/core/ReadData.cpp
-        src/common/Callbacks.cpp
         src/core/Renderer.cpp
         src/core/ContactListenerImpl.cpp
-        src/core/Font.cpp
+        src/core/UiRenderer.cpp
         src/common/models/Animator.cpp
         src/common/models/ModelLoader.cpp
         src/common/models/Scene.cpp
@@ -48,6 +47,38 @@ add_executable(WireboundWorldCreator
         src/core/Cubemap.cpp
         src/common/models/Door.cpp
         src/common/models/Door.h
+        src/ui/UiButton.h
+        src/ui/UiButton.cpp
+        src/ui/UiElement.h
+        src/ui/UiElement.cpp
+        src/core/UiRenderer.h
+        src/core/UiRenderer.cpp
+        src/ui/UiStaticText.h
+        src/ui/UiStaticText.cpp
+        src/ui/UiTextButton.h
+        src/ui/UiTextButton.cpp
+        src/ui/UITexturedQuad.h
+        src/ui/DebugUI.h
+        src/ui/DebugUI.cpp
+        src/ui/UIVerticalStack.h
+        src/ui/UIVerticalStack.cpp
+        src/ui/UIHorizontalStack.cpp
+        src/ui/UiImage.h
+        src/ui/UiImage.cpp
+        src/ui/UiSlider.h
+        src/ui/UiSlider.cpp
+        src/ui/UIHorizontalStack.h
+        src/ui/UiCheckBox.h
+        src/ui/UiCheckBox.cpp
+        src/ui/UiComboBox.h
+        src/ui/UiComboBox.cpp
+        src/ui/UiAnimation.h
+        src/ui/UiAnimationSlide.h
+        src/ui/UiAnimationSlide.cpp
+        src/core/UiRenderer.cpp
+        src/core/UiRenderer.h
+        src/core/UiScene.h
+        src/core/UiScene.cpp
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

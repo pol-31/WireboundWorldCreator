@@ -1,7 +1,5 @@
 #pragma once
 
-#include <map>
-
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Color.h>
 #include <Jolt/Core/Mutex.h>
@@ -9,18 +7,15 @@
 #include <Jolt/Math/Float2.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
 
-#include "../common/models/WorldManager.h"
-
 #include <glm/glm.hpp>
+#include <map>
 
+#include "../common/models/WorldManager.h"
 #include "../render/Shader.h"
 #include "../render/Texture.h"
-#include "Frustum.h"
-#include "Font.h"
-#include "vec3.hpp"
-
-#include "TerrainRenderer.h"
 #include "Cubemap.h"
+#include "Frustum.h"
+#include "TerrainRenderer.h"
 
 class Camera;
 struct Scene;
@@ -30,7 +25,6 @@ class StaticObject;
 class DirectedLight;
 class PointLight;
 class Weapon;
-
 
 /// Implementation of DebugRenderer
 class Renderer {
@@ -53,16 +47,16 @@ class Renderer {
 
   void DrawGeometryPass(TerrainRenderData terrain);
 
+  void DrawBloom();
+
   void DrawSsaoPass();
 
   void DrawLightPass(CubemapRenderData cubemap);
 
-  void DrawUi();
+  void RenderToTheScreen();
 
   /// Clear all primitives (to be called after drawing)
   void Clear();
-  void AddText(std::string_view text, glm::vec2 position, glm::vec2 scale, glm::vec4 color);
-  void AddSprite(const std::string& name, glm::vec2 position, glm::vec2 scale, glm::vec4 color);
 
   /// DBG Unused func for composite draw (picked apart by lines/triangles)
   // void DrawLine(RVec3Arg inFrom, RVec3Arg inTo, ColorArg inColor);
@@ -97,6 +91,7 @@ class Renderer {
   Shader sh_ssao_;
   std::vector<glm::vec3> ssao_kernel_;
 
+  void InitInstancedBuffer();
   GLuint ssbo_instanced_ = 0;
 
   const Scene* scene_;
@@ -108,6 +103,7 @@ class Renderer {
   std::vector<GLuint> shadow_maps_; // point light
   std::vector<GLuint> shadow_cubemaps_; // dir light
 
+  void InitLights();
 
   Shader sh_shadow_dir_;
   Shader sh_shadow_dir_apply_;
@@ -124,24 +120,37 @@ class Renderer {
   Shader sh_deferred_shading_;
   Shader sh_light_emitter_;
 
+  void InitGBuffer();
+
   GLuint g_buffer_ = 0;
   GLuint g_position_ = 0;
   GLuint g_normal_ = 0;
   GLuint g_albedo_spec_ = 0;
+
+  void InitBloom();
 
   /// bloom / post-light effects
   GLuint fbo_bloom_ = 0;
   GLuint bloom_tex_ = 0;
   Shader sh_bloom_;
 
-  GLuint fbo_hdr_scene_ = 0;
-  GLuint tex_hdr_scene_ = 0;
+  void InitScene();
+
+  GLuint fbo_scene_ = 0;
+  GLuint tex_scene_ = 0;
+
+  void InitGauss();
 
   GLuint fbo_ping_pong_[2];
   GLuint buffer_ping_pong_[2];
   Shader sh_gauss_;
 
+  void InitCompositeFbo();
+
   Shader sh_composite_;
+  Shader sh_pass_through_;
+  GLuint fbo_composite_ = 0;
+  Texture tex_composite_;
 
   void RenderTerrain(TerrainRenderData terrain);
   void RenderCubemap(CubemapRenderData cubemap);
@@ -151,6 +160,8 @@ class Renderer {
 
   Shader sh_terrain_;
   Shader sh_cubemap_;
+
+  void InitUi();
 
   /// ui
   GLuint vao_ui_ = 0;
@@ -169,8 +180,6 @@ class Renderer {
 
   Shader sh_lines_;
   JPH::Array<Line> mLines;
-
-  Font text_renderer_;
 
   Shader sh_wall_;
   GLuint vao_wall_ = 0;

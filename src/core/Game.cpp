@@ -55,9 +55,9 @@
 
 #include "../common/models/DirectedLight.h"
 
-#include "../common/Callbacks.h"
-
 #include "ContactListenerImpl.h"
+#include "UiScene.h"
+#include "../ui/DebugUI.h"
 
 JPH_SUPPRESS_WARNINGS_STD_BEGIN
 #include <fstream>
@@ -89,11 +89,15 @@ Game::Game()
   Init();
 }
 
+Game::~Game() {
+  DeInit();
+}
+
 void Game::RenderInterface() {
   float target_size = 16.0f;
   float half_target_size = target_size / 2.0f;
   if (player_->GetBody()->IsAiming()) {
-    renderer_.AddSprite("GoldenCircle",
+    text_renderer_.AddSprite("GoldenCircle",
     glm::vec2(800.0f, 450.0f) - half_target_size,
     glm::vec2(target_size), glm::vec4(1.0f));
   }
@@ -102,24 +106,48 @@ void Game::RenderInterface() {
   glm::vec2 hp_size = glm::vec2(16.0f);
   for (int i = 0; i < 10; ++i) {
     hp_pos.x += hp_size.x;
-    renderer_.AddSprite("FlowerWhite", hp_pos,
+    text_renderer_.AddSprite("FlowerWhite", hp_pos,
       hp_size, glm::vec4(1.0f));
   }
   hp_pos = start_hp_pos;
   hp_pos.y -= hp_size.y;
   for (int i = 0; i < 10; ++i) {
     hp_pos.x += hp_size.x;
-    renderer_.AddSprite("StaminaPoint", hp_pos,
+    text_renderer_.AddSprite("StaminaPoint", hp_pos,
       hp_size, glm::vec4(1.0f));
   }
   hp_pos = glm::vec2(1380.0f, 25.0f);
   for (int i = 0; i < 7; ++i) {
     hp_pos.x += hp_size.x;
-    renderer_.AddSprite("HealthPoint", hp_pos,
+    text_renderer_.AddSprite("HealthPoint", hp_pos,
       hp_size * 2.0f, glm::vec4(1.0f));
   }
-  renderer_.AddSprite("Gear", glm::vec2(1531.0f, 5.0f),
+  text_renderer_.AddSprite("Gear", glm::vec2(1531.0f, 5.0f),
     hp_size * 4.0f, glm::vec4(1.0f));
+
+  // ---
+
+  int characters_left = 0;
+  for (const auto& c : characters_) {
+    if (!c->GetBody()->IsDead()) {
+      ++characters_left;
+    }
+  }
+  if (characters_left == 0) {
+    for (auto& c : characters_) {
+      c->GetBody()->Revive();
+    }
+    characters_left = characters_.size();
+  }
+  std::string charactersLeftText = "enemies left: " + std::to_string(characters_left);
+  text_renderer_.AddText(charactersLeftText, glm::vec2(100.0f, 20.0f),
+    glm::vec2(1.0f), glm::vec4(1.0f));
+}
+
+void Game::RenderFps() {
+  std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps_));
+  text_renderer_.AddText(fpsText, glm::vec2(10.0f, 20.0f),
+    glm::vec2(1.0f), glm::vec4(1.0f));
 }
 
 
@@ -162,40 +190,53 @@ void UpdateDirLightFrustum(DirectedLight& light, const Camera* camera) {
   light.lightSpaceMatrix = lightProjection * lightView;
 }
 
-void Game::RunRenderLoop() {
-  camera_.Reset();
+void Game::Run() {
+  while (true) {
+    if (state_ == State::Game) {
+      glEnable(GL_STENCIL_TEST);
+      glEnable(GL_CULL_FACE);
+      glEnable(GL_DEPTH_TEST);
+      glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+      camera_.HideCursor();
+      glfwSetScrollCallback(gWindow, GameScrollCallback);
+      glfwSetMouseButtonCallback(gWindow, GameMouseButtonCallback);
+      glfwSetKeyCallback(gWindow, GameKeyCallback);
+      glfwSetCursorPosCallback(gWindow, GameCursorPosCallback);
+      RunGameLoop();
+    } else if (state_ == State::Menu) {
+      glDisable(GL_STENCIL_TEST);
+      glDisable(GL_CULL_FACE);
+      glDisable(GL_DEPTH_TEST);
+      camera_.ShowCursor();
+      glfwSetScrollCallback(gWindow, MenuScrollCallback);
+      glfwSetMouseButtonCallback(gWindow, MenuMouseButtonCallback);
+      glfwSetKeyCallback(gWindow, MenuKeyCallback);
+      glfwSetCursorPosCallback(gWindow, MenuCursorPosCallback);
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+      RunMenuLoop();
+    } else if (state_ == State::Exit) {
+      break;
+    }
+  }
+}
 
-  glEnable(GL_STENCIL_TEST);
-  glEnable(GL_CULL_FACE);
-  glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-  bool disable_animator = false;
-
-  while (!glfwWindowShouldClose(gWindow)) {
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+void Game::RunGameLoop() {
+  while (true) {
+    if (glfwWindowShouldClose(gWindow)) {
+      state_ = State::Exit;
+      break;
+    }
+    if (state_ != State::Game) {
+      break;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glStencilFunc(GL_ALWAYS, 0, 0xFF);
     glStencilMask(0xFF);
     glClearColor(0.2f, 1.0f, 0.0f, 1.0f);
+    glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     UpdateDeltaTime();
-    UpdateFPS(gDeltaTime);
-
-    int characters_left = 0;
-    for (const auto& c : characters_) {
-      if (!c->GetBody()->IsDead()) {
-        ++characters_left;
-      }
-    }
-    if (characters_left == 0) {
-      for (auto& c : characters_) {
-        c->GetBody()->Revive();
-      }
-      characters_left = characters_.size();
-    }
-    std::string charactersLeftText = "enemies left: " + std::to_string(characters_left);
-    renderer_.AddText(charactersLeftText, glm::vec2(100.0f, 20.0f),
-      glm::vec2(1.0f), glm::vec4(1.0f));
-
 
     // Reinitialize the job system if the concurrency setting changed
     if (mMaxConcurrentJobs != mJobSystem->GetMaxConcurrency())
@@ -206,7 +247,6 @@ void Game::RunRenderLoop() {
     for (auto& l : dir_lights_) {
       UpdateDirLightFrustum(l, &camera_);
     }
-
 
     /// pre physics update
     for (auto& c : characters_) {
@@ -233,6 +273,7 @@ void Game::RunRenderLoop() {
     }
     player_->GetBody()->PostPhysicsUpdate(mPhysicsSystem->GetGravity(), gDeltaTimePhysics);
 
+    bool disable_animator = false;
     animator_.Update(disable_animator);
     if (!disable_animator) {
       disable_animator = true;
@@ -244,26 +285,72 @@ void Game::RunRenderLoop() {
     auto player_pos = player_->GetBody()->GetPosition();
     //std::cout << player_pos.GetX() << ' ' << player_pos.GetZ() << std::endl;
     world_manager_.UpdatePlayerZone(player_pos, &bi);
-    world_manager_.Cull();
+
+    if (render_settings_.cull) {
+      world_manager_.Cull();
+    }
 
     glDisable(GL_BLEND);
     if (render_physics_only_) {
+      renderer_.UpdateBuffer();
       renderer_.RenderDebug();
     } else {
       renderer_.UpdateBuffer();
-      renderer_.DrawShadowPass();
+      if (render_settings_.shadows) {
+        renderer_.DrawShadowPass();
+      }
       renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData());
-      //renderer_.DrawSsaoPass();
+      if (render_settings_.ssao) {
+        renderer_.DrawSsaoPass();
+      }
       renderer_.DrawLightPass(cubemap_.GetRenderData());
+      if (render_settings_.bloom) {
+        renderer_.DrawBloom();
+      }
     }
-    glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     RenderInterface();
-    renderer_.DrawUi();
-    glEnable(GL_DEPTH_TEST);
+
+    text_renderer_.Render();
+    renderer_.RenderToTheScreen();
+
+    // Menu not visible, cancel any mouse operations
+    ui_menu_scene_->MouseCancel();
+    RenderFps();
+    text_renderer_.Render();
 
     // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glfwPollEvents();
+    glfwSwapBuffers(gWindow);
+  }
+}
+
+void Game::RunMenuLoop() {
+  while (true) {
+    if (glfwWindowShouldClose(gWindow)) {
+      state_ = State::Exit;
+      break;
+    }
+    if (state_ != State::Menu) {
+      break;
+    }
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    UpdateDeltaTime();
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    renderer_.RenderToTheScreen();
+
+    RenderFps();
+
+    ui_menu_scene_->Update(gDeltaTime);
+    ui_menu_scene_->Draw();
+
+    text_renderer_.Render();
+
     glfwPollEvents();
     glfwSwapBuffers(gWindow);
   }
@@ -274,21 +361,15 @@ void Game::UpdateDeltaTime() {
   gDeltaTime = current_frame - last_frame;
   last_frame = current_frame;
   gDeltaTimePhysics = std::clamp(gDeltaTime, 0.001f, 1.0f / 30.0f);
-}
 
-void Game::UpdateFPS(float delta_time) {
   frameCount_++;
-  elapsedTime_ += delta_time;
+  elapsedTime_ += gDeltaTime;
 
   if (elapsedTime_ >= 1.0f) {
     fps_ = frameCount_ / elapsedTime_;
     frameCount_ = 0;
     elapsedTime_ -= 1.0f;
   }
-
-  std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps_));
-  renderer_.AddText(fpsText, glm::vec2(10.0f, 20.0f),
-    glm::vec2(1.0f), glm::vec4(1.0f));
 }
 
 JPH::Ref<JPH::Shape> CreateMeshShape(const Scene::Mesh& mesh) {
@@ -473,13 +554,6 @@ void Game::Init() {
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glClearColor(0.2f, 0.7f, 0.1f, 1.0f);
 
-  camera_.HideCursor();
-
-  glfwSetScrollCallback(gWindow, ScrollCallback);
-  glfwSetMouseButtonCallback(gWindow, MouseButtonCallback);
-  glfwSetKeyCallback(gWindow, KeyCallback);
-  glfwSetCursorPosCallback(gWindow, CursorPosCallback);
-
   // jph
 
   // Allocate temp memory
@@ -589,18 +663,79 @@ void Game::Init() {
   player_->GetBody()->EquipWeapon(weapons_.back().get());
 
   world_manager_.UpdatePlayerZone(player_->GetBody()->GetPosition(), &bi);
+
+
+  // --- CREATE UI
+  // --- CREATE UI
+  // --- CREATE UI
+  // --- CREATE UI
+  ui_menu_scene_ = std::make_unique<UiScene>(&text_renderer_);
+  mDebugUI = std::make_unique<DebugUI>(ui_menu_scene_.get(), nullptr);
+  {
+		// Disable allocation checking
+
+		// Create UI
+		UIElement *main_menu = mDebugUI->CreateMenu();
+		mDebugUI->CreateTextButton(main_menu, "ssao", [this]() { render_settings_.ssao = !render_settings_.ssao; });
+		mDebugUI->CreateTextButton(main_menu, "shadows", [this]() { render_settings_.shadows = !render_settings_.shadows; });
+		mDebugUI->CreateTextButton(main_menu, "bloom", [this]() { render_settings_.bloom = !render_settings_.bloom; });
+		mDebugUI->CreateTextButton(main_menu, "cull", [this]() { render_settings_.cull = !render_settings_.cull; });
+		mDebugUI->CreateTextButton(main_menu, "Physics Settings", [this]() {
+			UIElement *phys_settings = mDebugUI->CreateMenu();
+			mDebugUI->CreateSlider(phys_settings, "Max Concurrent Jobs", float(mMaxConcurrentJobs), 1, float(std::thread::hardware_concurrency()), 1, [this](float inValue) { mMaxConcurrentJobs = (int)inValue; });
+			mDebugUI->CreateSlider(phys_settings, "Gravity (m/s^2)", -mPhysicsSystem->GetGravity().GetY(), 0.0f, 20.0f, 1.0f, [this](float inValue) { mPhysicsSystem->SetGravity(JPH::Vec3(0, -inValue, 0)); });
+			mDebugUI->CreateSlider(phys_settings, "Num Velocity Steps", float(mPhysicsSettings.mNumVelocitySteps), 0, 30, 1, [this](float inValue) { mPhysicsSettings.mNumVelocitySteps = int(round(inValue)); mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateSlider(phys_settings, "Num Position Steps", float(mPhysicsSettings.mNumPositionSteps), 0, 30, 1, [this](float inValue) { mPhysicsSettings.mNumPositionSteps = int(round(inValue)); mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateSlider(phys_settings, "Baumgarte Stabilization Factor", mPhysicsSettings.mBaumgarte, 0.01f, 1.0f, 0.05f, [this](float inValue) { mPhysicsSettings.mBaumgarte = inValue; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateSlider(phys_settings, "Speculative Contact Distance (m)", mPhysicsSettings.mSpeculativeContactDistance, 0.0f, 0.1f, 0.005f, [this](float inValue) { mPhysicsSettings.mSpeculativeContactDistance = inValue; });
+			mDebugUI->CreateSlider(phys_settings, "Penetration Slop (m)", mPhysicsSettings.mPenetrationSlop, 0.0f, 0.1f, 0.005f, [this](float inValue) { mPhysicsSettings.mPenetrationSlop = inValue; });
+			mDebugUI->CreateSlider(phys_settings, "Linear Cast Threshold", mPhysicsSettings.mLinearCastThreshold, 0.0f, 1.0f, 0.05f, [this](float inValue) { mPhysicsSettings.mLinearCastThreshold = inValue; });
+			mDebugUI->CreateSlider(phys_settings, "Min Velocity For Restitution (m/s)", mPhysicsSettings.mMinVelocityForRestitution, 0.0f, 10.0f, 0.1f, [this](float inValue) { mPhysicsSettings.mMinVelocityForRestitution = inValue; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateSlider(phys_settings, "Time Before Sleep (s)", mPhysicsSettings.mTimeBeforeSleep, 0.1f, 1.0f, 0.1f, [this](float inValue) { mPhysicsSettings.mTimeBeforeSleep = inValue; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateSlider(phys_settings, "Point Velocity Sleep Threshold (m/s)", mPhysicsSettings.mPointVelocitySleepThreshold, 0.01f, 1.0f, 0.01f, [this](float inValue) { mPhysicsSettings.mPointVelocitySleepThreshold = inValue; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+		#ifdef JPH_CUSTOM_MEMORY_HOOK_ENABLED
+			mDebugUI->CreateCheckBox(phys_settings, "Enable Checking Memory Hook", IsCustomMemoryHookEnabled(), [](UICheckBox::EState inState) { EnableCustomMemoryHook(inState == UICheckBox::STATE_CHECKED); });
+		#endif
+			mDebugUI->CreateCheckBox(phys_settings, "Deterministic Simulation", mPhysicsSettings.mDeterministicSimulation, [this](UICheckBox::EState inState) { mPhysicsSettings.mDeterministicSimulation = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateCheckBox(phys_settings, "Constraint Warm Starting", mPhysicsSettings.mConstraintWarmStart, [this](UICheckBox::EState inState) { mPhysicsSettings.mConstraintWarmStart = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateCheckBox(phys_settings, "Use Body Pair Contact Cache", mPhysicsSettings.mUseBodyPairContactCache, [this](UICheckBox::EState inState) { mPhysicsSettings.mUseBodyPairContactCache = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateCheckBox(phys_settings, "Contact Manifold Reduction", mPhysicsSettings.mUseManifoldReduction, [this](UICheckBox::EState inState) { mPhysicsSettings.mUseManifoldReduction = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateCheckBox(phys_settings, "Use Large Island Splitter", mPhysicsSettings.mUseLargeIslandSplitter, [this](UICheckBox::EState inState) { mPhysicsSettings.mUseLargeIslandSplitter = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateCheckBox(phys_settings, "Allow Sleeping", mPhysicsSettings.mAllowSleeping, [this](UICheckBox::EState inState) { mPhysicsSettings.mAllowSleeping = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->CreateCheckBox(phys_settings, "Check Active Triangle Edges", mPhysicsSettings.mCheckActiveEdges, [this](UICheckBox::EState inState) { mPhysicsSettings.mCheckActiveEdges = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
+			mDebugUI->ShowMenu(phys_settings);
+		});
+		mDebugUI->CreateTextButton(main_menu, "Help", [this](){
+			UIElement *help = mDebugUI->CreateMenu();
+			mDebugUI->CreateStaticText(help,
+				"ESC: Back to previous menu.\n"
+				"WASD + Mouse: Fly around. Hold Shift to speed up, Ctrl to slow down.\n"
+				"Space: Hold to pick up and drag a physics object under the crosshair.\n"
+				"P: Pause / unpause simulation.\n"
+				"O: Single step the simulation.\n"
+				",: Step back (only when Physics Settings / Record State for Playback is on).\n"
+				".: Step forward (only when Physics Settings / Record State for Playback is on).\n"
+				"Shift + ,: Play reverse (only when Physics Settings / Record State for Playback is on).\n"
+				"Shift + .: Replay forward (only when Physics Settings / Record State for Playback is on).\n"
+				"T: Dump frame timing information to profile_*.html (when JPH_PROFILE_ENABLED defined)."
+			);
+			mDebugUI->ShowMenu(help);
+		});
+		mDebugUI->ShowMenu(main_menu);
+	}
 }
 
 void Game::DeInit() {
   // mCharacter->RemoveFromPhysicsSystem();
 }
 
-void ScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
+
+void GameScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
   auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
   game->camera_.ZoomOriginDist(yoffset);
 }
 
-void MouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+void GameMouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
   auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
   // bool mod_ctrl = mods & GLFW_MOD_CONTROL;
   // bool mod_shift = mods & GLFW_MOD_SHIFT;
@@ -621,7 +756,7 @@ void MouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
   }
 }
 
-void KeyCallback(GLFWwindow *window, int key, int scancode, int action,
+void GameKeyCallback(GLFWwindow *window, int key, int scancode, int action,
                  int mods) {
   auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
   bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
@@ -629,6 +764,8 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action,
   if (action == GLFW_PRESS) {
     if (key == GLFW_KEY_ESCAPE) {
       glfwSetWindowShouldClose(window, true);
+    } else if (key == GLFW_KEY_TAB) {
+      game->state_ = Game::State::Menu;
     } else if (key == GLFW_KEY_F1) {
       game->camera_.SwitchFaceMode();
     } else if (key == GLFW_KEY_F2) {
@@ -642,7 +779,7 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action,
   game->player_->ProcessMovement(key, action);
 }
 
-void CursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
+void GameCursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
   float xoffset = (xpos - lastX) / 0.05f;
   float yoffset = (lastY - ypos) / 0.05f;
 
@@ -656,6 +793,44 @@ void CursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
   game->camera_.MoveRotateView(xoffset, yoffset);
   // game->camera_.MoveRotateViewOrigin(xoffset, yoffset);
 }
+
+void MenuScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
+  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+}
+
+void MenuMouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  double x, y;
+  glfwGetCursorPos(window, &x, &y);
+  if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
+    game->ui_menu_scene_->MouseDown(x, y);
+    std::cout << x << ' ' << y << std::endl;
+  } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_LEFT) {
+    game->ui_menu_scene_->MouseUp(x, y);
+  }
+}
+
+void MenuKeyCallback(GLFWwindow *window, int key, int scancode, int action,
+                 int mods) {
+  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  if (action == GLFW_PRESS) {
+    if (key == GLFW_KEY_ESCAPE) {
+      glfwSetWindowShouldClose(window, true);
+    } else if (key == GLFW_KEY_TAB) {
+      game->state_ = Game::State::Game;
+    }
+  } else if (action == GLFW_RELEASE && key == GLFW_KEY_E) {
+  }
+}
+
+void MenuCursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
+  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  game->ui_menu_scene_->MouseMove(xpos, ypos);
+}
+
+
+
+/// ---
 
 void Game::OnContactAdded(const JPH::Body &inBody1,
                                        const JPH::Body &inBody2,

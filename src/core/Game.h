@@ -38,23 +38,47 @@
 #include "Cubemap.h"
 #include "../common/models/Door.h"
 
+#include "UiRenderer.h"
+
 class ContactListenerImpl;
+class DebugUI;
+class UiScene;
+
+struct RenderSettings {
+  bool ssao = true;
+  bool shadows = true;
+  bool bloom = true;
+  bool cull = true;
+};
 
 class Game : public JPH::ContactListener,
    public JPH::CharacterContactListener {
  public:
   using ShapeToGeometryMap = std::unordered_map<JPH::EShapeSubType, int>;
 
+  enum class State {
+    Game,
+    Menu,
+    Exit,
+  };
+
+  State state_ = State::Game;
+
   Game();
 
-  ~Game() { DeInit(); }
+  ~Game();
 
-  void RunRenderLoop();
+  void Run();
 
  private:
   void Init();
 
   void DeInit();
+
+  void RunGameLoop();
+
+  void RunMenuLoop();
+
 
   int mMaxConcurrentJobs = 1;  // thread::hardware_concurrency();
   JPH::TempAllocator* mTempAllocator = nullptr;
@@ -72,9 +96,9 @@ class Game : public JPH::ContactListener,
 
   void RenderInterface();
 
-  void UpdateDeltaTime();
+  void RenderFps();
 
-  void UpdateFPS(float deltaTime);
+  void UpdateDeltaTime();
 
   float frameCount_ = 0;
   float elapsedTime_ = 0;
@@ -109,9 +133,14 @@ public:
   ContactSet mActiveContacts;
 
   WorldManager world_manager_;
+  UiRenderer text_renderer_;
   Renderer renderer_; // in the end
+  RenderSettings render_settings_;
 
   std::vector<Door> doors_;
+
+  std::unique_ptr<DebugUI> mDebugUI;
+  std::unique_ptr<UiScene> ui_menu_scene_;
 
   void CreateBodyForNode(SceneNode* node, SceneZone* zone);
 
@@ -183,13 +212,22 @@ public:
                                 JPH::CharacterContactSettings &ioSettings);
 };
 
-void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+void GameScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
-void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+void GameMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-void KeyCallback(GLFWwindow* window, int key, int scancode, int action,
+void GameKeyCallback(GLFWwindow* window, int key, int scancode, int action,
                  int mods);
 
-void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
+void GameCursorPosCallback(GLFWwindow* window, double xpos, double ypos);
+
+void MenuScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+
+void MenuMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+
+void MenuKeyCallback(GLFWwindow* window, int key, int scancode, int action,
+                 int mods);
+
+void MenuCursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 
 #endif  // WIREBOUNDWORLDCREATOR_GAME_H
