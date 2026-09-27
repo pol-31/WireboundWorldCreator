@@ -1,13 +1,12 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_IO_CAMERA_H_
 #define WIREBOUNDWORLDCREATOR_SRC_IO_CAMERA_H_
 
-#include <array>
-#include <memory>
-
 #include <Jolt/Jolt.h>
-
 #include <glad/glad.h>
+
+#include <array>
 #include <glm/glm.hpp>
+#include <memory>
 
 #include "../core/Frustum.h"
 
@@ -63,13 +62,9 @@ class Camera {
 
   void ProcessMovement(int key, int action);
 
-  void SwitchFaceMode() {
-    first_face_mode_ = !first_face_mode_;
-  }
+  void SwitchFaceMode() { first_face_mode_ = !first_face_mode_; }
 
-  bool IsFirstFaceMode() const noexcept {
-    return first_face_mode_;
-  }
+  bool IsFirstFaceMode() const noexcept { return first_face_mode_; }
 
   /// getters
 

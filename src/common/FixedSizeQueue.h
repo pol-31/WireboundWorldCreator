@@ -22,7 +22,6 @@ class FixedSizeQueue {
   FixedSizeQueue& operator=(const FixedSizeQueue&) noexcept = default;
   FixedSizeQueue& operator=(FixedSizeQueue&&) noexcept = default;
 
-
   SizeType PushBack(const T& value) {
     assert(cur_size_ < N && "Queue overflow");
     data_[cur_size_] = value;

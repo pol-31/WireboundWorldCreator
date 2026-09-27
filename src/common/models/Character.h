@@ -6,37 +6,34 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 
 #include "../../core/Frustum.h"
+#include "CharacterSharedData.h"
+#include "GameObject.h"
 #include "Scene.h"
 #include "Weapon.h"
-#include "CharacterSharedData.h"
-
 
 constexpr bool sPlayerCanPushOtherCharacters = true;
 constexpr bool sOtherCharactersCanPushPlayer = true;
 
-class Character {
-public:
+class Character : public GameObject {
+ public:
   enum class State {
-    kIdle, // stand, walk, run
-    kStunned, // can't do anything
+    kIdle,     // stand, walk, run
+    kStunned,  // can't do anything
     Dead
   };
 
-  [[nodiscard]] bool IsIdle() const noexcept {
-    return state_ == State::kIdle;
-  }
+  [[nodiscard]] bool IsIdle() const noexcept { return state_ == State::kIdle; }
 
-  [[nodiscard]] bool IsDead() const noexcept {
-    return state_ == State::Dead;
-  }
+  [[nodiscard]] bool IsDead() const noexcept { return state_ == State::Dead; }
 
-  Character(
-CharacterSharedData* shared_data,
-SceneNode* scene_node,
-const Scene::CharacterData* model,
-const Scene::CharacterRig* skin);
+  Character(CharacterSharedData* shared_data, SceneNode* scene_node,
+            const Scene::CharacterData* model, const Scene::CharacterRig* skin);
 
   AnimatedRenderData GetAnimatedRenderData() const;
+
+  void TakeDamage(JPH::Vec3 impulse, JPH::RVec3 hit_pos, float damage) override;
+
+  std::string GetInteractPrompt() override;
 
   void Run();
 
@@ -60,11 +57,10 @@ const Scene::CharacterRig* skin);
 
   void Reload();
 
-  void PrePhysicsUpdate(
-    const JPH::PhysicsSystem* physics_system,
-    JPH::TempAllocator* temp_allocator, float dt);
+  void PrePhysicsUpdate(const JPH::PhysicsSystem* physics_system,
+                        JPH::TempAllocator* temp_allocator, float dt);
 
-   void PostPhysicsUpdate(JPH::Vec3 gravity, float dt);
+  void PostPhysicsUpdate(JPH::Vec3 gravity, float dt);
 
   bool IsStanding();
 
@@ -83,67 +79,45 @@ const Scene::CharacterRig* skin);
 
   JPH::Quat GetRotation() const;
 
-  JPH::CharacterVirtual* GetJphCharacter() {
-    return jph_character_;
-  }
+  JPH::CharacterVirtual* GetJphCharacter() { return jph_character_; }
 
-  void AllowSliding(bool val) {
-    mAllowSliding = val;
-  }
+  void AllowSliding(bool val) { mAllowSliding = val; }
 
-  bool GetAllowSliding() const {
-    return mAllowSliding;
-  }
+  bool GetAllowSliding() const { return mAllowSliding; }
 
   JPH::Vec3 GetLinearVelocity() const noexcept;
 
-  float GetHeadYaw() const noexcept {
-    return head_yaw_;
-  }
+  float GetHeadYaw() const noexcept { return head_yaw_; }
 
-  float GetHeadPitch() const noexcept {
-    return head_pitch_;
-  }
+  float GetHeadPitch() const noexcept { return head_pitch_; }
 
   // so you should use this rather than LinearVelocity, because it's the input,
   // while linear velocity is the consequence... idk, maybe
-  JPH::Vec3 GetMoveDirection() const noexcept {
-    return movement_direction_;
-  }
+  JPH::Vec3 GetMoveDirection() const noexcept { return movement_direction_; }
 
   // for animation blending (e.g. forward - strafe_left blending)
   JPH::Vec3 GetMoveDirectionRaw() const noexcept {
-     return movement_direction_raw_;
+    return movement_direction_raw_;
   }
 
-  [[nodiscard]] int GetAnimationId() const noexcept {
-    return animation_id_;
-  }
+  [[nodiscard]] int GetAnimationId() const noexcept { return animation_id_; }
 
   JPH::Quat GetRenderRotation() const noexcept;
 
-  [[nodiscard]] bool IsAiming() const noexcept {
-    return is_aiming_;
-  }
+  [[nodiscard]] bool IsAiming() const noexcept { return is_aiming_; }
 
-  [[nodiscard]] bool IsCrouch() const noexcept {
-    return is_crouch_;
-  }
+  [[nodiscard]] bool IsCrouch() const noexcept { return is_crouch_; }
 
-  [[nodiscard]] bool IsSprinting() const noexcept {
-    return is_sprinting_;
-  }
+  [[nodiscard]] bool IsSprinting() const noexcept { return is_sprinting_; }
 
-  [[nodiscard]] float GetSpeed() const noexcept {
-    return speed_;
-  }
+  [[nodiscard]] float GetSpeed() const noexcept { return speed_; }
 
   static const float cWalkSpeed;
   static const float cRunSpeed;
   static const float cJumpSpeed;
   static const float cMaxHealth;
 
-private:
+ private:
   friend class EnemyController;
   friend class PlayerController;
 
@@ -171,8 +145,8 @@ private:
   bool is_aiming_ = false;
   bool is_crouch_ = false;
 
-  float head_yaw_ = 0.0f; // camera or mover
-  float head_pitch_ = 0.0f; // camera of mover
+  float head_yaw_ = 0.0f;    // camera or mover
+  float head_pitch_ = 0.0f;  // camera of mover
 
   float health_ = cMaxHealth;
   float speed_ = 0.0f;

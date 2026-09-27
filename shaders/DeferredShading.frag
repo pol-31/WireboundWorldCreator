@@ -4,23 +4,25 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 // G-Buffer with packed PBR data in the alpha channels
-layout (location = 0) uniform sampler2D gPosition;    // .rgb = Pos, .a = Roughness
-layout (location = 1) uniform sampler2D gNormal;      // .rgb = Norm, .a = Metallic
-layout (location = 2) uniform sampler2D gAlbedoSpec;  // .rgb = Albedo, .a = AO
+layout (location = 0) uniform sampler2D gNormal;      // .rgb = Norm, .a = Metallic
+layout (location = 1) uniform sampler2D gAlbedoSpec;  // .rgb = Albedo, .a = AO
+layout (location = 2) uniform sampler2D gDepth;  // .rgb = Albedo, .a = AO
 layout (location = 3) uniform sampler2D gSsao;  // .rgb = Albedo, .a = AO
+uniform mat4 uInvViewProj;  // .rgb = Albedo, .a = AO
 
 struct Light {
     vec3 Position;
     vec3 Color;
+    float Radius;
 };
 
-const float LightLinear = 0.09;
-const float LightQuadratic = 0.032;
+const float LightLinear = 0.99;
+const float LightQuadratic = 0.000032;
 const float PI = 3.14159265359;
 
 const int MAX_LIGHTS = 8;
-layout (location = 4) uniform int lights_num;
-layout (location = 5) uniform Light lights[MAX_LIGHTS];
+uniform int lights_num;
+uniform Light lights[MAX_LIGHTS];
 
 uniform samplerCubeArray shadowMaps[MAX_LIGHTS];
 uniform float farPlanes[MAX_LIGHTS];
@@ -42,14 +44,14 @@ vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
 vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 );
 
-float ShadowCalculation(int lightIndex, vec3 fragPos, vec3 lightPos, float NdotL) {
+float ShadowCalculation(float maxDist, int lightIndex, vec3 fragPos, vec3 lightPos, float NdotL) {
     vec3 fragToLight = fragPos - lightPos;
     float currentDepth = length(fragToLight);
     float bias = max(0.5 * (1.0 - NdotL), 0.05);
     float farPlane = farPlanes[lightIndex];
-    float diskRadius = (1.0 + (currentDepth / farPlane)) / 25.0;
+    float diskRadius = (1.0 + (currentDepth / farPlane)) / maxDist;
     float shadow = 0.0;
-    int samples = 20;
+    int samples = 20; // sampleOffsetDirections size
     for (int i = 0; i < samples; ++i) {
         vec3 sampleDir = fragToLight + sampleOffsetDirections[i] * diskRadius;
         float closestDepth = texture(shadowMaps[lightIndex], vec4(sampleDir, 0)).r * farPlane;
@@ -113,23 +115,45 @@ vec3 ACESFilm(vec3 x) {
     return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
+// In your Light Pass / Post-Process Shader:
+vec3 ReconstructViewPos(vec2 uv, float depth) {
+    // Convert UV [0,1] and Depth [0,1] to Clip Space [-1,1]
+    vec4 clipSpace = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 viewSpace = uInvViewProj * clipSpace;
+    return viewSpace.xyz / viewSpace.w;
+}
+
+vec2 OctWrap(vec2 v) {
+    return (1.0 - abs(v.yx)) * (vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0));
+}
+
+// Decode vec2 back to vec3
+vec3 DecodeNormal(vec2 enc) {
+    enc = enc * 2.0 - 1.0;
+    vec3 n = vec3(enc.x, enc.y, 1.0 - abs(enc.x) - abs(enc.y));
+    if (n.z < 0.0) n.xy = OctWrap(n.xy);
+    return normalize(n);
+}
+
 void main() {
     // 1. Unpack G-Buffer
-    vec4 posData = texture(gPosition, TexCoords);
-    vec3 FragPos = posData.rgb;
-    float Roughness = posData.a;
-    Roughness = max(Roughness, 0.05);
-    // Fallback if roughness is 0 (prevent pitch black artifacts)
+    float depth = texture(gDepth, TexCoords).r;
+    vec3 positions = ReconstructViewPos(TexCoords, depth);
+    vec3 FragPos = positions;
 
     vec4 normData = texture(gNormal, TexCoords);
-    vec3 Normal = normData.rgb;
+    vec3 Normal = DecodeNormal(normData.xy);
     float Metallic = normData.a;
+    float Roughness = normData.b;
+    Roughness = max(Roughness, 0.05);
+    // Fallback if roughness is 0 (prevent pitch black artifacts)
 
     vec4 albedoData = texture(gAlbedoSpec, TexCoords);
     vec3 Albedo = albedoData.rgb;
 
     float AmbientOcclusion = texture(gSsao, TexCoords).r;
-    Albedo *= vec3(0.2 * AmbientOcclusion);
+    AmbientOcclusion *= 0.2f;
+    //Albedo *= vec3(0.2 * AmbientOcclusion);
 
     float AO = albedoData.a;
 
@@ -144,12 +168,16 @@ void main() {
 
     // 3. Lighting Loop
     for(int i = 0; i < lights_num; ++i) {
+        //break;
         vec3 L = normalize(lights[i].Position - FragPos);
         vec3 H = normalize(V + L);
 
         // Calculate incoming radiance based on your attenuation
         float dist = length(lights[i].Position - FragPos);
         float attenuation = 1.0 / (1.0 + LightLinear * dist + LightQuadratic * dist * dist);
+        float maxDist = lights[i].Radius;
+        float fade = smoothstep(maxDist, maxDist * 0.8, dist);
+        attenuation *= fade;
 
         // Radiance = Light Color * Attenuation
         vec3 radiance = lights[i].Color * attenuation;
@@ -171,7 +199,7 @@ void main() {
         float NdotL = max(dot(N, L), 0.0);
 
         // Apply your shadow calculation
-        float shadow = ShadowCalculation(i, FragPos, lights[i].Position, NdotL);
+        float shadow = 1.0f * ShadowCalculation(maxDist, i, FragPos, lights[i].Position, NdotL);
 
         // Accumulate light (Notice how shadow just scales the final radiance)
         Lo += (1.0 - shadow) * (kD * Albedo / PI + specular) * radiance * NdotL;
@@ -182,12 +210,13 @@ void main() {
     vec3 skyColor = vec3(0.1, 0.15, 0.25);   // Cool ambient from above
     vec3 groundColor = vec3(0.05, 0.03, 0.01); // Warm ambient bounced from below
     float upFactor = N.y * 0.5 + 0.5; // 0.0 to 1.0 based on surface facing
-    vec3 ambientLight = mix(groundColor, skyColor, upFactor);
-    vec3 ambient = ambientLight * Albedo * AO * (1.0 - Metallic);
+    vec3 ambientLight = mix(groundColor, skyColor, upFactor);// Remove the Albedo *= line entirely!
+
+    // Later, at the bottom of main():
+    vec3 ambient = ambientLight * Albedo * AO * AmbientOcclusion * (1.0 - Metallic);
 
     vec3 color = ambient + Lo;
-
-    color *= 0.5f;
+//    color *= 0.99f;
 
     // 5. Tonemapping and Gamma Correction (Mandatory for PBR)
 
@@ -195,6 +224,8 @@ void main() {
     color = ACESFilm(color);
     color = pow(color, vec3(1.0/2.2));   // Gamma correction
 
+//    color = vec3(pow(depth, 500.0f));
+//    color = vec3(Normal);
+
     FragColor = vec4(color, 1.0);
-    //FragColor = vec4(AmbientOcclusion, AmbientOcclusion, AmbientOcclusion, 1.0f);
 }

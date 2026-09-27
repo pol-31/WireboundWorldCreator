@@ -29,10 +29,9 @@ class Weapon;
 /// Implementation of DebugRenderer
 class Renderer {
  public:
-  Renderer(const Scene* scene,
-  const Camera* camera,
-  const std::unique_ptr<PlayerController>* player,
-  const WorldManager::ZoneCulledData* culled_data);
+  Renderer(const Scene* scene, const Camera* camera,
+           const std::unique_ptr<PlayerController>* player,
+           const WorldManager::ZoneCulledData* culled_data);
 
   ~Renderer() { DeInit(); }
 
@@ -45,13 +44,16 @@ class Renderer {
   /// OR just RenderDebug();
   void DrawShadowPass();
 
-  void DrawGeometryPass(TerrainRenderData terrain);
+  void DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
+                        bool render_geometry);
 
   void DrawBloom();
 
   void DrawSsaoPass();
 
-  void DrawLightPass(CubemapRenderData cubemap);
+  void DrawLightPass(CubemapRenderData cubemap, bool light_pass,
+                     bool apply_shadows, bool render_light_sources,
+                     bool render_bloom);
 
   void RenderToTheScreen();
 
@@ -68,11 +70,15 @@ class Renderer {
   static const int cMaxInstancesRigged;
   static const int cMaxLines;
 
-
   static const int cMaxDirectedLights;
   static const GLuint cShadowCubeMapSize;
   static const int cMaxPointLights;
   static const GLuint cShadowMapSize;
+
+  static const GLuint cBloomSize;
+  static const GLuint cSsaoSize;
+
+  static const int cShadowObjectLod;
 
  private:
   void Init();
@@ -95,13 +101,13 @@ class Renderer {
   GLuint ssbo_instanced_ = 0;
 
   const Scene* scene_;
-  const Camera* camera_; // to know is it 1st/3rd AND frustum
+  const Camera* camera_;  // to know is it 1st/3rd AND frustum
   const std::unique_ptr<PlayerController>* player_;
 
   const WorldManager::ZoneCulledData* culled_data_ = nullptr;
 
-  std::vector<GLuint> shadow_maps_; // point light
-  std::vector<GLuint> shadow_cubemaps_; // dir light
+  std::vector<GLuint> shadow_maps_;      // point light
+  std::vector<GLuint> shadow_cubemaps_;  // dir light
 
   void InitLights();
 
@@ -123,7 +129,7 @@ class Renderer {
   void InitGBuffer();
 
   GLuint g_buffer_ = 0;
-  GLuint g_position_ = 0;
+  GLuint g_depth_ = 0;
   GLuint g_normal_ = 0;
   GLuint g_albedo_spec_ = 0;
 

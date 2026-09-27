@@ -46,22 +46,22 @@ void main() {
 
     vec4 skinned_pos = skinMat * vec4(in_vertex, 1.0);
     vec3 skinned_normal = mat3(skinMat) * in_normal;
-    vec3 skinned_tangent = mat3(skinMat) * in_tangent.xyz; // Drop the W component for math
+    vec3 skinned_tangent = mat3(skinMat) * in_tangent.xyz;
 
-    mat4 model = modelMatrix;
-    vec4 color = modelColor;
-    vec4 worldPos = model * skinned_pos;
-//    worldPos = skinned_pos;
+    mat4 combinedMat = modelMatrix * skinMat;
+    vec4 worldPos = combinedMat * vec4(in_vertex, 1.0);
     gl_Position = camera.proj * camera.view * worldPos;
+
     vs_out.FragPos = worldPos.xyz;
     vs_out.TexCoords = in_texcoord;
-    vs_out.vert_color = color;
+    vs_out.vert_color = modelColor;
 
-    mat3 normalMatrix = transpose(inverse(mat3(model)));
-    vec3 T = normalize(normalMatrix * skinned_tangent);
-    vec3 N = normalize(normalMatrix * skinned_normal);
+    // Create a safe normal matrix from the combined transform
+    mat3 normalMatrix = transpose(inverse(mat3(combinedMat)));
 
+    vec3 N = normalize(normalMatrix * in_normal);
+    vec3 T = normalize(normalMatrix * in_tangent.xyz);
     T = normalize(T - dot(T, N) * N);
-    vec3 B = cross(N, T) * in_tangent.w;
+    vec3 B = cross(N, T);
     vs_out.TBN = mat3(T, B, N);
 }

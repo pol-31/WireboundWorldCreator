@@ -70,9 +70,7 @@ class Texture {
 
   void Clear() const;
 
-  [[nodiscard]] bool IsValid() const noexcept {
-    return id_ != 0;
-  }
+  [[nodiscard]] bool IsValid() const noexcept { return id_ != 0; }
 
   [[nodiscard]] GLuint GetId() const { return id_; }
 

@@ -169,7 +169,7 @@ void SetupWindow() {
   glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR,
                         GL_DEBUG_SEVERITY_HIGH, 0, nullptr, GL_TRUE);
   // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClearColor(0.5f, 1.0f, 1.0f, 1.0f);
+  glClearColor(0.5f, 1.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 }
 

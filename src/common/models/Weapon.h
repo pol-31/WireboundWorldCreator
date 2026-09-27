@@ -2,20 +2,20 @@
 #define WIREBOUNDWORLDCREATOR_WEAPON_H
 
 #include "Scene.h"
+#include "GameObject.h"
 
 namespace JPH {
 class PhysicsSystem;
-} // namespace JPH
+}  // namespace JPH
 
 class Animator;
 
-class Weapon {
-public:
+class Weapon : public GameObject {
+ public:
   enum class OperationalState { Idle, Reload, Shoot };
 
-  Weapon(const Scene::WeaponData* model,
-    JPH::PhysicsSystem* physics_system,
-    Animator* animator);
+  Weapon(const Scene::WeaponData* model, JPH::PhysicsSystem* physics_system,
+         Animator* animator);
 
   /// --- all interaction interface ---
   bool TryShoot(const JPH::Vec3& eye_pos, const JPH::Vec3& forward_dir);
@@ -35,12 +35,12 @@ public:
     return static_cast<bool>(owner_);
   }
 
-private:
+ private:
   void CreatePhysicBody(const JPH::Vec3& position);
 
   void DeletePhysicBody();
 
-  JPH::PhysicsSystem* physics_system_; // to create & interact
+  JPH::PhysicsSystem* physics_system_;  // to create & interact
   const Scene::WeaponData* model_;
 
   int animation_id_ = -1;

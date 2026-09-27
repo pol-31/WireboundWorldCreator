@@ -13,28 +13,26 @@ struct TerrainRenderData {
   int patch_num = 0;
   GLuint hmap_id;
   int material_id;
-  //bool enable_wireframe;
+  // bool enable_wireframe;
 };
 
 namespace JPH {
 class BodyInterface;
-} // namespace JPH
+}  // namespace JPH
 
 class MaterialArray;
 
 class TerrainRenderer {
-public:
+ public:
   TerrainRenderer(const MaterialArray* material);
 
   void InitializeBody(JPH::BodyInterface* body_interface);
 
-  void Update(const Camera* camera) {
-    mesh_.Update(camera);
-  }
+  void Update(const Camera* camera) { mesh_.Update(camera); }
 
   TerrainRenderData GetRenderData() const noexcept;
 
-private:
+ private:
   JPH::BodyID body_id_;
   GeoClipmaps mesh_;
   Texture32F hmap_;

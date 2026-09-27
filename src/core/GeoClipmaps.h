@@ -1,10 +1,10 @@
 #ifndef WIREBOUNDWORLDCREATOR_GEOCLIPMAPS_H
 #define WIREBOUNDWORLDCREATOR_GEOCLIPMAPS_H
 
-#include <vector>
-
 #include <glad/glad.h>
+
 #include <glm/glm.hpp>
+#include <vector>
 
 class Camera;
 
@@ -23,7 +23,7 @@ struct GeoSurface {
 };
 
 class GeoClipmaps {
-public:
+ public:
   static const int gPatchNum;
   static const int gPatchNumLowPoly;
 
@@ -39,11 +39,9 @@ public:
     return surface_;
   }
 
-  GLuint GetVao() const noexcept {
-    return vao_;
-  }
+  GLuint GetVao() const noexcept { return vao_; }
 
-private:
+ private:
   struct Patch {
     glm::vec4 p0;
     glm::vec4 p1;

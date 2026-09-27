@@ -32,7 +32,7 @@ JPH::ValidateResult ContactListenerImpl::OnContactValidate(
   //     Color::sBlue, 0.05f);
 
   // JPH::Trace("Validate %u and %u result %d", inBody1.GetID().GetIndex(),
-             // inBody2.GetID().GetIndex(), (int)result);
+  // inBody2.GetID().GetIndex(), (int)result);
 
   return result;
 }
@@ -80,10 +80,11 @@ void ContactListenerImpl::OnContactPersisted(
   // Expect bodies to be sorted
   if (!(inBody1.GetID() < inBody2.GetID())) JPH_BREAKPOINT;
 
-  //TODO: this is actually good
-  // JPH::Trace("Contact persisted %u (%08x) and %u (%08x)",
-  //            inBody1.GetID().GetIndex(), inManifold.mSubShapeID1.GetValue(),
-  //            inBody2.GetID().GetIndex(), inManifold.mSubShapeID2.GetValue());
+  // TODO: this is actually good
+  //  JPH::Trace("Contact persisted %u (%08x) and %u (%08x)",
+  //             inBody1.GetID().GetIndex(), inManifold.mSubShapeID1.GetValue(),
+  //             inBody2.GetID().GetIndex(),
+  //             inManifold.mSubShapeID2.GetValue());
 
   // DebugRenderer::sInstance->DrawWirePolygon(
   //     RMat44::sTranslation(inManifold.mBaseOffset),

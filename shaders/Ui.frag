@@ -14,5 +14,5 @@ void main() {
 //    vec3 brown = vec3(0.2118, 0.1647, 0.0745);
 //    vec3 darkBrownGold = vec3(0.55, 0.40, 0.05);
     vec4 texel = texture(tex, texcoord);
-    FragColor = texel * color;
+    FragColor = texel * (color / 255.0f);
 }

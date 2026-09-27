@@ -1,21 +1,21 @@
 #ifndef WIREBOUNDWORLDCREATOR_SCENE_H
 #define WIREBOUNDWORLDCREATOR_SCENE_H
 
-#include <string>
-#include <memory>
-#include <vector>
-
-#include <jolt/jolt.h>
+#include <glad/glad.h>
+#include <Jolt/Jolt.h>
 #include <jolt/Physics/Body/BodyLockInterface.h>
 #include <jolt/Physics/Collision/Shape/Shape.h>
-#include <glad/glad.h>
 #include <tiny_gltf.h>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "../Material.h"
-#include "StaticObject.h"
 #include "PointLight.h"
+#include "StaticObject.h"
 
 enum class CharacterAnimType {
   Idle,
@@ -74,20 +74,19 @@ struct SceneNodePose {
   JPH::Mat44 Matrix() const noexcept;
 };
 
-
 enum class MaterialIndex {
   Wood,
   Steel,
-  Clay, // +terrain, +walls
+  Clay,  // +terrain, +walls
   Sticks,
   Straw,
-  Grass, // +terrain
+  Grass,  // +terrain
   TotalNormalMaterials,
   // the rest are special with specific size or usage
-  Tablecloth, // special
-  Ryadno, // special
-  Ryshnuk, // special
-  Ribbons, // special
+  Tablecloth,  // special
+  Ryadno,      // special
+  Ryshnuk,     // special
+  Ribbons,     // special
 };
 
 /// for animated there's no children and global_transform used as model_mat
@@ -144,12 +143,7 @@ struct SceneTile {
 };
 
 struct Scene {
-  enum class CollisionType {
-    Cube,
-    Sphere,
-    Capsule,
-    Cylinder
-  };
+  enum class CollisionType { Cube, Sphere, Capsule, Cylinder };
 
   enum class Type {
     Static,
@@ -192,10 +186,9 @@ struct Scene {
   };
 
   struct Joint {
-    int node = -1;               // index into model.nodes
+    int node = -1;           // index into model.nodes
     JPH::Mat44 inverseBind;  // from glTF
   };
-
 
   // upper body pose blend (neck / shoulders & neck)
   struct PoseDeltas {
@@ -241,15 +234,12 @@ struct Scene {
 
   struct Mesh {
     std::string name;
-    std::vector<Primitive> primitives_lod_0; // near
-    std::vector<Primitive> primitives_lod_1;
-    std::vector<Primitive> primitives_lod_2;
-    glm::vec3 min;
-    glm::vec3 max;
+    std::vector<std::vector<Primitive>> primitives_lods;  // near - mid - far
+    glm::vec3 min = glm::vec3(0.0f);
+    glm::vec3 max = glm::vec3(0.0f);
 
-    //TODO: now they all based on mesh name? probably...
     Type type = Type::Static;
-    CollisionType collision_type; // defines how to reinterpret in dbg render
+    CollisionType collision_type;  // defines how to reinterpret in dbg render
   };
 
   struct SceneData {
@@ -264,7 +254,7 @@ struct Scene {
     GLuint ebo = 0;
   };
 
-  MaterialArray materials; // shared for all scenes, for DBG use just index=0
+  MaterialArray materials;  // shared for all scenes, for DBG use just index=0
   SceneData scene_data_;
   SceneData scene_dbg_shapes_;
 
@@ -279,7 +269,7 @@ struct Scene {
     std::vector<int> render_nodes;
   };
   std::vector<CharacterData> character_skins_;
-  CharacterRig character_rig_; // same shared rigging for all characters
+  CharacterRig character_rig_;  // same shared rigging for all characters
 
   struct WeaponData {
     GLuint vao = 0;
@@ -299,14 +289,14 @@ struct Scene {
   };
   std::vector<WeaponData> weapons_;
 
-  Material material_embroidery_; // DEPRECATED
+  Material material_embroidery_;  // DEPRECATED
   GLuint material_tablecloth_ = 0;
   GLuint material_ryadno_ = 0;
   GLuint material_ryshnuk_ = 0;
   GLuint material_ribbons_ = 0;
 
   void UpdateRenderTransform(const JPH::BodyLockInterface& bli,
-  std::vector<SceneTile*>& tiles);
+                             std::vector<SceneTile*>& tiles);
 
   void ConnectZonesWithPortals(int tile_id);
 };
@@ -317,6 +307,7 @@ struct AnimatedRenderData {
   GLuint vao;
   const Material* material;
   const std::vector<Scene::Mesh>* meshes;
+  int lod = 2;  // 0, 1, 2
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_SCENE_H

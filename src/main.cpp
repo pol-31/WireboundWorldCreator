@@ -10,18 +10,16 @@ extern "C" {
 __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
 
-#include <stb_image.h>
-
-#include <iostream>
-#include <string>
-#include <cstdarg>
-
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/RegisterTypes.h>
+#include <stb_image.h>
+
+#include <cstdarg>
+#include <iostream>
+#include <string>
 
 #include "core/Game.h"
-
 
 // TODO: JoltPhysics-5.5.0/Build/CMakeLists.txt
 // # Set repository root <--------------------------------------commented by me

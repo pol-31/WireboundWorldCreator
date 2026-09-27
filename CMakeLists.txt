@@ -79,6 +79,7 @@ add_executable(WireboundWorldCreator
         src/core/UiRenderer.h
         src/core/UiScene.h
         src/core/UiScene.cpp
+        src/common/models/GameObject.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

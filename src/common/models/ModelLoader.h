@@ -1,12 +1,12 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_
 #define WIREBOUNDWORLDCREATOR_SRC_COMMON_MODELS_MODELLOADER_H_
 
+#include <glad/glad.h>
+#include <tiny_gltf.h>
+
 #include <map>
 #include <memory>
 #include <vector>
-
-#include <glad/glad.h>
-#include <tiny_gltf.h>
 
 #include "../../render/Texture.h"
 #include "Scene.h"
@@ -26,18 +26,18 @@ class ModelLoader {
   /// because in the LoadScene we init nodes with dbg_shape
   void LoadDebugShapes(std::string_view path);
 
-  void LoadScene(std::string_view path);
+  void LoadScene(std::string_view scene_path,
+    const std::vector<std::string_view>& meshes_paths);
 
   void LoadSceneMaterials(std::string_view path);
 
-  void LoadEmbroideryTextures(
-  std::string_view path_tablecloth,
-  std::string_view path_ryadno,
-  std::string_view path_ryshnuk,
-  std::string_view path_ribbons);
+  void LoadEmbroideryTextures(std::string_view path_tablecloth,
+                              std::string_view path_ryadno,
+                              std::string_view path_ryshnuk,
+                              std::string_view path_ribbons);
 
   void LoadCharacters(std::string_view skeleton_path,
-    std::vector<std::string_view> skin_paths);
+                      std::vector<std::string_view> skin_paths);
 
   void LoadWeapon(std::vector<std::string_view> paths);
 
@@ -56,29 +56,25 @@ class ModelLoader {
     GLenum joints_type = GL_UNSIGNED_BYTE;
   };
 
-  Scene* GetScene() noexcept {
-    return &scene_;
-  }
+  Scene* GetScene() noexcept { return &scene_; }
 
  private:
   void LoadBuffers(const tinygltf::Model& model,
-    std::vector<Scene::Mesh>& meshes);
+                   std::vector<Scene::Mesh>& meshes);
   BufferDataAnimated LoadBuffersAnimated(const tinygltf::Model& model);
 
   Material LoadMaterial(std::string_view path, tinygltf::Model& model,
-    const tinygltf::Material& m);
+                        const tinygltf::Material& m);
 
   Texture LoadTexture(std::string_view path, const tinygltf::Model& model,
                       int tex_id);
 
-  std::vector<uint8_t> LoadTextureRaw(
-    std::string_view path, const tinygltf::Model& model, int tex_id);
-
+  std::vector<uint8_t> LoadTextureRaw(std::string_view path,
+                                      const tinygltf::Model& model, int tex_id);
 
   Scene::CoreRig LoadCoreRig(const tinygltf::Model& model);
 
-  std::vector<Scene::Animation> LoadAnimations(
-    const tinygltf::Model& model);
+  std::vector<Scene::Animation> LoadAnimations(const tinygltf::Model& model);
 
   tinygltf::TinyGLTF loader_;
   Scene scene_;

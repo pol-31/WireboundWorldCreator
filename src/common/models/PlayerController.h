@@ -7,13 +7,10 @@
 class Camera;
 
 class PlayerController {
-public:
-  PlayerController(
-    const Camera* camera,
-CharacterSharedData* shared_data,
-SceneNode* scene_node,
-const Scene::CharacterData* model,
-const Scene::CharacterRig* skin);
+ public:
+  PlayerController(const Camera* camera, CharacterSharedData* shared_data,
+                   SceneNode* scene_node, const Scene::CharacterData* model,
+                   const Scene::CharacterRig* skin);
 
   Character* GetBody() { return &character_; }
   const Character* GetBody() const { return &character_; }
@@ -23,9 +20,7 @@ const Scene::CharacterRig* skin);
   void UpdateView();
   void UpdateMovementDirection();
 
-  void SetAiming(bool value) {
-    character_.is_aiming_ = value;
-  }
+  void SetAiming(bool value) { character_.is_aiming_ = value; }
 
   void Shoot();
 
@@ -41,7 +36,7 @@ const Scene::CharacterRig* skin);
 
   [[nodiscard]] bool IsDragging() const noexcept;
 
-private:
+ private:
   void SetMoveForward(bool pressed) { move_forward_ = pressed; }
   void SetMoveBackward(bool pressed) { move_backward_ = pressed; }
   void SetMoveLeft(bool pressed) { move_left_ = pressed; }
@@ -51,9 +46,7 @@ private:
 
   void UpdateRawMovementDirection();
 
-  CharacterSharedData* GetSharedData() {
-    return character_.shared_data_;
-  }
+  CharacterSharedData* GetSharedData() { return character_.shared_data_; }
 
   const Camera* camera_;
 

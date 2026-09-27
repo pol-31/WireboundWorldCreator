@@ -8,40 +8,39 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
 
+#include "DirectedLight.h"
+#include "EnemyController.h"
+#include "PlayerController.h"
+#include "PointLight.h"
 #include "Scene.h"
 #include "StaticObject.h"
-#include "DirectedLight.h"
-#include "PointLight.h"
-#include "PlayerController.h"
-#include "EnemyController.h"
 #include "Weapon.h"
 
 WorldManager::WorldManager(
-  const Scene* scene,
-  const Camera* camera,
-  const std::unique_ptr<PlayerController>& player,
-  const std::vector<std::unique_ptr<EnemyController>>& characters,
-  const std::vector<std::unique_ptr<Weapon>>& weapons,
-  const std::vector<DirectedLight>& dir_lights)
+    const Scene* scene, const Camera* camera,
+    const std::unique_ptr<PlayerController>& player,
+    const std::vector<std::unique_ptr<EnemyController>>& characters,
+    const std::vector<std::unique_ptr<Weapon>>& weapons,
+    const std::vector<DirectedLight>& dir_lights)
     : scene_(scene),
-  camera_(camera),
-  player_(player),
-  characters_(characters),
-  weapons_(weapons),
-  dir_lights_(dir_lights) {}
+      camera_(camera),
+      player_(player),
+      characters_(characters),
+      weapons_(weapons),
+      dir_lights_(dir_lights) {}
 
-//TODO: Furthermore, running recursive std::function calls inside your hottest
-// frame loop is going to eat your CPU budget
-//TODO: so need to flatten to culled_nodes (not all scene nodes)
+// TODO: Furthermore, running recursive std::function calls inside your hottest
+//  frame loop is going to eat your CPU budget
+// TODO: so need to flatten to culled_nodes (not all scene nodes)
 void WorldManager::PushFrustumCulled(
-  const SceneNode* node,
-  std::vector<std::vector<InstanceGpu>>& ssbo_data) {
+    const SceneNode* node, std::vector<std::vector<InstanceGpu>>& ssbo_data) {
   const Scene::SceneData& scene_data = scene_->scene_data_;
   InstanceGpu new_instance;
   new_instance.model = node->global_transform;
-  //TODO: primitives 0.... but maybe all our primitives have same mat id..
-  // so fix not for today
-  new_instance.material_id = scene_data.meshes[node->mesh_index].primitives_lod_0[0].material_id;
+  // TODO: primitives 0.... but maybe all our primitives have same mat id..
+  //  so fix not for today
+  new_instance.material_id =
+      scene_data.meshes[node->mesh_index].primitives_lods[0][0].material_id;
   if (scene_data.meshes[node->mesh_index].type == Scene::Type::Wall) {
     if (new_instance.material_id == static_cast<int>(MaterialIndex::Clay)) {
       new_instance.use_triplanar = 40;
@@ -56,8 +55,8 @@ void WorldManager::PushFrustumCulled(
 }
 
 void WorldManager::PushFrustumCulled(
-  const std::vector<const SceneNode*>& objects,
-  std::vector<std::vector<InstanceGpu>>& ssbo_data) {
+    const std::vector<const SceneNode*>& objects,
+    std::vector<std::vector<InstanceGpu>>& ssbo_data) {
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
   for (auto node : objects) {
     PushFrustumCulled(node, ssbo_data);
@@ -68,33 +67,44 @@ void WorldManager::PushFrustumCulled(
 bool WorldManager::IsZoneCulled(JPH::Vec3 pos) {
   auto character_zone = FindNearestZone(pos);
   auto it =
-    std::find(active_zones_.begin(), active_zones_.end(), character_zone);
+      std::find(active_zones_.begin(), active_zones_.end(), character_zone);
   return it == active_zones_.end();
 }
 
 JPH::AABox GetDefaultBounds() {
-  return JPH::AABox(
-      JPH::Vec3::sReplicate(-1.0f),
-      JPH::Vec3::sReplicate(1.0f));
+  return JPH::AABox(JPH::Vec3::sReplicate(-1.0f), JPH::Vec3::sReplicate(1.0f));
+}
+
+int GetLodByDist(JPH::Vec3 camera_pos, JPH::Vec3 obj_pos) {
+  int lod = 2;
+  auto dist_to_camera = (camera_pos - obj_pos).Length();
+  if (dist_to_camera < 4.0f) {
+    lod = 0;
+  } else if (dist_to_camera < 8.0f) {
+    lod = 1;
+  }
+  return lod;
 }
 
 void WorldManager::CullAnimatedObject(
-    const Frustum& frustum_camera,
-    const std::vector<PointLight*>& zone_point_lights,
-    JPH::Vec3 pos,
-    const AnimatedRenderData& render_data) {
+    const Frustum& frustum_camera, JPH::Vec3 camera_pos,
+    const std::vector<PointLight*>& zone_point_lights, JPH::Vec3 pos,
+    AnimatedRenderData render_data) {
   if (IsZoneCulled(pos)) {
     return;
   }
   auto bounds = GetDefaultBounds();
   bounds.Translate(pos);
   if (frustum_camera.Overlaps(bounds)) {
+    render_data.lod = GetLodByDist(camera_pos, pos);
     final_render_data_.camera.object_animated.push_back(render_data);
   }
+  render_data.lod = 2;  // min lod for shadows
   for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
     const auto& light = dir_lights_[light_id];
     if (light.frustum.Overlaps(bounds)) {
-      final_render_data_.dir_lights[light_id].object_animated.push_back(render_data);
+      final_render_data_.dir_lights[light_id].object_animated.push_back(
+          render_data);
     }
   }
   for (int light_id = 0; light_id < zone_point_lights.size(); ++light_id) {
@@ -104,8 +114,11 @@ void WorldManager::CullAnimatedObject(
       if (!light->frustum_[face].is_visible) {
         continue;
       }
-      if (light->frustum_[face].frustum.Overlaps(bounds, light_pos, light->radius_)) {
-        final_render_data_.point_lights[light_id].object_animated[face].push_back(render_data);
+      if (light->frustum_[face].frustum.Overlaps(bounds, light_pos,
+                                                 light->radius_)) {
+        final_render_data_.point_lights[light_id]
+            .object_animated[face]
+            .push_back(render_data);
       }
     }
   }
@@ -115,44 +128,42 @@ struct FaceTarget {
   glm::vec3 dir;
   glm::vec3 up;
 };
-//TODO: same declared in Renderer.cpp, so need to unify em
+// TODO: same declared in Renderer.cpp, so need to unify em
 
 // Modern OpenGL cubemap face sampling order (+X, -X, +Y, -Y, +Z, -Z)
 static const FaceTarget kCubeFaces[6] = {
-  { glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f) }, // +X
-  { glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f) }, // -X
-  { glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f) }, // +Y
-  { glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f) }, // -Y
-  { glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f) }, // +Z
-  { glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f) }  // -Z
+    {glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},   // +X
+    {glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},  // -X
+    {glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},    // +Y
+    {glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)},  // -Y
+    {glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)},   // +Z
+    {glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)}   // -Z
 };
 
 void UpdateLightFrustums(const Frustum& frustum_camera, PointLight& l) {
-  //int total_faces_rendered = 0;
+  // int total_faces_rendered = 0;
   for (int i = 0; i < std::size(kCubeFaces); ++i) {
     auto face = kCubeFaces[i];
     auto pos = l.object_->global_bounds.GetCenter();
     auto fov = JPH::DegreesToRadians(90.0f);
     float near = 0.01f;
-    l.frustum_[i].frustum = Frustum(pos, ToJph(face.dir), ToJph(face.up),
-      fov, fov, near);
-    l.frustum_[i].is_visible = frustum_camera.OverlapsLightFace(pos, l.radius_, i);
-    //if (l.frustum_[i].is_visible) ++total_faces_rendered;
+    l.frustum_[i].frustum =
+        Frustum(pos, ToJph(face.dir), ToJph(face.up), fov, fov, near);
+    l.frustum_[i].is_visible =
+        frustum_camera.OverlapsLightFace(pos, l.radius_, i);
+    // if (l.frustum_[i].is_visible) ++total_faces_rendered;
   }
-  //std::cout << total_faces_rendered << std::endl;
+  // std::cout << total_faces_rendered << std::endl;
 }
 
-void WorldManager::Cull() {
-  //TODO: check active zones as well;
+void WorldManager::Cull(bool render_animated) {
   auto frustum_camera = camera_->GetFrustum();
-  for (auto& l : scene_->scene_data_.tiles[0]->zones[cur_zone_id_]->point_lights_) {
+  for (auto& l :
+       scene_->scene_data_.tiles[0]->zones[cur_zone_id_]->point_lights_) {
     UpdateLightFrustums(frustum_camera, l);
   }
 
-  //TODO: check active zones as well;
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
-  //const SceneZone* zone = zones[cur_zone_id_];
-
 
   std::vector<PointLight*> point_lights;
   for (int zone_id : active_zones_) {
@@ -162,13 +173,19 @@ void WorldManager::Cull() {
     }
   }
 
-
-  active_point_lights_ = std::vector<std::array<std::vector<const SceneNode*>, 6>>(point_lights.size());
-  active_dir_lights_ = std::vector<std::vector<const SceneNode*>>(dir_lights_.size());
-  active_camera_ = std::vector<const SceneNode*>();
+  active_point_lights_ =
+      std::vector<std::array<std::vector<const SceneNode*>, 6>>(
+          point_lights.size());
+  active_dir_lights_ =
+      std::vector<std::vector<const SceneNode*>>(dir_lights_.size());
+  active_camera_lod0 = std::vector<const SceneNode*>();
+  active_camera_lod1 = std::vector<const SceneNode*>();
+  active_camera_lod2 = std::vector<const SceneNode*>();
   final_render_data_.ssbo_data.clear();
 
-  final_render_data_.camera.objects.clear();
+  final_render_data_.camera.objects_lod0.clear();
+  final_render_data_.camera.objects_lod1.clear();
+  final_render_data_.camera.objects_lod2.clear();
   final_render_data_.camera.object_animated.clear();
 
   final_render_data_.point_lights.clear();
@@ -176,85 +193,77 @@ void WorldManager::Cull() {
   final_render_data_.dir_lights.clear();
   final_render_data_.dir_lights.resize(active_dir_lights_.size());
 
+  auto camera_pos = ToJph(camera_->GetPosition());
+
+  auto PackSSBO = [&](const std::vector<std::vector<InstanceGpu>>& source_data,
+                    std::vector<SsboOffsetObject>& target_offsets) {
+    for (int mesh_id = 0; mesh_id < source_data.size(); ++mesh_id) {
+      const auto& data = source_data[mesh_id];
+      if (!data.empty()) {
+        SsboOffsetObject new_offset;
+        new_offset.instance_offset = final_render_data_.ssbo_data.size();
+        new_offset.instances_num = data.size();
+        new_offset.mesh_id = mesh_id;
+        target_offsets.push_back(new_offset);
+
+        final_render_data_.ssbo_data.insert(
+            final_render_data_.ssbo_data.end(),
+            data.begin(), data.end()
+        );
+      }
+    }
+  };
+
   for (int zone_id : active_zones_) {
     const auto* zone = zones[zone_id];
     const auto& static_objects = zone->static_objects_;
 
-    for (const auto& c : characters_) {
-      CullAnimatedObject(frustum_camera, point_lights, c->GetBody()->GetPosition(),
-        c->GetBody()->GetAnimatedRenderData());
-    }
-    for (const auto& w : weapons_) {
-      CullAnimatedObject(frustum_camera, point_lights, w->GetPosition(),
-        w->GetAnimatedRenderData());
-    }
-
-    for (const auto& obj : static_objects) {
-    if (frustum_camera.Overlaps(obj.object_->global_bounds)) {
-      active_camera_.push_back(obj.object_);
-    }
-    for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
-      const auto& light = dir_lights_[light_id];
-      if (light.frustum.Overlaps(obj.object_->global_bounds)) {
-        active_dir_lights_[light_id].push_back(obj.object_);
+    if (render_animated) {
+      for (const auto& c : characters_) {
+        CullAnimatedObject(frustum_camera, ToJph(camera_->GetPosition()),
+                           point_lights, c->GetBody()->GetPosition(),
+                           c->GetBody()->GetAnimatedRenderData());
+      }
+      for (const auto& w : weapons_) {
+        CullAnimatedObject(frustum_camera, ToJph(camera_->GetPosition()),
+                           point_lights, w->GetPosition(),
+                           w->GetAnimatedRenderData());
       }
     }
-    for (int light_id = 0; light_id < point_lights.size(); ++light_id) {
-      const auto& light = point_lights[light_id];
-      auto light_pos = light->object_->global_bounds.GetCenter();
-      for (int face = 0; face < 6; ++face) {
-        if (!light->frustum_[face].is_visible) {
-          continue;
+
+    for (auto& obj : static_objects) {
+      if (frustum_camera.Overlaps(obj.object_->global_bounds)) {
+        //TODO: closes point of aabb instead
+        auto lod = GetLodByDist(camera_pos, obj.object_->global_bounds.GetCenter());
+        if (lod == 0) {
+          active_camera_lod0.push_back(obj.object_);
+        } else if (lod == 1) {
+          active_camera_lod1.push_back(obj.object_);
+        } else {
+          active_camera_lod2.push_back(obj.object_);
         }
-        if (light->frustum_[face].frustum.Overlaps(obj.object_->global_bounds, light_pos, light->radius_)) {
-          active_point_lights_[light_id][face].push_back(obj.object_);
+      }
+      for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
+        const auto& light = dir_lights_[light_id];
+        if (light.frustum.Overlaps(obj.object_->global_bounds)) {
+          active_dir_lights_[light_id].push_back(obj.object_);
+        }
+      }
+      for (int light_id = 0; light_id < point_lights.size(); ++light_id) {
+        const auto& light = point_lights[light_id];
+        auto light_pos = light->object_->global_bounds.GetCenter();
+        for (int face = 0; face < 6; ++face) {
+          if (!light->frustum_[face].is_visible) {
+            continue;
+          }
+          if (light->frustum_[face].frustum.Overlaps(
+                  obj.object_->global_bounds, light_pos, light->radius_)) {
+            active_point_lights_[light_id][face].push_back(obj.object_);
+          }
         }
       }
     }
   }
-
-
-    //.. seems we don't need to render them, because we CreateBodyForNode
-    // for each zone and so physics objects are copied
-  for (const auto* p : zone->portals) {
-    continue;
-    auto bounds = p->frame->global_bounds;
-    if (frustum_camera.Overlaps(bounds)) {
-      active_camera_.push_back(p->desk);
-      active_camera_.push_back(p->frame);
-      for (const auto* o : p->obj) {
-        active_camera_.push_back(o);
-      }
-    }
-    for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
-      const auto& light = dir_lights_[light_id];
-      if (light.frustum.Overlaps(bounds)) {
-        active_dir_lights_[light_id].push_back(p->desk);
-        active_dir_lights_[light_id].push_back(p->frame);
-        for (const auto* o : p->obj) {
-          active_dir_lights_[light_id].push_back(o);
-        }
-      }
-    }
-    for (int light_id = 0; light_id < point_lights.size(); ++light_id) {
-      const auto& light = point_lights[light_id];
-      auto light_pos = light->object_->global_bounds.GetCenter();
-      for (int face = 0; face < 6; ++face) {
-        if (!light->frustum_[face].is_visible) {
-          continue;
-        }
-        if (light->frustum_[face].frustum.Overlaps(bounds, light_pos, light->radius_)) {
-          active_point_lights_[light_id][face].push_back(p->desk);
-          active_point_lights_[light_id][face].push_back(p->frame);
-          for (const auto* o : p->obj) {
-            active_point_lights_[light_id][face].push_back(o);
-        }
-        }
-      }
-    }
-  }
-  }
-
 
   /// linealization (we have FrustumCulledObjects, now
   /// need to generate only solid InstanceGpu block, what now is BY MESH,
@@ -262,17 +271,25 @@ void WorldManager::Cull() {
   /// --- SO HERE we packing instnce data (ssbo) camera - plight - dlight
   const Scene::SceneData& scene_data = scene_->scene_data_;
   int meshes_num = scene_data.meshes.size();
-  auto ssbo_data_cam = std::vector<std::vector<InstanceGpu>>(meshes_num);
-  auto ssbo_data_pl = std::vector<std::array<std::vector<std::vector<InstanceGpu>>, 6>>();
+  auto ssbo_data_cam_lod0 = std::vector<std::vector<InstanceGpu>>(meshes_num);
+  auto ssbo_data_cam_lod1 = std::vector<std::vector<InstanceGpu>>(meshes_num);
+  auto ssbo_data_cam_lod2 = std::vector<std::vector<InstanceGpu>>(meshes_num);
+  auto ssbo_data_pl =
+      std::vector<std::array<std::vector<std::vector<InstanceGpu>>, 6>>();
   auto ssbo_data_dl = std::vector<std::vector<std::vector<InstanceGpu>>>();
-  PushFrustumCulled(active_camera_, ssbo_data_cam);
-  //std::cout << zone->portals.size() << std::endl;
+  PushFrustumCulled(active_camera_lod0, ssbo_data_cam_lod0);
+  PushFrustumCulled(active_camera_lod1, ssbo_data_cam_lod1);
+  PushFrustumCulled(active_camera_lod2, ssbo_data_cam_lod2);
+  // std::cout << zone->portals.size() << std::endl;
 
   for (int i = 0; i < active_point_lights_.size(); ++i) {
-      ssbo_data_pl.push_back(std::array<std::vector<std::vector<InstanceGpu>>, 6>());
+    ssbo_data_pl.push_back(
+        std::array<std::vector<std::vector<InstanceGpu>>, 6>());
     for (int face = 0; face < 6; ++face) {
-      ssbo_data_pl.back()[face] = std::vector<std::vector<InstanceGpu>>(meshes_num);
-      PushFrustumCulled(active_point_lights_[i][face], ssbo_data_pl.back()[face]);
+      ssbo_data_pl.back()[face] =
+          std::vector<std::vector<InstanceGpu>>(meshes_num);
+      PushFrustumCulled(active_point_lights_[i][face],
+                        ssbo_data_pl.back()[face]);
     }
   }
   for (int i = 0; i < active_dir_lights_.size(); ++i) {
@@ -281,85 +298,56 @@ void WorldManager::Cull() {
   }
 
   final_render_data_.ssbo_data.clear();
-  for (int mesh_id = 0; mesh_id < ssbo_data_cam.size(); ++mesh_id) {
-    auto& data = ssbo_data_cam[mesh_id];
-    if (!data.empty()) {
-      SsboOffsetObject new_offset;
-      new_offset.instance_offset = final_render_data_.ssbo_data.size();
-      new_offset.instances_num = data.size();
-      new_offset.mesh_id = mesh_id;
-      final_render_data_.camera.objects.push_back(new_offset);
-      final_render_data_.ssbo_data.insert(final_render_data_.ssbo_data.end(),
-        data.begin(), data.end());
-    }
-  }
+  PackSSBO(ssbo_data_cam_lod0, final_render_data_.camera.objects_lod0);
+  PackSSBO(ssbo_data_cam_lod1, final_render_data_.camera.objects_lod1);
+  PackSSBO(ssbo_data_cam_lod2, final_render_data_.camera.objects_lod2);
+
   for (int i = 0; i < active_point_lights_.size(); ++i) {
     auto& l_out = final_render_data_.point_lights[i];
     l_out.source = point_lights[i];
     for (int face = 0; face < 6; ++face) {
-      const auto& face_data = ssbo_data_pl[i][face];
-      for (int mesh_id = 0; mesh_id < face_data.size(); ++mesh_id) {
-        auto& data = face_data[mesh_id]; // here from ssbo_data_cam
-        if (!data.empty()) {
-          SsboOffsetObject new_offset;
-          new_offset.instance_offset = final_render_data_.ssbo_data.size();
-          new_offset.instances_num = data.size();
-          new_offset.mesh_id = mesh_id;
-          l_out.objects[face].push_back(new_offset);
-          final_render_data_.ssbo_data.insert(final_render_data_.ssbo_data.end(),
-            data.begin(), data.end());
-        }
-      }
+      PackSSBO(ssbo_data_pl[i][face], l_out.objects[face]);
     }
   }
+
   for (int i = 0; i < active_dir_lights_.size(); ++i) {
     auto& l_out = final_render_data_.dir_lights[i];
     l_out.source = &dir_lights_[i];
-    for (int mesh_id = 0; mesh_id < ssbo_data_dl[i].size(); ++mesh_id) {
-      auto& data = ssbo_data_dl[i][mesh_id]; // herer from ssbo_data_cam
-      if (!data.empty()) {
-        SsboOffsetObject new_offset;
-        new_offset.instance_offset = final_render_data_.ssbo_data.size();
-        new_offset.instances_num = data.size();
-        new_offset.mesh_id = mesh_id;
-        l_out.objects.push_back(new_offset);
-        final_render_data_.ssbo_data.insert(final_render_data_.ssbo_data.end(),
-          data.begin(), data.end());
-      }
-    }
+    PackSSBO(ssbo_data_dl[i], l_out.objects);
   }
   final_render_data_.active_zones = active_zones_;
 }
 
 int WorldManager::FindNearestZone(JPH::Vec3 player_pos) {
-    const auto& zones = scene_->scene_data_.tiles[0]->zones;
+  const auto& zones = scene_->scene_data_.tiles[0]->zones;
 
-        int nearest_index = -1;
-        float min_sq_dist = FLT_MAX;
+  int nearest_index = -1;
+  float min_sq_dist = FLT_MAX;
 
-        for (int i = 0; i < zones.size(); ++i) {
-            // GetSqDistanceTo returns 0.0f if the point is inside the AABB
-            float sq_dist = zones[i]->bounds.GetSqDistanceTo(player_pos);
+  for (int i = 0; i < zones.size(); ++i) {
+    // GetSqDistanceTo returns 0.0f if the point is inside the AABB
+    float sq_dist = zones[i]->bounds.GetSqDistanceTo(player_pos);
 
-            if (sq_dist < min_sq_dist) {
-                min_sq_dist = sq_dist;
-                nearest_index = i;
-            }
-
-            // Early exit: We are perfectly inside a zone
-            if (sq_dist == 0.0f) {
-                return i;
-            }
-        }
-        return nearest_index;
+    if (sq_dist < min_sq_dist) {
+      min_sq_dist = sq_dist;
+      nearest_index = i;
     }
 
-    // Call this every frame in your Update loop
+    // Early exit: We are perfectly inside a zone
+    if (sq_dist == 0.0f) {
+      return i;
+    }
+  }
+  return nearest_index;
+}
 
-void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* body_interface) {
-    const auto& zones = scene_->scene_data_.tiles[0]->zones;
-  //cur_tile_id_ = 0;
-  // 1. Initial Spawn State
+// Call this every frame in your Update loop
+
+void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos,
+                                    JPH::BodyInterface* body_interface) {
+  const auto& zones = scene_->scene_data_.tiles[0]->zones;
+  // cur_tile_id_ = 0;
+  //  1. Initial Spawn State
   if (cur_zone_id_ == -1) {
     cur_zone_id_ = FindNearestZone(player_pos);
     ActivateZone(cur_zone_id_, body_interface);
@@ -368,23 +356,26 @@ void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* bo
 
   // 2. O(1) Fast Path: Are we still in the same zone?
   if (zones[cur_zone_id_]->bounds.Contains(player_pos)) {
-    return; // Skip activation process entirely
+    return;  // Skip activation process entirely
   }
 
   // 3. O(K) Transition Path: We stepped out. Check connected zones via portals.
   int new_zone_index = -1;
   for (const ScenePortal* portal : zones[cur_zone_id_]->portals) {
-    if (portal->connected_zone_index_1 != -1 && zones[portal->connected_zone_index_1]->bounds.Contains(player_pos)) {
+    if (portal->connected_zone_index_1 != -1 &&
+        zones[portal->connected_zone_index_1]->bounds.Contains(player_pos)) {
       new_zone_index = portal->connected_zone_index_1;
       break;
     }
-    if (portal->connected_zone_index_2 != -1 && zones[portal->connected_zone_index_2]->bounds.Contains(player_pos)) {
+    if (portal->connected_zone_index_2 != -1 &&
+        zones[portal->connected_zone_index_2]->bounds.Contains(player_pos)) {
       new_zone_index = portal->connected_zone_index_2;
       break;
     }
   }
 
-  // 4. Fallback: We glitched out of bounds or teleported without telling the manager
+  // 4. Fallback: We glitched out of bounds or teleported without telling the
+  // manager
   if (new_zone_index == -1) {
     new_zone_index = FindNearestZone(player_pos);
   }
@@ -402,7 +393,8 @@ void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* bo
   std::cout << std::endl;
 }
 
-void WorldManager::ActivateZone(int zone_index, JPH::BodyInterface* body_interface) {
+void WorldManager::ActivateZone(int zone_index,
+                                JPH::BodyInterface* body_interface) {
   auto dfs = [&](auto& self, SceneNode* node) -> void {
     JPH::BodyID body_id = node->body_id;
     if (!body_id.IsInvalid() && node->can_be_activated) {
@@ -424,20 +416,22 @@ void WorldManager::ActivateZone(int zone_index, JPH::BodyInterface* body_interfa
     if (near_zone_id == cur_zone_id_) {
       near_zone_id = p->connected_zone_index_2;
     }
-    if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) == active_zones_.end()) {
+    if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) ==
+        active_zones_.end()) {
       ActivateZone(near_zone_id, body_interface);
     }
   }
-    // for (const auto& obj : scene_->scene_data_.tiles[0]->portals) {
-    //   dfs(dfs, obj.desk);
-    //   dfs(dfs, obj.frame);
-    //   for (auto& child : obj.obj) {
-    //     dfs(dfs, child);
-    //   }
-    // }
+  // for (const auto& obj : scene_->scene_data_.tiles[0]->portals) {
+  //   dfs(dfs, obj.desk);
+  //   dfs(dfs, obj.frame);
+  //   for (auto& child : obj.obj) {
+  //     dfs(dfs, child);
+  //   }
+  // }
 }
 
-void WorldManager::DeactivateZone(int zone_index, JPH::BodyInterface* body_interface) {
+void WorldManager::DeactivateZone(int zone_index,
+                                  JPH::BodyInterface* body_interface) {
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
   const SceneZone* zone = zones[zone_index];
   for (const SceneNode* obj : zone->object_nodes) {
@@ -452,7 +446,8 @@ void WorldManager::DeactivateZone(int zone_index, JPH::BodyInterface* body_inter
     if (near_zone_id == cur_zone_id_) {
       near_zone_id = p->connected_zone_index_2;
     }
-    if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) != active_zones_.end()) {
+    if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) !=
+        active_zones_.end()) {
       DeactivateZone(near_zone_id, body_interface);
     }
   }

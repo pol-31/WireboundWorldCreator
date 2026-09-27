@@ -130,38 +130,64 @@ bool CharacterSharedData::CastProbe(JPH::Vec3 pos, JPH::Vec3 dir,
   //   mDebugRenderer->DrawMarker(pos + 0.1f * forward, JPH::Color::sRed, 0.001f);
 
   if (had_hit) {
-    std::cout << "cast probe id : " << hit.mBodyID.GetIndex() << ' '
-    << std::boolalpha << had_hit << std::noboolalpha << std::endl;
+    // std::cout << "cast probe id : " << hit.mBodyID.GetIndex() << ' '
+    // << std::boolalpha << had_hit << std::noboolalpha << std::endl;
   }
   return had_hit;
 }
 
+// void CharacterSharedData::Shoot(JPH::Vec3 pos, JPH::Vec3 dir, JPH::BodyID source_body_id) {
+//   JPH::RVec3 hit_position;
+//   JPH::BodyID hit_body_id;
+//   float hit_fraction = 1.0f;
+//   float maxDistance = 100.0f;
+//   if (CastProbe(pos, dir, maxDistance, hit_fraction,
+//     hit_position, hit_body_id, source_body_id)) {
+//     float shotForce = 50.0f;
+//     JPH::Vec3 impulse = dir * shotForce;
+//     JPH::BodyInterface &bi = physics_system_->GetBodyInterface();
+//     bool is_character = false;
+//     //TODO: probably there's a better way
+//     for (auto& c : *characters_) {
+//       if (c->GetBody()->GetJphCharacter()->GetInnerBodyID() == hit_body_id) {
+//         is_character = true;
+//         float stopping_power = 15.0f;
+//         c->GetBody()->Death();
+//         std::cout << "shot somebody" << std::endl;
+//         // c.external_impulse += ToJph(camera_.GetDirectionFront()) * stopping_power;
+//         return;
+//       }
+//     }
+//     for (auto& d : *doors_) {
+//       d.TakeDamage(hit_body_id, impulse, 100.0f);
+//     }
+//       bi.AddImpulse(hit_body_id, impulse, hit_position);
+//       std::cout << "shot something" << std::endl;
+//   }
+// }
+
 void CharacterSharedData::Shoot(JPH::Vec3 pos, JPH::Vec3 dir, JPH::BodyID source_body_id) {
-  JPH::RVec3 hit_position;
-  JPH::BodyID hit_body_id;
+  JPH::RVec3 hit_pos;
+  JPH::BodyID hit_id;
   float hit_fraction = 1.0f;
-  float maxDistance = 100.0f;
-  if (CastProbe(pos, dir, maxDistance, hit_fraction,
-    hit_position, hit_body_id, source_body_id)) {
-    float shotForce = 50.0f;
-    JPH::Vec3 impulse = dir * shotForce;
+
+  if (CastProbe(pos, dir, 100.0f, hit_fraction, hit_pos, hit_id, source_body_id)) {
     JPH::BodyInterface &bi = physics_system_->GetBodyInterface();
-    bool is_character = false;
-    //TODO: probably there's a better way
-    for (auto& c : *characters_) {
-      if (c->GetBody()->GetJphCharacter()->GetInnerBodyID() == hit_body_id) {
-        is_character = true;
-        float stopping_power = 15.0f;
-        c->GetBody()->Death();
-        std::cout << "shot somebody" << std::endl;
-        // c.external_impulse += ToJph(camera_.GetDirectionFront()) * stopping_power;
-        return;
+
+    // Add physics impulse regardless of what it is
+    JPH::Vec3 impulse = dir * 50.0f;
+    bi.AddImpulse(hit_id, impulse, hit_pos);
+
+    // Get the C++ object from the physics body!
+    JPH::BodyLockRead lock(physics_system_->GetBodyLockInterface(), hit_id);
+    if (lock.Succeeded()) {
+      const JPH::Body& hit_body = lock.GetBody();
+      uint64_t user_data = hit_body.GetUserData();
+
+      if (user_data != 0) {
+        GameObject* obj = reinterpret_cast<GameObject*>(user_data);
+        obj->TakeDamage(impulse, hit_pos, 25.0f); // Polymorphism handles the rest!
       }
     }
-    for (auto& d : *doors_) {
-      d.TakeDamage(hit_body_id, impulse, 100.0f);
-    }
-      bi.AddImpulse(hit_body_id, impulse, hit_position);
-      std::cout << "shot something" << std::endl;
   }
 }

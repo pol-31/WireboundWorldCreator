@@ -65,12 +65,15 @@ Door::Door(JPH::PhysicsSystem* physics_system,
   }
 }
 
-bool Door::TakeDamage(JPH::BodyID hit_body, JPH::Vec3 impulse, float damage) {
+void Door::TakeDamage(JPH::Vec3 impulse, JPH::RVec3 hit_pos, float damage) {
   bool all_broken = true;
   bool hit_registered = false;
 
+  //TODO: we need to pass it to class_Hinge
+
   for (auto& hinge : hinges_) {
-    if (!hinge.is_broken && hinge.hitbox_id == hit_body) {
+    // if (!hinge.is_broken && hinge.hitbox_id == hit_body) {
+    if (!hinge.is_broken/* && hinge.hitbox_id == hit_body*/) {
       // Bullet hit this hinge! Break the constraint.
       physics_system_->RemoveConstraint(hinge.constraint);
       std::cout << "removed constraint" << std::endl;
@@ -98,5 +101,9 @@ bool Door::TakeDamage(JPH::BodyID hit_body, JPH::Vec3 impulse, float damage) {
 
   // If all hinges are broken, Jolt will naturally let the dynamic DoorDesk
   // detach and fall to the ground due to gravity.
-  return all_broken;
+  //return all_broken;
+}
+
+std::string Door::GetInteractPrompt() {
+  return "E to open the door";
 }

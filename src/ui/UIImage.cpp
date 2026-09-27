@@ -2,11 +2,11 @@
 
 #include "../core/UiScene.h"
 
-void UIImage::Draw() const
-{
-	GetManager()->DrawQuad(GetX(), GetY(), GetWidth(), GetHeight(), mImage, JPH::Color::sWhite);
+void UIImage::Draw() const {
+  GetManager()->DrawQuad(GetX(), GetY(), GetWidth(), GetHeight(), image_name_,
+                         JPH::Color::sWhite);
 
-	UIElement::Draw();
+  UIElement::Draw();
 }
 
 // void UIImage::CopyTo(UIElement *ioElement) const

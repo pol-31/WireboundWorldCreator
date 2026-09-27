@@ -4,31 +4,29 @@
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-
-#include <Jolt/Physics/Collision/Shape/Shape.h>
-#include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Collision/CollideSoftBodyVertexIterator.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/Shape/Shape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
-#include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
-#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
 
 #include "../../core/Layers.h"
-#include "../../io/Window.h" // gDeltaTime
 #include "../../io/Camera.h"
+#include "../../io/Window.h"  // gDeltaTime
 
 const float cDragRayLength = 40.0f;
 
-PlayerController::PlayerController(
-    const Camera* camera,
-CharacterSharedData* shared_data,
-SceneNode* scene_node,
-const Scene::CharacterData* model,
-const Scene::CharacterRig* skin)
-: character_(shared_data, scene_node, model, skin),
-  camera_(camera) {
-  character_.jph_character_->SetCharacterVsCharacterCollision(&shared_data->mCharacterVsCharacterCollision_);
+PlayerController::PlayerController(const Camera *camera,
+                                   CharacterSharedData *shared_data,
+                                   SceneNode *scene_node,
+                                   const Scene::CharacterData *model,
+                                   const Scene::CharacterRig *skin)
+    : character_(shared_data, scene_node, model, skin), camera_(camera) {
+  character_.jph_character_->SetCharacterVsCharacterCollision(
+      &shared_data->mCharacterVsCharacterCollision_);
   character_.jph_character_->SetListener(shared_data->contact_listener_);
   ResetMouseDragging();
 }
@@ -45,19 +43,19 @@ void PlayerController::UpdateView() {
   auto input_dir = character_.GetMoveDirectionRaw();
   character_.head_yaw_ = -yaw;
   character_.head_pitch_ = pitch;
-  JPH::Quat rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisY(), -JPH::DegreesToRadians(yaw));
+  JPH::Quat rotation =
+      JPH::Quat::sRotation(JPH::Vec3::sAxisY(), -JPH::DegreesToRadians(yaw));
   character_.movement_direction_ = rotation * input_dir;
 }
 
 void PlayerController::UpdateRawMovementDirection() {
-  auto& dir = character_.movement_direction_raw_;
+  auto &dir = character_.movement_direction_raw_;
   dir = JPH::Vec3::sZero();
   if (move_left_) dir.SetZ(-1);
   if (move_right_) dir.SetZ(1);
   if (move_forward_) dir.SetX(1);
   if (move_backward_) dir.SetX(-1);
-  if (dir != JPH::Vec3::sZero())
-    dir = dir.Normalized();
+  if (dir != JPH::Vec3::sZero()) dir = dir.Normalized();
 }
 
 void PlayerController::ProcessMovement(int key, int action) {
@@ -103,72 +101,74 @@ void PlayerController::ProcessMovement(int key, int action) {
 }
 
 void PlayerController::TryEnterCover() {
-    float coverCheckDistance = 1.5f;
-    JPH::RefConst<JPH::Shape> playerShape = new JPH::SphereShape(cPlayerCoverRadius * 2.0f);
+  float coverCheckDistance = 1.5f;
+  JPH::RefConst<JPH::Shape> playerShape =
+      new JPH::SphereShape(cPlayerCoverRadius * 2.0f);
 
-    // 1. Create the correct RShapeCast object
-    // Pass local space shape, scale, world transform matrix, and translation direction
-    JPH::RShapeCast shapeCast(
-        playerShape,
-        JPH::Vec3::sReplicate(1.0f),
-        JPH::Mat44::sTranslation(ToJph(camera_->GetPosition())),
-        ToJph(camera_->GetDirectionFront()) * coverCheckDistance
-    );
+  // 1. Create the correct RShapeCast object
+  // Pass local space shape, scale, world transform matrix, and translation
+  // direction
+  JPH::RShapeCast shapeCast(
+      playerShape, JPH::Vec3::sReplicate(1.0f),
+      JPH::Mat44::sTranslation(ToJph(camera_->GetPosition())),
+      ToJph(camera_->GetDirectionFront()) * coverCheckDistance);
 
-    JPH::ShapeCastSettings castSettings;
-    castSettings.mReturnDeepestPoint = true; // Ensures accurate penetration data for snapping
+  JPH::ShapeCastSettings castSettings;
+  castSettings.mReturnDeepestPoint =
+      true;  // Ensures accurate penetration data for snapping
 
   JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
 
-  IgnoreSingleBodyFilter player_filter = IgnoreSingleBodyFilter(
-    character_.GetJphCharacter()->GetInnerBodyID());
+  IgnoreSingleBodyFilter player_filter =
+      IgnoreSingleBodyFilter(character_.GetJphCharacter()->GetInnerBodyID());
 
-    // 3. Call the function with all required filters and offsets
-    GetSharedData()->physics_system_->GetNarrowPhaseQuery().CastShape(
-        shapeCast,
-        castSettings,
-        JPH::RVec3::sZero(), // inBaseOffset (can be zero since our shapeCast matrix is already in world space)
-        collector,
-        {}, {}, player_filter);
+  // 3. Call the function with all required filters and offsets
+  GetSharedData()->physics_system_->GetNarrowPhaseQuery().CastShape(
+      shapeCast, castSettings,
+      JPH::RVec3::sZero(),  // inBaseOffset (can be zero since our shapeCast
+                            // matrix is already in world space)
+      collector, {}, {}, player_filter);
 
-    // 4. Check if the collector actually found a hit
-    if (collector.HadHit()) {
-        const JPH::ShapeCastResult& hit = collector.mHit;
-        JPH::BodyInterface& bi = GetSharedData()->physics_system_->GetBodyInterface();
+  // 4. Check if the collector actually found a hit
+  if (collector.HadHit()) {
+    const JPH::ShapeCastResult &hit = collector.mHit;
+    JPH::BodyInterface &bi =
+        GetSharedData()->physics_system_->GetBodyInterface();
 
-        // Double check it's static geometry
-        if (bi.GetMotionType(hit.mBodyID2) == JPH::EMotionType::Static) {
-            mIsInCover = true;
-            mCoverBodyID = hit.mBodyID2;
+    // Double check it's static geometry
+    if (bi.GetMotionType(hit.mBodyID2) == JPH::EMotionType::Static) {
+      mIsInCover = true;
+      mCoverBodyID = hit.mBodyID2;
 
-            // In Jolt, mPenetrationAxis points from shape2 to shape1
-            // Normalized, this gives us the wall normal pointing outward
-            mCoverNormal = hit.mPenetrationAxis.Normalized();
-            mCoverTangent = JPH::Vec3::sAxisY().Cross(mCoverNormal).Normalized();
+      // In Jolt, mPenetrationAxis points from shape2 to shape1
+      // Normalized, this gives us the wall normal pointing outward
+      mCoverNormal = hit.mPenetrationAxis.Normalized();
+      mCoverTangent = JPH::Vec3::sAxisY().Cross(mCoverNormal).Normalized();
 
-            // Calculate snap position using the hit fraction along the cast path
-            JPH::Vec3 hitPosition = shapeCast.GetPointOnRay(hit.mFraction);
-            JPH::Vec3 targetSnapPosition = hitPosition + (mCoverNormal * cPlayerCoverRadius);
+      // Calculate snap position using the hit fraction along the cast path
+      JPH::Vec3 hitPosition = shapeCast.GetPointOnRay(hit.mFraction);
+      JPH::Vec3 targetSnapPosition =
+          hitPosition + (mCoverNormal * cPlayerCoverRadius);
 
-          character_.GetJphCharacter()->SetPosition(targetSnapPosition);
+      character_.GetJphCharacter()->SetPosition(targetSnapPosition);
 
-          std::cout << mCoverBodyID.GetIndex() << ' '
-          << targetSnapPosition.GetX() << ' ' << targetSnapPosition.GetZ()
-          << std::endl;
-            // Move player to targetSnapPosition...
-        }
+      std::cout << mCoverBodyID.GetIndex() << ' ' << targetSnapPosition.GetX()
+                << ' ' << targetSnapPosition.GetZ() << std::endl;
+      // Move player to targetSnapPosition...
     }
+  }
 }
 
 void PlayerController::UpdateCoverState() {
   if (!mIsInCover) return;
 
-  JPH::BodyInterface& bi = GetSharedData()->physics_system_->GetBodyInterface();
+  JPH::BodyInterface &bi = GetSharedData()->physics_system_->GetBodyInterface();
 
-  // 1. Check if the body was deleted entirely (e.g., deleted from the physics world)
+  // 1. Check if the body was deleted entirely (e.g., deleted from the physics
+  // world)
   // 2. Check if the static board was converted into a dynamic flying chunk
-  if (!bi.IsAdded(mCoverBodyID) || bi.GetMotionType(mCoverBodyID) != JPH::EMotionType::Static) {
-
+  if (!bi.IsAdded(mCoverBodyID) ||
+      bi.GetMotionType(mCoverBodyID) != JPH::EMotionType::Static) {
     // The cover has been blown apart!
     mIsInCover = false;
     mCoverBodyID = JPH::BodyID();
@@ -213,14 +213,12 @@ void PlayerController::HandleCoverMovement(float inputX) {
     mPeekOffset += (0.0f - mPeekOffset) * peekSpeed * gDeltaTime;
   }
 
-  // Apply the visual peek offset to your actual OpenGL camera rendering position
-  // Vec3 finalCameraRenderPos = playerBasePos + (mCoverTangent * mPeekOffset);
-  // camera_.SetPosition(finalCameraRenderPos);
+  // Apply the visual peek offset to your actual OpenGL camera rendering
+  // position Vec3 finalCameraRenderPos = playerBasePos + (mCoverTangent *
+  // mPeekOffset); camera_.SetPosition(finalCameraRenderPos);
 }
 
-void PlayerController::ExitCover() {
-  mIsInCover = false;
-}
+void PlayerController::ExitCover() { mIsInCover = false; }
 
 void PlayerController::ResetMouseDragging() {
   mDragAnchor = nullptr;
@@ -249,19 +247,19 @@ void PlayerController::ReleaseObjectDragging(float throwForce) {
     mDragAnchor = nullptr;
   }
   if (mDragVertexIndex != ~JPH::uint(0)) {
-    JPH::BodyLockWrite lock(GetSharedData()->physics_system_->GetBodyLockInterface(),
-                       mDragBody);
+    JPH::BodyLockWrite lock(
+        GetSharedData()->physics_system_->GetBodyLockInterface(), mDragBody);
     if (lock.Succeeded()) {
       JPH::Body &body = lock.GetBody();
       JPH_ASSERT(body.IsSoftBody());
       JPH::SoftBodyMotionProperties *mp =
           static_cast<JPH::SoftBodyMotionProperties *>(
               body.GetMotionProperties());
-      mp->GetVertex(mDragVertexIndex).mInvMass =
-          mDragVertexPreviousInvMass;
+      mp->GetVertex(mDragVertexIndex).mInvMass = mDragVertexPreviousInvMass;
       if (throwForce != 0.0f) {
-        for (JPH::SoftBodyVertex& vertex : mp->GetVertices()) {
-          if (vertex.mInvMass > 0.0f) { // Don't accelerate fixed/kinematic vertices
+        for (JPH::SoftBodyVertex &vertex : mp->GetVertices()) {
+          if (vertex.mInvMass >
+              0.0f) {  // Don't accelerate fixed/kinematic vertices
             vertex.mVelocity += throwVector;
           }
         }
@@ -278,8 +276,9 @@ void PlayerController::UpdateObjectDragging() {
     return;
   }
   JPH::BodyInterface &bi = GetSharedData()->physics_system_->GetBodyInterface();
-  JPH::RVec3 new_pos = ToJph(camera_->GetPosition()) +
-    cDragRayLength * mDragFraction * ToJph(camera_->GetDirectionFront());
+  JPH::RVec3 new_pos =
+      ToJph(camera_->GetPosition()) +
+      cDragRayLength * mDragFraction * ToJph(camera_->GetDirectionFront());
   switch (bi.GetBodyType(mDragBody)) {
     case JPH::EBodyType::RigidBody:
       bi.SetPositionAndRotation(mDragAnchor->GetID(), new_pos,
@@ -287,18 +286,18 @@ void PlayerController::UpdateObjectDragging() {
                                 JPH::EActivation::DontActivate);
       break;
     case JPH::EBodyType::SoftBody: {
-      JPH::BodyLockWrite lock(GetSharedData()->physics_system_->GetBodyLockInterface(),
-                         mDragBody);
+      JPH::BodyLockWrite lock(
+          GetSharedData()->physics_system_->GetBodyLockInterface(), mDragBody);
       if (lock.Succeeded()) {
         JPH::Body &body = lock.GetBody();
         JPH::SoftBodyMotionProperties *mp =
             static_cast<JPH::SoftBodyMotionProperties *>(
                 body.GetMotionProperties());
         JPH::SoftBodyVertex &v = mp->GetVertex(mDragVertexIndex);
-        v.mVelocity = body.GetRotation().Conjugated() *
-                      JPH::Vec3(new_pos - body.GetCenterOfMassTransform() *
-                                         v.mPosition) /
-                      gDeltaTimePhysics;
+        v.mVelocity =
+            body.GetRotation().Conjugated() *
+            JPH::Vec3(new_pos - body.GetCenterOfMassTransform() * v.mPosition) /
+            gDeltaTimePhysics;
       }
     } break;
   }
@@ -312,11 +311,11 @@ void PlayerController::StartObjectDragging() {
   JPH::BodyInterface &bi = GetSharedData()->physics_system_->GetBodyInterface();
   JPH::RVec3 hit_position;
   if (GetSharedData()->CastProbe(
-    ToJph(camera_->GetPosition()), ToJph(camera_->GetDirectionFront()),
-    cDragRayLength, mDragFraction, hit_position,
-    mDragBody, character_.jph_character_->GetInnerBodyID())) {
-    JPH::BodyLockWrite lock(GetSharedData()->physics_system_->GetBodyLockInterface(),
-                               mDragBody);
+          ToJph(camera_->GetPosition()), ToJph(camera_->GetDirectionFront()),
+          cDragRayLength, mDragFraction, hit_position, mDragBody,
+          character_.jph_character_->GetInnerBodyID())) {
+    JPH::BodyLockWrite lock(
+        GetSharedData()->physics_system_->GetBodyLockInterface(), mDragBody);
     if (lock.Succeeded()) {
       JPH::Body &drag_body = lock.GetBody();
       if (drag_body.IsSoftBody()) {
@@ -341,7 +340,8 @@ void PlayerController::StartObjectDragging() {
       } else if (drag_body.IsDynamic()) {
         JPH::DistanceConstraintSettings settings;
         settings.mPoint1 = settings.mPoint2 = hit_position;
-        settings.mLimitsSpringSettings.mFrequency = 2.0f; // div by world_scale==1
+        settings.mLimitsSpringSettings.mFrequency =
+            2.0f;  // div by world_scale==1
         settings.mLimitsSpringSettings.mDamping = 1.0f;
 
         JPH::Body *drag_anchor = bi.CreateBody(JPH::BodyCreationSettings(
@@ -362,5 +362,5 @@ bool PlayerController::IsDragging() const noexcept {
 
 void PlayerController::Shoot() {
   character_.Shoot(ToJph(camera_->GetPosition()),
-    ToJph(camera_->GetDirectionFront()));
+                   ToJph(camera_->GetDirectionFront()));
 }

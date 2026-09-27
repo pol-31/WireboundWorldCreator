@@ -18,9 +18,7 @@ void Camera::ProcessMovement(int key, int action) {
 glm::vec3 ToGlm(JPH::Vec3 val) {
   return glm::vec3(val.GetX(), val.GetY(), val.GetZ());
 }
-JPH::Vec3 ToJph(glm::vec3 val) {
-  return JPH::Vec3(val.x, val.y, val.z);
-}
+JPH::Vec3 ToJph(glm::vec3 val) { return JPH::Vec3(val.x, val.y, val.z); }
 
 JPH::Quat ToJph(glm::quat val) {
   return JPH::Quat(val.x, val.y, val.z, val.w).Normalized();
@@ -85,12 +83,16 @@ void Camera::Update(JPH::Mat44 head_mat) {
   if (first_face_mode_) {
     position_ = head_pos;
     origin_ = head_pos;
-    direction_front_.x = glm::cos(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
+    direction_front_.x =
+        glm::cos(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
     direction_front_.y = glm::sin(glm::radians(pitch_));
-    direction_front_.z = glm::sin(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
+    direction_front_.z =
+        glm::sin(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
     direction_front_ = glm::normalize(direction_front_);
-    direction_right_ = glm::normalize(glm::cross(direction_front_, direction_world_up_));
-    direction_up_    = glm::normalize(glm::cross(direction_right_, direction_front_));
+    direction_right_ =
+        glm::normalize(glm::cross(direction_front_, direction_world_up_));
+    direction_up_ =
+        glm::normalize(glm::cross(direction_right_, direction_front_));
   } else {
     origin_ = head_pos;
     float yawRad = glm::radians(yaw_);
@@ -199,8 +201,8 @@ Frustum Camera::GetFrustum() const noexcept {
   float cam_fovx = glm::radians(120.0f);
   float cam_fovy = glm::radians(75.0f);
   float cam_inNear = 0.01f;
-  return Frustum(cam_position, cam_inForward, cam_inUp,
-    cam_fovx, cam_fovy, cam_inNear);
+  return Frustum(cam_position, cam_inForward, cam_inUp, cam_fovx, cam_fovy,
+                 cam_inNear);
 }
 
 glm::quat Camera::GetRotation() const {

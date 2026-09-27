@@ -1,43 +1,40 @@
 #ifndef WIREBOUNDWORLDCREATOR_GAME_H
 #define WIREBOUNDWORLDCREATOR_GAME_H
 
-#include <unordered_map>
-#include <memory>
-#include <chrono>
-
-#include <glm/glm.hpp>
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/JobSystem.h>
+#include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Math/Real.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Character/Character.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
-#include <Jolt/Physics/Collision/ContactListener.h>
-#include <Jolt/Physics/PhysicsSystem.h>
-
-#include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
-#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Collision/ContactListener.h>
 #include <Jolt/Physics/Collision/Shape/SubShapeID.h>
+#include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Skeleton/SkeletonPose.h>
 
+#include <chrono>
+#include <glm/glm.hpp>
+#include <memory>
+#include <unordered_map>
+
+#include "../common/GlfwContext.h"
 #include "../common/models/Animator.h"
+#include "../common/models/CharacterSharedData.h"
+#include "../common/models/DirectedLight.h"
+#include "../common/models/Door.h"
+#include "../common/models/EnemyController.h"
 #include "../common/models/ModelLoader.h"
 #include "../common/models/PlayerController.h"
-#include "../common/models/EnemyController.h"
 #include "../common/models/PointLight.h"
-#include "../common/models/DirectedLight.h"
 #include "../common/models/StaticObject.h"
-#include "../common/GlfwContext.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
+#include "Cubemap.h"
 #include "Layers.h"
 #include "Renderer.h"
-#include "../common/models/CharacterSharedData.h"
 #include "TerrainRenderer.h"
-#include "Cubemap.h"
-#include "../common/models/Door.h"
-
 #include "UiRenderer.h"
 
 class ContactListenerImpl;
@@ -45,14 +42,23 @@ class DebugUI;
 class UiScene;
 
 struct RenderSettings {
+  int triplanar_level = 1;  // floor, walls, ceiling: 1, 2, 3
   bool ssao = true;
-  bool shadows = true;
+  bool render_shadows = true;
   bool bloom = true;
   bool cull = true;
+  bool light_sources = true;
+  bool apply_shadows = true;
+  bool render_animated = true;
+  bool animate_animated = true;
+  bool update_physics = true;
+  bool update_buffer = true;
+
+  bool geometry_pass = true;
+  bool light_pass = true;
 };
 
-class Game : public JPH::ContactListener,
-   public JPH::CharacterContactListener {
+class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
  public:
   using ShapeToGeometryMap = std::unordered_map<JPH::EShapeSubType, int>;
 
@@ -79,18 +85,17 @@ class Game : public JPH::ContactListener,
 
   void RunMenuLoop();
 
-
   int mMaxConcurrentJobs = 1;  // thread::hardware_concurrency();
-  JPH::TempAllocator* mTempAllocator = nullptr;
-  JPH::JobSystem* mJobSystem = nullptr;
-  JPH::JobSystem* mJobSystemValidating = nullptr;
+  JPH::TempAllocator *mTempAllocator = nullptr;
+  JPH::JobSystem *mJobSystem = nullptr;
+  JPH::JobSystem *mJobSystemValidating = nullptr;
   BPLayerInterfaceImpl mBroadPhaseLayerInterface;
   ObjectVsBroadPhaseLayerFilterImpl mObjectVsBroadPhaseLayerFilter;
   ObjectLayerPairFilterImpl mObjectVsObjectLayerFilter;
-  JPH::PhysicsSystem* mPhysicsSystem = nullptr;
-  ContactListenerImpl* mContactListener = nullptr;
+  JPH::PhysicsSystem *mPhysicsSystem = nullptr;
+  ContactListenerImpl *mContactListener = nullptr;
   JPH::PhysicsSettings mPhysicsSettings;
-  JPH::BodyInterface* mBodyInterface = nullptr;
+  JPH::BodyInterface *mBodyInterface = nullptr;
 
   /// interface & fps
 
@@ -100,20 +105,22 @@ class Game : public JPH::ContactListener,
 
   void UpdateDeltaTime();
 
+  void UpdateHoveredObject();
+  GameObject* hovered_object_ = nullptr;
+
   float frameCount_ = 0;
   float elapsedTime_ = 0;
   float fps_ = 0;
 
-public:
+ public:
   ModelLoader mdl_loader_;
   Animator animator_;
-
 
   TerrainRenderer terrain_renderer_;
   Cubemap cubemap_;
   Camera camera_;
 
-  std::unique_ptr<CharacterSharedData> character_shared_data_; // shapes
+  std::unique_ptr<CharacterSharedData> character_shared_data_;  // shapes
 
   // owns the pointer, modifying the underlying data
   std::unique_ptr<PlayerController> player_;
@@ -133,8 +140,8 @@ public:
   ContactSet mActiveContacts;
 
   WorldManager world_manager_;
-  UiRenderer text_renderer_;
-  Renderer renderer_; // in the end
+  UiRenderer ui_renderer_;
+  Renderer renderer_;  // in the end
   RenderSettings render_settings_;
 
   std::vector<Door> doors_;
@@ -142,67 +149,70 @@ public:
   std::unique_ptr<DebugUI> mDebugUI;
   std::unique_ptr<UiScene> ui_menu_scene_;
 
-  void CreateBodyForNode(SceneNode* node, SceneZone* zone);
+  void CreateBodyForNode(SceneNode *node, SceneZone *zone);
 
-public:
+ public:
   /// ContactListener callbacks
-  JPH::ContactListener* GetContactListener() {
-    return this;
-  }
-  JPH::CharacterContactListener* GetCharacterContactListener() {
-    return this;
-  }
-  void OnContactAdded(const JPH::Body &inBody1,
-                              const JPH::Body &inBody2,
-                              const JPH::ContactManifold &inManifold,
-                              JPH::ContactSettings &ioSettings) override;
-  void OnContactPersisted(const JPH::Body &inBody1,
-                                  const JPH::Body &inBody2,
-                                  const JPH::ContactManifold &inManifold,
-                                  JPH::ContactSettings &ioSettings) override;
+  JPH::ContactListener *GetContactListener() { return this; }
+  JPH::CharacterContactListener *GetCharacterContactListener() { return this; }
+  void OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2,
+                      const JPH::ContactManifold &inManifold,
+                      JPH::ContactSettings &ioSettings) override;
+  void OnContactPersisted(const JPH::Body &inBody1, const JPH::Body &inBody2,
+                          const JPH::ContactManifold &inManifold,
+                          JPH::ContactSettings &ioSettings) override;
 
   /// CharacterContactListener callbacks
   void OnAdjustBodyVelocity(const JPH::CharacterVirtual *inCharacter,
-                                    const JPH::Body &inBody2, JPH::Vec3 &ioLinearVelocity,
-                                    JPH::Vec3 &ioAngularVelocity) override;
+                            const JPH::Body &inBody2,
+                            JPH::Vec3 &ioLinearVelocity,
+                            JPH::Vec3 &ioAngularVelocity) override;
   void OnContactAdded(const JPH::CharacterVirtual *inCharacter,
-                              const JPH::BodyID &inBodyID2,
-                              const JPH::SubShapeID &inSubShapeID2,
-                              JPH::RVec3Arg inContactPosition,
-                              JPH::Vec3Arg inContactNormal,
-                              JPH::CharacterContactSettings &ioSettings) override;
-  void OnContactPersisted(
-      const JPH::CharacterVirtual *inCharacter, const JPH::BodyID &inBodyID2,
-      const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
-      JPH::Vec3Arg inContactNormal, JPH::CharacterContactSettings &ioSettings) override;
+                      const JPH::BodyID &inBodyID2,
+                      const JPH::SubShapeID &inSubShapeID2,
+                      JPH::RVec3Arg inContactPosition,
+                      JPH::Vec3Arg inContactNormal,
+                      JPH::CharacterContactSettings &ioSettings) override;
+  void OnContactPersisted(const JPH::CharacterVirtual *inCharacter,
+                          const JPH::BodyID &inBodyID2,
+                          const JPH::SubShapeID &inSubShapeID2,
+                          JPH::RVec3Arg inContactPosition,
+                          JPH::Vec3Arg inContactNormal,
+                          JPH::CharacterContactSettings &ioSettings) override;
   void OnContactRemoved(const JPH::CharacterVirtual *inCharacter,
-                                const JPH::BodyID &inBodyID2,
-                                const JPH::SubShapeID &inSubShapeID2) override;
+                        const JPH::BodyID &inBodyID2,
+                        const JPH::SubShapeID &inSubShapeID2) override;
   void OnCharacterContactAdded(
       const JPH::CharacterVirtual *inCharacter,
-      const JPH::CharacterVirtual *inOtherCharacter, const JPH::SubShapeID &inSubShapeID2,
-      JPH::RVec3Arg inContactPosition, JPH::Vec3Arg inContactNormal,
+      const JPH::CharacterVirtual *inOtherCharacter,
+      const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
+      JPH::Vec3Arg inContactNormal,
       JPH::CharacterContactSettings &ioSettings) override;
   void OnCharacterContactPersisted(
       const JPH::CharacterVirtual *inCharacter,
-      const JPH::CharacterVirtual *inOtherCharacter, const JPH::SubShapeID &inSubShapeID2,
-      JPH::RVec3Arg inContactPosition, JPH::Vec3Arg inContactNormal,
-      JPH::CharacterContactSettings &ioSettings) override;
-  void OnCharacterContactRemoved(
-      const JPH::CharacterVirtual *inCharacter,
-      const JPH::CharacterID &inOtherCharacterID,
-      const JPH::SubShapeID &inSubShapeID2) override;
-  void OnContactSolve(
-      const JPH::CharacterVirtual *inCharacter, const JPH::BodyID &inBodyID2,
+      const JPH::CharacterVirtual *inOtherCharacter,
       const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
-      JPH::Vec3Arg inContactNormal, JPH::Vec3Arg inContactVelocity,
-      const JPH::PhysicsMaterial *inContactMaterial, JPH::Vec3Arg inCharacterVelocity,
-      JPH::Vec3 &ioNewCharacterVelocity) override;
+      JPH::Vec3Arg inContactNormal,
+      JPH::CharacterContactSettings &ioSettings) override;
+  void OnCharacterContactRemoved(const JPH::CharacterVirtual *inCharacter,
+                                 const JPH::CharacterID &inOtherCharacterID,
+                                 const JPH::SubShapeID &inSubShapeID2) override;
+  void OnContactSolve(const JPH::CharacterVirtual *inCharacter,
+                      const JPH::BodyID &inBodyID2,
+                      const JPH::SubShapeID &inSubShapeID2,
+                      JPH::RVec3Arg inContactPosition,
+                      JPH::Vec3Arg inContactNormal,
+                      JPH::Vec3Arg inContactVelocity,
+                      const JPH::PhysicsMaterial *inContactMaterial,
+                      JPH::Vec3Arg inCharacterVelocity,
+                      JPH::Vec3 &ioNewCharacterVelocity) override;
 
  protected:
   void OnContactCommon(const JPH::CharacterVirtual *inCharacter,
-                       const JPH::BodyID &inBodyID2, const JPH::SubShapeID &inSubShapeID2,
-                       JPH::RVec3Arg inContactPosition, JPH::Vec3Arg inContactNormal,
+                       const JPH::BodyID &inBodyID2,
+                       const JPH::SubShapeID &inSubShapeID2,
+                       JPH::RVec3Arg inContactPosition,
+                       JPH::Vec3Arg inContactNormal,
                        JPH::CharacterContactSettings &ioSettings);
   void OnCharacterContactCommon(const JPH::CharacterVirtual *inCharacter,
                                 const JPH::CharacterVirtual *inOtherCharacter,
@@ -212,22 +222,24 @@ public:
                                 JPH::CharacterContactSettings &ioSettings);
 };
 
-void GameScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+void GameScrollCallback(GLFWwindow *window, double xoffset, double yoffset);
 
-void GameMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+void GameMouseButtonCallback(GLFWwindow *window, int button, int action,
+                             int mods);
 
-void GameKeyCallback(GLFWwindow* window, int key, int scancode, int action,
-                 int mods);
+void GameKeyCallback(GLFWwindow *window, int key, int scancode, int action,
+                     int mods);
 
-void GameCursorPosCallback(GLFWwindow* window, double xpos, double ypos);
+void GameCursorPosCallback(GLFWwindow *window, double xpos, double ypos);
 
-void MenuScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+void MenuScrollCallback(GLFWwindow *window, double xoffset, double yoffset);
 
-void MenuMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+void MenuMouseButtonCallback(GLFWwindow *window, int button, int action,
+                             int mods);
 
-void MenuKeyCallback(GLFWwindow* window, int key, int scancode, int action,
-                 int mods);
+void MenuKeyCallback(GLFWwindow *window, int key, int scancode, int action,
+                     int mods);
 
-void MenuCursorPosCallback(GLFWwindow* window, double xpos, double ypos);
+void MenuCursorPosCallback(GLFWwindow *window, double xpos, double ypos);
 
 #endif  // WIREBOUNDWORLDCREATOR_GAME_H

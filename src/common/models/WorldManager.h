@@ -1,11 +1,13 @@
 #ifndef WIREBOUNDWORLDCREATOR_WORLDMANAGER_H
 #define WIREBOUNDWORLDCREATOR_WORLDMANAGER_H
 
-#include <vector>
 #include <memory>
+#include <vector>
 
-#include "Scene.h"
+#include <Jolt/Jolt.h>
+
 #include "../../core/Frustum.h"
+#include "Scene.h"
 
 class Camera;
 class PlayerController;
@@ -17,20 +19,20 @@ class StaticObject;
 
 namespace JPH {
 class BodyInterface;
-} // namespace JPH
+}  // namespace JPH
 
 /// I wanted to name it ZoneCuller, because the main job is to get
 /// all object, cull them based on our zone (or camera frustum ???)
 /// and put to another structures, so then we feed it to our Renderer
 class WorldManager {
-public:
+ public:
   /// std430 layout (16-byte alignment)
   struct InstanceGpu {
     JPH::Mat44 model = JPH::Mat44::sIdentity();
     JPH::Vec4 color = JPH::Vec4::sOne();
     uint32_t material_id = 0;
     uint32_t use_triplanar = 0;
-    uint32_t padding2 = 0;
+    uint32_t lod = 0; //TODO: we also can optimize shaders based on lod!!!!!!!!!!
     uint32_t padding3 = 0;
   };
 
@@ -45,8 +47,10 @@ public:
   struct FinalPointLight {
     const PointLight* source = nullptr;
     /// objects, that cast a shadow, 6 faces
-    std::array<std::vector<SsboOffsetObject>, 6> objects; // by mesh, * is on gpu
-    std::array<std::vector<AnimatedRenderData>, 6> object_animated; // by mesh, * is on gpu
+    std::array<std::vector<SsboOffsetObject>, 6>
+        objects;  // by mesh, * is on gpu
+    std::array<std::vector<AnimatedRenderData>, 6>
+        object_animated;  // by mesh, * is on gpu
   };
   struct FinalDirLight {
     const DirectedLight* source = nullptr;
@@ -55,40 +59,35 @@ public:
     std::vector<AnimatedRenderData> object_animated;
   };
   struct FinalCamera {
-    std::vector<SsboOffsetObject> objects;
+    std::vector<SsboOffsetObject> objects_lod0;
+    std::vector<SsboOffsetObject> objects_lod1;
+    std::vector<SsboOffsetObject> objects_lod2;
     std::vector<AnimatedRenderData> object_animated;
   };
 
+  WorldManager(const Scene* scene, const Camera* camera,
+               const std::unique_ptr<PlayerController>& player,
+               const std::vector<std::unique_ptr<EnemyController>>& characters,
+               const std::vector<std::unique_ptr<Weapon>>& weapons,
+               const std::vector<DirectedLight>& dir_lights);
 
-  WorldManager(
-    const Scene* scene,
-  const Camera* camera,
-  const std::unique_ptr<PlayerController>& player,
-  const std::vector<std::unique_ptr<EnemyController>>& characters,
-  const std::vector<std::unique_ptr<Weapon>>& weapons,
-  const std::vector<DirectedLight>& dir_lights);
-
-  void Cull();
+  void Cull(bool render_animated);
 
   int FindNearestZone(JPH::Vec3 player_pos);
 
-
   bool IsZoneCulled(JPH::Vec3 pos);
 
-  void UpdatePlayerZone(JPH::Vec3 player_pos, JPH::BodyInterface* body_interface);
+  void UpdatePlayerZone(JPH::Vec3 player_pos,
+                        JPH::BodyInterface* body_interface);
 
-private:
-
+ private:
   void ActivateZone(int zone_index, JPH::BodyInterface* body_interface);
 
   void DeactivateZone(int zone_index, JPH::BodyInterface* body_interface);
 
-
-  void CullAnimatedObject(
-    const Frustum& frustum_camera,
-    const std::vector<PointLight*>& zone_point_lights,
-    JPH::Vec3 pos,
-    const AnimatedRenderData& render_data);
+  void CullAnimatedObject(const Frustum& frustum_camera, JPH::Vec3 camera_pos,
+                          const std::vector<PointLight*>& zone_point_lights,
+                          JPH::Vec3 pos, AnimatedRenderData render_data);
 
   // struct Zone {
   //   Scene::ModelNode* scene_node = nullptr;
@@ -115,8 +114,8 @@ private:
 
   /// --- 1---
   const Scene* scene_;
-  const Camera* camera_; // to know is it 1st/3rd AND frustum
-  const std::unique_ptr<PlayerController>& player_; // TODO: only for shadows
+  const Camera* camera_;  // to know is it 1st/3rd AND frustum
+  const std::unique_ptr<PlayerController>& player_;  // TODO: only for shadows
   const std::vector<std::unique_ptr<EnemyController>>& characters_;
   const std::vector<std::unique_ptr<Weapon>>& weapons_;
   const std::vector<DirectedLight>& dir_lights_;
@@ -130,19 +129,21 @@ private:
   // relative to cur scene for sure
 
   void PushFrustumCulled(const std::vector<const SceneNode*>& objects,
-    std::vector<std::vector<InstanceGpu>>& ssbo_data);
+                         std::vector<std::vector<InstanceGpu>>& ssbo_data);
 
   void PushFrustumCulled(const SceneNode* node,
-    std::vector<std::vector<InstanceGpu>>& ssbo_data);
+                         std::vector<std::vector<InstanceGpu>>& ssbo_data);
 
   // resized with zone lights num, so its array idx == (int)cur_zone.light,
   // so we don't need to store ptr to the source
-  std::vector<std::array<std::vector<const SceneNode*>, 6>> active_point_lights_;
+  std::vector<std::array<std::vector<const SceneNode*>, 6>>
+      active_point_lights_;
   std::vector<std::vector<const SceneNode*>> active_dir_lights_;
-  std::vector<const SceneNode*> active_camera_;
+  std::vector<const SceneNode*> active_camera_lod0;
+  std::vector<const SceneNode*> active_camera_lod1;
+  std::vector<const SceneNode*> active_camera_lod2;
 
-
-public:
+ public:
   /// output (just --- 3 --- struct):
   struct ZoneCulledData {
     std::vector<InstanceGpu> ssbo_data;
@@ -152,14 +153,12 @@ public:
     FinalCamera camera;
   };
 
-  const ZoneCulledData* GetCulledData() {
-    return &final_render_data_;
-  }
+  const ZoneCulledData* GetCulledData() { return &final_render_data_; }
 
-private:
+ private:
   ZoneCulledData final_render_data_;
 };
 
-//TODO : get back PointLight DirLight to lightweight structures
+// TODO : get back PointLight DirLight to lightweight structures
 
 #endif  // WIREBOUNDWORLDCREATOR_WORLDMANAGER_H

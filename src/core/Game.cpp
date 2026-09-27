@@ -4,26 +4,13 @@
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-#include <glad/glad.h>
-
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Color.h>
-#include <Jolt/ObjectStream/ObjectStreamIn.h>
-#include <Jolt/Physics/Collision/Shape/BoxShape.h>
-#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
-#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
-#include <Jolt/Physics/Collision/Shape/MeshShape.h>
-#include <Jolt/Physics/Collision/Shape/SphereShape.h>
-#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
-#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
-#include <Jolt/Physics/Constraints/HingeConstraint.h>
-#include <Jolt/Physics/PhysicsScene.h>
-#include <Jolt/Physics/PhysicsSystem.h>
-#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Core/JobSystemSingleThreaded.h>
 #include <Jolt/Core/JobSystemThreadPool.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Geometry/OrientedBox.h>
+#include <Jolt/ObjectStream/ObjectStreamIn.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/Collision/AABoxCast.h>
@@ -31,33 +18,35 @@
 #include <Jolt/Physics/Collision/CollidePointResult.h>
 #include <Jolt/Physics/Collision/CollideSoftBodyVertexIterator.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
-
-#include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
-#include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
-
-#include <Jolt/Physics/Collision/CollideSoftBodyVertexIterator.h>
-#include <Jolt/Physics/Constraints/DistanceConstraint.h>
-
-#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/ScaledShape.h>
-#include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
+#include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
+#include <glad/glad.h>
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Layers.h"
+#include "../common/models/DirectedLight.h"
 #include "../io/Camera.h"
 #include "../io/Window.h"
-
-#include "../common/models/DirectedLight.h"
-
-#include "ContactListenerImpl.h"
-#include "UiScene.h"
 #include "../ui/DebugUI.h"
+#include "ContactListenerImpl.h"
+#include "Layers.h"
+#include "UiScene.h"
 
 JPH_SUPPRESS_WARNINGS_STD_BEGIN
 #include <fstream>
@@ -82,76 +71,73 @@ class TempAllocator;
 };  // namespace JPH
 
 Game::Game()
-  : terrain_renderer_(&(mdl_loader_.GetScene()->materials)),
-    world_manager_(mdl_loader_.GetScene(), &camera_, player_,
-    characters_, weapons_, dir_lights_),
-    renderer_(mdl_loader_.GetScene(), &camera_, &player_, world_manager_.GetCulledData()){
+    : terrain_renderer_(&(mdl_loader_.GetScene()->materials)),
+      world_manager_(mdl_loader_.GetScene(), &camera_, player_, characters_,
+                     weapons_, dir_lights_),
+      renderer_(mdl_loader_.GetScene(), &camera_, &player_,
+                world_manager_.GetCulledData()) {
   Init();
 }
 
-Game::~Game() {
-  DeInit();
-}
+Game::~Game() { DeInit(); }
 
 void Game::RenderInterface() {
   float target_size = 16.0f;
   float half_target_size = target_size / 2.0f;
   if (player_->GetBody()->IsAiming()) {
-    text_renderer_.AddSprite("GoldenCircle",
-    glm::vec2(800.0f, 450.0f) - half_target_size,
-    glm::vec2(target_size), glm::vec4(1.0f));
+    ui_renderer_.AddSprite("GoldenCircle",
+                           glm::vec2(800.0f, 450.0f) - half_target_size,
+                           glm::vec2(target_size), glm::vec4(1.0f));
   }
   const glm::vec2 start_hp_pos = glm::vec2(10.0f, 45.0f);
   glm::vec2 hp_pos = start_hp_pos;
   glm::vec2 hp_size = glm::vec2(16.0f);
   for (int i = 0; i < 10; ++i) {
     hp_pos.x += hp_size.x;
-    text_renderer_.AddSprite("FlowerWhite", hp_pos,
-      hp_size, glm::vec4(1.0f));
+    ui_renderer_.AddSprite("FlowerWhite", hp_pos, hp_size, glm::vec4(1.0f));
   }
   hp_pos = start_hp_pos;
   hp_pos.y -= hp_size.y;
   for (int i = 0; i < 10; ++i) {
     hp_pos.x += hp_size.x;
-    text_renderer_.AddSprite("StaminaPoint", hp_pos,
-      hp_size, glm::vec4(1.0f));
+    ui_renderer_.AddSprite("StaminaPoint", hp_pos, hp_size, glm::vec4(1.0f));
   }
   hp_pos = glm::vec2(1380.0f, 25.0f);
   for (int i = 0; i < 7; ++i) {
     hp_pos.x += hp_size.x;
-    text_renderer_.AddSprite("HealthPoint", hp_pos,
-      hp_size * 2.0f, glm::vec4(1.0f));
+    ui_renderer_.AddSprite("HealthPoint", hp_pos, hp_size * 2.0f,
+                           glm::vec4(1.0f));
   }
-  text_renderer_.AddSprite("Gear", glm::vec2(1531.0f, 5.0f),
-    hp_size * 4.0f, glm::vec4(1.0f));
+  ui_renderer_.AddSprite("Gear", glm::vec2(1531.0f, 5.0f), hp_size * 4.0f,
+                         glm::vec4(1.0f));
 
   // ---
 
   int characters_left = 0;
-  for (const auto& c : characters_) {
+  for (const auto &c : characters_) {
     if (!c->GetBody()->IsDead()) {
       ++characters_left;
     }
   }
   if (characters_left == 0) {
-    for (auto& c : characters_) {
+    for (auto &c : characters_) {
       c->GetBody()->Revive();
     }
     characters_left = characters_.size();
   }
-  std::string charactersLeftText = "enemies left: " + std::to_string(characters_left);
-  text_renderer_.AddText(charactersLeftText, glm::vec2(100.0f, 20.0f),
-    glm::vec2(1.0f), glm::vec4(1.0f));
+  std::string charactersLeftText =
+      "enemies left: " + std::to_string(characters_left);
+  ui_renderer_.AddText(charactersLeftText, glm::vec2(100.0f, 20.0f),
+                       glm::vec2(1.0f), glm::vec4(1.0f));
 }
 
 void Game::RenderFps() {
   std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps_));
-  text_renderer_.AddText(fpsText, glm::vec2(10.0f, 20.0f),
-    glm::vec2(1.0f), glm::vec4(1.0f));
+  ui_renderer_.AddText(fpsText, glm::vec2(10.0f, 20.0f), glm::vec2(1.0f),
+                       glm::vec4(1.0f));
 }
 
-
-void UpdateDirLightFrustum(DirectedLight& light, const Camera* camera) {
+void UpdateDirLightFrustum(DirectedLight &light, const Camera *camera) {
   constexpr float fovx = glm::radians(120.0f);
   constexpr float fovy = glm::radians(75.0f);
   constexpr float near_distance = 0.1f;
@@ -163,30 +149,29 @@ void UpdateDirLightFrustum(DirectedLight& light, const Camera* camera) {
 
   auto camera_pos = ToJph(camera->GetPosition());
   const JPH::Vec3 sun_position =
-      camera_pos + JPH::Vec3(0.0f, 1.0f, 0.0f) +
-      camera_forward * 4.0f;
+      camera_pos + JPH::Vec3(0.0f, 1.0f, 0.0f) + camera_forward * 4.0f;
 
-  JPH::Vec3 sun_dir = JPH::Vec3(light.dir.x, light.dir.y, light.dir.z).Normalized();
+  JPH::Vec3 sun_dir =
+      JPH::Vec3(light.dir.x, light.dir.y, light.dir.z).Normalized();
   if (abs(sun_dir.Dot(world_up)) > 0.99f) {
     world_up = JPH::Vec3(1.0f, 0.0f, 0.0f);
   }
 
-  light.frustum = Frustum(sun_position, sun_dir, world_up,fovx, fovy, near_distance);
+  light.frustum =
+      Frustum(sun_position, sun_dir, world_up, fovx, fovy, near_distance);
 
   constexpr float near_plane = 1.0f;
   constexpr float far_plane = 7.5f;
 
   glm::mat4 lightProjection =
-      glm::ortho(
-          -10.0f, 10.0f,
-          -10.0f, 10.0f,
-          near_plane,
-          far_plane);
+      glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
 
-  glm::vec3 sun_pos_glm(sun_position.GetX(), sun_position.GetY(), sun_position.GetZ());
+  glm::vec3 sun_pos_glm(sun_position.GetX(), sun_position.GetY(),
+                        sun_position.GetZ());
   glm::vec3 sun_dir_glm(sun_dir.GetX(), sun_dir.GetY(), sun_dir.GetZ());
   glm::vec3 target = sun_pos_glm + sun_dir_glm;
-  glm::mat4 lightView = glm::lookAt(sun_pos_glm, target,glm::vec3(0.0f, 1.0f, 0.0f));
+  glm::mat4 lightView =
+      glm::lookAt(sun_pos_glm, target, glm::vec3(0.0f, 1.0f, 0.0f));
   light.lightSpaceMatrix = lightProjection * lightView;
 }
 
@@ -220,6 +205,66 @@ void Game::Run() {
   }
 }
 
+#include <chrono>
+#include <iostream>
+#include <string>
+
+struct ScopedTimer {
+  std::string name;
+  std::chrono::time_point<std::chrono::high_resolution_clock> start;
+
+  ScopedTimer(const std::string &name)
+      : name(name), start(std::chrono::high_resolution_clock::now()) {}
+  ~ScopedTimer() {
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration =
+        std::chrono::duration_cast<std::chrono::microseconds>(end - start)
+            .count();
+    // Print if it takes more than 1 millisecond (1000 microseconds) to avoid
+    // console spam
+    if (duration > 1000) {
+      std::cout << name << " took " << duration / 1000.0f << " ms\n";
+    }
+  }
+};
+
+void Game::UpdateHoveredObject() {
+  JPH::RVec3 hit_pos;
+  JPH::BodyID hit_id;
+  float hit_fraction;
+
+  // Reset hovered object every frame
+  hovered_object_ = nullptr;
+
+  auto camera_pos = ToJph(camera_.GetPosition());
+  auto camera_forward = ToJph(camera_.GetDirectionFront());
+
+  // Cast a short ray from the camera
+  float interact_dist = 2.5f;
+  if (character_shared_data_->CastProbe(camera_pos, camera_forward, interact_dist,
+    hit_fraction, hit_pos, hit_id,
+    player_->GetBody()->GetJphCharacter()->GetInnerBodyID())) {
+
+      JPH::BodyLockRead lock(mPhysicsSystem->GetBodyLockInterface(), hit_id);
+      if (lock.Succeeded()) {
+         uint64_t user_data = lock.GetBody().GetUserData();
+         if (user_data != 0) {
+             GameObject* obj = reinterpret_cast<GameObject*>(user_data);
+
+             // Check if this object actually has an interaction prompt
+             if (!obj->GetInteractPrompt().empty()) {
+                 hovered_object_ = obj;
+             }
+         }
+      }
+  }
+
+  // Handle Input
+  // if (hovered_object_ && InputSystem::IsKeyPressed(KEY_E)) {
+      // hovered_object_->Interact(this->GetCharacter());
+  // }
+}
+
 void Game::RunGameLoop() {
   while (true) {
     if (glfwWindowShouldClose(gWindow)) {
@@ -238,72 +283,84 @@ void Game::RunGameLoop() {
 
     UpdateDeltaTime();
 
-    // Reinitialize the job system if the concurrency setting changed
-    if (mMaxConcurrentJobs != mJobSystem->GetMaxConcurrency())
-      static_cast<JPH::JobSystemThreadPool *>(mJobSystem)
-          ->SetNumThreads(mMaxConcurrentJobs - 1);
     JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
 
-    for (auto& l : dir_lights_) {
-      UpdateDirLightFrustum(l, &camera_);
+    if (render_settings_.update_physics) {
+      // Reinitialize the job system if the concurrency setting changed
+      if (mMaxConcurrentJobs != mJobSystem->GetMaxConcurrency())
+        static_cast<JPH::JobSystemThreadPool *>(mJobSystem)
+            ->SetNumThreads(mMaxConcurrentJobs - 1);
+
+      for (auto &l : dir_lights_) {
+        UpdateDirLightFrustum(l, &camera_);
+      }
+
+      /// pre physics update
+      for (auto &c : characters_) {
+        c->UpdateLogic(mPhysicsSystem, gDeltaTimePhysics);
+        c->GetBody()->PrePhysicsUpdate(mPhysicsSystem, mTempAllocator,
+                                       gDeltaTimePhysics);
+      }
+
+      player_->UpdateObjectDragging();
+      player_->UpdateCoverState();
+      player_->HandleCoverMovement(glfwGetKey(gWindow, GLFW_KEY_A) ==
+                                   GLFW_PRESS);
+      player_->UpdateView();
+      player_->GetBody()->PrePhysicsUpdate(mPhysicsSystem, mTempAllocator,
+                                           gDeltaTimePhysics);
+
+      /// physics update
+      mPhysicsSystem->Update(gDeltaTimePhysics, 1, mTempAllocator, mJobSystem);
+      const JPH::BodyLockInterface &bli =
+          mPhysicsSystem->GetBodyLockInterface();
+      mdl_loader_.GetScene()->UpdateRenderTransform(
+          bli, mdl_loader_.GetScene()->scene_data_.tiles);
+
+      /// post physics update
+      for (auto &c : characters_) {
+        c->GetBody()->PostPhysicsUpdate(mPhysicsSystem->GetGravity(),
+                                        gDeltaTimePhysics);
+      }
+      player_->GetBody()->PostPhysicsUpdate(mPhysicsSystem->GetGravity(),
+                                            gDeltaTimePhysics);
     }
 
-    /// pre physics update
-    for (auto& c : characters_) {
-      c->UpdateLogic(mPhysicsSystem, gDeltaTimePhysics);
-      c->GetBody()->PrePhysicsUpdate(mPhysicsSystem, mTempAllocator, gDeltaTimePhysics);
-    }
-
-    player_->UpdateObjectDragging();
-    player_->UpdateCoverState();
-    player_->HandleCoverMovement(glfwGetKey(gWindow, GLFW_KEY_A) == GLFW_PRESS);
-    player_->UpdateView();
-    player_->GetBody()->PrePhysicsUpdate(mPhysicsSystem, mTempAllocator, gDeltaTimePhysics);
-
-    /// physics update
-    mPhysicsSystem->Update(gDeltaTimePhysics, 1, mTempAllocator, mJobSystem);
-    const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
-    mdl_loader_.GetScene()->UpdateRenderTransform(
-      bli, mdl_loader_.GetScene()->scene_data_.tiles);
-
-
-    /// post physics update
-    for (auto& c : characters_) {
-      c->GetBody()->PostPhysicsUpdate(mPhysicsSystem->GetGravity(), gDeltaTimePhysics);
-    }
-    player_->GetBody()->PostPhysicsUpdate(mPhysicsSystem->GetGravity(), gDeltaTimePhysics);
-
-    bool disable_animator = false;
-    animator_.Update(disable_animator);
-    if (!disable_animator) {
-      disable_animator = true;
-    }
+    animator_.Update(!render_settings_.animate_animated);
 
     camera_.Update(player_->GetBody()->GetCameraBoneMatrix());
     terrain_renderer_.Update(&camera_);
 
     auto player_pos = player_->GetBody()->GetPosition();
-    //std::cout << player_pos.GetX() << ' ' << player_pos.GetZ() << std::endl;
+    // std::cout << player_pos.GetX() << ' ' << player_pos.GetZ() << std::endl;
     world_manager_.UpdatePlayerZone(player_pos, &bi);
 
     if (render_settings_.cull) {
-      world_manager_.Cull();
+      world_manager_.Cull(render_settings_.render_animated);
     }
 
     glDisable(GL_BLEND);
-    if (render_physics_only_) {
+
+    if (render_settings_.update_buffer) {
       renderer_.UpdateBuffer();
+    }
+
+    if (render_physics_only_) {
       renderer_.RenderDebug();
     } else {
-      renderer_.UpdateBuffer();
-      if (render_settings_.shadows) {
+      if (render_settings_.render_shadows) {
         renderer_.DrawShadowPass();
       }
-      renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData());
+      renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData(),
+                                 render_settings_.triplanar_level,
+                                 render_settings_.geometry_pass);
       if (render_settings_.ssao) {
         renderer_.DrawSsaoPass();
       }
-      renderer_.DrawLightPass(cubemap_.GetRenderData());
+      renderer_.DrawLightPass(
+          cubemap_.GetRenderData(), render_settings_.light_pass,
+          render_settings_.apply_shadows, render_settings_.light_sources,
+          render_settings_.bloom);
       if (render_settings_.bloom) {
         renderer_.DrawBloom();
       }
@@ -312,15 +369,22 @@ void Game::RunGameLoop() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     RenderInterface();
 
-    text_renderer_.Render();
+    ui_renderer_.Render();
+
     renderer_.RenderToTheScreen();
 
-    // Menu not visible, cancel any mouse operations
     ui_menu_scene_->MouseCancel();
     RenderFps();
-    text_renderer_.Render();
 
-    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    UpdateHoveredObject();
+    if (hovered_object_) {
+      std::string hoveredObjectText = hovered_object_->GetInteractPrompt();
+      ui_renderer_.AddText(hoveredObjectText, glm::vec2(100.0f, 200.0f), glm::vec2(1.0f),
+                           glm::vec4(1.0f));
+    }
+
+    ui_renderer_.Render();
+
     glfwPollEvents();
     glfwSwapBuffers(gWindow);
   }
@@ -349,7 +413,7 @@ void Game::RunMenuLoop() {
     ui_menu_scene_->Update(gDeltaTime);
     ui_menu_scene_->Draw();
 
-    text_renderer_.Render();
+    ui_renderer_.Render();
 
     glfwPollEvents();
     glfwSwapBuffers(gWindow);
@@ -372,7 +436,7 @@ void Game::UpdateDeltaTime() {
   }
 }
 
-JPH::Ref<JPH::Shape> CreateMeshShape(const Scene::Mesh& mesh) {
+JPH::Ref<JPH::Shape> CreateMeshShape(const Scene::Mesh &mesh) {
   JPH::Ref<JPH::Shape> local_shape;
   if (mesh.collision_type == Scene::CollisionType::Sphere) {
     float radius = (mesh.max[0] - mesh.min[0]) * 0.5f;
@@ -381,31 +445,32 @@ JPH::Ref<JPH::Shape> CreateMeshShape(const Scene::Mesh& mesh) {
     local_shape = sphere_settings.Create().Get();
   } else {
     auto half_extend_glm = (mesh.max - mesh.min) / 2.0f;
-    JPH::Vec3 half_extend(half_extend_glm.x, half_extend_glm.y, half_extend_glm.z);
+    JPH::Vec3 half_extend(half_extend_glm.x, half_extend_glm.y,
+                          half_extend_glm.z);
     JPH::BoxShapeSettings box_settings(half_extend);
     local_shape = box_settings.Create().Get();
   }
   auto center_glm = (mesh.max + mesh.min) / 2.0f;
   JPH::Vec3 local_center(center_glm.x, center_glm.y, center_glm.z);
   if (!local_center.IsNearZero()) {
-    JPH::RotatedTranslatedShapeSettings offset_settings(local_center, JPH::Quat::sIdentity(), local_shape);
+    JPH::RotatedTranslatedShapeSettings offset_settings(
+        local_center, JPH::Quat::sIdentity(), local_shape);
     local_shape = offset_settings.Create().Get();
   }
   return local_shape;
 }
 
-void InitSceneGlobalTransforms(
-    std::vector<SceneTile*>& tiles) {
-  std::function<void(SceneNode*, const JPH::Mat44&)> dfs =
-      [&](SceneNode* node, const JPH::Mat44& parent) {
+void InitSceneGlobalTransforms(std::vector<SceneTile *> &tiles) {
+  std::function<void(SceneNode *, const JPH::Mat44 &)> dfs =
+      [&](SceneNode *node, const JPH::Mat44 &parent) {
         auto local = node->local_transform.Matrix();
         auto global_transform = parent * local;
         node->global_transform = global_transform;
         for (auto child : node->children) {
           dfs(child, global_transform);
         }
-  };
-  for (auto& tile : tiles) {
+      };
+  for (auto &tile : tiles) {
     for (auto node : tile->characters) {
       dfs(node, JPH::Mat44::sIdentity());
     }
@@ -413,11 +478,11 @@ void InitSceneGlobalTransforms(
       auto mat = JPH::Mat44::sRotationTranslation(node.rotation, node.position);
       dfs(node.desk, mat);
       dfs(node.frame, mat);
-      for (auto* o : node.obj) {
+      for (auto *o : node.obj) {
         dfs(o, mat);
       }
     }
-    for (auto& zone : tile->zones) {
+    for (auto &zone : tile->zones) {
       auto mat = JPH::Mat44::sTranslation(zone->translate);
       for (auto node : zone->object_nodes) {
         dfs(node, mat);
@@ -432,21 +497,22 @@ void InitSceneGlobalTransforms(
   while (shape->GetSubType() == JPH::EShapeSubType::OffsetCenterOfMass ||
            shape->GetSubType() == JPH::EShapeSubType::RotatedTranslated) {
     if (shape->GetSubType() == JPH::EShapeSubType::OffsetCenterOfMass) {
-      shape = static_cast<const JPH::OffsetCenterOfMassShape*>(shape)->GetInnerShape();
-    } else {
-      shape = static_cast<const JPH::RotatedTranslatedShape*>(shape)->GetInnerShape();
+      shape = static_cast<const
+JPH::OffsetCenterOfMassShape*>(shape)->GetInnerShape(); } else { shape =
+static_cast<const JPH::RotatedTranslatedShape*>(shape)->GetInnerShape();
     }
            }
   out_scale = JPH::Vec3::sReplicate(1.0f);
   if (shape->GetSubType() == JPH::EShapeSubType::Box) {
     out_scale = static_cast<const JPH::BoxShape*>(shape)->GetHalfExtent();
   } else if (shape->GetSubType() == JPH::EShapeSubType::Sphere) {
-    out_scale = JPH::Vec3::sReplicate(static_cast<const JPH::SphereShape*>(shape)->GetRadius());
+    out_scale = JPH::Vec3::sReplicate(static_cast<const
+JPH::SphereShape*>(shape)->GetRadius());
   }
   return shapeToGeometry.at(shape->GetSubType());
 } */
 
-//TODO: not used yet
+// TODO: not used yet
 JPH::Color DefineColor(JPH::EMotionType body_type, JPH::BodyID body_id) {
   JPH::Color color;
   switch (body_type) {
@@ -468,76 +534,74 @@ JPH::Color DefineColor(JPH::EMotionType body_type, JPH::BodyID body_id) {
 }
 
 // zone might be as well nullptr in case of character TODO: bear it out
-void Game::CreateBodyForNode(SceneNode* node, SceneZone* zone) {
-  //TODO: should we do smt with it?... probably there shouldn't be those
+void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone) {
+  // TODO: should we do smt with it?... probably there shouldn't be those
   if (node->mesh_index == -1) return;
   const auto scene = mdl_loader_.GetScene();
-    const auto& mesh = scene->scene_data_.meshes[node->mesh_index];
-    JPH::Ref<JPH::Shape> local_shape = CreateMeshShape(mesh);
-    JPH::EMotionType motion_type = JPH::EMotionType::Static;
-    JPH::ObjectLayer object_layer = Layers::NON_MOVING;
-    JPH::Ref<JPH::Shape> shape_settings = local_shape;
-    JPH::EActivation activation_state = JPH::EActivation::DontActivate;
-    if (mesh.type == Scene::Type::Dynamic ||
-        mesh.type == Scene::Type::HingeMoving) {
-      motion_type = JPH::EMotionType::Dynamic;
-      object_layer = Layers::MOVING;
-      node->can_be_activated = true;
-      //activation_state = JPH::EActivation::Activate;
-      zone->static_objects_.emplace_back(node);
-    } else if (mesh.type == Scene::Type::Hinge) {
-        motion_type = JPH::EMotionType::Kinematic;
-        object_layer = Layers::MOVING;
-        zone->static_objects_.emplace_back(node);
-    } else if (mesh.type == Scene::Type::Character) {
-      // return;
-      characters_.push_back(std::make_unique<EnemyController>(
-        character_shared_data_.get(), node,
-        &scene->character_skins_[0], &scene->character_rig_));
-      weapons_.push_back(std::make_unique<Weapon>(
-        &scene->weapons_[0], mPhysicsSystem, &animator_));
-      characters_.back()->GetBody()->EquipWeapon(weapons_.back().get());
-      characters_.back()->GetBody()->SetPositionRotation(
+  const auto &mesh = scene->scene_data_.meshes[node->mesh_index];
+  JPH::Ref<JPH::Shape> local_shape = CreateMeshShape(mesh);
+  JPH::EMotionType motion_type = JPH::EMotionType::Static;
+  JPH::ObjectLayer object_layer = Layers::NON_MOVING;
+  JPH::Ref<JPH::Shape> shape_settings = local_shape;
+  JPH::EActivation activation_state = JPH::EActivation::DontActivate;
+  if (mesh.type == Scene::Type::Dynamic ||
+      mesh.type == Scene::Type::HingeMoving) {
+    motion_type = JPH::EMotionType::Dynamic;
+    object_layer = Layers::MOVING;
+    node->can_be_activated = true;
+    // activation_state = JPH::EActivation::Activate;
+    zone->static_objects_.emplace_back(node);
+  } else if (mesh.type == Scene::Type::Hinge) {
+    motion_type = JPH::EMotionType::Kinematic;
+    object_layer = Layers::MOVING;
+    zone->static_objects_.emplace_back(node);
+  } else if (mesh.type == Scene::Type::Character) {
+    // return;
+    characters_.push_back(std::make_unique<EnemyController>(
+        character_shared_data_.get(), node, &scene->character_skins_[0],
+        &scene->character_rig_));
+    weapons_.push_back(std::make_unique<Weapon>(&scene->weapons_[0],
+                                                mPhysicsSystem, &animator_));
+    characters_.back()->GetBody()->EquipWeapon(weapons_.back().get());
+    characters_.back()->GetBody()->SetPositionRotation(
         node->global_transform.GetTranslation(),
         node->global_transform.GetRotation().GetQuaternion().Normalized());
+    return;
+  } else {
+    // no point light (it's not a ModelNode)
+    if (mesh.type == Scene::Type::PointLight) {
+      zone->point_lights_.emplace_back(node);
+      zone->point_lights_.back().radius_ = 5.0f;
+    } else if (mesh.type == Scene::Type::Portal ||
+               mesh.type == Scene::Type::None ||
+               mesh.type == Scene::Type::HingeBase) {
+      // door frame is.... none?
+      zone->static_objects_.push_back(node);
+      // TODO: non-physics bodies
       return;
     } else {
-      // no point light (it's not a ModelNode)
-      if (mesh.type == Scene::Type::PointLight) {
-        zone->point_lights_.emplace_back(node);
-        zone->point_lights_.back().radius_ = 25.0f;
-      } else if (mesh.type == Scene::Type::Portal
-          || mesh.type == Scene::Type::None
-          || mesh.type == Scene::Type::HingeBase
-          ) {
-        // door frame is.... none?
-        zone->static_objects_.push_back(node);
-        //TODO: non-physics bodies
-        return;
+      zone->static_objects_.push_back(node);
+      if (mesh.type == Scene::Type::Wall) {
+        // return;
+        //          zone->walls.push_back(node);
       } else {
-          zone->static_objects_.push_back(node);
-        if (mesh.type == Scene::Type::Wall) {
-          // return;
-//          zone->walls.push_back(node);
-        } else {
-          // zone->static_objects_.push_back(node);
-  //        zone->static_objects_.push_back(node);
-        }
+        // zone->static_objects_.push_back(node);
+        //        zone->static_objects_.push_back(node);
       }
     }
-    // no scale component, so safe
-    JPH::Vec3 translation = node->global_transform.GetTranslation();
-    JPH::Quat rotation = node->global_transform.GetRotation().GetQuaternion().Normalized();
-    JPH::BodyCreationSettings obj_settings(
-          shape_settings,
-          translation,
-          rotation,
-          motion_type,
-          object_layer);
-    obj_settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
-    obj_settings.mMassPropertiesOverride.mMass = 10.0f;
-    node->body_id = mBodyInterface->CreateAndAddBody(obj_settings, activation_state);
-    node->shape = local_shape;
+  }
+  // no scale component, so safe
+  JPH::Vec3 translation = node->global_transform.GetTranslation();
+  JPH::Quat rotation =
+      node->global_transform.GetRotation().GetQuaternion().Normalized();
+  JPH::BodyCreationSettings obj_settings(shape_settings, translation, rotation,
+                                         motion_type, object_layer);
+  obj_settings.mOverrideMassProperties =
+      JPH::EOverrideMassProperties::CalculateInertia;
+  obj_settings.mMassPropertiesOverride.mMass = 10.0f;
+  node->body_id =
+      mBodyInterface->CreateAndAddBody(obj_settings, activation_state);
+  node->shape = local_shape;
 }
 
 void Game::Init() {
@@ -591,46 +655,48 @@ void Game::Init() {
 
   /// CharacterBaseTest
 
-  mdl_loader_.LoadDebugShapes("C:\\Users\\Pavlo\\Desktop\\assets\\DebugShapes.gltf");
-  mdl_loader_.LoadScene( "C:\\Users\\Pavlo\\Desktop\\assets\\SceneBackyard.gltf");
-  mdl_loader_.LoadSceneMaterials( "C:\\Users\\Pavlo\\Desktop\\assets\\Materials.gltf");
+  mdl_loader_.LoadDebugShapes(
+      "C:\\Users\\Pavlo\\Desktop\\assets\\DebugShapes.gltf");
+  mdl_loader_.LoadScene(
+      "C:\\Users\\Pavlo\\Desktop\\assets\\SceneBackyard.gltf",
+      {"C:\\Users\\Pavlo\\Desktop\\assets\\OutdoorStuff.gltf"});
+  mdl_loader_.LoadSceneMaterials(
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Materials.gltf");
   // mdl_loader_.LoadEmbroideryTextures("C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery");
   mdl_loader_.LoadEmbroideryTextures(
-    "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\tablecloth",
-    "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryadno",
-    "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryshnuk",
-    "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ribbons"
-    );
-  mdl_loader_.LoadCharacters(
-        "C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf",
-        {"C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf"});
-  //TODO: create CharacterSkeleton.gltf
-  // mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\nagan.gltf"});
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\tablecloth",
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryadno",
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryshnuk",
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ribbons");
+  mdl_loader_.LoadCharacters("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf",
+                             {"C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf"});
+  // TODO: create CharacterSkeleton.gltf
+  //  mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\nagan.gltf"});
   mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\MauserC96.gltf"});
   // mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\Nagant.gltf"});
   const auto scene = mdl_loader_.GetScene();
 
   character_shared_data_ = std::make_unique<CharacterSharedData>(
-    mPhysicsSystem, mTempAllocator, this, &animator_, &doors_, &characters_);
+      mPhysicsSystem, mTempAllocator, this, &animator_, &doors_, &characters_);
 
-  const JPH::BodyLockInterface& bli = mPhysicsSystem->GetBodyLockInterface();
+  const JPH::BodyLockInterface &bli = mPhysicsSystem->GetBodyLockInterface();
 
-
-  JPH::BodyInterface& bi = mPhysicsSystem->GetBodyInterface();
+  JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
 
   InitSceneGlobalTransforms(scene->scene_data_.tiles);
   mdl_loader_.GetScene()->UpdateRenderTransform(
-    bli, mdl_loader_.GetScene()->scene_data_.tiles);
+      bli, mdl_loader_.GetScene()->scene_data_.tiles);
   mdl_loader_.GetScene()->ConnectZonesWithPortals(0);
+  std::cerr << "mid init 5" << std::endl;
 
-  for (auto& tile : scene->scene_data_.tiles) {
+  for (auto &tile : scene->scene_data_.tiles) {
     terrain_renderer_.InitializeBody(mBodyInterface);
-    //std::cout << "tile added" << std::endl;
+    // std::cout << "tile added" << std::endl;
     for (auto node : tile->characters) {
       CreateBodyForNode(node, nullptr);
     }
-    for (SceneZone* zone : tile->zones) {
-      //std::cout << "zone added" << std::endl;
+    for (SceneZone *zone : tile->zones) {
+      // std::cout << "zone added" << std::endl;
       for (auto node : zone->object_nodes) {
         CreateBodyForNode(node, zone);
       }
@@ -643,99 +709,294 @@ void Game::Init() {
         for (auto child : portal->frame->children) {
           CreateBodyForNode(child, zone);
         }
-        for (const auto* o : portal->obj) {
+        for (const auto *o : portal->obj) {
           CreateBodyForNode(0, zone);
         }
       }
     }
-    for (auto& portal : tile->portals) {
+    for (auto &portal : tile->portals) {
       doors_.emplace_back(mPhysicsSystem, scene, &portal);
-      //std::cout << "---- + 1 door" << std::endl;
+      // std::cout << "---- + 1 door" << std::endl;
     }
   }
 
   auto player_node = scene->scene_data_.player_node;
   player_ = std::make_unique<PlayerController>(
-    &camera_, character_shared_data_.get(), player_node,
-    &scene->character_skins_[0], &scene->character_rig_);
-  weapons_.push_back(std::make_unique<Weapon>(
-    &scene->weapons_[0], mPhysicsSystem, &animator_));
+      &camera_, character_shared_data_.get(), player_node,
+      &scene->character_skins_[0], &scene->character_rig_);
+  weapons_.push_back(std::make_unique<Weapon>(&scene->weapons_[0],
+                                              mPhysicsSystem, &animator_));
   player_->GetBody()->EquipWeapon(weapons_.back().get());
 
   world_manager_.UpdatePlayerZone(player_->GetBody()->GetPosition(), &bi);
 
-
   // --- CREATE UI
   // --- CREATE UI
   // --- CREATE UI
   // --- CREATE UI
-  ui_menu_scene_ = std::make_unique<UiScene>(&text_renderer_);
+  ui_menu_scene_ = std::make_unique<UiScene>(&ui_renderer_);
   mDebugUI = std::make_unique<DebugUI>(ui_menu_scene_.get(), nullptr);
   {
-		// Disable allocation checking
+    // Disable allocation checking
 
-		// Create UI
-		UIElement *main_menu = mDebugUI->CreateMenu();
-		mDebugUI->CreateTextButton(main_menu, "ssao", [this]() { render_settings_.ssao = !render_settings_.ssao; });
-		mDebugUI->CreateTextButton(main_menu, "shadows", [this]() { render_settings_.shadows = !render_settings_.shadows; });
-		mDebugUI->CreateTextButton(main_menu, "bloom", [this]() { render_settings_.bloom = !render_settings_.bloom; });
-		mDebugUI->CreateTextButton(main_menu, "cull", [this]() { render_settings_.cull = !render_settings_.cull; });
-		mDebugUI->CreateTextButton(main_menu, "Physics Settings", [this]() {
-			UIElement *phys_settings = mDebugUI->CreateMenu();
-			mDebugUI->CreateSlider(phys_settings, "Max Concurrent Jobs", float(mMaxConcurrentJobs), 1, float(std::thread::hardware_concurrency()), 1, [this](float inValue) { mMaxConcurrentJobs = (int)inValue; });
-			mDebugUI->CreateSlider(phys_settings, "Gravity (m/s^2)", -mPhysicsSystem->GetGravity().GetY(), 0.0f, 20.0f, 1.0f, [this](float inValue) { mPhysicsSystem->SetGravity(JPH::Vec3(0, -inValue, 0)); });
-			mDebugUI->CreateSlider(phys_settings, "Num Velocity Steps", float(mPhysicsSettings.mNumVelocitySteps), 0, 30, 1, [this](float inValue) { mPhysicsSettings.mNumVelocitySteps = int(round(inValue)); mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateSlider(phys_settings, "Num Position Steps", float(mPhysicsSettings.mNumPositionSteps), 0, 30, 1, [this](float inValue) { mPhysicsSettings.mNumPositionSteps = int(round(inValue)); mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateSlider(phys_settings, "Baumgarte Stabilization Factor", mPhysicsSettings.mBaumgarte, 0.01f, 1.0f, 0.05f, [this](float inValue) { mPhysicsSettings.mBaumgarte = inValue; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateSlider(phys_settings, "Speculative Contact Distance (m)", mPhysicsSettings.mSpeculativeContactDistance, 0.0f, 0.1f, 0.005f, [this](float inValue) { mPhysicsSettings.mSpeculativeContactDistance = inValue; });
-			mDebugUI->CreateSlider(phys_settings, "Penetration Slop (m)", mPhysicsSettings.mPenetrationSlop, 0.0f, 0.1f, 0.005f, [this](float inValue) { mPhysicsSettings.mPenetrationSlop = inValue; });
-			mDebugUI->CreateSlider(phys_settings, "Linear Cast Threshold", mPhysicsSettings.mLinearCastThreshold, 0.0f, 1.0f, 0.05f, [this](float inValue) { mPhysicsSettings.mLinearCastThreshold = inValue; });
-			mDebugUI->CreateSlider(phys_settings, "Min Velocity For Restitution (m/s)", mPhysicsSettings.mMinVelocityForRestitution, 0.0f, 10.0f, 0.1f, [this](float inValue) { mPhysicsSettings.mMinVelocityForRestitution = inValue; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateSlider(phys_settings, "Time Before Sleep (s)", mPhysicsSettings.mTimeBeforeSleep, 0.1f, 1.0f, 0.1f, [this](float inValue) { mPhysicsSettings.mTimeBeforeSleep = inValue; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateSlider(phys_settings, "Point Velocity Sleep Threshold (m/s)", mPhysicsSettings.mPointVelocitySleepThreshold, 0.01f, 1.0f, 0.01f, [this](float inValue) { mPhysicsSettings.mPointVelocitySleepThreshold = inValue; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-		#ifdef JPH_CUSTOM_MEMORY_HOOK_ENABLED
-			mDebugUI->CreateCheckBox(phys_settings, "Enable Checking Memory Hook", IsCustomMemoryHookEnabled(), [](UICheckBox::EState inState) { EnableCustomMemoryHook(inState == UICheckBox::STATE_CHECKED); });
-		#endif
-			mDebugUI->CreateCheckBox(phys_settings, "Deterministic Simulation", mPhysicsSettings.mDeterministicSimulation, [this](UICheckBox::EState inState) { mPhysicsSettings.mDeterministicSimulation = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateCheckBox(phys_settings, "Constraint Warm Starting", mPhysicsSettings.mConstraintWarmStart, [this](UICheckBox::EState inState) { mPhysicsSettings.mConstraintWarmStart = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateCheckBox(phys_settings, "Use Body Pair Contact Cache", mPhysicsSettings.mUseBodyPairContactCache, [this](UICheckBox::EState inState) { mPhysicsSettings.mUseBodyPairContactCache = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateCheckBox(phys_settings, "Contact Manifold Reduction", mPhysicsSettings.mUseManifoldReduction, [this](UICheckBox::EState inState) { mPhysicsSettings.mUseManifoldReduction = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateCheckBox(phys_settings, "Use Large Island Splitter", mPhysicsSettings.mUseLargeIslandSplitter, [this](UICheckBox::EState inState) { mPhysicsSettings.mUseLargeIslandSplitter = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateCheckBox(phys_settings, "Allow Sleeping", mPhysicsSettings.mAllowSleeping, [this](UICheckBox::EState inState) { mPhysicsSettings.mAllowSleeping = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->CreateCheckBox(phys_settings, "Check Active Triangle Edges", mPhysicsSettings.mCheckActiveEdges, [this](UICheckBox::EState inState) { mPhysicsSettings.mCheckActiveEdges = inState == UICheckBox::STATE_CHECKED; mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings); });
-			mDebugUI->ShowMenu(phys_settings);
-		});
-		mDebugUI->CreateTextButton(main_menu, "Help", [this](){
-			UIElement *help = mDebugUI->CreateMenu();
-			mDebugUI->CreateStaticText(help,
-				"ESC: Back to previous menu.\n"
-				"WASD + Mouse: Fly around. Hold Shift to speed up, Ctrl to slow down.\n"
-				"Space: Hold to pick up and drag a physics object under the crosshair.\n"
-				"P: Pause / unpause simulation.\n"
-				"O: Single step the simulation.\n"
-				",: Step back (only when Physics Settings / Record State for Playback is on).\n"
-				".: Step forward (only when Physics Settings / Record State for Playback is on).\n"
-				"Shift + ,: Play reverse (only when Physics Settings / Record State for Playback is on).\n"
-				"Shift + .: Replay forward (only when Physics Settings / Record State for Playback is on).\n"
-				"T: Dump frame timing information to profile_*.html (when JPH_PROFILE_ENABLED defined)."
-			);
-			mDebugUI->ShowMenu(help);
-		});
-		mDebugUI->ShowMenu(main_menu);
-	}
+    // Create UI
+    UIElement *main_menu = mDebugUI->CreateMenu();
+    mDebugUI->CreateCheckBox(main_menu, "ssao", render_settings_.ssao,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.ssao =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "render shadows",
+                             render_settings_.render_shadows,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.render_shadows =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "apply shadows",
+                             render_settings_.apply_shadows,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.apply_shadows =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "bloom", render_settings_.bloom,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.bloom =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "cull", render_settings_.cull,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.cull =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "light sources",
+                             render_settings_.light_sources,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.light_sources =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "render animated",
+                             render_settings_.render_animated,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.render_animated =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "animate animated",
+                             render_settings_.animate_animated,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.animate_animated =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "geometry pass",
+                             render_settings_.geometry_pass,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.geometry_pass =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "light pass",
+                             render_settings_.light_pass,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.light_pass =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "update physics",
+                             render_settings_.update_physics,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.update_physics =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "update buffer",
+                             render_settings_.update_buffer,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.update_buffer =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateSlider(
+        main_menu, "light distance", float(5.0f), 1, 25, 1,
+        [this](float inValue) {
+          for (auto zone :
+               mdl_loader_.GetScene()->scene_data_.tiles[0]->zones) {
+            for (auto &l : zone->point_lights_) {
+              l.radius_ = float(inValue);
+            }
+          }
+        });
+    mDebugUI->CreateSlider(main_menu, "triplanar level",
+                           float(render_settings_.triplanar_level), 1, 3, 1,
+                           [this](float inValue) {
+                             render_settings_.triplanar_level = (int)inValue;
+                           });
+    mDebugUI->CreateTextButton(main_menu, "Physics Settings", [this]() {
+      UIElement *phys_settings = mDebugUI->CreateMenu();
+      mDebugUI->CreateSlider(
+          phys_settings, "Max Concurrent Jobs", float(mMaxConcurrentJobs), 1,
+          float(std::thread::hardware_concurrency()), 1,
+          [this](float inValue) { mMaxConcurrentJobs = (int)inValue; });
+      mDebugUI->CreateSlider(
+          phys_settings, "Gravity (m/s^2)",
+          -mPhysicsSystem->GetGravity().GetY(), 0.0f, 20.0f, 1.0f,
+          [this](float inValue) {
+            mPhysicsSystem->SetGravity(JPH::Vec3(0, -inValue, 0));
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Num Velocity Steps",
+          float(mPhysicsSettings.mNumVelocitySteps), 0, 30, 1,
+          [this](float inValue) {
+            mPhysicsSettings.mNumVelocitySteps = int(round(inValue));
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Num Position Steps",
+          float(mPhysicsSettings.mNumPositionSteps), 0, 30, 1,
+          [this](float inValue) {
+            mPhysicsSettings.mNumPositionSteps = int(round(inValue));
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Baumgarte Stabilization Factor",
+          mPhysicsSettings.mBaumgarte, 0.01f, 1.0f, 0.05f,
+          [this](float inValue) {
+            mPhysicsSettings.mBaumgarte = inValue;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(phys_settings, "Speculative Contact Distance (m)",
+                             mPhysicsSettings.mSpeculativeContactDistance, 0.0f,
+                             0.1f, 0.005f, [this](float inValue) {
+                               mPhysicsSettings.mSpeculativeContactDistance =
+                                   inValue;
+                             });
+      mDebugUI->CreateSlider(phys_settings, "Penetration Slop (m)",
+                             mPhysicsSettings.mPenetrationSlop, 0.0f, 0.1f,
+                             0.005f, [this](float inValue) {
+                               mPhysicsSettings.mPenetrationSlop = inValue;
+                             });
+      mDebugUI->CreateSlider(phys_settings, "Linear Cast Threshold",
+                             mPhysicsSettings.mLinearCastThreshold, 0.0f, 1.0f,
+                             0.05f, [this](float inValue) {
+                               mPhysicsSettings.mLinearCastThreshold = inValue;
+                             });
+      mDebugUI->CreateSlider(
+          phys_settings, "Min Velocity For Restitution (m/s)",
+          mPhysicsSettings.mMinVelocityForRestitution, 0.0f, 10.0f, 0.1f,
+          [this](float inValue) {
+            mPhysicsSettings.mMinVelocityForRestitution = inValue;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Time Before Sleep (s)",
+          mPhysicsSettings.mTimeBeforeSleep, 0.1f, 1.0f, 0.1f,
+          [this](float inValue) {
+            mPhysicsSettings.mTimeBeforeSleep = inValue;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Point Velocity Sleep Threshold (m/s)",
+          mPhysicsSettings.mPointVelocitySleepThreshold, 0.01f, 1.0f, 0.01f,
+          [this](float inValue) {
+            mPhysicsSettings.mPointVelocitySleepThreshold = inValue;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+#ifdef JPH_CUSTOM_MEMORY_HOOK_ENABLED
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Enable Checking Memory Hook",
+          IsCustomMemoryHookEnabled(), [](UICheckBox::EState inState) {
+            EnableCustomMemoryHook(inState == UICheckBox::STATE_CHECKED);
+          });
+#endif
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Deterministic Simulation",
+          mPhysicsSettings.mDeterministicSimulation,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mDeterministicSimulation =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Constraint Warm Starting",
+          mPhysicsSettings.mConstraintWarmStart,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mConstraintWarmStart =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Use Body Pair Contact Cache",
+          mPhysicsSettings.mUseBodyPairContactCache,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mUseBodyPairContactCache =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Contact Manifold Reduction",
+          mPhysicsSettings.mUseManifoldReduction,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mUseManifoldReduction =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Use Large Island Splitter",
+          mPhysicsSettings.mUseLargeIslandSplitter,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mUseLargeIslandSplitter =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Allow Sleeping", mPhysicsSettings.mAllowSleeping,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mAllowSleeping =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Check Active Triangle Edges",
+          mPhysicsSettings.mCheckActiveEdges,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mCheckActiveEdges =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->ShowMenu(phys_settings);
+    });
+    mDebugUI->CreateTextButton(main_menu, "Help", [this]() {
+      UIElement *help = mDebugUI->CreateMenu();
+      mDebugUI->CreateStaticText(
+          help,
+          "ESC: Back to previous menu.\n"
+          "WASD + Mouse: Fly around. Hold Shift to speed up, Ctrl to slow "
+          "down.\n"
+          "Space: Hold to pick up and drag a physics object under the "
+          "crosshair.\n"
+          "P: Pause / unpause simulation.\n"
+          "O: Single step the simulation.\n"
+          ",: Step back (only when Physics Settings / Record State for "
+          "Playback is on).\n"
+          ".: Step forward (only when Physics Settings / Record State for "
+          "Playback is on).\n"
+          "Shift + ,: Play reverse (only when Physics Settings / Record State "
+          "for Playback is on).\n"
+          "Shift + .: Replay forward (only when Physics Settings / Record "
+          "State for Playback is on).\n"
+          "T: Dump frame timing information to profile_*.html (when "
+          "JPH_PROFILE_ENABLED defined).");
+      mDebugUI->ShowMenu(help);
+    });
+    mDebugUI->ShowMenu(main_menu);
+  }
 }
 
 void Game::DeInit() {
   // mCharacter->RemoveFromPhysicsSystem();
 }
 
-
 void GameScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
   auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
   game->camera_.ZoomOriginDist(yoffset);
 }
 
-void GameMouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+void GameMouseButtonCallback(GLFWwindow *window, int button, int action,
+                             int mods) {
   auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
   // bool mod_ctrl = mods & GLFW_MOD_CONTROL;
   // bool mod_shift = mods & GLFW_MOD_SHIFT;
@@ -757,13 +1018,15 @@ void GameMouseButtonCallback(GLFWwindow *window, int button, int action, int mod
 }
 
 void GameKeyCallback(GLFWwindow *window, int key, int scancode, int action,
-                 int mods) {
+                     int mods) {
   auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
   bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
   bool mod_shift = (mods & GLFW_MOD_SHIFT);
   if (action == GLFW_PRESS) {
     if (key == GLFW_KEY_ESCAPE) {
-      glfwSetWindowShouldClose(window, true);
+      if (mod_shift) {
+        glfwSetWindowShouldClose(window, true);
+      }
     } else if (key == GLFW_KEY_TAB) {
       game->state_ = Game::State::Menu;
     } else if (key == GLFW_KEY_F1) {
@@ -798,7 +1061,8 @@ void MenuScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
   auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
 }
 
-void MenuMouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+void MenuMouseButtonCallback(GLFWwindow *window, int button, int action,
+                             int mods) {
   auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
   double x, y;
   glfwGetCursorPos(window, &x, &y);
@@ -811,11 +1075,15 @@ void MenuMouseButtonCallback(GLFWwindow *window, int button, int action, int mod
 }
 
 void MenuKeyCallback(GLFWwindow *window, int key, int scancode, int action,
-                 int mods) {
+                     int mods) {
   auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
+  bool mod_shift = (mods & GLFW_MOD_SHIFT);
   if (action == GLFW_PRESS) {
     if (key == GLFW_KEY_ESCAPE) {
-      glfwSetWindowShouldClose(window, true);
+      if (mod_shift) {
+        glfwSetWindowShouldClose(window, true);
+      }
     } else if (key == GLFW_KEY_TAB) {
       game->state_ = Game::State::Game;
     }
@@ -828,51 +1096,54 @@ void MenuCursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
   game->ui_menu_scene_->MouseMove(xpos, ypos);
 }
 
-
-
 /// ---
 
-void Game::OnContactAdded(const JPH::Body &inBody1,
-                                       const JPH::Body &inBody2,
-                                       const JPH::ContactManifold &inManifold,
-                                       JPH::ContactSettings &ioSettings) {
+void Game::OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2,
+                          const JPH::ContactManifold &inManifold,
+                          JPH::ContactSettings &ioSettings) {
   // Draw a box around the character when it enters the sensor
   // if (inBody1.GetID() == mSensorBody)
-  //   mDebugRenderer->DrawBox(inBody2.GetWorldSpaceBounds(), JPH::Color::sGreen,
+  //   mDebugRenderer->DrawBox(inBody2.GetWorldSpaceBounds(),
+  //   JPH::Color::sGreen,
   //                           JPH::DebugRenderer::ECastShadow::Off,
   //                           JPH::DebugRenderer::EDrawMode::Wireframe);
   // else if (inBody2.GetID() == mSensorBody)
-  //   mDebugRenderer->DrawBox(inBody1.GetWorldSpaceBounds(), JPH::Color::sGreen,
+  //   mDebugRenderer->DrawBox(inBody1.GetWorldSpaceBounds(),
+  //   JPH::Color::sGreen,
   //                           JPH::DebugRenderer::ECastShadow::Off,
   //                           JPH::DebugRenderer::EDrawMode::Wireframe);
 }
 
-void Game::OnContactPersisted(
-    const JPH::Body &inBody1, const JPH::Body &inBody2,
-    const JPH::ContactManifold &inManifold, JPH::ContactSettings &ioSettings) {
+void Game::OnContactPersisted(const JPH::Body &inBody1,
+                              const JPH::Body &inBody2,
+                              const JPH::ContactManifold &inManifold,
+                              JPH::ContactSettings &ioSettings) {
   // Same behavior as contact added
   OnContactAdded(inBody1, inBody2, inManifold, ioSettings);
 }
 
-void Game::OnAdjustBodyVelocity(
-    const JPH::CharacterVirtual *inCharacter, const JPH::Body &inBody2,
-    JPH::Vec3 &ioLinearVelocity, JPH::Vec3 &ioAngularVelocity) {
+void Game::OnAdjustBodyVelocity(const JPH::CharacterVirtual *inCharacter,
+                                const JPH::Body &inBody2,
+                                JPH::Vec3 &ioLinearVelocity,
+                                JPH::Vec3 &ioAngularVelocity) {
   // Apply artificial velocity to the character when standing on the conveyor
   // belt
-  // if (inBody2.GetID() == mConveyorBeltBody) ioLinearVelocity += JPH::Vec3(0, 0, 2);
+  // if (inBody2.GetID() == mConveyorBeltBody) ioLinearVelocity += JPH::Vec3(0,
+  // 0, 2);
 }
 
 void Game::OnContactCommon(const JPH::CharacterVirtual *inCharacter,
-                                        const JPH::BodyID &inBodyID2,
-                                        const JPH::SubShapeID &inSubShapeID2,
-                                        JPH::RVec3Arg inContactPosition,
-                                        JPH::Vec3Arg inContactNormal,
-                                        JPH::CharacterContactSettings &ioSettings) {
+                           const JPH::BodyID &inBodyID2,
+                           const JPH::SubShapeID &inSubShapeID2,
+                           JPH::RVec3Arg inContactPosition,
+                           JPH::Vec3Arg inContactNormal,
+                           JPH::CharacterContactSettings &ioSettings) {
   // Draw a box around the character when it enters the sensor
   // if (inBodyID2 == mSensorBody) {
   //   JPH::AABox box = inCharacter->GetShape()->GetWorldSpaceBounds(
   //       inCharacter->GetCenterOfMassTransform(), JPH::Vec3::sOne());
-  //   // mDebugRenderer->DrawBox(box, JPH::Color::sGreen, JPH::DebugRenderer::ECastShadow::Off,
+  //   // mDebugRenderer->DrawBox(box, JPH::Color::sGreen,
+  //   JPH::DebugRenderer::ECastShadow::Off,
   //   //                         JPH::DebugRenderer::EDrawMode::Wireframe);
   // }
 
@@ -886,18 +1157,19 @@ void Game::OnContactCommon(const JPH::CharacterVirtual *inCharacter,
   // }
 
   // If we encounter an object that can push the player, enable sliding
-  if (inCharacter == player_->GetBody()->GetJphCharacter() && ioSettings.mCanPushCharacter &&
+  if (inCharacter == player_->GetBody()->GetJphCharacter() &&
+      ioSettings.mCanPushCharacter &&
       mPhysicsSystem->GetBodyInterface().GetMotionType(inBodyID2) !=
           JPH::EMotionType::Static)
     player_->GetBody()->AllowSliding(true);
 }
 
 void Game::OnContactAdded(const JPH::CharacterVirtual *inCharacter,
-                                       const JPH::BodyID &inBodyID2,
-                                       const JPH::SubShapeID &inSubShapeID2,
-                                       JPH::RVec3Arg inContactPosition,
-                                       JPH::Vec3Arg inContactNormal,
-                                       JPH::CharacterContactSettings &ioSettings) {
+                          const JPH::BodyID &inBodyID2,
+                          const JPH::SubShapeID &inSubShapeID2,
+                          JPH::RVec3Arg inContactPosition,
+                          JPH::Vec3Arg inContactNormal,
+                          JPH::CharacterContactSettings &ioSettings) {
   OnContactCommon(inCharacter, inBodyID2, inSubShapeID2, inContactPosition,
                   inContactNormal, ioSettings);
 
@@ -915,10 +1187,12 @@ void Game::OnContactAdded(const JPH::CharacterVirtual *inCharacter,
   }
 }
 
-void Game::OnContactPersisted(
-    const JPH::CharacterVirtual *inCharacter, const JPH::BodyID &inBodyID2,
-    const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
-    JPH::Vec3Arg inContactNormal, JPH::CharacterContactSettings &ioSettings) {
+void Game::OnContactPersisted(const JPH::CharacterVirtual *inCharacter,
+                              const JPH::BodyID &inBodyID2,
+                              const JPH::SubShapeID &inSubShapeID2,
+                              JPH::RVec3Arg inContactPosition,
+                              JPH::Vec3Arg inContactNormal,
+                              JPH::CharacterContactSettings &ioSettings) {
   OnContactCommon(inCharacter, inBodyID2, inSubShapeID2, inContactPosition,
                   inContactNormal, ioSettings);
 
@@ -928,16 +1202,16 @@ void Game::OnContactPersisted(
           inBodyID2.GetIndexAndSequenceNumber(), inSubShapeID2.GetValue());
 #endif
     if (std::find(mActiveContacts.begin(), mActiveContacts.end(),
-                  JPH::CharacterVirtual::ContactKey(inBodyID2, inSubShapeID2)) ==
-        mActiveContacts.end())
+                  JPH::CharacterVirtual::ContactKey(
+                      inBodyID2, inSubShapeID2)) == mActiveContacts.end())
       throw std::runtime_error(
           "Got a persisted contact that should have been an add contact");
   }
 }
 
 void Game::OnContactRemoved(const JPH::CharacterVirtual *inCharacter,
-                                         const JPH::BodyID &inBodyID2,
-                                         const JPH::SubShapeID &inSubShapeID2) {
+                            const JPH::BodyID &inBodyID2,
+                            const JPH::SubShapeID &inSubShapeID2) {
   if (inCharacter == player_->GetBody()->GetJphCharacter()) {
 #ifdef CHARACTER_TRACE_CONTACTS
     Trace("Contact removed with body %08x, sub shape %08x",
@@ -954,22 +1228,24 @@ void Game::OnContactRemoved(const JPH::CharacterVirtual *inCharacter,
 
 void Game::OnCharacterContactCommon(
     const JPH::CharacterVirtual *inCharacter,
-    const JPH::CharacterVirtual *inOtherCharacter, const JPH::SubShapeID &inSubShapeID2,
-    JPH::RVec3Arg inContactPosition, JPH::Vec3Arg inContactNormal,
-    JPH::CharacterContactSettings &ioSettings) {
+    const JPH::CharacterVirtual *inOtherCharacter,
+    const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
+    JPH::Vec3Arg inContactNormal, JPH::CharacterContactSettings &ioSettings) {
   // Characters can only be pushed in their own update
-  ioSettings.mCanPushCharacter = inOtherCharacter == player_->GetBody()->GetJphCharacter();
+  ioSettings.mCanPushCharacter =
+      inOtherCharacter == player_->GetBody()->GetJphCharacter();
   // If the player can be pushed by the other virtual character, we allow
   // sliding
-  if (inCharacter == player_->GetBody()->GetJphCharacter() && ioSettings.mCanPushCharacter)
+  if (inCharacter == player_->GetBody()->GetJphCharacter() &&
+      ioSettings.mCanPushCharacter)
     player_->GetBody()->AllowSliding(true);
 }
 
 void Game::OnCharacterContactAdded(
     const JPH::CharacterVirtual *inCharacter,
-    const JPH::CharacterVirtual *inOtherCharacter, const JPH::SubShapeID &inSubShapeID2,
-    JPH::RVec3Arg inContactPosition, JPH::Vec3Arg inContactNormal,
-    JPH::CharacterContactSettings &ioSettings) {
+    const JPH::CharacterVirtual *inOtherCharacter,
+    const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
+    JPH::Vec3Arg inContactNormal, JPH::CharacterContactSettings &ioSettings) {
   OnCharacterContactCommon(inCharacter, inOtherCharacter, inSubShapeID2,
                            inContactPosition, inContactNormal, ioSettings);
 
@@ -978,7 +1254,8 @@ void Game::OnCharacterContactAdded(
     Trace("Contact added with character %08x, sub shape %08x",
           inOtherCharacter->GetID().GetValue(), inSubShapeID2.GetValue());
 #endif
-    JPH::CharacterVirtual::ContactKey c(inOtherCharacter->GetID(), inSubShapeID2);
+    JPH::CharacterVirtual::ContactKey c(inOtherCharacter->GetID(),
+                                        inSubShapeID2);
     if (std::find(mActiveContacts.begin(), mActiveContacts.end(), c) !=
         mActiveContacts.end())
       throw std::runtime_error(
@@ -989,9 +1266,9 @@ void Game::OnCharacterContactAdded(
 
 void Game::OnCharacterContactPersisted(
     const JPH::CharacterVirtual *inCharacter,
-    const JPH::CharacterVirtual *inOtherCharacter, const JPH::SubShapeID &inSubShapeID2,
-    JPH::RVec3Arg inContactPosition, JPH::Vec3Arg inContactNormal,
-    JPH::CharacterContactSettings &ioSettings) {
+    const JPH::CharacterVirtual *inOtherCharacter,
+    const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
+    JPH::Vec3Arg inContactNormal, JPH::CharacterContactSettings &ioSettings) {
   OnCharacterContactCommon(inCharacter, inOtherCharacter, inSubShapeID2,
                            inContactPosition, inContactNormal, ioSettings);
 
@@ -1002,16 +1279,16 @@ void Game::OnCharacterContactPersisted(
 #endif
     if (std::find(mActiveContacts.begin(), mActiveContacts.end(),
                   JPH::CharacterVirtual::ContactKey(inOtherCharacter->GetID(),
-                                               inSubShapeID2)) ==
+                                                    inSubShapeID2)) ==
         mActiveContacts.end())
       throw std::runtime_error(
           "Got a persisted contact that should have been an add contact");
   }
 }
 
-void Game::OnCharacterContactRemoved(
-    const JPH::CharacterVirtual *inCharacter, const JPH::CharacterID &inOtherCharacterID,
-    const JPH::SubShapeID &inSubShapeID2) {
+void Game::OnCharacterContactRemoved(const JPH::CharacterVirtual *inCharacter,
+                                     const JPH::CharacterID &inOtherCharacterID,
+                                     const JPH::SubShapeID &inSubShapeID2) {
   if (inCharacter == player_->GetBody()->GetJphCharacter()) {
 #ifdef CHARACTER_TRACE_CONTACTS
     Trace("Contact removed with character %08x, sub shape %08x",
@@ -1030,14 +1307,15 @@ void Game::OnContactSolve(
     const JPH::CharacterVirtual *inCharacter, const JPH::BodyID &inBodyID2,
     const JPH::SubShapeID &inSubShapeID2, JPH::RVec3Arg inContactPosition,
     JPH::Vec3Arg inContactNormal, JPH::Vec3Arg inContactVelocity,
-    const JPH::PhysicsMaterial *inContactMaterial, JPH::Vec3Arg inCharacterVelocity,
-    JPH::Vec3 &ioNewCharacterVelocity) {
+    const JPH::PhysicsMaterial *inContactMaterial,
+    JPH::Vec3Arg inCharacterVelocity, JPH::Vec3 &ioNewCharacterVelocity) {
   // Ignore callbacks for other characters than the player
   if (inCharacter != player_->GetBody()->GetJphCharacter()) return;
 
   // Don't allow the player to slide down static not-too-steep surfaces when not
   // actively moving and when not on a moving platform
-  if (!player_->GetBody()->GetAllowSliding() && inContactVelocity.IsNearZero() &&
+  if (!player_->GetBody()->GetAllowSliding() &&
+      inContactVelocity.IsNearZero() &&
       !inCharacter->IsSlopeTooSteep(inContactNormal))
     ioNewCharacterVelocity = JPH::Vec3::sZero();
 }

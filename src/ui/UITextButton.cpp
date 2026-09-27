@@ -15,90 +15,79 @@
 // 	element->mClickAction = mClickAction;
 // }
 
-bool UITextButton::MouseDown(int inX, int inY)
-{
-	if (UIStaticText::MouseDown(inX, inY))
-		return true;
+bool UITextButton::MouseDown(int inX, int inY) {
+  if (UIStaticText::MouseDown(inX, inY)) return true;
 
-	if (Contains(inX, inY))
-	{
-		mPressed = true;
-		mIsRepeating = false;
-		mRepeatTimeLeft = mRepeatStartTime;
-		return true;
-	}
+  if (Contains(inX, inY)) {
+    mPressed = true;
+    mIsRepeating = false;
+    mRepeatTimeLeft = mRepeatStartTime;
+    return true;
+  }
 
-	return false;
+  return false;
 }
 
-bool UITextButton::MouseUp(int inX, int inY)
-{
-	if (UIStaticText::MouseUp(inX, inY))
-		return true;
+bool UITextButton::MouseUp(int inX, int inY) {
+  if (UIStaticText::MouseUp(inX, inY)) return true;
 
-	if (mPressed)
-	{
-		mPressed = false;
+  if (mPressed) {
+    mPressed = false;
 
-		if (!mIsRepeating && Contains(inX, inY))
-		{
-			HandleUIEvent(EVENT_BUTTON_DOWN, this);
+    if (!mIsRepeating && Contains(inX, inY)) {
+      HandleUIEvent(EVENT_BUTTON_DOWN, this);
 
-			if (mClickAction)
-				mClickAction();
-		}
-		return true;
-	}
+      if (mClickAction) mClickAction();
+    }
+    return true;
+  }
 
-	return false;
+  return false;
 }
 
-bool UITextButton::MouseMove(int inX, int inY)
-{
-	if (UIStaticText::MouseMove(inX, inY))
-		return true;
+bool UITextButton::MouseMove(int inX, int inY) {
+  if (UIStaticText::MouseMove(inX, inY)) return true;
 
-	return mPressed;
+  return mPressed;
 }
 
-void UITextButton::MouseCancel()
-{
-	UIStaticText::MouseCancel();
+void UITextButton::MouseCancel() {
+  UIStaticText::MouseCancel();
 
-	mPressed = false;
+  mPressed = false;
 }
 
-void UITextButton::Update(float inDeltaTime)
-{
-	UIStaticText::Update(inDeltaTime);
+void UITextButton::Update(float inDeltaTime) {
+  UIStaticText::Update(inDeltaTime);
 
-	if (mPressed && mRepeatStartTime > 0)
-	{
-		// Check repeat
-		mRepeatTimeLeft -= inDeltaTime;
-		if (mRepeatTimeLeft <= 0.0f)
-		{
-			// We're repeating
-			mIsRepeating = true;
-			mRepeatTimeLeft = mRepeatTime;
+  if (mPressed && mRepeatStartTime > 0) {
+    // Check repeat
+    mRepeatTimeLeft -= inDeltaTime;
+    if (mRepeatTimeLeft <= 0.0f) {
+      // We're repeating
+      mIsRepeating = true;
+      mRepeatTimeLeft = mRepeatTime;
 
-			HandleUIEvent(EVENT_BUTTON_DOWN, this);
+      HandleUIEvent(EVENT_BUTTON_DOWN, this);
 
-			if (mClickAction)
-				mClickAction();
-		}
-	}
+      if (mClickAction) mClickAction();
+    }
+  }
 }
 
-void UITextButton::DrawCustom() const
-{
-	UIStaticText::DrawCustom(IsDisabled()? mDisabledTextColor : (mPressed? mDownTextColor : (mIsHighlighted? mHighlightTextColor : (mIsSelected? mSelectedTextColor : mTextColor))));
+void UITextButton::DrawCustom() const {
+  UIStaticText::DrawCustom(
+      IsDisabled()
+          ? mDisabledTextColor
+          : (mPressed ? mDownTextColor
+                      : (mIsHighlighted ? mHighlightTextColor
+                                        : (mIsSelected ? mSelectedTextColor
+                                                       : mTextColor))));
 }
 
-void UITextButton::Draw() const
-{
-	DrawCustom();
+void UITextButton::Draw() const {
+  DrawCustom();
 
-	// Skip direct base class, we modify the text color
-	UIElement::Draw();
+  // Skip direct base class, we modify the text color
+  UIElement::Draw();
 }

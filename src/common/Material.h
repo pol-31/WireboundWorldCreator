@@ -24,9 +24,7 @@ struct Material {
    * TODO: occlusion & emission can be stored in the same RGBA texture
    */
 
-  [[nodiscard]] bool IsOnlyAlbedo() const noexcept {
-    return !normal.IsValid();
-  }
+  [[nodiscard]] bool IsOnlyAlbedo() const noexcept { return !normal.IsValid(); }
 
   Texture albedo;
   Texture normal;

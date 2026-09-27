@@ -1,7 +1,7 @@
 #version 460 core
-layout (location = 0) out vec4 gPosition;
-layout (location = 1) out vec4 gNormal;
-layout (location = 2) out vec4 gAlbedoSpec;
+//layout (location = 0) out vec4 gPosition;
+layout (location = 0) out vec4 gNormal;
+layout (location = 1) out vec4 gAlbedoSpec;
 
 in VS_OUT {
     vec3 FragPos;
@@ -31,6 +31,8 @@ layout(binding = 3) uniform sampler2DArray uAlbedoEmbroidery1;
 layout(binding = 4) uniform sampler2DArray uAlbedoEmbroidery2;
 layout(binding = 5) uniform sampler2DArray uAlbedoEmbroidery3;
 layout(binding = 6) uniform sampler2DArray uAlbedoEmbroidery4;
+
+layout(location = 7) uniform int uTriplanarSize;
 
 // 1. Core Triplanar Sampler: Samples ONE scale of the texture
 vec3 SampleTriplanar(sampler2DArray tex, vec3 scaledPos, vec3 weights, float layer) {
@@ -63,6 +65,17 @@ vec3 SampleTriplanar2Level(sampler2DArray tex, vec3 fragPos, vec3 weights, float
     vec3 valFar   = SampleTriplanar(tex, fragPos * scaleFar,   weights, layer);
 
     return mix(valClose, valFar, blendCloseFar);
+}
+
+
+vec2 OctWrap(vec2 v) {
+    return (1.0 - abs(v.yx)) * (vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0));
+}
+
+vec2 EncodeNormal(vec3 n) {
+    n /= (abs(n.x) + abs(n.y) + abs(n.z));
+    vec2 enc = n.z >= 0.0 ? n.xy : OctWrap(n.xy);
+    return enc * 0.5 + 0.5;
 }
 
 void main() {
@@ -105,25 +118,33 @@ void main() {
             ao_rough_metal.g = 0.85f;
             ao_rough_metal.b = 0.0f;
         } else {
-            baseAlbedo      = SampleTriplanar2Level(uAlbedo,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
-            normalMapSample = SampleTriplanar2Level(uNormal,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
-            ao_rough_metal  = SampleTriplanar2Level(uAoRoughMetal, fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
-//            baseAlbedo      = SampleTriplanar3Level(uAlbedo,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleMid, scaleFar, blendCloseMid, blendMidFar);
-//            normalMapSample = SampleTriplanar3Level(uNormal,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleMid, scaleFar, blendCloseMid, blendMidFar);
-//            ao_rough_metal  = SampleTriplanar3Level(uAoRoughMetal, fs_in.FragPos, blendWeights, layer, scaleClose, scaleMid, scaleFar, blendCloseMid, blendMidFar);
+            if (uTriplanarSize == 2) {
+                baseAlbedo      = SampleTriplanar2Level(uAlbedo,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
+                normalMapSample = SampleTriplanar2Level(uNormal,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
+                ao_rough_metal  = SampleTriplanar2Level(uAoRoughMetal, fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
+            } else if (uTriplanarSize == 3) {
+                baseAlbedo      = SampleTriplanar3Level(uAlbedo,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleMid, scaleFar, blendCloseMid, blendMidFar);
+                normalMapSample = SampleTriplanar3Level(uNormal,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleMid, scaleFar, blendCloseMid, blendMidFar);
+                ao_rough_metal  = SampleTriplanar3Level(uAoRoughMetal, fs_in.FragPos, blendWeights, layer, scaleClose, scaleMid, scaleFar, blendCloseMid, blendMidFar);
+            } else {
+                vec3 tc = vec3(fs_in.TexCoords, float(fs_in.material_id));
+                normalMapSample = texture(uNormal, tc).rgb;
+                ao_rough_metal = texture(uAoRoughMetal, tc).rgb;
+                baseAlbedo = texture(uAlbedo, tc).rgb;
+                //baseAlbedo = vec3(0.0f);
+            }
         }
+        //baseAlbedo = vec3(0.0f);
+        //normalMapSample = vec3(0.5f, 0.5f, 1.0f);
+        //ao_rough_metal = vec3(0.0f, 0.6f, 1.0f);
     } else {
-        // --- STANDARD UV LOGIC ---
         vec3 tc = vec3(fs_in.TexCoords, float(fs_in.material_id));
-
         if (fs_in.material_id < 5) {
             normalMapSample = texture(uNormal, tc).rgb;
             ao_rough_metal = texture(uAoRoughMetal, tc).rgb;
             baseAlbedo = texture(uAlbedo, tc).rgb;
         } else {
             ao_rough_metal = vec3(1.0f, 0.9f, 0.0f);
-            //ao_rough_metal = texture(uAoRoughMetal, vec3(fs_in.TexCoords, 2.0f)).rgb;
-
             if (fs_in.material_id == 7) {
                 baseAlbedo = texture(uAlbedoEmbroidery1, tc).rgb;
             } else if (fs_in.material_id == 8) {
@@ -132,8 +153,6 @@ void main() {
                 baseAlbedo = texture(uAlbedoEmbroidery3, tc).rgb;
             } else if (fs_in.material_id == 10) {
                 baseAlbedo = texture(uAlbedoEmbroidery4, tc).rgb;
-            } else {
-                baseAlbedo = vec3(1.0f);
             }
         }
     }
@@ -143,9 +162,11 @@ void main() {
     //ao_rough_metal.b = 0.1f;
 
 
-    gPosition = vec4(fs_in.FragPos, ao_rough_metal.g);
+//    gPosition = vec4(fs_in.FragPos, ao_rough_metal.g);
     vec3 tangentNormal = normalMapSample * 2.0 - 1.0;
     mat3 TBN = mat3(normalize(fs_in.TBN[0]), normalize(fs_in.TBN[1]), normalize(fs_in.TBN[2]));
-    gNormal = vec4(normalize(TBN * tangentNormal), ao_rough_metal.b);
+//    gNormal = vec4(normalize(TBN * tangentNormal), ao_rough_metal.b);
+    gNormal = vec4(EncodeNormal(normalize(TBN * tangentNormal)), ao_rough_metal.g, ao_rough_metal.b);
+
     gAlbedoSpec = vec4(baseAlbedo * fs_in.vert_color.rgb, ao_rough_metal.r);
 }
