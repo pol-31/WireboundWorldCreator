@@ -152,6 +152,8 @@ Renderer::Renderer(const Scene* scene, const Camera* camera,
                         "../shaders/TriangleShadowPoint.frag", {}),
       sh_geometry_("../shaders/TriangleGeometry.vert",
                    "../shaders/TriangleGeometry.frag", {0, 1, 2, 3, 4, 5, 6}),
+      sh_geometry_dbg_("../shaders/TriangleGeometry.vert",
+                   "../shaders/TriangleGeometryDbg.frag", {}),
       sh_geometry5_("../shaders/TriangleGeometry5.vert",
                     "../shaders/TriangleGeometry5.frag", {0, 1}),
       sh_deferred_shading_("../shaders/DeferredShading.vert",
@@ -437,26 +439,15 @@ int GetDbgShapeId(const std::vector<Scene::Mesh>& dbg_meshes,
 }
 
 void Renderer::RenderDebug() {
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
-  if (!culled_data_->ssbo_data.empty()) {
-    glBufferSubData(
-        GL_SHADER_STORAGE_BUFFER, 0,
-        culled_data_->ssbo_data.size() * sizeof(WorldManager::InstanceGpu),
-        culled_data_->ssbo_data.data());
-  }
-
   glBindVertexArray(scene_->scene_dbg_shapes_.vao);
-  glBindFramebuffer(GL_FRAMEBUFFER, g_buffer_);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, gWindowWidth, gWindowHeight);
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glCullFace(GL_BACK);
 
-  sh_geometry_.Bind();  // TODO: probably different shader
-
-  glBindTextureUnit(0, scene_->materials.albedo);
-  glBindTextureUnit(1, scene_->materials.normal);
-  glBindTextureUnit(2, scene_->materials.rough_metal_ao);
+  sh_geometry_dbg_.DebugUpdate();
+  sh_geometry_dbg_.Bind();
 
   for (const auto& o : culled_data_->camera.objects_lod0) {
     int lod = 0;
@@ -466,18 +457,43 @@ void Renderer::RenderDebug() {
     const auto& m_dbg = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
     for (const auto& p : m_dbg.primitives_lods[lod]) {
       glDrawElementsInstancedBaseVertexBaseInstance(
-          GL_TRIANGLES, p.index_count, p.index_type, (void*)p.index_byte_offset,
-          o.instances_num, p.base_vertex, o.instance_offset);
+          GL_TRIANGLES, p.index_count, p.index_type,
+          (void*)p.index_byte_offset, o.instances_num, p.base_vertex,
+          o.instance_offset);
     }
   }
-  // auto cam_frustum = camera_->GetFrustum();
-  // for (const auto& w : culled_data_->camera.weapons) {
-  //   (*w)->Render(cam_frustum); // non-animated, rendered only if no owner_
-  // }
-  //
+  for (const auto& o : culled_data_->camera.objects_lod1) {
+    int lod = 0;
+    const auto& m = scene_->scene_data_.meshes[o.mesh_id];
+    int dbg_shape_id =
+        GetDbgShapeId(scene_->scene_dbg_shapes_.meshes, m.collision_type);
+    const auto& m_dbg = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
+    for (const auto& p : m_dbg.primitives_lods[lod]) {
+      glDrawElementsInstancedBaseVertexBaseInstance(
+          GL_TRIANGLES, p.index_count, p.index_type,
+          (void*)p.index_byte_offset, o.instances_num, p.base_vertex,
+          o.instance_offset);
+    }
+  }
+  for (const auto& o : culled_data_->camera.objects_lod2) {
+    int lod = 0;
+    const auto& m = scene_->scene_data_.meshes[o.mesh_id];
+    int dbg_shape_id =
+        GetDbgShapeId(scene_->scene_dbg_shapes_.meshes, m.collision_type);
+    const auto& m_dbg = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
+    for (const auto& p : m_dbg.primitives_lods[lod]) {
+      glDrawElementsInstancedBaseVertexBaseInstance(
+          GL_TRIANGLES, p.index_count, p.index_type,
+          (void*)p.index_byte_offset, o.instances_num, p.base_vertex,
+          o.instance_offset);
+    }
+  }
+
   // sh_geometry5_.Bind();
-  // for (const auto& c : culled_data_->camera.characters) {
-  //   (*c)->GetBody()->RenderWithWeapon(cam_frustum); // both animated
+  // auto render_data = (*player_)->GetBody()->GetAnimatedRenderData();
+  // RenderPlayer(render_data);
+  // for (const auto& data : culled_data_->camera.object_animated) {
+  //   RenderAnimated(data);
   // }
 }
 
@@ -701,6 +717,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[!horizontal]);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+
   /// lines
   if (!mLines.empty()) {
     sh_lines_.Bind();
@@ -709,12 +726,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
     glBindVertexArray(vao_lines_);
     glDrawArrays(GL_LINES, 0, mLines.size());
   }
-
-  Clear();
-}
-
-void Renderer::DrawBloom() {
-  //
+  mLines.clear();
 }
 
 void Renderer::RenderToTheScreen() {
@@ -725,8 +737,6 @@ void Renderer::RenderToTheScreen() {
   tex_composite_.BindSampler(0);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
-
-void Renderer::Clear() { mLines.clear(); }
 
 void Renderer::DeInit() {
   glDeleteTextures(shadow_maps_.size(), shadow_maps_.data());

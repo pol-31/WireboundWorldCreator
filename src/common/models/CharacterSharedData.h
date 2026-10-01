@@ -16,7 +16,6 @@ class CharacterSharedData {
   CharacterSharedData(
       JPH::PhysicsSystem* physics_system, JPH::TempAllocator* temp_allocator,
       JPH::CharacterContactListener* contact_listener, Animator* animator,
-      std::vector<Door>* doors,
       std::vector<std::unique_ptr<EnemyController>>* characters);
 
   JPH::Ref<JPH::CharacterVirtualSettings> GetDefaultJphSettings();

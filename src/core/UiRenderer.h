@@ -51,6 +51,11 @@ class UiRenderer {
   std::vector<stbtt_packedchar> packed_chars_;
   Texture texture_text_;
   int mCharHeight = 0;
+  float font_ascent_ = 0.0f;;
+  float font_descent_ = 0.0f;
+  float font_line_gap_ = 0.0f;
+  float font_line_height_ = 0.0f;
+  float font_middle_offset_ = 0.0f;
 
   // SpriteAtlas:
   std::unordered_map<std::string, SpriteUV> sprite_atlas_;

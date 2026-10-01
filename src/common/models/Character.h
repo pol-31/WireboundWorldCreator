@@ -33,7 +33,9 @@ class Character : public GameObject {
 
   void TakeDamage(JPH::Vec3 impulse, JPH::RVec3 hit_pos, float damage) override;
 
-  std::string GetInteractPrompt() override;
+  GameObject::InteractPrompt GetInteractPrompt(Character* interactor) override;
+
+  void Interact(Character* interactor) override;
 
   void Run();
 
@@ -75,7 +77,7 @@ class Character : public GameObject {
 
   void SetPositionRotation(JPH::RVec3 pos, JPH::Quat rot);
 
-  JPH::Vec3 GetPosition() const;
+  JPH::Vec3 GetPosition() const override;
 
   JPH::Quat GetRotation() const;
 
@@ -98,6 +100,10 @@ class Character : public GameObject {
   // for animation blending (e.g. forward - strafe_left blending)
   JPH::Vec3 GetMoveDirectionRaw() const noexcept {
     return movement_direction_raw_;
+  }
+
+  JPH::Vec3 GetLookDirection() const noexcept {
+    return look_direction_;
   }
 
   [[nodiscard]] int GetAnimationId() const noexcept { return animation_id_; }
@@ -147,6 +153,7 @@ class Character : public GameObject {
 
   float head_yaw_ = 0.0f;    // camera or mover
   float head_pitch_ = 0.0f;  // camera of mover
+  JPH::Vec3 look_direction_ = JPH::Vec3(0.0f, 1.0f, 0.0f);
 
   float health_ = cMaxHealth;
   float speed_ = 0.0f;

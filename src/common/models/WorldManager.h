@@ -71,7 +71,7 @@ class WorldManager {
                const std::vector<std::unique_ptr<Weapon>>& weapons,
                const std::vector<DirectedLight>& dir_lights);
 
-  void Cull(bool render_animated);
+  void Cull(bool render_animated, bool debug);
 
   int FindNearestZone(JPH::Vec3 player_pos);
 
@@ -129,10 +129,12 @@ class WorldManager {
   // relative to cur scene for sure
 
   void PushFrustumCulled(const std::vector<const SceneNode*>& objects,
-                         std::vector<std::vector<InstanceGpu>>& ssbo_data);
+  std::vector<std::vector<InstanceGpu>>& ssbo_data,
+  bool debug);
 
   void PushFrustumCulled(const SceneNode* node,
-                         std::vector<std::vector<InstanceGpu>>& ssbo_data);
+                         std::vector<std::vector<InstanceGpu>>& ssbo_data,
+                         bool debug);
 
   // resized with zone lights num, so its array idx == (int)cur_zone.light,
   // so we don't need to store ptr to the source
@@ -142,6 +144,10 @@ class WorldManager {
   std::vector<const SceneNode*> active_camera_lod0;
   std::vector<const SceneNode*> active_camera_lod1;
   std::vector<const SceneNode*> active_camera_lod2;
+
+
+  std::uniform_real_distribution<float> random_floats_;
+  std::default_random_engine generator_;
 
  public:
   /// output (just --- 3 --- struct):

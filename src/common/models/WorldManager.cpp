@@ -27,20 +27,38 @@ WorldManager::WorldManager(
       player_(player),
       characters_(characters),
       weapons_(weapons),
-      dir_lights_(dir_lights) {}
+      dir_lights_(dir_lights),
+      random_floats_(0.0, 1.0),
+      generator_() {}
 
 // TODO: Furthermore, running recursive std::function calls inside your hottest
 //  frame loop is going to eat your CPU budget
 // TODO: so need to flatten to culled_nodes (not all scene nodes)
 void WorldManager::PushFrustumCulled(
-    const SceneNode* node, std::vector<std::vector<InstanceGpu>>& ssbo_data) {
+    const SceneNode* node, std::vector<std::vector<InstanceGpu>>& ssbo_data,
+    bool debug) {
   const Scene::SceneData& scene_data = scene_->scene_data_;
   InstanceGpu new_instance;
-  new_instance.model = node->global_transform;
+  float dispersion = 100.0f;
+  if (debug) {
+    dispersion = 255.0f;
+    JPH::Vec3 box_size = node->local_bounds.GetExtent();
+    auto scale_matrix = JPH::Mat44::sScale(box_size);
+    new_instance.model = node->global_transform * scale_matrix;
+  } else {
+    new_instance.model = node->global_transform;
+  }
   // TODO: primitives 0.... but maybe all our primitives have same mat id..
   //  so fix not for today
   new_instance.material_id =
       scene_data.meshes[node->mesh_index].primitives_lods[0][0].material_id;
+
+  float rest = 255.0f - dispersion;
+  auto GetRandomValue = [&]() -> float {
+    return rest + std::clamp(0.0f, 255.0f, float(node->node_id)) * dispersion / 255.0f;
+    // return rest + dispersion * random_floats_(generator_);
+  };
+  new_instance.color = JPH::Vec4(GetRandomValue(), GetRandomValue(), GetRandomValue(), 255.0f);
   if (scene_data.meshes[node->mesh_index].type == Scene::Type::Wall) {
     if (new_instance.material_id == static_cast<int>(MaterialIndex::Clay)) {
       new_instance.use_triplanar = 40;
@@ -50,16 +68,17 @@ void WorldManager::PushFrustumCulled(
   }
   ssbo_data[node->mesh_index].push_back(std::move(new_instance));
   for (const SceneNode* child : node->children) {
-    PushFrustumCulled(child, ssbo_data);
+    PushFrustumCulled(child, ssbo_data, debug);
   }
 }
 
 void WorldManager::PushFrustumCulled(
     const std::vector<const SceneNode*>& objects,
-    std::vector<std::vector<InstanceGpu>>& ssbo_data) {
+    std::vector<std::vector<InstanceGpu>>& ssbo_data,
+    bool debug) {
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
   for (auto node : objects) {
-    PushFrustumCulled(node, ssbo_data);
+    PushFrustumCulled(node, ssbo_data, debug);
   }
 }
 
@@ -156,7 +175,10 @@ void UpdateLightFrustums(const Frustum& frustum_camera, PointLight& l) {
   // std::cout << total_faces_rendered << std::endl;
 }
 
-void WorldManager::Cull(bool render_animated) {
+void WorldManager::Cull(bool render_animated, bool debug) {
+  random_floats_ = std::uniform_real_distribution<float>(0.0, 1.0);
+  generator_ = std::default_random_engine();
+
   auto frustum_camera = camera_->GetFrustum();
   for (auto& l :
        scene_->scene_data_.tiles[0]->zones[cur_zone_id_]->point_lights_) {
@@ -277,9 +299,9 @@ void WorldManager::Cull(bool render_animated) {
   auto ssbo_data_pl =
       std::vector<std::array<std::vector<std::vector<InstanceGpu>>, 6>>();
   auto ssbo_data_dl = std::vector<std::vector<std::vector<InstanceGpu>>>();
-  PushFrustumCulled(active_camera_lod0, ssbo_data_cam_lod0);
-  PushFrustumCulled(active_camera_lod1, ssbo_data_cam_lod1);
-  PushFrustumCulled(active_camera_lod2, ssbo_data_cam_lod2);
+  PushFrustumCulled(active_camera_lod0, ssbo_data_cam_lod0, debug);
+  PushFrustumCulled(active_camera_lod1, ssbo_data_cam_lod1, debug);
+  PushFrustumCulled(active_camera_lod2, ssbo_data_cam_lod2, debug);
   // std::cout << zone->portals.size() << std::endl;
 
   for (int i = 0; i < active_point_lights_.size(); ++i) {
@@ -289,12 +311,12 @@ void WorldManager::Cull(bool render_animated) {
       ssbo_data_pl.back()[face] =
           std::vector<std::vector<InstanceGpu>>(meshes_num);
       PushFrustumCulled(active_point_lights_[i][face],
-                        ssbo_data_pl.back()[face]);
+                        ssbo_data_pl.back()[face], debug);
     }
   }
   for (int i = 0; i < active_dir_lights_.size(); ++i) {
     ssbo_data_dl.push_back(std::vector<std::vector<InstanceGpu>>(meshes_num));
-    PushFrustumCulled(active_dir_lights_[i], ssbo_data_dl.back());
+    PushFrustumCulled(active_dir_lights_[i], ssbo_data_dl.back(), debug);
   }
 
   final_render_data_.ssbo_data.clear();

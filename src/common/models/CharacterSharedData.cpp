@@ -39,13 +39,11 @@ CharacterSharedData::CharacterSharedData(
     JPH::TempAllocator* temp_allocator,
     JPH::CharacterContactListener* contact_listener,
     Animator* animator,
-    std::vector<Door>* doors,
     std::vector<std::unique_ptr<EnemyController>>* characters)
       : physics_system_(physics_system),
   temp_allocator_(temp_allocator),
   contact_listener_(contact_listener),
   animator_(animator),
-doors_(doors),
   characters_(characters) {
   mStandingShape_ =
           JPH::RotatedTranslatedShapeSettings(
@@ -173,21 +171,12 @@ void CharacterSharedData::Shoot(JPH::Vec3 pos, JPH::Vec3 dir, JPH::BodyID source
 
   if (CastProbe(pos, dir, 100.0f, hit_fraction, hit_pos, hit_id, source_body_id)) {
     JPH::BodyInterface &bi = physics_system_->GetBodyInterface();
-
-    // Add physics impulse regardless of what it is
     JPH::Vec3 impulse = dir * 50.0f;
     bi.AddImpulse(hit_id, impulse, hit_pos);
-
-    // Get the C++ object from the physics body!
-    JPH::BodyLockRead lock(physics_system_->GetBodyLockInterface(), hit_id);
-    if (lock.Succeeded()) {
-      const JPH::Body& hit_body = lock.GetBody();
-      uint64_t user_data = hit_body.GetUserData();
-
-      if (user_data != 0) {
-        GameObject* obj = reinterpret_cast<GameObject*>(user_data);
-        obj->TakeDamage(impulse, hit_pos, 25.0f); // Polymorphism handles the rest!
-      }
+    uint64_t user_data = bi.GetUserData(hit_id);
+    if (user_data != 0) {
+      GameObject* obj = reinterpret_cast<GameObject*>(user_data);
+      obj->TakeDamage(impulse, hit_pos, 25.0f);
     }
   }
 }

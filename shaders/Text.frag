@@ -14,6 +14,6 @@ void main() {
 //    vec3 brown = vec3(0.2118, 0.1647, 0.0745);
 //    vec3 darkBrownGold = vec3(0.55, 0.40, 0.05);
     float bitmap_value = texture(tex, texcoord).r;
-    FragColor = vec4(bitmap_value) * color;
+    FragColor = vec4(bitmap_value * 1.1f / 255.0f) * color;
 //    FragColor = vec4(1.0f);
 }

@@ -20,18 +20,21 @@ UIElement *DebugUI::CreateMenu() {
   mUI->PushLayer();
 
   UIImage *background = new UIImage();
-  // background->SetRelativeX(10);
-  // background->SetRelativeY(10);
+  // background->SetPaddingRight(100);
+  // background->SetPaddingBottom(-50);
   background->SetImage("DeskHuge");
+  // background->SetWidth(400);
+  // background->SetHeight(400);
   // background->SetImage(UITexturedQuad(mUITexture, 0, 0, 33, 30, 4, 4, 24,
   // 21));
   mUI->Add(background);
 
   UIVerticalStack *stack = new UIVerticalStack();
   stack->SetRelativeX(60);
-  stack->SetRelativeY(190);
-  stack->SetPaddingRight(40);
+  stack->SetRelativeY(100);
+  stack->SetPaddingRight(100);
   stack->SetPaddingBottom(100);
+  // stack->SetWidth(400);
   background->Add(stack);
 
   return stack;
@@ -51,7 +54,7 @@ UITextButton *DebugUI::CreateTextButton(UIElement *inMenu,
                                         UITextButton::ClickAction inAction) {
   UITextButton *button = new UITextButton();
   button->SetText(inName);
-  // button->SetHeight(24);
+  // button->SetHeight(8);
   //  button->SetFont(mFont);
   button->SetClickAction(inAction);
   button->SetTextPadding(0, 24, 0, 0);
@@ -83,19 +86,20 @@ UISlider *DebugUI::CreateSlider(UIElement *inMenu,
                                 float inMaxValue, float inStepValue,
                                 UISlider::ValueChangedAction inAction) {
   UIHorizontalStack *horiz = new UIHorizontalStack();
-  horiz->SetPaddingRight(24);
+  // horiz->SetPaddingRight(24);
   inMenu->Add(horiz);
 
   UIStaticText *text = new UIStaticText();
   // text->SetFont(mFont);
-  text->SetTextPadding(0, 24, 0, 0);
+  // text->SetTextPadding(0, 24, 0, 0);
+  // text->SetHeight(24);
+  //text->SetWidth(300);
   text->SetText(inName);
-  text->SetPaddingRight(20);
+  // text->SetPaddingRight(20);
   horiz->Add(text);
 
   UISlider *slider = new UISlider();
-  slider->SetHeight(24);
-  slider->SetWidth(250);
+  slider->SetWidth(150);
   slider->SetPaddingRight(20);
   slider->SetValue(inInitialValue);
   slider->SetRange(inMinValue, inMaxValue, inStepValue);
@@ -107,25 +111,29 @@ UISlider *DebugUI::CreateSlider(UIElement *inMenu,
   UIButton *decr_button = new UIButton();
   decr_button->SetRepeat(0.5f, 0.2f);
   decr_button->SetButtonQuad(UITexturedQuad(mUITexture, 0, 31, 17, 21));
+  decr_button->SetHeight(20);
   slider->Add(decr_button);
   slider->SetDecreaseButton(decr_button);
 
   UIButton *incr_button = new UIButton();
   incr_button->SetRepeat(0.5f, 0.2f);
   incr_button->SetButtonQuad(UITexturedQuad(mUITexture, 13, 31, 17, 21));
+  incr_button->SetHeight(20);
   slider->Add(incr_button);
   slider->SetIncreaseButton(incr_button);
 
   UIImage *image = new UIImage();
   image->SetImage("Loading0");
+  image->SetHeight(20);
   // image->SetImage(UITexturedQuad(mUITexture, 34, 0, 13, 24, 36, 2, 9, 20));
   horiz->Add(image);
 
   UIStaticText *value = new UIStaticText();
-  value->SetWidth(75);
-  value->SetTextPadding(0, 5, 0, 5);
-  value->SetWrap(true);
-  value->SetTextAlignment(UIElement::RIGHT);
+  // value->SetWidth(75);
+  value->SetTextPadding(0, 20, 0, 0);
+  // value->SetWrap(true);
+  // value->SetHeight(20);
+  // value->SetTextAlignment(UIElement::CENTER);
   // value->SetFont(mFont);
   image->Add(value);
   slider->SetStaticText(value);

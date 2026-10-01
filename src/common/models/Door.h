@@ -10,28 +10,26 @@
 
 class Scene;
 class ScenePortal;
-
-struct HingeData {
-  JPH::BodyID hitbox_id;  // The small physics body of the hinge mesh (what the
-                          // bullet hits)
-  JPH::Constraint* constraint;  // The Jolt constraint keeping the door attached
-                                // at this pivot
-  bool is_broken = false;
-};
+class Hinge;
 
 class Door : public GameObject {
  public:
-  Door(JPH::PhysicsSystem* physics_system, const Scene* scene,
-       ScenePortal* portal);
+  Door() = default;
 
-  void TakeDamage(JPH::Vec3 impulse, JPH::RVec3 hit_pos, float damage) override;
+  void Initialize(JPH::PhysicsSystem* physics_system,
+       ScenePortal* portal, Hinge* hinge_top, Hinge* hinge_bottom);
 
-  std::string GetInteractPrompt() override;
+  GameObject::InteractPrompt GetInteractPrompt(Character* interactor) override;
+
+  void Interact(Character* interactor) override;
+
+  JPH::Vec3 GetPosition() const override;
 
  private:
   JPH::PhysicsSystem* physics_system_ = nullptr;
   ScenePortal* portal_ = nullptr;
-  std::vector<HingeData> hinges_;
+  Hinge* hinge_top_ = nullptr;
+  Hinge* hinge_bottom_ = nullptr;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_DOOR_H

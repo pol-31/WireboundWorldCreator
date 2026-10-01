@@ -127,14 +127,14 @@ void Game::RenderInterface() {
   }
   std::string charactersLeftText =
       "enemies left: " + std::to_string(characters_left);
-  ui_renderer_.AddText(charactersLeftText, glm::vec2(100.0f, 20.0f),
-                       glm::vec2(1.0f), glm::vec4(1.0f));
+  ui_renderer_.AddText(charactersLeftText, glm::vec2(100.0f, 5.0f),
+                       glm::vec2(255.0f), glm::vec4(255.0f));
 }
 
 void Game::RenderFps() {
   std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps_));
-  ui_renderer_.AddText(fpsText, glm::vec2(10.0f, 20.0f), glm::vec2(1.0f),
-                       glm::vec4(1.0f));
+  ui_renderer_.AddText(fpsText, glm::vec2(10.0f, 5.0f), glm::vec2(1.0f),
+                       glm::vec4(255.0f));
 }
 
 void UpdateDirLightFrustum(DirectedLight &light, const Camera *camera) {
@@ -236,6 +236,10 @@ void Game::UpdateHoveredObject() {
   // Reset hovered object every frame
   hovered_object_ = nullptr;
 
+  if (player_->IsDragging()) {
+    return;
+  }
+
   auto camera_pos = ToJph(camera_.GetPosition());
   auto camera_forward = ToJph(camera_.GetDirectionFront());
 
@@ -244,25 +248,14 @@ void Game::UpdateHoveredObject() {
   if (character_shared_data_->CastProbe(camera_pos, camera_forward, interact_dist,
     hit_fraction, hit_pos, hit_id,
     player_->GetBody()->GetJphCharacter()->GetInnerBodyID())) {
-
-      JPH::BodyLockRead lock(mPhysicsSystem->GetBodyLockInterface(), hit_id);
-      if (lock.Succeeded()) {
-         uint64_t user_data = lock.GetBody().GetUserData();
-         if (user_data != 0) {
-             GameObject* obj = reinterpret_cast<GameObject*>(user_data);
-
-             // Check if this object actually has an interaction prompt
-             if (!obj->GetInteractPrompt().empty()) {
-                 hovered_object_ = obj;
-             }
-         }
+    uint64_t user_data = mPhysicsSystem->GetBodyInterface().GetUserData(hit_id);
+    if (user_data != 0) {
+      GameObject* obj = reinterpret_cast<GameObject*>(user_data);
+      if (!obj->GetInteractPrompt(player_->GetBody()).prompt.empty()) {
+        hovered_object_ = obj;
       }
+    }
   }
-
-  // Handle Input
-  // if (hovered_object_ && InputSystem::IsKeyPressed(KEY_E)) {
-      // hovered_object_->Interact(this->GetCharacter());
-  // }
 }
 
 void Game::RunGameLoop() {
@@ -336,7 +329,7 @@ void Game::RunGameLoop() {
     world_manager_.UpdatePlayerZone(player_pos, &bi);
 
     if (render_settings_.cull) {
-      world_manager_.Cull(render_settings_.render_animated);
+      world_manager_.Cull(render_settings_.render_animated, render_physics_only_);
     }
 
     glDisable(GL_BLEND);
@@ -361,9 +354,6 @@ void Game::RunGameLoop() {
           cubemap_.GetRenderData(), render_settings_.light_pass,
           render_settings_.apply_shadows, render_settings_.light_sources,
           render_settings_.bloom);
-      if (render_settings_.bloom) {
-        renderer_.DrawBloom();
-      }
     }
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -371,16 +361,48 @@ void Game::RunGameLoop() {
 
     ui_renderer_.Render();
 
-    renderer_.RenderToTheScreen();
+    if (!render_physics_only_) {
+      renderer_.RenderToTheScreen();
+    }
 
     ui_menu_scene_->MouseCancel();
     RenderFps();
 
     UpdateHoveredObject();
+
+    auto projection_matrix = camera_.GetProjMatrix();
+    auto view_matrix = camera_.GetViewMatrix();
     if (hovered_object_) {
-      std::string hoveredObjectText = hovered_object_->GetInteractPrompt();
-      ui_renderer_.AddText(hoveredObjectText, glm::vec2(100.0f, 200.0f), glm::vec2(1.0f),
-                           glm::vec4(1.0f));
+      auto prompt_data = hovered_object_->GetInteractPrompt(player_->GetBody());
+      JPH::Vec3 worldPos_jph = prompt_data.position;
+      glm::vec3 worldPos = glm::vec3(worldPos_jph.GetX(), worldPos_jph.GetY(), worldPos_jph.GetZ());
+      glm::vec4 clipPos = projection_matrix * view_matrix * glm::vec4(worldPos, 1.0f);
+      glm::vec2 ndc(clipPos.x, clipPos.y);
+      if (clipPos.w > 0.0f) {
+        ndc /= clipPos.w;
+      } else {
+        ndc = -ndc;
+        if (glm::length(ndc) > 0.0001f) {
+          ndc = glm::normalize(ndc);
+          ndc /= std::max(std::abs(ndc.x), std::abs(ndc.y));
+        }
+      }
+      float screenX = (ndc.x + 1.0f) * 0.5f * static_cast<float>(gWindowWidth);
+      float screenY = (ndc.y + 1.0f) * 0.5f * static_cast<float>(gWindowHeight);
+      float uiY = static_cast<float>(gWindowHeight) - screenY;
+      std::string hoveredObjectText = prompt_data.prompt;
+      glm::vec2 textSize = ui_renderer_.MeasureText(hoveredObjectText);
+      float finalX = screenX - textSize.x / 2.0f;
+      float finalY = uiY - textSize.y;
+      const float padding = 10.0f;
+      finalX = std::clamp(finalX, padding, static_cast<float>(gWindowWidth) - textSize.x - padding);
+      finalY = std::clamp(finalY, padding, static_cast<float>(gWindowHeight) - textSize.y - padding);
+      ui_renderer_.AddText(
+          hoveredObjectText,
+          glm::vec2(finalX, finalY),
+          glm::vec2(1.0f),
+          glm::vec4(120.0f, 155.0f, 0.0f, 255.0f)
+      );
     }
 
     ui_renderer_.Render();
@@ -534,7 +556,7 @@ JPH::Color DefineColor(JPH::EMotionType body_type, JPH::BodyID body_id) {
 }
 
 // zone might be as well nullptr in case of character TODO: bear it out
-void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone) {
+void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user_data) {
   // TODO: should we do smt with it?... probably there shouldn't be those
   if (node->mesh_index == -1) return;
   const auto scene = mdl_loader_.GetScene();
@@ -555,8 +577,9 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone) {
     motion_type = JPH::EMotionType::Kinematic;
     object_layer = Layers::MOVING;
     zone->static_objects_.emplace_back(node);
+    hinges_.emplace_back(std::make_unique<Hinge>(mPhysicsSystem, node));
+    std::cerr << "+1 hinge" << std::endl;
   } else if (mesh.type == Scene::Type::Character) {
-    // return;
     characters_.push_back(std::make_unique<EnemyController>(
         character_shared_data_.get(), node, &scene->character_skins_[0],
         &scene->character_rig_));
@@ -575,21 +598,18 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone) {
     } else if (mesh.type == Scene::Type::Portal ||
                mesh.type == Scene::Type::None ||
                mesh.type == Scene::Type::HingeBase) {
-      // door frame is.... none?
       zone->static_objects_.push_back(node);
       // TODO: non-physics bodies
       return;
     } else {
       zone->static_objects_.push_back(node);
-      if (mesh.type == Scene::Type::Wall) {
-        // return;
-        //          zone->walls.push_back(node);
-      } else {
-        // zone->static_objects_.push_back(node);
-        //        zone->static_objects_.push_back(node);
-      }
     }
   }
+  if (!node->body_id.IsInvalid()) {
+    std::cout << "obj already exists" << std::endl;
+    return; // already exists (for objects exist in few rooms like portals)
+  }
+
   // no scale component, so safe
   JPH::Vec3 translation = node->global_transform.GetTranslation();
   JPH::Quat rotation =
@@ -599,6 +619,11 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone) {
   obj_settings.mOverrideMassProperties =
       JPH::EOverrideMassProperties::CalculateInertia;
   obj_settings.mMassPropertiesOverride.mMass = 10.0f;
+  if (jph_user_data != 0) {
+    obj_settings.mUserData = jph_user_data;
+  } else if (mesh.type == Scene::Type::Hinge) {
+    obj_settings.mUserData = reinterpret_cast<uint64_t>(hinges_.back().get());
+  }
   node->body_id =
       mBodyInterface->CreateAndAddBody(obj_settings, activation_state);
   node->shape = local_shape;
@@ -659,7 +684,8 @@ void Game::Init() {
       "C:\\Users\\Pavlo\\Desktop\\assets\\DebugShapes.gltf");
   mdl_loader_.LoadScene(
       "C:\\Users\\Pavlo\\Desktop\\assets\\SceneBackyard.gltf",
-      {"C:\\Users\\Pavlo\\Desktop\\assets\\OutdoorStuff.gltf"});
+      {"C:\\Users\\Pavlo\\Desktop\\assets\\OutdoorStuff.gltf",
+      "C:\\Users\\Pavlo\\Desktop\\assets\\House.gltf"});
   mdl_loader_.LoadSceneMaterials(
       "C:\\Users\\Pavlo\\Desktop\\assets\\Materials.gltf");
   // mdl_loader_.LoadEmbroideryTextures("C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery");
@@ -677,7 +703,7 @@ void Game::Init() {
   const auto scene = mdl_loader_.GetScene();
 
   character_shared_data_ = std::make_unique<CharacterSharedData>(
-      mPhysicsSystem, mTempAllocator, this, &animator_, &doors_, &characters_);
+      mPhysicsSystem, mTempAllocator, this, &animator_, &characters_);
 
   const JPH::BodyLockInterface &bli = mPhysicsSystem->GetBodyLockInterface();
 
@@ -687,7 +713,6 @@ void Game::Init() {
   mdl_loader_.GetScene()->UpdateRenderTransform(
       bli, mdl_loader_.GetScene()->scene_data_.tiles);
   mdl_loader_.GetScene()->ConnectZonesWithPortals(0);
-  std::cerr << "mid init 5" << std::endl;
 
   for (auto &tile : scene->scene_data_.tiles) {
     terrain_renderer_.InitializeBody(mBodyInterface);
@@ -701,7 +726,22 @@ void Game::Init() {
         CreateBodyForNode(node, zone);
       }
       for (auto portal : zone->portals) {
-        CreateBodyForNode(portal->desk, zone);
+        if (!portal->desk->body_id.IsInvalid()) {
+          zone->static_objects_.emplace_back(portal->desk);
+          for (auto child : portal->desk->children) {
+            zone->static_objects_.emplace_back(child);
+          }
+          zone->static_objects_.emplace_back(portal->frame);
+          for (auto child : portal->frame->children) {
+            zone->static_objects_.emplace_back(child);
+          }
+          for (auto o : portal->obj) {
+            zone->static_objects_.emplace_back(o);
+          }
+          continue;
+        }
+        doors_.emplace_back(std::make_unique<Door>());
+        CreateBodyForNode(portal->desk, zone, reinterpret_cast<uint64_t>(doors_.back().get()));
         for (auto child : portal->desk->children) {
           CreateBodyForNode(child, zone);
         }
@@ -709,14 +749,13 @@ void Game::Init() {
         for (auto child : portal->frame->children) {
           CreateBodyForNode(child, zone);
         }
-        for (const auto *o : portal->obj) {
-          CreateBodyForNode(0, zone);
+        for (auto o : portal->obj) {
+          CreateBodyForNode(o, zone);
         }
+        doors_.back()->Initialize(mPhysicsSystem, portal,
+          hinges_[hinges_.size() - 1].get(),
+          hinges_[hinges_.size() - 2].get());
       }
-    }
-    for (auto &portal : tile->portals) {
-      doors_.emplace_back(mPhysicsSystem, scene, &portal);
-      // std::cout << "---- + 1 door" << std::endl;
     }
   }
 
@@ -1034,7 +1073,11 @@ void GameKeyCallback(GLFWwindow *window, int key, int scancode, int action,
     } else if (key == GLFW_KEY_F2) {
       game->render_physics_only_ = !game->render_physics_only_;
     } else if (key == GLFW_KEY_E) {
-      game->player_->StartObjectDragging();
+      if (game->hovered_object_) {
+        game->hovered_object_->Interact(game->player_->GetBody());
+      } else {
+        game->player_->StartObjectDragging();
+      }
     }
   } else if (action == GLFW_RELEASE && key == GLFW_KEY_E) {
     game->player_->ReleaseObjectDragging(1.0f);
@@ -1083,6 +1126,8 @@ void MenuKeyCallback(GLFWwindow *window, int key, int scancode, int action,
     if (key == GLFW_KEY_ESCAPE) {
       if (mod_shift) {
         glfwSetWindowShouldClose(window, true);
+      } else {
+        game->mDebugUI->ToggleVisibility();
       }
     } else if (key == GLFW_KEY_TAB) {
       game->state_ = Game::State::Game;

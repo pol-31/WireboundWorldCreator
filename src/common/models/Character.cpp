@@ -15,8 +15,28 @@ void Character::TakeDamage(JPH::Vec3 impulse, JPH::RVec3 hit_pos, float damage) 
   Death();
 }
 
-std::string Character::GetInteractPrompt() {
-  return "shake hands";
+bool CanStealth(bool is_crouch, Character::State target_state, JPH::Vec3 dir, JPH::Vec3 target_dir) {
+  if (!is_crouch || target_state == Character::State::Dead) {
+    return false;
+  }
+  float max_angle_radians = JPH::DegreesToRadians(45.0f);
+  return dir.Dot(target_dir) > std::cos(max_angle_radians);
+}
+
+// interactor is a player, so should be crouch
+GameObject::InteractPrompt Character::GetInteractPrompt(Character* interactor) {
+  if (CanStealth(interactor->IsCrouch(), state_, interactor->GetLookDirection(), GetLookDirection())) {
+    auto offsetted_position = GetPosition() + JPH::Vec3(0.0f, 1.0f, 0.0f);
+    return {"kill stealth", offsetted_position};
+  }
+  return {};
+}
+
+// interactor is a player, so should be crouch
+void Character::Interact(Character* interactor) {
+  if (CanStealth(interactor->IsCrouch(), state_, interactor->GetLookDirection(), GetLookDirection())) {
+    Death();
+  }
 }
 
 void Character::SetPositionRotation(JPH::RVec3 pos, JPH::Quat rot) {
@@ -139,6 +159,11 @@ void Character::PostPhysicsUpdate(JPH::Vec3 gravity, float dt) {
   if (IsDead()) {
     return;
   }
+  JPH::Quat q_yaw = JPH::Quat::sRotation(JPH::Vec3::sAxisY(), -JPH::DegreesToRadians(head_yaw_));
+  JPH::Quat q_pitch = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), JPH::DegreesToRadians(head_pitch_));
+  JPH::Quat total_rotation = q_yaw * q_pitch;
+  look_direction_ = total_rotation * JPH::Vec3(1.0f, 0.0f, 0.0f); // forward: +x
+
   // 1. Calculate Target Speed based on input
   float target_speed = 0.0f;
   if (movement_direction_.Length() > 0.1f) {

@@ -47,7 +47,7 @@ class Renderer {
   void DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
                         bool render_geometry);
 
-  void DrawBloom();
+  // void DrawBloom();
 
   void DrawSsaoPass();
 
@@ -56,9 +56,6 @@ class Renderer {
                      bool render_bloom);
 
   void RenderToTheScreen();
-
-  /// Clear all primitives (to be called after drawing)
-  void Clear();
 
   /// DBG Unused func for composite draw (picked apart by lines/triangles)
   // void DrawLine(RVec3Arg inFrom, RVec3Arg inTo, ColorArg inColor);
@@ -166,6 +163,8 @@ class Renderer {
 
   Shader sh_terrain_;
   Shader sh_cubemap_;
+
+  Shader sh_geometry_dbg_;
 
   void InitUi();
 

@@ -10,7 +10,7 @@
 const int UiRenderer::cMaxRenderChars = 1000;
 
 UiRenderer::UiRenderer()
-    : mCharHeight(24),
+    : mCharHeight(20),
       shader_text_("../shaders/Ui.vert", "../shaders/Text.frag", {0}),
       shader_ui_("../shaders/Ui.vert", "../shaders/Ui.frag", {0}),
       texture_ui_("../assets/TexAtlas.png", Texture::Type::UiAtlas) {
@@ -20,6 +20,18 @@ UiRenderer::UiRenderer()
   if (!stbtt_InitFont(&font, font_data.data(),
                       stbtt_GetFontOffsetForIndex(font_data.data(), 0)))
     throw std::runtime_error("unable to load font file");
+
+  int unscaled_ascent = 0;
+  int unscaled_descent = 0;
+  int unscaled_line_gap = 0;
+  stbtt_GetFontVMetrics(&font, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
+  float font_scale = stbtt_ScaleForPixelHeight(&font, static_cast<float>(mCharHeight));
+  std::cout << "font scale: " << font_scale << std::endl;
+  font_ascent_  = unscaled_ascent * font_scale;
+  font_descent_ = unscaled_descent * font_scale;
+  font_line_gap_ = unscaled_line_gap * font_scale;
+  font_line_height_   = font_ascent_ - font_descent_ + font_line_gap_;
+  font_middle_offset_ = (font_ascent_ + font_descent_) * 0.5f;
 
   const int atlasWidth = 512;
   const int atlasHeight = 512;
@@ -196,23 +208,33 @@ void UiRenderer::AddSprite(std::string_view name, glm::vec2 position_pix,
 
 void UiRenderer::AddText(std::string_view text, glm::vec2 position_pix,
                          glm::vec2 scale, glm::vec4 color) {
+  MeasureText(text);
+  scale = glm::vec2(1.0f);
   if ((vbo_data_text_.size() / 4) + text.length() >
       static_cast<size_t>(cMaxRenderChars)) {
     return;
   }
-  float cursor_x = 0.0f;
-  float cursor_y = 0.0f;
+  float cursor_x = position_pix.x;
+  float cursor_y = position_pix.y + ((mCharHeight * scale.y));
+  // float cursor_y = position_pix.y - font_middle_offset_;
   for (char c : text) {
-    if (c < 32 || c > 126) continue;
+    if (c == '\n') {
+      cursor_y += mCharHeight * scale.y;
+      cursor_x = position_pix.x;
+      continue;
+    }
+    if (c < 32 || c > 126) {
+      continue;
+    }
     stbtt_aligned_quad q;
     stbtt_GetPackedQuad(packed_chars_.data(), texture_text_.GetWidth(),
                         texture_text_.GetHeight(), c - 32, &cursor_x, &cursor_y,
-                        &q, 1);
+                        &q, 0);
 
-    float x0 = position_pix.x + q.x0 * scale.x;
-    float y0 = position_pix.y + q.y0 * scale.y;
-    float x1 = position_pix.x + q.x1 * scale.x;
-    float y1 = position_pix.y + q.y1 * scale.y;
+    float x0 = q.x0 * scale.x;
+    float y0 = q.y0 * scale.y;
+    float x1 = q.x1 * scale.x;
+    float y1 = q.y1 * scale.y;
 
     Vertex v0{{x0, y0}, {q.s0, q.t0}, color};
     Vertex v1{{x0, y1}, {q.s0, q.t1}, color};
@@ -233,9 +255,19 @@ glm::vec2 UiRenderer::MeasureText(std::string_view text) const {
 
   float min_x = 0.0f;
   float max_x = 0.0f;
+  int rows_num = 0;
   bool first_char = true;
 
+  float total_width = 0.0f;
+
   for (char c : text) {
+    if (c == '\n') {
+      total_width = std::max(total_width, max_x - min_x);
+      rows_num += 1;
+      first_char = true;
+      cursor_x = 0.0f;
+      continue;
+    }
     if (c < 32 || c > 126) continue;
 
     stbtt_aligned_quad q;
@@ -251,18 +283,11 @@ glm::vec2 UiRenderer::MeasureText(std::string_view text) const {
     max_x = q.x1;
   }
 
-  // Visual width (tight bounding box) or advance width (cursor_x)
-  float total_width = cursor_x - min_x;
+  total_width = std::max(total_width, max_x - min_x);
+  rows_num += 1; // at least 1
 
-  // Use constant line height calculated during font baking/packing
-  // max_font_height_ = (ascent - descent) * scale;
-  float total_height = mCharHeight;
-
-  float factor_ = 12.5f;
-
-  // Return raw unrounded dimensions (apply UI scale factor outside or safely
-  // here without loss)
-  return glm::vec2(total_width / factor_, total_height / factor_);
+  float total_height = mCharHeight * static_cast<float>(rows_num);
+  return glm::vec2(total_width, total_height);
 }
 
 // glm::vec2 UiRenderer::MeasureText(std::string_view text) const {

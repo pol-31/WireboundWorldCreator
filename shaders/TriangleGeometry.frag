@@ -142,7 +142,7 @@ void main() {
         if (fs_in.material_id < 5) {
             normalMapSample = texture(uNormal, tc).rgb;
             ao_rough_metal = texture(uAoRoughMetal, tc).rgb;
-            baseAlbedo = texture(uAlbedo, tc).rgb;
+            baseAlbedo = texture(uAlbedo, tc).rgb * fs_in.vert_color.rgb / 255.0f;
         } else {
             ao_rough_metal = vec3(1.0f, 0.9f, 0.0f);
             if (fs_in.material_id == 7) {
@@ -168,5 +168,5 @@ void main() {
 //    gNormal = vec4(normalize(TBN * tangentNormal), ao_rough_metal.b);
     gNormal = vec4(EncodeNormal(normalize(TBN * tangentNormal)), ao_rough_metal.g, ao_rough_metal.b);
 
-    gAlbedoSpec = vec4(baseAlbedo * fs_in.vert_color.rgb, ao_rough_metal.r);
+    gAlbedoSpec = vec4(baseAlbedo, ao_rough_metal.r);
 }

@@ -57,12 +57,14 @@ void UIStaticText::AutoLayout() {
   // Update size
   if (GetManager() != nullptr) {
     glm::vec2 size = GetManager()->MeasureText(GetWrappedText());
-    int w = int(size.x * GetManager()->GetCharHeight()) + mTextPadLeft +
+    int w = int(size.x) + mTextPadLeft +
             mTextPadRight;
-    int h = int(size.y * GetManager()->GetCharHeight()) + mTextPadTop +
+    int h = int(size.y) + mTextPadTop +
             mTextPadBottom;
     if (GetWidth() <= 0) mWidth.Set(w, PIXELS);
     if (GetHeight() <= 0) mHeight.Set(h, PIXELS);
+    // mWidth.Set(size.x, PIXELS);
+    // mHeight.Set(size.y, PIXELS);
   }
 }
 

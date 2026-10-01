@@ -24,6 +24,7 @@
 #include "../common/models/CharacterSharedData.h"
 #include "../common/models/DirectedLight.h"
 #include "../common/models/Door.h"
+#include "../common/models/Hinge.h"
 #include "../common/models/EnemyController.h"
 #include "../common/models/ModelLoader.h"
 #include "../common/models/PlayerController.h"
@@ -106,13 +107,16 @@ class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
   void UpdateDeltaTime();
 
   void UpdateHoveredObject();
-  GameObject* hovered_object_ = nullptr;
 
   float frameCount_ = 0;
   float elapsedTime_ = 0;
   float fps_ = 0;
 
  public:
+
+  GameObject* hovered_object_ = nullptr;
+
+
   ModelLoader mdl_loader_;
   Animator animator_;
 
@@ -144,12 +148,13 @@ class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
   Renderer renderer_;  // in the end
   RenderSettings render_settings_;
 
-  std::vector<Door> doors_;
+  std::vector<std::unique_ptr<Door>> doors_;
+  std::vector<std::unique_ptr<Hinge>> hinges_;
 
   std::unique_ptr<DebugUI> mDebugUI;
   std::unique_ptr<UiScene> ui_menu_scene_;
 
-  void CreateBodyForNode(SceneNode *node, SceneZone *zone);
+  void CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user_data = 0);
 
  public:
   /// ContactListener callbacks
