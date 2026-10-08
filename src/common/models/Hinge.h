@@ -22,9 +22,7 @@ public:
 
   JPH::Vec3 GetPosition() const override;
 
-  void SetConstraint(JPH::Ref<JPH::Constraint> constraint) {
-    constraint_ = constraint;
-  }
+  void SetConstraint(JPH::Ref<JPH::Constraint> constraint);
 
   [[nodiscard]] bool IsBroken() const noexcept {
     return is_broken_;

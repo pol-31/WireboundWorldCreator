@@ -44,17 +44,13 @@ vec3 DecodeNormal(vec2 enc) {
 
 void main() {
     mat4 invProj = inverse(camera.proj);
-
-    // 1. Reconstruct current Fragment Position in View Space
     float depth = texture(gDepth, TexCoords).r;
     vec3 fragPos = ReconstructViewPos(TexCoords, depth, invProj);
 
-    // 2. Decode World Normal and convert to VIEW SPACE
     vec4 normData = texture(gNormal, TexCoords);
     vec3 worldNormal = DecodeNormal(normData.xy);
     vec3 normal = normalize(mat3(camera.view) * worldNormal); // Convert to View Space!
 
-    // 3. Build TBN Matrix in View Space
     vec3 randomVec = normalize(texture(texNoise, TexCoords * noiseScale).xyz);
     vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
     vec3 bitangent = cross(normal, tangent);
@@ -62,25 +58,21 @@ void main() {
 
     float occlusion = 0.0;
     for (int i = 0; i < kernelSize; ++i) {
-        // Sample position in View Space
         vec3 samplePos = fragPos + (TBN * samples[i]) * radius;
-
-        // Project sample from View Space to Screen Space UV
         vec4 offset = vec4(samplePos, 1.0);
         offset = camera.proj * offset;      // View to Clip
         offset.xyz /= offset.w;             // Perspective divide (-1 to 1)
         offset.xyz = offset.xyz * 0.5 + 0.5; // NDC to UV [0, 1]
-
-        // 4. Reconstruct the NEIGHBOR'S position in View Space
         float neighborDepth = texture(gDepth, offset.xy).r;
         vec3 neighborViewPos = ReconstructViewPos(offset.xy, neighborDepth, invProj);
-
-        // 5. Compare View Space Z (In OpenGL, negative Z is further away)
-        // Check if neighbor geometry is closer to camera than sample point
         float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - neighborViewPos.z));
         occlusion += (neighborViewPos.z >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
     }
 
     occlusion = 1.0 - (occlusion / float(kernelSize));
+
+    float aoPower = 2.5; // Tweak this: 1.0 is linear, 3.0 is very dark
+    occlusion = pow(occlusion, aoPower);
+
     FragColor = occlusion;
 }

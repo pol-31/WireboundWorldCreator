@@ -108,22 +108,26 @@ int GetLodByDist(JPH::Vec3 camera_pos, JPH::Vec3 obj_pos) {
 void WorldManager::CullAnimatedObject(
     const Frustum& frustum_camera, JPH::Vec3 camera_pos,
     const std::vector<PointLight*>& zone_point_lights, JPH::Vec3 pos,
-    AnimatedRenderData render_data) {
+    AnimatedRenderData render_data, bool apply_directed_lights,
+    bool is_player) {
   if (IsZoneCulled(pos)) {
     return;
   }
   auto bounds = GetDefaultBounds();
   bounds.Translate(pos);
-  if (frustum_camera.Overlaps(bounds)) {
+  // we render player with separate call in Geometry pass
+  if (!is_player && frustum_camera.Overlaps(bounds)) {
     render_data.lod = GetLodByDist(camera_pos, pos);
     final_render_data_.camera.object_animated.push_back(render_data);
   }
   render_data.lod = 2;  // min lod for shadows
-  for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
-    const auto& light = dir_lights_[light_id];
-    if (light.frustum.Overlaps(bounds)) {
-      final_render_data_.dir_lights[light_id].object_animated.push_back(
-          render_data);
+  if (apply_directed_lights) {
+    for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
+      const auto& light = dir_lights_[light_id];
+      if (light.frustum.Overlaps(bounds)) {
+        final_render_data_.dir_lights[light_id].object_animated.push_back(
+            render_data);
+      }
     }
   }
   for (int light_id = 0; light_id < zone_point_lights.size(); ++light_id) {
@@ -175,7 +179,9 @@ void UpdateLightFrustums(const Frustum& frustum_camera, PointLight& l) {
   // std::cout << total_faces_rendered << std::endl;
 }
 
-void WorldManager::Cull(bool render_animated, bool debug) {
+void WorldManager::Cull(bool render_player, bool skip_portals,
+    bool render_animated, bool debug, int total_objects) {
+  final_render_data_.render_player = render_player;
   random_floats_ = std::uniform_real_distribution<float>(0.0, 1.0);
   generator_ = std::default_random_engine();
 
@@ -187,13 +193,18 @@ void WorldManager::Cull(bool render_animated, bool debug) {
 
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
 
+  bool apply_directed_light = false;
   std::vector<PointLight*> point_lights;
   for (int zone_id : active_zones_) {
     auto* zone = zones[zone_id];
     for (auto& l : zone->point_lights_) {
       point_lights.push_back(&l);
     }
+    if (zone->properties.outside) {
+      apply_directed_light = true;
+    }
   }
+  final_render_data_.directed_lights_on = apply_directed_light;
 
   active_point_lights_ =
       std::vector<std::array<std::vector<const SceneNode*>, 6>>(
@@ -204,6 +215,7 @@ void WorldManager::Cull(bool render_animated, bool debug) {
   active_camera_lod1 = std::vector<const SceneNode*>();
   active_camera_lod2 = std::vector<const SceneNode*>();
   final_render_data_.ssbo_data.clear();
+  final_render_data_.point_lights_fake.clear();
 
   final_render_data_.camera.objects_lod0.clear();
   final_render_data_.camera.objects_lod1.clear();
@@ -244,17 +256,39 @@ void WorldManager::Cull(bool render_animated, bool debug) {
       for (const auto& c : characters_) {
         CullAnimatedObject(frustum_camera, ToJph(camera_->GetPosition()),
                            point_lights, c->GetBody()->GetPosition(),
-                           c->GetBody()->GetAnimatedRenderData());
+                           c->GetBody()->GetAnimatedRenderData(),
+                           apply_directed_light, false);
       }
+      CullAnimatedObject(frustum_camera, ToJph(camera_->GetPosition()),
+                         point_lights, player_->GetBody()->GetPosition(),
+                         player_->GetBody()->GetAnimatedRenderData(),
+                         apply_directed_light, true);
       for (const auto& w : weapons_) {
         CullAnimatedObject(frustum_camera, ToJph(camera_->GetPosition()),
                            point_lights, w->GetPosition(),
-                           w->GetAnimatedRenderData());
+                           w->GetAnimatedRenderData(),
+                           apply_directed_light, false);
+      }
+    }
+
+    for (auto& obj : zone->point_lights_fake_) {
+      if (frustum_camera.Overlaps(obj.object_->global_bounds)) {
+        final_render_data_.point_lights_fake.push_back(obj.object_);
       }
     }
 
     for (auto& obj : static_objects) {
+      if (skip_portals) {
+        auto mesh_index = obj.object_->mesh_index;
+        auto mesh_type = scene_->scene_data_.meshes[mesh_index].type;
+        if (mesh_type == Scene::Type::HingeMoving) {
+          continue;
+        }
+      }
       if (frustum_camera.Overlaps(obj.object_->global_bounds)) {
+        if (--total_objects < 0) {
+          continue;
+        }
         //TODO: closes point of aabb instead
         auto lod = GetLodByDist(camera_pos, obj.object_->global_bounds.GetCenter());
         if (lod == 0) {
@@ -265,10 +299,12 @@ void WorldManager::Cull(bool render_animated, bool debug) {
           active_camera_lod2.push_back(obj.object_);
         }
       }
-      for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
-        const auto& light = dir_lights_[light_id];
-        if (light.frustum.Overlaps(obj.object_->global_bounds)) {
-          active_dir_lights_[light_id].push_back(obj.object_);
+      if (apply_directed_light) {
+        for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
+          const auto& light = dir_lights_[light_id];
+          if (light.frustum.Overlaps(obj.object_->global_bounds)) {
+            active_dir_lights_[light_id].push_back(obj.object_);
+          }
         }
       }
       for (int light_id = 0; light_id < point_lights.size(); ++light_id) {

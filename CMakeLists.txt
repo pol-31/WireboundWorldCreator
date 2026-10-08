@@ -82,6 +82,7 @@ add_executable(WireboundWorldCreator
         src/common/models/GameObject.h
         src/common/models/Hinge.cpp
         src/common/models/Hinge.h
+        src/core/WindowResizeListener.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

@@ -26,13 +26,19 @@ class TerrainRenderer {
  public:
   TerrainRenderer(const MaterialArray* material);
 
-  void InitializeBody(JPH::BodyInterface* body_interface);
+  void LoadHmap(JPH::BodyInterface* body_interface, std::string_view hmap_path);
+
+  /// instead of LoadHmap
+  void LoadDefaultSurface(JPH::BodyInterface* body_interface);
 
   void Update(const Camera* camera) { mesh_.Update(camera); }
 
   TerrainRenderData GetRenderData() const noexcept;
 
- private:
+private:
+  void InitializeBody(JPH::BodyInterface* body_interface,
+    int terrain_size, const std::vector<float>& height_data);
+
   JPH::BodyID body_id_;
   GeoClipmaps mesh_;
   Texture32F hmap_;

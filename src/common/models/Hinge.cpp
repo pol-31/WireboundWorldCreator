@@ -40,6 +40,13 @@ bool Hinge::Dismantle() {
   return true;
 }
 
+void Hinge::SetConstraint(JPH::Ref<JPH::Constraint> constraint) {
+  if (constraint_) {
+    throw std::runtime_error("the hinge already initialized");
+  }
+  constraint_ = constraint;
+}
+
 void Hinge::Interact(Character* interactor) {
   Dismantle();
 }

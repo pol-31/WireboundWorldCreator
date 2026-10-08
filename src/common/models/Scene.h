@@ -115,7 +115,7 @@ struct ScenePortal {
   std::string name;
 
   SceneNode* frame = nullptr;
-  SceneNode* desk = nullptr;
+  std::vector<SceneNode*> desks;
   std::vector<SceneNode*> obj;
   JPH::Vec3 position = JPH::Vec3::sZero();
   JPH::Quat rotation = JPH::Quat::sIdentity();
@@ -124,22 +124,33 @@ struct ScenePortal {
 };
 
 struct SceneZone {
+  struct Properties {
+    bool outside = false;
+  };
   std::vector<SceneNode*> object_nodes;
   std::vector<ScenePortal*> portals;
   JPH::Vec3 translate;
   JPH::AABox bounds;
   std::string name;
+  std::vector<StaticObject> point_lights_fake_;
   std::vector<PointLight> point_lights_;
   std::vector<StaticObject> static_objects_;
-  std::vector<StaticObject> walls;
+  std::vector<SceneNode*> walls;
+  Properties properties;
 };
+
 struct SceneTile {
+  struct Properties {
+    std::string_view hmap_path;
+  };
   std::vector<SceneZone*> zones;
+  std::vector<SceneNode*> walls;
   std::vector<ScenePortal> portals;
   std::vector<SceneNode*> characters;
   JPH::AABox bounds;
   std::string name;
   std::string hmap_path;
+  Properties properties;
 };
 
 struct Scene {
@@ -149,6 +160,7 @@ struct Scene {
     Static,
     Dynamic,
     PointLight,
+    PointLightFake,
     None,
     Hinge,
     HingeBase,

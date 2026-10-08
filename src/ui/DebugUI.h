@@ -10,15 +10,18 @@
 #include "UIStaticText.h"
 #include "UITextButton.h"
 #include "UiElement.h"
+#include "../core/WindowResizeListener.h"
 
 class Texture;
 class UiScene;
 class Keyboard;
 
-class DebugUI {
+class DebugUI : public WindowResizeListener {
  public:
   /// Constructor
   DebugUI(UiScene *inUiRenderer, const Texture *texture);
+
+  void OnWindowResize() override;
 
   /// Create a new (sub) menu
   UIElement *CreateMenu();

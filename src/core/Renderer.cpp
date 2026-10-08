@@ -26,9 +26,9 @@ const int Renderer::cMaxInstancesRigged = 10;
 const int Renderer::cMaxLines = 100 * 3;
 
 const int Renderer::cMaxDirectedLights = 4;
-const GLuint Renderer::cShadowCubeMapSize = 256;
+const GLuint Renderer::cShadowCubeMapSize = 128;
 const int Renderer::cMaxPointLights = 32;
-const GLuint Renderer::cShadowMapSize = 256;
+const GLuint Renderer::cShadowMapSize = 512;
 
 const GLuint Renderer::cBloomSize = 256;
 const GLuint Renderer::cSsaoSize = 256;
@@ -38,16 +38,14 @@ const int Renderer::cShadowObjectLod = 2;
 GLuint CreateShadowMap() {
   GLuint depth_map = 0;
   glGenTextures(1, &depth_map);
-  float borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
   glBindTexture(GL_TEXTURE_2D, depth_map);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, Renderer::cShadowMapSize,
                Renderer::cShadowMapSize, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
                nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-  glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   return depth_map;
 }
 
@@ -70,6 +68,9 @@ GLuint CreateShadowCubeMapArray() {
                   GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_R,
                   GL_CLAMP_TO_EDGE);
+
+  // glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+  // glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
   glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, 0);
   return depth_cubemap_array;
@@ -146,6 +147,8 @@ Renderer::Renderer(const Scene* scene, const Camera* camera,
       //                             {1}),
       sh_shadow_dir_("../shaders/TriangleShadowDir.vert",
                      "../shaders/TriangleShadowDir.frag", {}),
+      sh_shadow_dir5_("../shaders/TriangleShadowDir5.vert",
+                     "../shaders/TriangleShadowDir.frag", {}),
       sh_shadow_point_("../shaders/TriangleShadowPoint.vert",
                        "../shaders/TriangleShadowPoint.frag", {}),
       sh_shadow_point5_("../shaders/TriangleShadowPoint5.vert",
@@ -157,7 +160,7 @@ Renderer::Renderer(const Scene* scene, const Camera* camera,
       sh_geometry5_("../shaders/TriangleGeometry5.vert",
                     "../shaders/TriangleGeometry5.frag", {0, 1}),
       sh_deferred_shading_("../shaders/DeferredShading.vert",
-                           "../shaders/DeferredShading.frag", {0, 1, 2, 3}),
+                           "../shaders/DeferredShading.frag", {0, 1, 2, 3, 6}),
       sh_bloom_("../shaders/DeferredShading.vert", "../shaders/Bloom.frag",
                 {0}),
       sh_gauss_("../shaders/DeferredShading.vert", "../shaders/Gauss.frag",
@@ -183,6 +186,9 @@ Renderer::Renderer(const Scene* scene, const Camera* camera,
 // WE CAN'T CONNECT OPENGL_ID TO A LIGHT SOURCE!!!
 
 void Renderer::DrawDirectionalLightShadowPass() {
+  if (!culled_data_->directed_lights_on) {
+    return;
+  }
   int num_to_add = culled_data_->dir_lights.size() - shadow_maps_.size();
   for (int i = 0; i < num_to_add; ++i) {
     shadow_maps_.push_back(CreateShadowMap());
@@ -192,7 +198,6 @@ void Renderer::DrawDirectionalLightShadowPass() {
   }
   glViewport(0, 0, cShadowMapSize, cShadowMapSize);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_map_);
-  glClear(GL_DEPTH_BUFFER_BIT);
   sh_shadow_dir_.DebugUpdate();
   sh_shadow_dir_.Bind();
   glBindVertexArray(scene_->scene_data_.vao);
@@ -211,6 +216,18 @@ void Renderer::DrawDirectionalLightShadowPass() {
             (void*)p.index_byte_offset, o.instances_num, p.base_vertex,
             o.instance_offset);
       }
+    }
+  }
+  sh_shadow_dir5_.DebugUpdate();
+  sh_shadow_dir5_.Bind();
+  for (int i = 0; i < culled_data_->dir_lights.size(); ++i) {
+    const auto& l = culled_data_->dir_lights[i];
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                           shadow_maps_[i], 0);
+    glUniformMatrix4fv(0, 1, GL_FALSE,
+                       glm::value_ptr(l.source->lightSpaceMatrix));
+    for (const auto& data : l.object_animated) {
+      RenderAnimated(data);
     }
   }
 }
@@ -297,8 +314,6 @@ void Renderer::DrawPointLightShadowPass() {
           static_cast<GLint>(0 * 6 + face);  // layer = 0; num_light...
       glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                                 shadow_cubemaps_[i], 0, layer);
-      auto render_data = (*player_)->GetBody()->GetAnimatedRenderData();
-      RenderAnimated(render_data);
       for (const auto& data : l.object_animated[face]) {
         RenderAnimated(data);
       }
@@ -347,13 +362,13 @@ void RenderPlayer(const AnimatedRenderData& data) {
 
 void Renderer::DrawSsaoPass() {
   sh_ssao_.Bind();
-  glBindFramebuffer(GL_FRAMEBUFFER, ssao_fbo_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_ssao_);
   glClear(GL_COLOR_BUFFER_BIT);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, g_depth_);
+  glBindTexture(GL_TEXTURE_2D, tex_g_depth_);
   glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, g_normal_);
-  ssao_tex_noise_.BindSampler(2);
+  glBindTexture(GL_TEXTURE_2D, tex_g_normal_);
+  tex_ssao_noise_.BindSampler(2);
   auto view_proj = camera_->GetViewMatrix() * camera_->GetProjMatrix();
   view_proj = glm::inverse(view_proj);
   // glUniformMatrix4fv(3, 1, false, glm::value_ptr(view_proj));
@@ -369,7 +384,7 @@ void Renderer::DrawSsaoPass() {
 void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
                                 bool render_geometry) {
   glBindVertexArray(scene_->scene_data_.vao);
-  glBindFramebuffer(GL_FRAMEBUFFER, g_buffer_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_g_buffer_);
   glViewport(0, 0, gWindowWidth, gWindowHeight);
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -418,9 +433,15 @@ void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
       }
     }
 
+    if (culled_data_->directed_lights_on) {
+      RenderTerrain(terrain);
+    }
+
     sh_geometry5_.Bind();
-    auto render_data = (*player_)->GetBody()->GetAnimatedRenderData();
-    RenderPlayer(render_data);
+    if (culled_data_->render_player) {
+      auto player_render_data = (*player_)->GetBody()->GetAnimatedRenderData();
+      RenderPlayer(player_render_data);
+    }
     for (const auto& data : culled_data_->camera.object_animated) {
       RenderAnimated(data);
     }
@@ -488,13 +509,6 @@ void Renderer::RenderDebug() {
           o.instance_offset);
     }
   }
-
-  // sh_geometry5_.Bind();
-  // auto render_data = (*player_)->GetBody()->GetAnimatedRenderData();
-  // RenderPlayer(render_data);
-  // for (const auto& data : culled_data_->camera.object_animated) {
-  //   RenderAnimated(data);
-  // }
 }
 
 void Renderer::RenderWalls() {
@@ -585,18 +599,28 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   glBindVertexArray(vao_ui_);
 
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, g_normal_);
+  glBindTexture(GL_TEXTURE_2D, tex_g_normal_);
   glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, g_albedo_spec_);
+  glBindTexture(GL_TEXTURE_2D, tex_g_albedo_spec_);
   glActiveTexture(GL_TEXTURE2);
-  glBindTexture(GL_TEXTURE_2D, g_depth_);
-  ssao_tex_color_.BindSampler(3);
+  glBindTexture(GL_TEXTURE_2D, tex_g_depth_);
+  tex_ssao_color_.BindSampler(3);
+
+  int apply_dir_lights = 0;
+  if (culled_data_->directed_lights_on) {
+    apply_dir_lights = 1;
+    glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D, shadow_maps_[0]);
+    glUniformMatrix4fv(7, 1, false, glm::value_ptr(culled_data_->dir_lights[0].source->lightSpaceMatrix));
+    glUniform3fv(8, 1, glm::value_ptr(culled_data_->dir_lights[0].source->dir));
+    glUniform3fv(9, 1, glm::value_ptr(culled_data_->dir_lights[0].source->color));
+  }
+  glUniform1i(5, apply_dir_lights);
 
   auto view_proj = camera_->GetProjMatrix() * camera_->GetViewMatrix();
   view_proj = glm::inverse(view_proj);
-  glUniformMatrix4fv(
-      glGetUniformLocation(sh_deferred_shading_.GetId(), "uInvViewProj"), 1,
-      false, glm::value_ptr(view_proj));
+  glUniformMatrix4fv(4, 1, false, glm::value_ptr(view_proj));
+
 
   const uint32_t num_lights =
       static_cast<uint32_t>(culled_data_->point_lights.size());
@@ -648,7 +672,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   // blit DEPTH to bloom fbo
-  glBindFramebuffer(GL_READ_FRAMEBUFFER, g_buffer_);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo_g_buffer_);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_scene_);
   glBlitFramebuffer(0, 0, gWindowWidth, gWindowHeight, 0, 0, gWindowWidth,
                     gWindowHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
@@ -668,6 +692,19 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
       glUniformMatrix4fv(
           0, 1, GL_FALSE,
           reinterpret_cast<const float*>(&l.source->object_->global_transform));
+      // JPH::Vec4 colorVec = l.object_->color.ToVec4();
+      JPH::Vec4 colorVec = JPH::Vec4::sOne();
+      glUniform4fv(1, 1, &colorVec.mF32[0]);
+      for (const auto& p : m.primitives_lods[2]) {
+        glDrawElementsBaseVertex(GL_TRIANGLES, p.index_count, p.index_type,
+                                 (void*)p.index_byte_offset, p.base_vertex);
+      }
+    }
+    for (const auto& l : culled_data_->point_lights_fake) {
+      const auto& m = scene_->scene_data_.meshes[l->mesh_index];
+      glUniformMatrix4fv(
+          0, 1, GL_FALSE,
+          reinterpret_cast<const float*>(&l->global_transform));
       // JPH::Vec4 colorVec = l.object_->color.ToVec4();
       JPH::Vec4 colorVec = JPH::Vec4::sOne();
       glUniform4fv(1, 1, &colorVec.mF32[0]);
@@ -698,8 +735,8 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
       glUniform1i(1, horizontal);
       glActiveTexture(GL_TEXTURE0);
       glBindTexture(GL_TEXTURE_2D, first_iteration
-                                       ? bloom_tex_
-                                       : buffer_ping_pong_[!horizontal]);
+                                       ? tex_bloom_
+                                       : tex_ping_pong_[!horizontal]);
       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
       horizontal = !horizontal;
       if (first_iteration) first_iteration = false;
@@ -709,24 +746,33 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   glViewport(0, 0, gWindowWidth, gWindowHeight);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_composite_);
   glClear(GL_COLOR_BUFFER_BIT);
+  sh_composite_.DebugUpdate();
   sh_composite_.Bind();
+  float bloom_intensity = 1.0f;
+  float bloom_exposure = 1.0f;
+  glm::vec2 bloom_texel_size = glm::vec2(
+    static_cast<float>(gWindowWidth),
+    static_cast<float>(gWindowHeight));
+  glUniform1f(2, bloom_intensity);
+  glUniform1f(3, bloom_exposure);
+  glUniform2fv(4, 1, glm::value_ptr(bloom_texel_size));
   glBindVertexArray(vao_ui_);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex_scene_);
   glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[!horizontal]);
+  glBindTexture(GL_TEXTURE_2D, tex_ping_pong_[!horizontal]);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 
   /// lines
-  if (!mLines.empty()) {
-    sh_lines_.Bind();
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines_);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, mLines.size(), mLines.data());
-    glBindVertexArray(vao_lines_);
-    glDrawArrays(GL_LINES, 0, mLines.size());
-  }
-  mLines.clear();
+  // if (!mLines.empty()) {
+  //   sh_lines_.Bind();
+  //   glBindBuffer(GL_ARRAY_BUFFER, vbo_lines_);
+  //   glBufferSubData(GL_ARRAY_BUFFER, 0, mLines.size(), mLines.data());
+  //   glBindVertexArray(vao_lines_);
+  //   glDrawArrays(GL_LINES, 0, mLines.size());
+  // }
+  // mLines.clear();
 }
 
 void Renderer::RenderToTheScreen() {
@@ -738,10 +784,52 @@ void Renderer::RenderToTheScreen() {
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
+GLuint Renderer::GetLightingFbo() {
+  return fbo_composite_;
+}
+
 void Renderer::DeInit() {
+  std::vector<GLuint> textures;
+  textures.push_back(tex_g_depth_);
+  textures.push_back(tex_g_normal_);
+  textures.push_back(tex_g_albedo_spec_);
+  textures.push_back(tex_bloom_);
+  textures.push_back(tex_scene_);
+  for (auto t : tex_ping_pong_) {
+    textures.push_back(t);
+  }
+  glDeleteTextures(textures.size(), textures.data());
   glDeleteTextures(shadow_maps_.size(), shadow_maps_.data());
+  shadow_maps_.clear();
   glDeleteTextures(shadow_cubemaps_.size(), shadow_cubemaps_.data());
-  glDeleteFramebuffers(1, &ssao_fbo_);
+  shadow_cubemaps_.clear();
+
+  std::vector<GLuint> fbos;
+  fbos.push_back(fbo_ssao_);
+  fbos.push_back(fbo_depth_map_);
+  fbos.push_back(fbo_depth_cubemap_);
+  fbos.push_back(fbo_g_buffer_);
+  fbos.push_back(fbo_bloom_);
+  fbos.push_back(fbo_scene_);
+  for (auto f : fbo_ping_pong_) {
+    fbos.push_back(f);
+  }
+  fbos.push_back(fbo_composite_);
+  glDeleteFramebuffers(fbos.size(), fbos.data());
+
+  glDeleteBuffers(1, &ssbo_instanced_);
+
+  std::vector<GLuint> vaos;
+  vaos.push_back(vao_ui_);
+  vaos.push_back(vao_lines_);
+  vaos.push_back(vao_wall_);
+  glDeleteVertexArrays(vaos.size(), vaos.data());
+
+  std::vector<GLuint> vbos;
+  vbos.push_back(vbo_ui_);
+  vbos.push_back(vbo_lines_);
+  vbos.push_back(vbo_wall_);
+  glDeleteBuffers(vbos.size(), vbos.data());
 }
 
 void Renderer::Init() {
@@ -791,32 +879,32 @@ void Renderer::InitCompositeFbo() {
 }
 
 void Renderer::InitGBuffer() {
-  glGenFramebuffers(1, &g_buffer_);
-  glBindFramebuffer(GL_FRAMEBUFFER, g_buffer_);
+  glGenFramebuffers(1, &fbo_g_buffer_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_g_buffer_);
 
-  glGenTextures(1, &g_normal_);
-  glBindTexture(GL_TEXTURE_2D, g_normal_);
+  glGenTextures(1, &tex_g_normal_);
+  glBindTexture(GL_TEXTURE_2D, tex_g_normal_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
                GL_RGBA, GL_FLOAT, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         g_normal_, 0);
+                         tex_g_normal_, 0);
 
-  glGenTextures(1, &g_albedo_spec_);
-  glBindTexture(GL_TEXTURE_2D, g_albedo_spec_);
+  glGenTextures(1, &tex_g_albedo_spec_);
+  glBindTexture(GL_TEXTURE_2D, tex_g_albedo_spec_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gWindowWidth, gWindowHeight, 0,
                GL_RGBA, GL_UNSIGNED_BYTE, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         g_albedo_spec_, 0);
+                         tex_g_albedo_spec_, 0);
 
   unsigned int attachments[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
   glDrawBuffers(2, attachments);
 
-  glGenTextures(1, &g_depth_);
-  glBindTexture(GL_TEXTURE_2D, g_depth_);
+  glGenTextures(1, &tex_g_depth_);
+  glBindTexture(GL_TEXTURE_2D, tex_g_depth_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, gWindowWidth,
                gWindowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -825,7 +913,7 @@ void Renderer::InitGBuffer() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                         g_depth_, 0);
+                         tex_g_depth_, 0);
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     std::cout << "Framebuffer not complete!" << std::endl;
@@ -867,10 +955,10 @@ void Renderer::InitUi() {
 
 void Renderer::InitGauss() {
   glGenFramebuffers(2, fbo_ping_pong_);
-  glGenTextures(2, buffer_ping_pong_);
+  glGenTextures(2, tex_ping_pong_);
   for (unsigned int i = 0; i < 2; i++) {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[i]);
-    glBindTexture(GL_TEXTURE_2D, buffer_ping_pong_[i]);
+    glBindTexture(GL_TEXTURE_2D, tex_ping_pong_[i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
                  GL_RGBA, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -878,7 +966,7 @@ void Renderer::InitGauss() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           buffer_ping_pong_[i], 0);
+                           tex_ping_pong_[i], 0);
   }
 }
 
@@ -886,14 +974,14 @@ void Renderer::InitBloom() {
   glGenFramebuffers(1, &fbo_bloom_);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
 
-  glGenTextures(1, &bloom_tex_);
-  glBindTexture(GL_TEXTURE_2D, bloom_tex_);
+  glGenTextures(1, &tex_bloom_);
+  glBindTexture(GL_TEXTURE_2D, tex_bloom_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, cBloomSize, cBloomSize, 0, GL_RGBA,
                GL_FLOAT, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         bloom_tex_, 0);
+                         tex_bloom_, 0);
   unsigned int bloom_attachment[1] = {GL_COLOR_ATTACHMENT0};
   glDrawBuffers(1, bloom_attachment);
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -929,6 +1017,7 @@ void Renderer::InitScene() {
 
 void Renderer::InitLights() {
   /// dir lights: shadowmap (sun)  glGenFramebuffers(1, &fbo_depth_map_);
+  glGenFramebuffers(1, &fbo_depth_map_);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_map_);
   glDrawBuffer(GL_NONE);
   glReadBuffer(GL_NONE);
@@ -982,17 +1071,17 @@ void Renderer::InitSsaoNoise() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  ssao_tex_noise_ = Texture(noise_tex_id, 4, 4, GL_RGB, GL_RGBA16F, GL_FLOAT);
+  tex_ssao_noise_ = Texture(noise_tex_id, 4, 4, GL_RGB, GL_RGBA16F, GL_FLOAT);
 }
 
 void Renderer::InitSsaoFbo() {
-  glGenFramebuffers(1, &ssao_fbo_);
-  glBindFramebuffer(GL_FRAMEBUFFER, ssao_fbo_);
+  glGenFramebuffers(1, &fbo_ssao_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_ssao_);
 
   GLuint color_buffer_id = 0;
   glGenTextures(1, &color_buffer_id);
   glBindTexture(GL_TEXTURE_2D, color_buffer_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, cBloomSize, cBloomSize, 0, GL_RED,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, cSsaoSize, cSsaoSize, 0, GL_RED,
                GL_FLOAT, nullptr);
   std::cout << gWindowWidth << ' ' << gWindowHeight << std::endl;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -1001,7 +1090,7 @@ void Renderer::InitSsaoFbo() {
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          color_buffer_id, 0);
 
-  ssao_tex_color_ = Texture(color_buffer_id, gWindowWidth, gWindowHeight,
+  tex_ssao_color_ = Texture(color_buffer_id, gWindowWidth, gWindowHeight,
                             GL_RED, GL_RED, GL_FLOAT);
 }
 
@@ -1063,4 +1152,11 @@ void Renderer::InitializeProceduralWall() {
                         (void*)(3 * sizeof(float)));
 
   glBindVertexArray(0);
+}
+
+void Renderer::OnWindowResize() {
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindVertexArray(0);
+  DeInit();
+  Init();
 }

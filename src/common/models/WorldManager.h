@@ -71,7 +71,8 @@ class WorldManager {
                const std::vector<std::unique_ptr<Weapon>>& weapons,
                const std::vector<DirectedLight>& dir_lights);
 
-  void Cull(bool render_animated, bool debug);
+  void Cull(bool render_player, bool skip_portals,
+    bool render_animated, bool debug, int total_objects = 5000);
 
   int FindNearestZone(JPH::Vec3 player_pos);
 
@@ -87,7 +88,8 @@ class WorldManager {
 
   void CullAnimatedObject(const Frustum& frustum_camera, JPH::Vec3 camera_pos,
                           const std::vector<PointLight*>& zone_point_lights,
-                          JPH::Vec3 pos, AnimatedRenderData render_data);
+                          JPH::Vec3 pos, AnimatedRenderData render_data,
+                          bool apply_directed_lights, bool is_player);
 
   // struct Zone {
   //   Scene::ModelNode* scene_node = nullptr;
@@ -157,6 +159,9 @@ class WorldManager {
     std::vector<FinalDirLight> dir_lights;
     std::vector<int> active_zones;
     FinalCamera camera;
+    std::vector<const SceneNode*> point_lights_fake;
+    bool directed_lights_on = true;
+    bool render_player = false;
   };
 
   const ZoneCulledData* GetCulledData() { return &final_render_data_; }

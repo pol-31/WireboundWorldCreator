@@ -1,8 +1,8 @@
 #version 460 core
 
-layout (location = 0) out vec4 gPosition;
-layout (location = 1) out vec4 gNormal;
-layout (location = 2) out vec4 gAlbedoSpec;
+//layout (location = 0) out vec4 gPosition;
+layout (location = 0) out vec4 gNormal;
+layout (location = 1) out vec4 gAlbedoSpec;
 
 layout(std140, binding = 0) uniform Camera {
     vec3 pos;       float _pad0;
@@ -15,12 +15,23 @@ layout(std140, binding = 0) uniform Camera {
 
 layout(location = 1) uniform sampler2DArray  material_albedo;
 layout(location = 2) uniform sampler2DArray  material_normal;
-layout(location = 3) uniform sampler2DArray  material_rough_metal_ao;
+layout(location = 3) uniform sampler2DArray  uAoRoughMetal;
 layout(location = 4) uniform int material_id;
 
 in TES_OUT {
     vec3 tc;  // Texture coordinates
 } fs_in;
+
+
+vec2 OctWrap(vec2 v) {
+    return (1.0 - abs(v.yx)) * (vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0));
+}
+
+vec2 EncodeNormal(vec3 n) {
+    n /= (abs(n.x) + abs(n.y) + abs(n.z));
+    vec2 enc = n.z >= 0.0 ? n.xy : OctWrap(n.xy);
+    return enc * 0.5 + 0.5;
+}
 
 //vec3 UnpackNormal(vec2 nmap_rg) {
 //    return normalize(vec3(nmap_rg * 2.0 - 1.0, sqrt(1.0 - dot(nmap_rg * 2.0 - 1.0, nmap_rg * 2.0 - 1.0))));
@@ -50,7 +61,7 @@ void main() {
 
     // 2. Sample the textures
     vec3 albedo = texture(material_albedo, vec3(uv, material_id)).rgb;
-    vec3 rma = texture(material_rough_metal_ao, vec3(uv, material_id)).rgb;
+    vec3 rma = texture(uAoRoughMetal, vec3(uv, material_id)).rgb;
 
     // Unpack Tangent Space normal (where Z is "UP")
     vec2 raw_normal = texture(material_normal, vec3(uv, material_id)).rg;
@@ -76,11 +87,7 @@ void main() {
     mat3 TBN = mat3(T, B, geo_normal);
 
     // 5. Final World Space Normal
-    vec3 final_normal = normalize(TBN * ts_normal);
-
-    // 6. OUTPUT TO G-BUFFER
-    gPosition = vec4(fs_in.tc, 1.0);
-    gNormal = vec4(final_normal, 1.0);     // Now strictly in World Space [-1, 1] !
+    gNormal = vec4(EncodeNormal(normalize(TBN * ts_normal)), rma.g, rma.b);
 
     // Assuming you pack Roughness/Specular into the alpha channel for the deferred pass
     gAlbedoSpec = vec4(albedo, rma.r);
@@ -93,7 +100,7 @@ void main() {
 //    vec2 uvY = worldPos.xz; // Y axis → XZ (this is your height-safe one)
 //    vec3 albedo = texture(material_albedo, vec3(WorldUV(uvY, 1.0f), material_id)).rgb;
 //    vec3 n = texture(material_normal, vec3(WorldUV(uvY, 1.0f), material_id)).rgb;
-//    vec3 rma = texture(material_rough_metal_ao, vec3(WorldUV(uvY, 1.0f), material_id)).rgb;
+//    vec3 rma = texture(uAoRoughMetal, vec3(WorldUV(uvY, 1.0f), material_id)).rgb;
 //    gAlbedoSpec = vec4(albedo, 1.0);
 //    gPosition = vec4(fs_in.tc, 1.0f);
 //

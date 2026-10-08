@@ -7,6 +7,7 @@
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
+#include <stb_image.h>
 
 #include "../common/Material.h"
 #include "../io/Window.h"
@@ -19,45 +20,40 @@ TerrainRenderer::TerrainRenderer(const MaterialArray* material)
 
 Texture CreateTexture(float terrain_size,
                       const std::vector<float>& height_data) {
-  // 1. Generate and bind the OpenGL texture
   GLuint texture_id;
   glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
-
-  // 2. Set texture parameters (essential for the texture to render correctly)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  // 3. Upload the float height data
-  glTexImage2D(GL_TEXTURE_2D,
-               0,        // Mipmap level
-               GL_R32F,  // Internal format (32-bit float, Red/Single channel)
-               terrain_size,       // Width
-               terrain_size,       // Height
-               0,                  // Border (must be 0)
-               GL_RED,             // Format of the pixel data
-               GL_FLOAT,           // Data type of the pixel data
-               height_data.data()  // Pointer to the raw float data
-  );
-
-  // Unbind the texture to clean up the state
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, terrain_size,
+               terrain_size, 0, GL_RED, GL_FLOAT,
+               height_data.data());
   glBindTexture(GL_TEXTURE_2D, 0);
-
-  // 4. Instantiate your custom Texture class
-  Texture32F terrain_texture(texture_id,    // GLuint id
-                             terrain_size,  // GLsizei width
-                             terrain_size,  // GLsizei height
-                             GL_RED,        // GLenum format
-                             GL_R32F,       // GLint format_internal
-                             GL_FLOAT       // GLenum type
+  Texture32F terrain_texture(
+    texture_id, terrain_size, terrain_size,
+    GL_RED, GL_R32F, GL_FLOAT
   );
   return terrain_texture;
 }
 
-void TerrainRenderer::InitializeBody(JPH::BodyInterface* body_interface) {
-  return;
+void TerrainRenderer::LoadHmap(JPH::BodyInterface* body_interface, std::string_view hmap_path) {
+  const int terrain_size = 1024;
+  std::vector<float> height_data(terrain_size * terrain_size, 0.0f);
+  int width, height, channels;
+  // The '1' at the end forces stb_image to return only the red/greyscale channel
+  float* data = stbi_loadf(hmap_path.data(), &width, &height, &channels, 1);
+
+  if (data) {
+    std::vector<float> height_data(data, data + (width * height));
+    hmap_ = CreateTexture(width, height_data);
+    stbi_image_free(data);
+  }
+  InitializeBody(body_interface, terrain_size, height_data);
+}
+
+void TerrainRenderer::LoadDefaultSurface(JPH::BodyInterface* body_interface) {
   const int terrain_size = 1024;
   std::vector<float> height_data(terrain_size * terrain_size, 0.0f);
   std::mt19937 rng(std::random_device{}());
@@ -68,8 +64,14 @@ void TerrainRenderer::InitializeBody(JPH::BodyInterface* body_interface) {
     h = 0.0f * 0.2f * dist(rng);
   }
   hmap_ = CreateTexture(terrain_size, height_data);
-  JPH::Vec3 offset(-512.0f, 0.0f, -512.0f);
-  JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
+  InitializeBody(body_interface, terrain_size, height_data);
+}
+
+void TerrainRenderer::InitializeBody(JPH::BodyInterface* body_interface,
+    int terrain_size, const std::vector<float>& height_data) {
+  float factor = 1.0f / 16.0f;
+  JPH::Vec3 offset = JPH::Vec3(-512.0f, 0.0f, -512.0f) * factor;
+  JPH::Vec3 scale = JPH::Vec3(1.0f * factor, 1.0f, 1.0f * factor);
   JPH::HeightFieldShapeSettings shape_settings(height_data.data(), offset,
                                                scale, terrain_size);
   shape_settings.mActiveEdgeCosThresholdAngle = 0.996195f;  // ~5 degrees

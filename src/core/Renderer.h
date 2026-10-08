@@ -16,6 +16,7 @@
 #include "Cubemap.h"
 #include "Frustum.h"
 #include "TerrainRenderer.h"
+#include "WindowResizeListener.h"
 
 class Camera;
 struct Scene;
@@ -27,11 +28,13 @@ class PointLight;
 class Weapon;
 
 /// Implementation of DebugRenderer
-class Renderer {
+class Renderer : public WindowResizeListener {
  public:
   Renderer(const Scene* scene, const Camera* camera,
            const std::unique_ptr<PlayerController>* player,
            const WorldManager::ZoneCulledData* culled_data);
+
+  void OnWindowResize() override;
 
   ~Renderer() { DeInit(); }
 
@@ -56,6 +59,8 @@ class Renderer {
                      bool render_bloom);
 
   void RenderToTheScreen();
+
+  GLuint GetLightingFbo();
 
   /// DBG Unused func for composite draw (picked apart by lines/triangles)
   // void DrawLine(RVec3Arg inFrom, RVec3Arg inTo, ColorArg inColor);
@@ -88,9 +93,9 @@ class Renderer {
 
   void InitSsaoFbo();
 
-  Texture ssao_tex_noise_;
-  GLuint ssao_fbo_ = 0;
-  Texture ssao_tex_color_;
+  Texture tex_ssao_noise_;
+  GLuint fbo_ssao_ = 0;
+  Texture tex_ssao_color_;
   Shader sh_ssao_;
   std::vector<glm::vec3> ssao_kernel_;
 
@@ -109,6 +114,7 @@ class Renderer {
   void InitLights();
 
   Shader sh_shadow_dir_;
+  Shader sh_shadow_dir5_;
   Shader sh_shadow_dir_apply_;
   GLuint fbo_depth_map_ = 0;
 
@@ -125,16 +131,16 @@ class Renderer {
 
   void InitGBuffer();
 
-  GLuint g_buffer_ = 0;
-  GLuint g_depth_ = 0;
-  GLuint g_normal_ = 0;
-  GLuint g_albedo_spec_ = 0;
+  GLuint fbo_g_buffer_ = 0;
+  GLuint tex_g_depth_ = 0;
+  GLuint tex_g_normal_ = 0;
+  GLuint tex_g_albedo_spec_ = 0;
 
   void InitBloom();
 
   /// bloom / post-light effects
   GLuint fbo_bloom_ = 0;
-  GLuint bloom_tex_ = 0;
+  GLuint tex_bloom_ = 0;
   Shader sh_bloom_;
 
   void InitScene();
@@ -145,7 +151,7 @@ class Renderer {
   void InitGauss();
 
   GLuint fbo_ping_pong_[2];
-  GLuint buffer_ping_pong_[2];
+  GLuint tex_ping_pong_[2];
   Shader sh_gauss_;
 
   void InitCompositeFbo();

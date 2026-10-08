@@ -1,6 +1,9 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC__SETUPWINDOW_H_
 #define WIREBOUNDWORLDCREATOR_SRC__SETUPWINDOW_H_
 
+#include <vector>
+#include <string>
+
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
@@ -36,6 +39,17 @@ extern float gResFactor;
 
 // TODO; maybe we can remove global variables, but this is not for now
 
+struct WindowResolution {
+  int width;
+  int height;
+};
+
+std::vector<std::string> GenWindowResolutionStrings();
+WindowResolution GetWindowResolution(int id);
+
+void SetFullscreen(bool enableFullscreen);
+void CenterWindow();
+
 /// initializes gWindow (see above)
 void SetupWindow();
 
@@ -50,5 +64,7 @@ glm::ivec2 ChooseNearestSize(glm::ivec2 size);
 
 /// returns neared to supported resolution (that was actually set)
 glm::ivec2 SetWindowSize(glm::ivec2 size);
+
+int GetDefaultWindowResolutionId();
 
 #endif  // WIREBOUNDWORLDCREATOR_SRC__SETUPWINDOW_H_

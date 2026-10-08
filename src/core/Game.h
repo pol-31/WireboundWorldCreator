@@ -57,6 +57,7 @@ struct RenderSettings {
 
   bool geometry_pass = true;
   bool light_pass = true;
+  int objects_num = 500;
 };
 
 class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
@@ -77,14 +78,24 @@ class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
 
   void Run();
 
+  void PrebakeEnvMaps();
+
  private:
   void Init();
 
   void DeInit();
 
+  void LoadScenes();
+
+  void InitUi();
+
+  void InitScenesBodies();
+
   void RunGameLoop();
 
   void RunMenuLoop();
+
+  void RenderHoveredObjectPrompt();
 
   int mMaxConcurrentJobs = 1;  // thread::hardware_concurrency();
   JPH::TempAllocator *mTempAllocator = nullptr;
@@ -148,6 +159,7 @@ class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
   Renderer renderer_;  // in the end
   RenderSettings render_settings_;
 
+  // std::vector<std::unique_ptr<Door>> windows_; same as door for now
   std::vector<std::unique_ptr<Door>> doors_;
   std::vector<std::unique_ptr<Hinge>> hinges_;
 

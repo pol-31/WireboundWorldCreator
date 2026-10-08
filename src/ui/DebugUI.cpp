@@ -147,19 +147,19 @@ UIComboBox *DebugUI::CreateComboBox(UIElement *inMenu,
                                     int inInitialItem,
                                     UIComboBox::ItemChangedAction inAction) {
   UIHorizontalStack *horiz = new UIHorizontalStack();
-  horiz->SetPaddingRight(24);
+  // horiz->SetPaddingRight(24);
   inMenu->Add(horiz);
 
   UIStaticText *text = new UIStaticText();
   // text->SetFont(mFont);
-  text->SetTextPadding(0, 24, 0, 0);
+  // text->SetTextPadding(0, 24, 0, 0);
   text->SetText(inName);
-  text->SetPaddingRight(20);
+  // text->SetPaddingRight(20);
   horiz->Add(text);
 
   UIComboBox *combo = new UIComboBox();
-  combo->SetHeight(24);
-  combo->SetWidth(250);
+  // combo->SetHeight(24);
+  combo->SetWidth(150);
   combo->SetPaddingRight(20);
   combo->SetItems(inItems);
   combo->SetCurrentItem(inInitialItem);
@@ -169,19 +169,21 @@ UIComboBox *DebugUI::CreateComboBox(UIElement *inMenu,
   UIButton *prev_button = new UIButton();
   prev_button->SetRepeat(0.5f, 0.2f);
   prev_button->SetButtonQuad(UITexturedQuad(mUITexture, 0, 31, 17, 21));
+  prev_button->SetHeight(20);
   combo->Add(prev_button);
   combo->SetPreviousButton(prev_button);
 
   UIButton *next_button = new UIButton();
   next_button->SetRepeat(0.5f, 0.2f);
   next_button->SetButtonQuad(UITexturedQuad(mUITexture, 13, 31, 17, 21));
+  next_button->SetHeight(20);
   combo->Add(next_button);
   combo->SetNextButton(next_button);
 
   UIStaticText *value = new UIStaticText();
-  value->SetTextPadding(0, 5, 0, 5);
-  value->SetWrap(false);
-  value->SetTextAlignment(UIElement::CENTER);
+  value->SetTextPadding(0, 20, 0, 0);
+  // value->SetWrap(false);
+  // value->SetTextAlignment(UIElement::CENTER);
   // value->SetFont(mFont);
   combo->Add(value);
   combo->SetStaticText(value);
@@ -204,4 +206,8 @@ void DebugUI::ToggleVisibility() {
     mUI->SwitchToState(UiScene::STATE_DEACTIVATING);
   else
     mUI->SetVisible(!mUI->IsVisible());
+}
+
+void DebugUI::OnWindowResize() {
+  //TODO;
 }

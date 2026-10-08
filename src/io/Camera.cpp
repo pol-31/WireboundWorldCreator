@@ -70,7 +70,7 @@ glm::mat4 Camera::GetProjMatrix() const noexcept {
   return glm::perspective(
       fovy_,
       static_cast<float>(gWindowWidth) / static_cast<float>(gWindowHeight),
-      0.01f, 1000.0f);
+      0.01f, 100.0f);
 }
 
 void Camera::ZoomOriginDist(float yoffset) {
@@ -116,8 +116,39 @@ void Camera::Update(JPH::Mat44 head_mat) {
   data.cosHalfFov = std::cos(fovy_ * 0.5f);
   data.view =
       glm::lookAt(position_, position_ + direction_front_, direction_up_);
-  data.proj = glm::perspective(
-      fovy_, float(gWindowWidth) / float(gWindowHeight), 0.01f, 1000.0f);
+  data.proj = GetProjMatrix();
+  glNamedBufferSubData(ubo_, 0, sizeof(CameraUBO), &data);
+}
+
+void Camera::UpdateBakeEnv(JPH::Vec3 position, float yaw, float pitch) {
+  yaw_ = yaw;
+  pitch_ = pitch;
+  position_ = ToGlm(position);
+  origin_ = ToGlm(position);
+  direction_front_.x =
+      glm::cos(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
+  direction_front_.y = glm::sin(glm::radians(pitch_));
+  direction_front_.z =
+      glm::sin(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
+  direction_front_ = glm::normalize(direction_front_);
+  direction_right_ =
+      glm::normalize(glm::cross(direction_front_, direction_world_up_));
+  direction_up_ =
+      glm::normalize(glm::cross(direction_right_, direction_front_));
+
+  SetFovy(glm::radians(90.0f));
+
+  CameraUBO data{};
+  data.camPos = position_;
+  data.camForward = direction_front_;
+  data.camUp = direction_up_;
+  data.camRight = direction_right_;
+  data.cosHalfFov = std::cos(fovy_ * 0.5f);
+  data.view =
+      glm::lookAt(position_, position_ + direction_front_, direction_up_);
+  data.proj = GetProjMatrix();
+
+  //TODO: but what bout GetProj()?
   glNamedBufferSubData(ubo_, 0, sizeof(CameraUBO), &data);
 }
 

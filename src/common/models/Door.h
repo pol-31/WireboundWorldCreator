@@ -9,17 +9,21 @@
 #include "GameObject.h"
 
 class Scene;
-class ScenePortal;
+class SceneNode;
 class Hinge;
 
 class Door : public GameObject {
  public:
   Door() = default;
 
-  void Initialize(JPH::PhysicsSystem* physics_system,
-       ScenePortal* portal, Hinge* hinge_top, Hinge* hinge_bottom);
+  void AddHinge(Hinge* hinge) {
+    hinges_.push_back(hinge);
+  }
 
-  GameObject::InteractPrompt GetInteractPrompt(Character* interactor) override;
+  void Initialize(JPH::PhysicsSystem* physics_system,
+       SceneNode* desk, JPH::BodyID frame_body_id);
+
+  InteractPrompt GetInteractPrompt(Character* interactor) override;
 
   void Interact(Character* interactor) override;
 
@@ -27,9 +31,8 @@ class Door : public GameObject {
 
  private:
   JPH::PhysicsSystem* physics_system_ = nullptr;
-  ScenePortal* portal_ = nullptr;
-  Hinge* hinge_top_ = nullptr;
-  Hinge* hinge_bottom_ = nullptr;
+  SceneNode* scene_node_ = nullptr;
+  std::vector<Hinge*> hinges_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_DOOR_H

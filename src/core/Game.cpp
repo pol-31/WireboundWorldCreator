@@ -37,7 +37,7 @@
 #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
 #include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
 #include <glad/glad.h>
-
+#include <stb_image_write.h>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../common/models/DirectedLight.h"
@@ -70,6 +70,111 @@ class JobSystem;
 class TempAllocator;
 };  // namespace JPH
 
+void UpdateDirLightFrustum(DirectedLight &light, const Camera *camera) {
+  auto camera_pos = ToJph(camera->GetPosition());
+
+  JPH::Vec3 sun_dir = JPH::Vec3(light.dir.x, light.dir.y, light.dir.z).Normalized();
+
+  // Focus the shadow map center slightly ahead of the player
+  auto camera_forward = ToJph(camera->GetDirectionFront());
+  JPH::Vec3 focus_pt = camera_pos + camera_forward * 5.0f;
+
+  // Pull shadow camera BACK along -sun_dir so higher structures (roofs) are captured
+  float shadow_distance = 30.0f;
+  JPH::Vec3 sun_position = focus_pt - sun_dir * shadow_distance;
+
+  JPH::Vec3 world_up(0.0f, 1.0f, 0.0f);
+  if (std::abs(sun_dir.Dot(world_up)) > 0.99f) {
+    world_up = JPH::Vec3(1.0f, 0.0f, 0.0f);
+  }
+
+  // Orthographic extents and depth bounds
+  float ortho_size = 15.0f;
+  float near_plane = 1.0f;
+  float far_plane = shadow_distance + 20.0f; // Cover full distance back to focus point + room behind
+
+  glm::mat4 lightProjection = glm::ortho(-ortho_size, ortho_size, -ortho_size, ortho_size, near_plane, far_plane);
+
+  glm::vec3 sun_pos_glm(sun_position.GetX(), sun_position.GetY(), sun_position.GetZ());
+  glm::vec3 focus_pt_glm(focus_pt.GetX(), focus_pt.GetY(), focus_pt.GetZ());
+  glm::vec3 up_glm(world_up.GetX(), world_up.GetY(), world_up.GetZ());
+
+  glm::mat4 lightView = glm::lookAt(sun_pos_glm, focus_pt_glm, up_glm);
+  light.lightSpaceMatrix = lightProjection * lightView;
+}
+
+struct PrebakeCameraDir {
+  float yaw;
+  float pitch;
+};
+
+PrebakeCameraDir gPrebakeCameraDirs[] = {
+  {0.0f, 0.0f},
+  {0.0f, 90.0f},
+  {0.0f, -90.0f},
+  {90.0f, 0.0f},
+  {180.0f, 0.0f},
+  {-90.0f, 0.0f},
+};
+
+void Game::PrebakeEnvMaps() {
+  JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
+  gWindowWidth = 512;
+  gWindowHeight = 512;
+  glfwSetWindowSize(gWindow, gWindowWidth, gWindowHeight);
+
+  for (const SceneZone* zone : mdl_loader_.GetScene()->scene_data_.tiles[0]->zones) {
+    auto camera_pos = zone->bounds.GetCenter();
+    for (int i = 0; i < std::size(gPrebakeCameraDirs); ++i) {
+
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glStencilFunc(GL_ALWAYS, 0, 0xFF);
+      glStencilMask(0xFF);
+      glClearColor(0.2f, 1.0f, 0.0f, 1.0f);
+      glEnable(GL_DEPTH_TEST);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+      auto camera_dirs = gPrebakeCameraDirs[i];
+      camera_.UpdateBakeEnv(camera_pos, camera_dirs.yaw, camera_dirs.pitch);
+
+      for (auto &l : dir_lights_) {
+        UpdateDirLightFrustum(l, &camera_);
+      }
+      terrain_renderer_.Update(&camera_);
+      world_manager_.UpdatePlayerZone(camera_pos, &bi);
+      world_manager_.Cull(false, true, false, false, render_settings_.objects_num);
+
+      glDisable(GL_BLEND);
+      renderer_.UpdateBuffer();
+      renderer_.DrawShadowPass();
+      renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData(),
+                                 render_settings_.triplanar_level,
+                                 true);
+      renderer_.DrawSsaoPass();
+      renderer_.DrawLightPass(
+          cubemap_.GetRenderData(), true, true,
+          true, true);
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer_.GetLightingFbo());
+      glReadBuffer(GL_COLOR_ATTACHMENT0);
+      std::vector<float> pixels(gWindowWidth * gWindowHeight * 3);
+      glReadPixels(0, 0, gWindowWidth, gWindowHeight, GL_RGB, GL_FLOAT, pixels.data());
+      stbi_flip_vertically_on_write(true);
+      std::string filename = "../assets/ibl/" + zone->name + "_face_" + std::to_string(i) + ".hdr";
+      stbi_write_hdr(filename.c_str(), gWindowWidth, gWindowHeight, 3, pixels.data());
+    }
+  }
+
+  camera_.SetDefaultFovy();
+  auto default_res = GetWindowResolution(GetDefaultWindowResolutionId());
+  gWindowWidth = default_res.width;
+  gWindowHeight = default_res.height;
+  glfwSetWindowSize(gWindow, gWindowWidth, gWindowHeight);
+}
+
+
 Game::Game()
     : terrain_renderer_(&(mdl_loader_.GetScene()->materials)),
       world_manager_(mdl_loader_.GetScene(), &camera_, player_, characters_,
@@ -86,7 +191,7 @@ void Game::RenderInterface() {
   float half_target_size = target_size / 2.0f;
   if (player_->GetBody()->IsAiming()) {
     ui_renderer_.AddSprite("GoldenCircle",
-                           glm::vec2(800.0f, 450.0f) - half_target_size,
+                           glm::vec2(gWindowWidth, gWindowHeight) - half_target_size,
                            glm::vec2(target_size), glm::vec4(1.0f));
   }
   const glm::vec2 start_hp_pos = glm::vec2(10.0f, 45.0f);
@@ -102,13 +207,13 @@ void Game::RenderInterface() {
     hp_pos.x += hp_size.x;
     ui_renderer_.AddSprite("StaminaPoint", hp_pos, hp_size, glm::vec4(1.0f));
   }
-  hp_pos = glm::vec2(1380.0f, 25.0f);
+  hp_pos = glm::vec2(gWindowWidth * 0.8f, 25.0f);
   for (int i = 0; i < 7; ++i) {
     hp_pos.x += hp_size.x;
     ui_renderer_.AddSprite("HealthPoint", hp_pos, hp_size * 2.0f,
                            glm::vec4(1.0f));
   }
-  ui_renderer_.AddSprite("Gear", glm::vec2(1531.0f, 5.0f), hp_size * 4.0f,
+  ui_renderer_.AddSprite("Gear", glm::vec2(gWindowWidth * 0.9f, 5.0f), hp_size * 4.0f,
                          glm::vec4(1.0f));
 
   // ---
@@ -135,44 +240,6 @@ void Game::RenderFps() {
   std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps_));
   ui_renderer_.AddText(fpsText, glm::vec2(10.0f, 5.0f), glm::vec2(1.0f),
                        glm::vec4(255.0f));
-}
-
-void UpdateDirLightFrustum(DirectedLight &light, const Camera *camera) {
-  constexpr float fovx = glm::radians(120.0f);
-  constexpr float fovy = glm::radians(75.0f);
-  constexpr float near_distance = 0.1f;
-
-  auto world_up = ToJph(camera->GetDirectionWorldUp());
-  auto camera_forward = ToJph(camera->GetDirectionFront());
-  camera_forward = (camera_forward - world_up * camera_forward.Dot(world_up));
-  camera_forward = camera_forward.NormalizedOr(JPH::Vec3(0, 0, -1));
-
-  auto camera_pos = ToJph(camera->GetPosition());
-  const JPH::Vec3 sun_position =
-      camera_pos + JPH::Vec3(0.0f, 1.0f, 0.0f) + camera_forward * 4.0f;
-
-  JPH::Vec3 sun_dir =
-      JPH::Vec3(light.dir.x, light.dir.y, light.dir.z).Normalized();
-  if (abs(sun_dir.Dot(world_up)) > 0.99f) {
-    world_up = JPH::Vec3(1.0f, 0.0f, 0.0f);
-  }
-
-  light.frustum =
-      Frustum(sun_position, sun_dir, world_up, fovx, fovy, near_distance);
-
-  constexpr float near_plane = 1.0f;
-  constexpr float far_plane = 7.5f;
-
-  glm::mat4 lightProjection =
-      glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-
-  glm::vec3 sun_pos_glm(sun_position.GetX(), sun_position.GetY(),
-                        sun_position.GetZ());
-  glm::vec3 sun_dir_glm(sun_dir.GetX(), sun_dir.GetY(), sun_dir.GetZ());
-  glm::vec3 target = sun_pos_glm + sun_dir_glm;
-  glm::mat4 lightView =
-      glm::lookAt(sun_pos_glm, target, glm::vec3(0.0f, 1.0f, 0.0f));
-  light.lightSpaceMatrix = lightProjection * lightView;
 }
 
 void Game::Run() {
@@ -205,28 +272,6 @@ void Game::Run() {
   }
 }
 
-#include <chrono>
-#include <iostream>
-#include <string>
-
-struct ScopedTimer {
-  std::string name;
-  std::chrono::time_point<std::chrono::high_resolution_clock> start;
-
-  ScopedTimer(const std::string &name)
-      : name(name), start(std::chrono::high_resolution_clock::now()) {}
-  ~ScopedTimer() {
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(end - start)
-            .count();
-    // Print if it takes more than 1 millisecond (1000 microseconds) to avoid
-    // console spam
-    if (duration > 1000) {
-      std::cout << name << " took " << duration / 1000.0f << " ms\n";
-    }
-  }
-};
 
 void Game::UpdateHoveredObject() {
   JPH::RVec3 hit_pos;
@@ -257,6 +302,44 @@ void Game::UpdateHoveredObject() {
     }
   }
 }
+
+void Game::RenderHoveredObjectPrompt() {
+  if (hovered_object_) {
+    auto projection_matrix = camera_.GetProjMatrix();
+    auto view_matrix = camera_.GetViewMatrix();
+    auto prompt_data = hovered_object_->GetInteractPrompt(player_->GetBody());
+    JPH::Vec3 worldPos_jph = prompt_data.position;
+    glm::vec3 worldPos = glm::vec3(worldPos_jph.GetX(), worldPos_jph.GetY(), worldPos_jph.GetZ());
+    glm::vec4 clipPos = projection_matrix * view_matrix * glm::vec4(worldPos, 1.0f);
+    glm::vec2 ndc(clipPos.x, clipPos.y);
+    if (clipPos.w > 0.0f) {
+      ndc /= clipPos.w;
+    } else {
+      ndc = -ndc;
+      if (glm::length(ndc) > 0.0001f) {
+        ndc = glm::normalize(ndc);
+        ndc /= std::max(std::abs(ndc.x), std::abs(ndc.y));
+      }
+    }
+    float screenX = (ndc.x + 1.0f) * 0.5f * static_cast<float>(gWindowWidth);
+    float screenY = (ndc.y + 1.0f) * 0.5f * static_cast<float>(gWindowHeight);
+    float uiY = static_cast<float>(gWindowHeight) - screenY;
+    std::string hoveredObjectText = prompt_data.prompt;
+    glm::vec2 textSize = ui_renderer_.MeasureText(hoveredObjectText);
+    float finalX = screenX - textSize.x / 2.0f;
+    float finalY = uiY - textSize.y;
+    const float padding = 10.0f;
+    finalX = std::clamp(finalX, padding, static_cast<float>(gWindowWidth) - textSize.x - padding);
+    finalY = std::clamp(finalY, padding, static_cast<float>(gWindowHeight) - textSize.y - padding);
+    ui_renderer_.AddText(
+        hoveredObjectText,
+        glm::vec2(finalX, finalY),
+        glm::vec2(1.0f),
+        glm::vec4(120.0f, 155.0f, 0.0f, 255.0f)
+    );
+  }
+}
+
 
 void Game::RunGameLoop() {
   while (true) {
@@ -329,7 +412,8 @@ void Game::RunGameLoop() {
     world_manager_.UpdatePlayerZone(player_pos, &bi);
 
     if (render_settings_.cull) {
-      world_manager_.Cull(render_settings_.render_animated, render_physics_only_);
+      world_manager_.Cull(true, false, render_settings_.render_animated,
+        render_physics_only_, render_settings_.objects_num);
     }
 
     glDisable(GL_BLEND);
@@ -370,40 +454,7 @@ void Game::RunGameLoop() {
 
     UpdateHoveredObject();
 
-    auto projection_matrix = camera_.GetProjMatrix();
-    auto view_matrix = camera_.GetViewMatrix();
-    if (hovered_object_) {
-      auto prompt_data = hovered_object_->GetInteractPrompt(player_->GetBody());
-      JPH::Vec3 worldPos_jph = prompt_data.position;
-      glm::vec3 worldPos = glm::vec3(worldPos_jph.GetX(), worldPos_jph.GetY(), worldPos_jph.GetZ());
-      glm::vec4 clipPos = projection_matrix * view_matrix * glm::vec4(worldPos, 1.0f);
-      glm::vec2 ndc(clipPos.x, clipPos.y);
-      if (clipPos.w > 0.0f) {
-        ndc /= clipPos.w;
-      } else {
-        ndc = -ndc;
-        if (glm::length(ndc) > 0.0001f) {
-          ndc = glm::normalize(ndc);
-          ndc /= std::max(std::abs(ndc.x), std::abs(ndc.y));
-        }
-      }
-      float screenX = (ndc.x + 1.0f) * 0.5f * static_cast<float>(gWindowWidth);
-      float screenY = (ndc.y + 1.0f) * 0.5f * static_cast<float>(gWindowHeight);
-      float uiY = static_cast<float>(gWindowHeight) - screenY;
-      std::string hoveredObjectText = prompt_data.prompt;
-      glm::vec2 textSize = ui_renderer_.MeasureText(hoveredObjectText);
-      float finalX = screenX - textSize.x / 2.0f;
-      float finalY = uiY - textSize.y;
-      const float padding = 10.0f;
-      finalX = std::clamp(finalX, padding, static_cast<float>(gWindowWidth) - textSize.x - padding);
-      finalY = std::clamp(finalY, padding, static_cast<float>(gWindowHeight) - textSize.y - padding);
-      ui_renderer_.AddText(
-          hoveredObjectText,
-          glm::vec2(finalX, finalY),
-          glm::vec2(1.0f),
-          glm::vec4(120.0f, 155.0f, 0.0f, 255.0f)
-      );
-    }
+    RenderHoveredObjectPrompt();
 
     ui_renderer_.Render();
 
@@ -498,11 +549,17 @@ void InitSceneGlobalTransforms(std::vector<SceneTile *> &tiles) {
     }
     for (auto node : tile->portals) {
       auto mat = JPH::Mat44::sRotationTranslation(node.rotation, node.position);
-      dfs(node.desk, mat);
+      for (auto desk : node.desks) {
+        dfs(desk, mat);
+      }
       dfs(node.frame, mat);
       for (auto *o : node.obj) {
         dfs(o, mat);
       }
+    }
+    for (auto node : tile->walls) {
+      auto mat = JPH::Mat44::sIdentity();
+      dfs(node, mat);
     }
     for (auto &zone : tile->zones) {
       auto mat = JPH::Mat44::sTranslation(zone->translate);
@@ -578,7 +635,7 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user
     object_layer = Layers::MOVING;
     zone->static_objects_.emplace_back(node);
     hinges_.emplace_back(std::make_unique<Hinge>(mPhysicsSystem, node));
-    std::cerr << "+1 hinge" << std::endl;
+    // std::cout << "+1 hinge" << std::endl;
   } else if (mesh.type == Scene::Type::Character) {
     characters_.push_back(std::make_unique<EnemyController>(
         character_shared_data_.get(), node, &scene->character_skins_[0],
@@ -595,6 +652,10 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user
     if (mesh.type == Scene::Type::PointLight) {
       zone->point_lights_.emplace_back(node);
       zone->point_lights_.back().radius_ = 5.0f;
+      return;
+    } else if (mesh.type == Scene::Type::PointLightFake) {
+      zone->point_lights_fake_.emplace_back(node);
+      return;
     } else if (mesh.type == Scene::Type::Portal ||
                mesh.type == Scene::Type::None ||
                mesh.type == Scene::Type::HingeBase) {
@@ -606,7 +667,7 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user
     }
   }
   if (!node->body_id.IsInvalid()) {
-    std::cout << "obj already exists" << std::endl;
+    //std::cout << "obj already exists" << std::endl;
     return; // already exists (for objects exist in few rooms like portals)
   }
 
@@ -630,13 +691,6 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user
 }
 
 void Game::Init() {
-  glfwSetWindowUserPointer(gWindow, reinterpret_cast<void *>(this));
-
-  // global_data_.camera = &camera_;
-  // global_data_.tile_renderer = &tile_renderer_;
-  // global_data_.picking_fbo = &picking_fbo_;
-  // ui_renderer_.SetupGlobalData();
-
   glEnable(GL_MULTISAMPLE);
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
@@ -678,351 +732,22 @@ void Game::Init() {
   camera_.Reset();
   camera_.SetOriginDist(10.0f);
 
-  /// CharacterBaseTest
+  LoadScenes();
+  InitScenesBodies();
 
-  mdl_loader_.LoadDebugShapes(
-      "C:\\Users\\Pavlo\\Desktop\\assets\\DebugShapes.gltf");
-  mdl_loader_.LoadScene(
-      "C:\\Users\\Pavlo\\Desktop\\assets\\SceneBackyard.gltf",
-      {"C:\\Users\\Pavlo\\Desktop\\assets\\OutdoorStuff.gltf",
-      "C:\\Users\\Pavlo\\Desktop\\assets\\House.gltf"});
-  mdl_loader_.LoadSceneMaterials(
-      "C:\\Users\\Pavlo\\Desktop\\assets\\Materials.gltf");
-  // mdl_loader_.LoadEmbroideryTextures("C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery");
-  mdl_loader_.LoadEmbroideryTextures(
-      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\tablecloth",
-      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryadno",
-      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryshnuk",
-      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ribbons");
-  mdl_loader_.LoadCharacters("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf",
-                             {"C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf"});
-  // TODO: create CharacterSkeleton.gltf
-  //  mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\nagan.gltf"});
-  mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\MauserC96.gltf"});
-  // mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\Nagant.gltf"});
-  const auto scene = mdl_loader_.GetScene();
+  dir_lights_.push_back({});
+  dir_lights_.back().dir = glm::normalize(glm::vec3(0.8f, -1.0f, -0.3f));
+  dir_lights_.back().color = glm::vec3(1.0f);
 
-  character_shared_data_ = std::make_unique<CharacterSharedData>(
-      mPhysicsSystem, mTempAllocator, this, &animator_, &characters_);
+  // terrain_renderer_.LoadHmap(&bi, scene->scene_data_.tiles[0]->properties.hmap_path);
+  terrain_renderer_.LoadDefaultSurface(mBodyInterface);
 
-  const JPH::BodyLockInterface &bli = mPhysicsSystem->GetBodyLockInterface();
+  InitUi();
 
-  JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
-
-  InitSceneGlobalTransforms(scene->scene_data_.tiles);
-  mdl_loader_.GetScene()->UpdateRenderTransform(
-      bli, mdl_loader_.GetScene()->scene_data_.tiles);
-  mdl_loader_.GetScene()->ConnectZonesWithPortals(0);
-
-  for (auto &tile : scene->scene_data_.tiles) {
-    terrain_renderer_.InitializeBody(mBodyInterface);
-    // std::cout << "tile added" << std::endl;
-    for (auto node : tile->characters) {
-      CreateBodyForNode(node, nullptr);
-    }
-    for (SceneZone *zone : tile->zones) {
-      // std::cout << "zone added" << std::endl;
-      for (auto node : zone->object_nodes) {
-        CreateBodyForNode(node, zone);
-      }
-      for (auto portal : zone->portals) {
-        if (!portal->desk->body_id.IsInvalid()) {
-          zone->static_objects_.emplace_back(portal->desk);
-          for (auto child : portal->desk->children) {
-            zone->static_objects_.emplace_back(child);
-          }
-          zone->static_objects_.emplace_back(portal->frame);
-          for (auto child : portal->frame->children) {
-            zone->static_objects_.emplace_back(child);
-          }
-          for (auto o : portal->obj) {
-            zone->static_objects_.emplace_back(o);
-          }
-          continue;
-        }
-        doors_.emplace_back(std::make_unique<Door>());
-        CreateBodyForNode(portal->desk, zone, reinterpret_cast<uint64_t>(doors_.back().get()));
-        for (auto child : portal->desk->children) {
-          CreateBodyForNode(child, zone);
-        }
-        CreateBodyForNode(portal->frame, zone);
-        for (auto child : portal->frame->children) {
-          CreateBodyForNode(child, zone);
-        }
-        for (auto o : portal->obj) {
-          CreateBodyForNode(o, zone);
-        }
-        doors_.back()->Initialize(mPhysicsSystem, portal,
-          hinges_[hinges_.size() - 1].get(),
-          hinges_[hinges_.size() - 2].get());
-      }
-    }
-  }
-
-  auto player_node = scene->scene_data_.player_node;
-  player_ = std::make_unique<PlayerController>(
-      &camera_, character_shared_data_.get(), player_node,
-      &scene->character_skins_[0], &scene->character_rig_);
-  weapons_.push_back(std::make_unique<Weapon>(&scene->weapons_[0],
-                                              mPhysicsSystem, &animator_));
-  player_->GetBody()->EquipWeapon(weapons_.back().get());
-
-  world_manager_.UpdatePlayerZone(player_->GetBody()->GetPosition(), &bi);
-
-  // --- CREATE UI
-  // --- CREATE UI
-  // --- CREATE UI
-  // --- CREATE UI
-  ui_menu_scene_ = std::make_unique<UiScene>(&ui_renderer_);
-  mDebugUI = std::make_unique<DebugUI>(ui_menu_scene_.get(), nullptr);
-  {
-    // Disable allocation checking
-
-    // Create UI
-    UIElement *main_menu = mDebugUI->CreateMenu();
-    mDebugUI->CreateCheckBox(main_menu, "ssao", render_settings_.ssao,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.ssao =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "render shadows",
-                             render_settings_.render_shadows,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.render_shadows =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "apply shadows",
-                             render_settings_.apply_shadows,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.apply_shadows =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "bloom", render_settings_.bloom,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.bloom =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "cull", render_settings_.cull,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.cull =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "light sources",
-                             render_settings_.light_sources,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.light_sources =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "render animated",
-                             render_settings_.render_animated,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.render_animated =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "animate animated",
-                             render_settings_.animate_animated,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.animate_animated =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "geometry pass",
-                             render_settings_.geometry_pass,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.geometry_pass =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "light pass",
-                             render_settings_.light_pass,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.light_pass =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "update physics",
-                             render_settings_.update_physics,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.update_physics =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateCheckBox(main_menu, "update buffer",
-                             render_settings_.update_buffer,
-                             [this](UICheckBox::EState state) {
-                               render_settings_.update_buffer =
-                                   state == UICheckBox::EState::STATE_CHECKED;
-                             });
-    mDebugUI->CreateSlider(
-        main_menu, "light distance", float(5.0f), 1, 25, 1,
-        [this](float inValue) {
-          for (auto zone :
-               mdl_loader_.GetScene()->scene_data_.tiles[0]->zones) {
-            for (auto &l : zone->point_lights_) {
-              l.radius_ = float(inValue);
-            }
-          }
-        });
-    mDebugUI->CreateSlider(main_menu, "triplanar level",
-                           float(render_settings_.triplanar_level), 1, 3, 1,
-                           [this](float inValue) {
-                             render_settings_.triplanar_level = (int)inValue;
-                           });
-    mDebugUI->CreateTextButton(main_menu, "Physics Settings", [this]() {
-      UIElement *phys_settings = mDebugUI->CreateMenu();
-      mDebugUI->CreateSlider(
-          phys_settings, "Max Concurrent Jobs", float(mMaxConcurrentJobs), 1,
-          float(std::thread::hardware_concurrency()), 1,
-          [this](float inValue) { mMaxConcurrentJobs = (int)inValue; });
-      mDebugUI->CreateSlider(
-          phys_settings, "Gravity (m/s^2)",
-          -mPhysicsSystem->GetGravity().GetY(), 0.0f, 20.0f, 1.0f,
-          [this](float inValue) {
-            mPhysicsSystem->SetGravity(JPH::Vec3(0, -inValue, 0));
-          });
-      mDebugUI->CreateSlider(
-          phys_settings, "Num Velocity Steps",
-          float(mPhysicsSettings.mNumVelocitySteps), 0, 30, 1,
-          [this](float inValue) {
-            mPhysicsSettings.mNumVelocitySteps = int(round(inValue));
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateSlider(
-          phys_settings, "Num Position Steps",
-          float(mPhysicsSettings.mNumPositionSteps), 0, 30, 1,
-          [this](float inValue) {
-            mPhysicsSettings.mNumPositionSteps = int(round(inValue));
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateSlider(
-          phys_settings, "Baumgarte Stabilization Factor",
-          mPhysicsSettings.mBaumgarte, 0.01f, 1.0f, 0.05f,
-          [this](float inValue) {
-            mPhysicsSettings.mBaumgarte = inValue;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateSlider(phys_settings, "Speculative Contact Distance (m)",
-                             mPhysicsSettings.mSpeculativeContactDistance, 0.0f,
-                             0.1f, 0.005f, [this](float inValue) {
-                               mPhysicsSettings.mSpeculativeContactDistance =
-                                   inValue;
-                             });
-      mDebugUI->CreateSlider(phys_settings, "Penetration Slop (m)",
-                             mPhysicsSettings.mPenetrationSlop, 0.0f, 0.1f,
-                             0.005f, [this](float inValue) {
-                               mPhysicsSettings.mPenetrationSlop = inValue;
-                             });
-      mDebugUI->CreateSlider(phys_settings, "Linear Cast Threshold",
-                             mPhysicsSettings.mLinearCastThreshold, 0.0f, 1.0f,
-                             0.05f, [this](float inValue) {
-                               mPhysicsSettings.mLinearCastThreshold = inValue;
-                             });
-      mDebugUI->CreateSlider(
-          phys_settings, "Min Velocity For Restitution (m/s)",
-          mPhysicsSettings.mMinVelocityForRestitution, 0.0f, 10.0f, 0.1f,
-          [this](float inValue) {
-            mPhysicsSettings.mMinVelocityForRestitution = inValue;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateSlider(
-          phys_settings, "Time Before Sleep (s)",
-          mPhysicsSettings.mTimeBeforeSleep, 0.1f, 1.0f, 0.1f,
-          [this](float inValue) {
-            mPhysicsSettings.mTimeBeforeSleep = inValue;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateSlider(
-          phys_settings, "Point Velocity Sleep Threshold (m/s)",
-          mPhysicsSettings.mPointVelocitySleepThreshold, 0.01f, 1.0f, 0.01f,
-          [this](float inValue) {
-            mPhysicsSettings.mPointVelocitySleepThreshold = inValue;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-#ifdef JPH_CUSTOM_MEMORY_HOOK_ENABLED
-      mDebugUI->CreateCheckBox(
-          phys_settings, "Enable Checking Memory Hook",
-          IsCustomMemoryHookEnabled(), [](UICheckBox::EState inState) {
-            EnableCustomMemoryHook(inState == UICheckBox::STATE_CHECKED);
-          });
-#endif
-      mDebugUI->CreateCheckBox(
-          phys_settings, "Deterministic Simulation",
-          mPhysicsSettings.mDeterministicSimulation,
-          [this](UICheckBox::EState inState) {
-            mPhysicsSettings.mDeterministicSimulation =
-                inState == UICheckBox::STATE_CHECKED;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateCheckBox(
-          phys_settings, "Constraint Warm Starting",
-          mPhysicsSettings.mConstraintWarmStart,
-          [this](UICheckBox::EState inState) {
-            mPhysicsSettings.mConstraintWarmStart =
-                inState == UICheckBox::STATE_CHECKED;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateCheckBox(
-          phys_settings, "Use Body Pair Contact Cache",
-          mPhysicsSettings.mUseBodyPairContactCache,
-          [this](UICheckBox::EState inState) {
-            mPhysicsSettings.mUseBodyPairContactCache =
-                inState == UICheckBox::STATE_CHECKED;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateCheckBox(
-          phys_settings, "Contact Manifold Reduction",
-          mPhysicsSettings.mUseManifoldReduction,
-          [this](UICheckBox::EState inState) {
-            mPhysicsSettings.mUseManifoldReduction =
-                inState == UICheckBox::STATE_CHECKED;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateCheckBox(
-          phys_settings, "Use Large Island Splitter",
-          mPhysicsSettings.mUseLargeIslandSplitter,
-          [this](UICheckBox::EState inState) {
-            mPhysicsSettings.mUseLargeIslandSplitter =
-                inState == UICheckBox::STATE_CHECKED;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateCheckBox(
-          phys_settings, "Allow Sleeping", mPhysicsSettings.mAllowSleeping,
-          [this](UICheckBox::EState inState) {
-            mPhysicsSettings.mAllowSleeping =
-                inState == UICheckBox::STATE_CHECKED;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->CreateCheckBox(
-          phys_settings, "Check Active Triangle Edges",
-          mPhysicsSettings.mCheckActiveEdges,
-          [this](UICheckBox::EState inState) {
-            mPhysicsSettings.mCheckActiveEdges =
-                inState == UICheckBox::STATE_CHECKED;
-            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
-          });
-      mDebugUI->ShowMenu(phys_settings);
-    });
-    mDebugUI->CreateTextButton(main_menu, "Help", [this]() {
-      UIElement *help = mDebugUI->CreateMenu();
-      mDebugUI->CreateStaticText(
-          help,
-          "ESC: Back to previous menu.\n"
-          "WASD + Mouse: Fly around. Hold Shift to speed up, Ctrl to slow "
-          "down.\n"
-          "Space: Hold to pick up and drag a physics object under the "
-          "crosshair.\n"
-          "P: Pause / unpause simulation.\n"
-          "O: Single step the simulation.\n"
-          ",: Step back (only when Physics Settings / Record State for "
-          "Playback is on).\n"
-          ".: Step forward (only when Physics Settings / Record State for "
-          "Playback is on).\n"
-          "Shift + ,: Play reverse (only when Physics Settings / Record State "
-          "for Playback is on).\n"
-          "Shift + .: Replay forward (only when Physics Settings / Record "
-          "State for Playback is on).\n"
-          "T: Dump frame timing information to profile_*.html (when "
-          "JPH_PROFILE_ENABLED defined).");
-      mDebugUI->ShowMenu(help);
-    });
-    mDebugUI->ShowMenu(main_menu);
-  }
+  global_data_.renderer = &renderer_;
+  global_data_.ui_manager = mDebugUI.get();
+  global_data_.game = this;
+  glfwSetWindowUserPointer(gWindow, reinterpret_cast<void *>(&global_data_));
 }
 
 void Game::DeInit() {
@@ -1030,13 +755,15 @@ void Game::DeInit() {
 }
 
 void GameScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
-  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  auto context = reinterpret_cast<GlfwContext *>(glfwGetWindowUserPointer(window));
+  auto game = context->game;
   game->camera_.ZoomOriginDist(yoffset);
 }
 
 void GameMouseButtonCallback(GLFWwindow *window, int button, int action,
                              int mods) {
-  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  auto context = reinterpret_cast<GlfwContext *>(glfwGetWindowUserPointer(window));
+  auto game = context->game;
   // bool mod_ctrl = mods & GLFW_MOD_CONTROL;
   // bool mod_shift = mods & GLFW_MOD_SHIFT;
   if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -1058,7 +785,8 @@ void GameMouseButtonCallback(GLFWwindow *window, int button, int action,
 
 void GameKeyCallback(GLFWwindow *window, int key, int scancode, int action,
                      int mods) {
-  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  auto context = reinterpret_cast<GlfwContext *>(glfwGetWindowUserPointer(window));
+  auto game = context->game;
   bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
   bool mod_shift = (mods & GLFW_MOD_SHIFT);
   if (action == GLFW_PRESS) {
@@ -1094,19 +822,22 @@ void GameCursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
   lastX = xpos;
   lastY = ypos;
 
-  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  auto context = reinterpret_cast<GlfwContext *>(glfwGetWindowUserPointer(window));
+  auto game = context->game;
 
   game->camera_.MoveRotateView(xoffset, yoffset);
   // game->camera_.MoveRotateViewOrigin(xoffset, yoffset);
 }
 
 void MenuScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
-  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  auto context = reinterpret_cast<GlfwContext *>(glfwGetWindowUserPointer(window));
+  auto game = context->game;
 }
 
 void MenuMouseButtonCallback(GLFWwindow *window, int button, int action,
                              int mods) {
-  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  auto context = reinterpret_cast<GlfwContext *>(glfwGetWindowUserPointer(window));
+  auto game = context->game;
   double x, y;
   glfwGetCursorPos(window, &x, &y);
   if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -1119,7 +850,8 @@ void MenuMouseButtonCallback(GLFWwindow *window, int button, int action,
 
 void MenuKeyCallback(GLFWwindow *window, int key, int scancode, int action,
                      int mods) {
-  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  auto context = reinterpret_cast<GlfwContext *>(glfwGetWindowUserPointer(window));
+  auto game = context->game;
   bool mod_ctrl = (mods & GLFW_MOD_CONTROL);
   bool mod_shift = (mods & GLFW_MOD_SHIFT);
   if (action == GLFW_PRESS) {
@@ -1137,7 +869,8 @@ void MenuKeyCallback(GLFWwindow *window, int key, int scancode, int action,
 }
 
 void MenuCursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
-  auto game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(window));
+  auto context = reinterpret_cast<GlfwContext *>(glfwGetWindowUserPointer(window));
+  auto game = context->game;
   game->ui_menu_scene_->MouseMove(xpos, ypos);
 }
 
@@ -1363,4 +1096,394 @@ void Game::OnContactSolve(
       inContactVelocity.IsNearZero() &&
       !inCharacter->IsSlopeTooSteep(inContactNormal))
     ioNewCharacterVelocity = JPH::Vec3::sZero();
+}
+
+void Game::LoadScenes() {
+  mdl_loader_.LoadDebugShapes(
+      "C:\\Users\\Pavlo\\Desktop\\assets\\DebugShapes.gltf");
+  mdl_loader_.LoadScene(
+      "C:\\Users\\Pavlo\\Desktop\\assets\\SceneBackyard.gltf",
+      {"C:\\Users\\Pavlo\\Desktop\\assets\\OutdoorStuff.gltf",
+      "C:\\Users\\Pavlo\\Desktop\\assets\\House.gltf"});
+  mdl_loader_.LoadSceneMaterials(
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Materials.gltf");
+  // mdl_loader_.LoadEmbroideryTextures("C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery");
+  mdl_loader_.LoadEmbroideryTextures(
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\tablecloth",
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryadno",
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryshnuk",
+      "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ribbons");
+  mdl_loader_.LoadCharacters("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf",
+                             {"C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf"});
+  // TODO: create CharacterSkeleton.gltf
+  //  mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\nagan.gltf"});
+  mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\MauserC96.gltf"});
+  // mdl_loader_.LoadWeapon({"C:\\Users\\Pavlo\\Desktop\\assets\\Nagant.gltf"});
+}
+
+void Game::InitScenesBodies() {
+  const auto scene = mdl_loader_.GetScene();
+
+  character_shared_data_ = std::make_unique<CharacterSharedData>(
+      mPhysicsSystem, mTempAllocator, this, &animator_, &characters_);
+
+  const JPH::BodyLockInterface &bli = mPhysicsSystem->GetBodyLockInterface();
+
+  JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
+
+  InitSceneGlobalTransforms(scene->scene_data_.tiles);
+  mdl_loader_.GetScene()->UpdateRenderTransform(
+      bli, mdl_loader_.GetScene()->scene_data_.tiles);
+  mdl_loader_.GetScene()->ConnectZonesWithPortals(0);
+
+  for (auto &tile : scene->scene_data_.tiles) {
+    //terrain_renderer_.InitializeBody(mBodyInterface);
+    // std::cout << "tile added" << std::endl;
+    for (auto node : tile->characters) {
+      CreateBodyForNode(node, nullptr);
+    }
+    for (SceneZone *zone : tile->zones) {
+      // std::cout << "zone added" << std::endl;
+      for (auto node : zone->object_nodes) {
+        CreateBodyForNode(node, zone);
+      }
+      for (auto node : zone->walls) {
+        CreateBodyForNode(node, zone);
+      }
+      for (auto portal : zone->portals) {
+        int hinges_was = hinges_.size();
+        // DESK, NOT FRAME, because frame doesn't have a jph body
+        if (!portal->desks[0]->body_id.IsInvalid()) {
+          for (SceneNode* desk : portal->desks) {
+            zone->static_objects_.emplace_back(desk);
+            for (auto child : desk->children) {
+              zone->static_objects_.emplace_back(child);
+            }
+          }
+          zone->static_objects_.emplace_back(portal->frame);
+          for (auto child : portal->frame->children) {
+            zone->static_objects_.emplace_back(child);
+          }
+          for (auto o : portal->obj) {
+            zone->static_objects_.emplace_back(o);
+          }
+          continue;
+        }
+        CreateBodyForNode(portal->frame, zone);
+        for (auto child : portal->frame->children) {
+          CreateBodyForNode(child, zone);
+        }
+        for (auto o : portal->obj) {
+          CreateBodyForNode(o, zone);
+        }
+        for (SceneNode* desk : portal->desks) {
+          doors_.emplace_back(std::make_unique<Door>());
+          CreateBodyForNode(desk, zone, reinterpret_cast<uint64_t>(doors_.back().get()));
+          for (auto child : desk->children) {
+            CreateBodyForNode(child, zone);
+          }
+          for (int hinge_id = hinges_was; hinge_id < hinges_.size(); ++hinge_id) {
+            auto& hinge = hinges_[hinge_id];
+            auto hinge_aabox = JPH::AABox(hinge->GetSceneNode()->global_bounds.GetCenter(), 0.1f);
+            if (desk->global_bounds.Overlaps(hinge_aabox)) {
+              // std::cout << "connected" << std::endl;
+              doors_.back()->AddHinge(hinge.get());
+            }
+          }
+          doors_.back()->Initialize(mPhysicsSystem, desk, portal->frame->body_id);
+
+        }
+      }
+    }
+  }
+
+  auto player_node = scene->scene_data_.player_node;
+  player_ = std::make_unique<PlayerController>(
+      &camera_, character_shared_data_.get(), player_node,
+      &scene->character_skins_[0], &scene->character_rig_);
+  weapons_.push_back(std::make_unique<Weapon>(&scene->weapons_[0],
+                                              mPhysicsSystem, &animator_));
+  player_->GetBody()->EquipWeapon(weapons_.back().get());
+  world_manager_.UpdatePlayerZone(player_->GetBody()->GetPosition(), &bi);
+}
+
+void Game::InitUi() {
+  ui_menu_scene_ = std::make_unique<UiScene>(&ui_renderer_);
+  mDebugUI = std::make_unique<DebugUI>(ui_menu_scene_.get(), nullptr);
+  {
+    // Disable allocation checking
+
+    // Create UI
+    UIElement *main_menu = mDebugUI->CreateMenu();
+    mDebugUI->CreateTextButton(main_menu, "remove hinges",
+                             [this]() {
+                               std::cout << "removing hinges" << std::endl;
+                               for (auto& hinge : hinges_) {
+                                 hinge->Interact(nullptr);
+                               }
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "ssao", render_settings_.ssao,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.ssao =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "render shadows",
+                             render_settings_.render_shadows,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.render_shadows =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "apply shadows",
+                             render_settings_.apply_shadows,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.apply_shadows =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "bloom", render_settings_.bloom,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.bloom =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "cull", render_settings_.cull,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.cull =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "light sources",
+                             render_settings_.light_sources,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.light_sources =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "render animated",
+                             render_settings_.render_animated,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.render_animated =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "animate animated",
+                             render_settings_.animate_animated,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.animate_animated =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "geometry pass",
+                             render_settings_.geometry_pass,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.geometry_pass =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "light pass",
+                             render_settings_.light_pass,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.light_pass =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "update physics",
+                             render_settings_.update_physics,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.update_physics =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateCheckBox(main_menu, "update buffer",
+                             render_settings_.update_buffer,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.update_buffer =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                             });
+    mDebugUI->CreateSlider(
+        main_menu, "light distance", float(5.0f), 1, 25, 1,
+        [this](float inValue) {
+          for (auto zone :
+               mdl_loader_.GetScene()->scene_data_.tiles[0]->zones) {
+            for (auto &l : zone->point_lights_) {
+              l.radius_ = float(inValue);
+            }
+          }
+        });
+    mDebugUI->CreateTextButton(main_menu, "prebake env maps", [this] {
+      this->PrebakeEnvMaps();
+    });
+    auto window_resolutions_strings = GenWindowResolutionStrings();
+    mDebugUI->CreateComboBox(main_menu, "resolution", window_resolutions_strings,
+      GetDefaultWindowResolutionId(), [](int id) {
+      auto res = GetWindowResolution(id);
+      gWindowWidth = res.width;
+      gWindowHeight = res.height;
+      glfwSetWindowSize(gWindow, gWindowWidth, gWindowHeight);
+    });
+    mDebugUI->CreateCheckBox(main_menu, "fullscreen",
+                             false,
+                             [this](UICheckBox::EState state) {
+                               SetFullscreen(state == UICheckBox::EState::STATE_CHECKED);
+                             });
+    mDebugUI->CreateSlider(
+        main_menu, "objects num", float(render_settings_.objects_num), 1, 500, 1,
+        [this](float inValue) {
+          render_settings_.objects_num = int(inValue);
+        });
+    mDebugUI->CreateSlider(main_menu, "triplanar level",
+                           float(render_settings_.triplanar_level), 1, 3, 1,
+                           [this](float inValue) {
+                             render_settings_.triplanar_level = (int)inValue;
+                           });
+    mDebugUI->CreateTextButton(main_menu, "Physics Settings", [this]() {
+      UIElement *phys_settings = mDebugUI->CreateMenu();
+      mDebugUI->CreateSlider(
+          phys_settings, "Max Concurrent Jobs", float(mMaxConcurrentJobs), 1,
+          float(std::thread::hardware_concurrency()), 1,
+          [this](float inValue) { mMaxConcurrentJobs = (int)inValue; });
+      mDebugUI->CreateSlider(
+          phys_settings, "Gravity (m/s^2)",
+          -mPhysicsSystem->GetGravity().GetY(), 0.0f, 20.0f, 1.0f,
+          [this](float inValue) {
+            mPhysicsSystem->SetGravity(JPH::Vec3(0, -inValue, 0));
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Num Velocity Steps",
+          float(mPhysicsSettings.mNumVelocitySteps), 0, 30, 1,
+          [this](float inValue) {
+            mPhysicsSettings.mNumVelocitySteps = int(round(inValue));
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Num Position Steps",
+          float(mPhysicsSettings.mNumPositionSteps), 0, 30, 1,
+          [this](float inValue) {
+            mPhysicsSettings.mNumPositionSteps = int(round(inValue));
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Baumgarte Stabilization Factor",
+          mPhysicsSettings.mBaumgarte, 0.01f, 1.0f, 0.05f,
+          [this](float inValue) {
+            mPhysicsSettings.mBaumgarte = inValue;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(phys_settings, "Speculative Contact Distance (m)",
+                             mPhysicsSettings.mSpeculativeContactDistance, 0.0f,
+                             0.1f, 0.005f, [this](float inValue) {
+                               mPhysicsSettings.mSpeculativeContactDistance =
+                                   inValue;
+                             });
+      mDebugUI->CreateSlider(phys_settings, "Penetration Slop (m)",
+                             mPhysicsSettings.mPenetrationSlop, 0.0f, 0.1f,
+                             0.005f, [this](float inValue) {
+                               mPhysicsSettings.mPenetrationSlop = inValue;
+                             });
+      mDebugUI->CreateSlider(phys_settings, "Linear Cast Threshold",
+                             mPhysicsSettings.mLinearCastThreshold, 0.0f, 1.0f,
+                             0.05f, [this](float inValue) {
+                               mPhysicsSettings.mLinearCastThreshold = inValue;
+                             });
+      mDebugUI->CreateSlider(
+          phys_settings, "Min Velocity For Restitution (m/s)",
+          mPhysicsSettings.mMinVelocityForRestitution, 0.0f, 10.0f, 0.1f,
+          [this](float inValue) {
+            mPhysicsSettings.mMinVelocityForRestitution = inValue;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Time Before Sleep (s)",
+          mPhysicsSettings.mTimeBeforeSleep, 0.1f, 1.0f, 0.1f,
+          [this](float inValue) {
+            mPhysicsSettings.mTimeBeforeSleep = inValue;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateSlider(
+          phys_settings, "Point Velocity Sleep Threshold (m/s)",
+          mPhysicsSettings.mPointVelocitySleepThreshold, 0.01f, 1.0f, 0.01f,
+          [this](float inValue) {
+            mPhysicsSettings.mPointVelocitySleepThreshold = inValue;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+#ifdef JPH_CUSTOM_MEMORY_HOOK_ENABLED
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Enable Checking Memory Hook",
+          IsCustomMemoryHookEnabled(), [](UICheckBox::EState inState) {
+            EnableCustomMemoryHook(inState == UICheckBox::STATE_CHECKED);
+          });
+#endif
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Deterministic Simulation",
+          mPhysicsSettings.mDeterministicSimulation,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mDeterministicSimulation =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Constraint Warm Starting",
+          mPhysicsSettings.mConstraintWarmStart,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mConstraintWarmStart =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Use Body Pair Contact Cache",
+          mPhysicsSettings.mUseBodyPairContactCache,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mUseBodyPairContactCache =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Contact Manifold Reduction",
+          mPhysicsSettings.mUseManifoldReduction,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mUseManifoldReduction =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Use Large Island Splitter",
+          mPhysicsSettings.mUseLargeIslandSplitter,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mUseLargeIslandSplitter =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Allow Sleeping", mPhysicsSettings.mAllowSleeping,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mAllowSleeping =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->CreateCheckBox(
+          phys_settings, "Check Active Triangle Edges",
+          mPhysicsSettings.mCheckActiveEdges,
+          [this](UICheckBox::EState inState) {
+            mPhysicsSettings.mCheckActiveEdges =
+                inState == UICheckBox::STATE_CHECKED;
+            mPhysicsSystem->SetPhysicsSettings(mPhysicsSettings);
+          });
+      mDebugUI->ShowMenu(phys_settings);
+    });
+    mDebugUI->CreateTextButton(main_menu, "Help", [this]() {
+      UIElement *help = mDebugUI->CreateMenu();
+      mDebugUI->CreateStaticText(
+          help,
+          "ESC: Back to previous menu.\n"
+          "WASD + Mouse: Fly around. Hold Shift to speed up, Ctrl to slow "
+          "down.\n"
+          "Space: Hold to pick up and drag a physics object under the "
+          "crosshair.\n"
+          "P: Pause / unpause simulation.\n"
+          "O: Single step the simulation.\n"
+          ",: Step back (only when Physics Settings / Record State for "
+          "Playback is on).\n"
+          ".: Step forward (only when Physics Settings / Record State for "
+          "Playback is on).\n"
+          "Shift + ,: Play reverse (only when Physics Settings / Record State "
+          "for Playback is on).\n"
+          "Shift + .: Replay forward (only when Physics Settings / Record "
+          "State for Playback is on).\n"
+          "T: Dump frame timing information to profile_*.html (when "
+          "JPH_PROFILE_ENABLED defined).");
+      mDebugUI->ShowMenu(help);
+    });
+    mDebugUI->ShowMenu(main_menu);
+  }
 }

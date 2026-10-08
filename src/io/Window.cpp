@@ -7,6 +7,9 @@
 #include "../common/PickingFramebuffer.h"
 #include "Camera.h"
 
+#include "../core/Renderer.h"
+#include "../ui/DebugUI.h"
+
 int gWindowWidth = 1600;
 int gWindowHeight = 900;
 float gResFactor =
@@ -26,21 +29,49 @@ double gEventMouseStartPosY = 0.0;
 
 GLFWwindow* gWindow = nullptr;
 
+// Store windowed position and size before entering fullscreen so you can restore later
+// int windowedX = 100, windowedY = 100;
+// int windowedWidth = 1280, windowedHeight = 720;
+
+void SetFullscreen(bool enableFullscreen) {
+  GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+  const GLFWvidmode* mode = glfwGetVideoMode(primaryMonitor);
+  if (enableFullscreen) {
+    glfwSetWindowMonitor(gWindow, primaryMonitor, 0, 0, gWindowWidth, gWindowHeight, GLFW_DONT_CARE);
+  } else {
+    glfwSetWindowMonitor(gWindow, nullptr, 0, 0, gWindowWidth, gWindowHeight, GLFW_DONT_CARE);
+    CenterWindow();
+  }
+}
+
+void CenterWindow() {
+  GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+  if (!primaryMonitor) {
+    return;
+  }
+  int monitor_x, monitor_y, monitor_width, monitor_height;
+  glfwGetMonitorWorkarea(primaryMonitor, &monitor_x, &monitor_y,
+    &monitor_width, &monitor_height);
+  int xPos = monitor_x + (monitor_width - gWindowWidth) / 2;
+  int yPos = monitor_y + (monitor_height - gWindowHeight) / 2;
+  glfwSetWindowPos(gWindow, xPos, yPos);
+}
+
 void CallbackFramebufferSize(GLFWwindow* window, int width, int height) {
-  auto resolution = SetWindowSize({width, height});
+  auto resolution = glm::ivec2{width, height};
   gWindowWidth = resolution.x;
   gWindowHeight = resolution.y;
   gResFactor =
       static_cast<float>(gWindowHeight) / static_cast<float>(gWindowWidth);
   glViewport(0, 0, resolution.x, resolution.y);
-  glfwSetWindowSize(gWindow, resolution.x, resolution.y);
-
+  gResFactor = static_cast<float>(gWindowHeight) / static_cast<float>(gWindowWidth);
+  lastX = static_cast<float>(gWindowWidth) / 2.0;
+  lastY = static_cast<float>(gWindowHeight) / 2.0;
+  CenterWindow();
   auto glfw_context =
       reinterpret_cast<GlfwContext*>(glfwGetWindowUserPointer(gWindow));
-  // glfw_context->camera->UpdateProjectionMatrix();
-  // glfw_context->ui_debugger->UpdateMoveSteps();
-  // glfw_context->picking_fbo->UpdateResolution();
-  // glfw_context->renderer->OnWindowResize();
+  glfw_context->renderer->OnWindowResize();
+  glfw_context->ui_manager->OnWindowResize();
 }
 
 void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id,
@@ -144,6 +175,7 @@ void SetupWindow() {
 
   gWindow = glfwCreateWindow(gWindowWidth, gWindowHeight, "WireboundDev",
                              nullptr, nullptr);
+  CenterWindow();
   if (!gWindow) {
     glfwTerminate();
     throw std::runtime_error("Failed to create GLFW window");
@@ -173,34 +205,34 @@ void SetupWindow() {
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-glm::ivec2 ChooseNearestSize(glm::ivec2 size) {
-  // 6 most common resolutions up to 1920x1080
-  std::array<glm::ivec2, 6> resolutions = {
-      glm::ivec2(640, 480),   // VGA
-      glm::ivec2(800, 600),   // SVGA
-      glm::ivec2(1024, 768),  // XGA
-      glm::ivec2(1280, 720),  // HD
-      glm::ivec2(1600, 900),  // HD+
-      glm::ivec2(1920, 1080)  // Full HD
-  };
+WindowResolution gWindowResolutions[] = {
+  {640, 480},   // VGA
+  {800, 600},   // SVGA
+  {1024, 768},  // XGA
+  {1280, 720},  // HD
+  {1600, 900},  // HD+
+  {1920, 1080}  // Full HD
+};
 
-  auto closest_it = std::min_element(
-      resolutions.begin(), resolutions.end(),
-      [size](const glm::ivec2& a, const glm::ivec2& b) {
-        glm::ivec2 da = a - size;
-        glm::ivec2 db = b - size;
-        return (da.x * da.x + da.y * da.y) < (db.x * db.x + db.y * db.y);
-      });
-
-  // can't be nullptr
-  glm::ivec2 result_size = *closest_it;
-  std::cout << "Closest resolution is " << result_size.x << " x "
-            << result_size.y << std::endl;
-  return result_size;
+std::vector<std::string> GenWindowResolutionStrings() {
+  std::string str_resolution;
+  str_resolution.reserve(11);
+  std::string str_resolution_delim = " x ";
+  std::vector<std::string> resolutions(std::size(gWindowResolutions), str_resolution);
+  for (int i = 0; i < resolutions.size(); i++) {
+    auto& res = gWindowResolutions[i];
+    auto& str = resolutions[i];
+    str += std::to_string(res.width);
+    str += str_resolution_delim;
+    str += std::to_string(res.height);
+  }
+  return resolutions;
 }
 
-glm::ivec2 SetWindowSize(glm::ivec2 size) {
-  auto resolution = ChooseNearestSize(size);
-  // TODO: window, viewport, notify all framebuffers, buttons
-  return resolution;
+WindowResolution GetWindowResolution(int id) {
+  return gWindowResolutions[id];
+}
+
+int GetDefaultWindowResolutionId() {
+  return 4;
 }

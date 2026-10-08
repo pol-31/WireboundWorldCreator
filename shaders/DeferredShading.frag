@@ -3,26 +3,34 @@ out vec4 FragColor;
 
 in vec2 TexCoords;
 
-// G-Buffer with packed PBR data in the alpha channels
-layout (location = 0) uniform sampler2D gNormal;      // .rgb = Norm, .a = Metallic
+layout (location = 0) uniform sampler2D gNormal;      // .rg = Norm, .b = Roughness .a = Metallic
 layout (location = 1) uniform sampler2D gAlbedoSpec;  // .rgb = Albedo, .a = AO
-layout (location = 2) uniform sampler2D gDepth;  // .rgb = Albedo, .a = AO
-layout (location = 3) uniform sampler2D gSsao;  // .rgb = Albedo, .a = AO
-uniform mat4 uInvViewProj;  // .rgb = Albedo, .a = AO
+layout (location = 2) uniform sampler2D gDepth;
+layout (location = 3) uniform sampler2D gSsao;
+layout (location = 4) uniform mat4 uInvViewProj;
+layout (location = 5) uniform int uApplyDirLights;
 
-struct Light {
+//struct DirLight {
+//    vec3 Direction;
+//    vec3 Color;
+//};
+
+layout (location = 6) uniform sampler2D sunShadowMap;
+layout (location = 7) uniform mat4 sunLightSpaceMatrix;
+layout (location = 8) uniform vec3 sun_dir;
+layout (location = 9) uniform vec3 sun_color;
+
+struct PointLight {
     vec3 Position;
     vec3 Color;
     float Radius;
 };
 
-const float LightLinear = 0.99;
-const float LightQuadratic = 0.000032;
 const float PI = 3.14159265359;
 
 const int MAX_LIGHTS = 8;
 uniform int lights_num;
-uniform Light lights[MAX_LIGHTS];
+uniform PointLight lights[MAX_LIGHTS];
 
 uniform samplerCubeArray shadowMaps[MAX_LIGHTS];
 uniform float farPlanes[MAX_LIGHTS];
@@ -44,7 +52,7 @@ vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
 vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 );
 
-float ShadowCalculation(float maxDist, int lightIndex, vec3 fragPos, vec3 lightPos, float NdotL) {
+float PointShadowCalculation(float maxDist, int lightIndex, vec3 fragPos, vec3 lightPos, float NdotL) {
     vec3 fragToLight = fragPos - lightPos;
     float currentDepth = length(fragToLight);
     float bias = max(0.5 * (1.0 - NdotL), 0.05);
@@ -52,29 +60,47 @@ float ShadowCalculation(float maxDist, int lightIndex, vec3 fragPos, vec3 lightP
     float diskRadius = (1.0 + (currentDepth / farPlane)) / maxDist;
     float shadow = 0.0;
     int samples = 20; // sampleOffsetDirections size
-    for (int i = 0; i < samples; ++i) {
+    int total_done = 0;
+    for (int i = 0; i < samples; i = i + 1) {
         vec3 sampleDir = fragToLight + sampleOffsetDirections[i] * diskRadius;
         float closestDepth = texture(shadowMaps[lightIndex], vec4(sampleDir, 0)).r * farPlane;
         if (currentDepth - bias > closestDepth) {
             shadow += 1.0;
         }
+        ++total_done;
     }
-    shadow /= float(samples);
+    shadow /= float(total_done);
     return shadow;
 }
 
-// --- Your Existing Shadow Math ---
-//float ShadowCalculation(int lightIndex, vec3 fragPos, vec3 lightPos, float NdotL) {
-//    vec3 fragToLight = fragPos - lightPos;
-//    float closestDepth = texture(shadowMaps[lightIndex], vec4(fragToLight, 0)).r;
-//    closestDepth *= farPlanes[lightIndex];
-//    float currentDepth = length(fragToLight);
-//    float bias = max(0.5 * (1.0 - NdotL), 0.05);
-//    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
-//    return shadow;
-//}
+float DirectionalShadowCalculation(vec3 fragPos, vec3 n, vec3 sunL) {
+    // NORMAL OFFSET BIAS: Push the position along the normal to escape the surface
+    float offsetScale = max(0.5 * (1.0 - dot(n, sunL)), 0.05);
+    vec3 biasedFragPos = fragPos + n * offsetScale;
 
-// --- PBR Functions ---
+    // Multiply the BIASED position by the light matrix
+    vec4 fragPosLightSpace = sunLightSpaceMatrix * vec4(biasedFragPos, 1.0f);
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    if(projCoords.z > 1.0) return 0.0;
+
+    float currentDepth = projCoords.z;
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(sunShadowMap, 0);
+
+    // No more bias subtraction down here!
+    for(int x = -1; x <= 1; ++x) {
+        for(int y = -1; y <= 1; ++y) {
+            float pcfDepth = texture(sunShadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+    return shadow;
+}
+
 float DistributionGGX(vec3 N, vec3 H, float roughness) {
     float a = roughness * roughness;
     float a2 = a * a;
@@ -106,18 +132,11 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-vec3 ACESFilm(vec3 x) {
-    float a = 2.51;
-    float b = 0.03;
-    float c = 2.43;
-    float d = 0.59;
-    float e = 0.14;
-    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-// In your Light Pass / Post-Process Shader:
 vec3 ReconstructViewPos(vec2 uv, float depth) {
-    // Convert UV [0,1] and Depth [0,1] to Clip Space [-1,1]
     vec4 clipSpace = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
     vec4 viewSpace = uInvViewProj * clipSpace;
     return viewSpace.xyz / viewSpace.w;
@@ -127,7 +146,6 @@ vec2 OctWrap(vec2 v) {
     return (1.0 - abs(v.yx)) * (vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0));
 }
 
-// Decode vec2 back to vec3
 vec3 DecodeNormal(vec2 enc) {
     enc = enc * 2.0 - 1.0;
     vec3 n = vec3(enc.x, enc.y, 1.0 - abs(enc.x) - abs(enc.y));
@@ -146,14 +164,11 @@ void main() {
     float Metallic = normData.a;
     float Roughness = normData.b;
     Roughness = max(Roughness, 0.05);
-    // Fallback if roughness is 0 (prevent pitch black artifacts)
 
     vec4 albedoData = texture(gAlbedoSpec, TexCoords);
     vec3 Albedo = albedoData.rgb;
 
-    float AmbientOcclusion = texture(gSsao, TexCoords).r;
-    AmbientOcclusion *= 0.2f;
-    //Albedo *= vec3(0.2 * AmbientOcclusion);
+    float ssao = texture(gSsao, TexCoords).r;
 
     float AO = albedoData.a;
 
@@ -168,19 +183,28 @@ void main() {
 
     // 3. Lighting Loop
     for(int i = 0; i < lights_num; ++i) {
-        //break;
-        vec3 L = normalize(lights[i].Position - FragPos);
-        vec3 H = normalize(V + L);
+//        break;
+        vec3 L = lights[i].Position - FragPos;
 
         // Calculate incoming radiance based on your attenuation
-        float dist = length(lights[i].Position - FragPos);
-        float attenuation = 1.0 / (1.0 + LightLinear * dist + LightQuadratic * dist * dist);
+        float dist = length(L);
         float maxDist = lights[i].Radius;
+
+if (dist >= maxDist) {
+    continue;
+}
+L = normalize(L);
+vec3 H = normalize(V + L);
+
+        float factor_linear = 9.5f / maxDist;
+        float factor_quadratic = 9.5f / (maxDist * maxDist);
+float attenuation = 1.0 / (1.0 + factor_linear * dist + factor_quadratic * dist * dist);
         float fade = smoothstep(maxDist, maxDist * 0.8, dist);
         attenuation *= fade;
 
         // Radiance = Light Color * Attenuation
         vec3 radiance = lights[i].Color * attenuation;
+//        radiance = vec3(0.79f, 0.81f, 0.01f) * attenuation;
 
         // Cook-Torrance BRDF
         float NDF = DistributionGGX(N, H, Roughness);
@@ -199,33 +223,78 @@ void main() {
         float NdotL = max(dot(N, L), 0.0);
 
         // Apply your shadow calculation
-        float shadow = 1.0f * ShadowCalculation(maxDist, i, FragPos, lights[i].Position, NdotL);
+        float shadow = 1.0f * PointShadowCalculation(maxDist, i, FragPos, lights[i].Position, NdotL);
 
         // Accumulate light (Notice how shadow just scales the final radiance)
         Lo += (1.0 - shadow) * (kD * Albedo / PI + specular) * radiance * NdotL;
     }
 
+    // --- DIRECTIONAL LIGHT (THE SUN) ---
+    if (uApplyDirLights == 1) {
+        // L is constant for the whole scene, just inverted direction
+        vec3 sunL = normalize(-sun_dir);
+        vec3 sunH = normalize(V + sunL);
+        vec3 sunRadiance = sun_color * 10.0f;
+        float sunNDF = DistributionGGX(N, sunH, Roughness);
+        float sunG   = GeometrySmith(N, V, sunL, Roughness);
+        vec3 sunF    = fresnelSchlick(max(dot(sunH, V), 0.0), F0);
+        vec3 sunNumerator    = sunNDF * sunG * sunF;
+        float sunDenominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, sunL), 0.0) + 0.0001;
+        vec3 sunSpecular     = sunNumerator / sunDenominator;
+        vec3 sunKS = sunF;
+        vec3 sunKD = vec3(1.0) - sunKS;
+        sunKD *= 1.0 - Metallic;
+        float sunNdotL = max(dot(N, sunL), 0.0);
+        float sunShadow = 1.0f * DirectionalShadowCalculation(FragPos, N, sunL);
+        Lo += (1.0 - sunShadow) * (sunKD * Albedo / PI + sunSpecular) * sunRadiance * sunNdotL;
+    }
+
+    // ----
+    // ----
+    // ----
+
+    // --- IBL AMBIENT LIGHTING ---
+
     // 4. Ambient Lighting
     //vec3 ambient = vec3(0.03) * Albedo * AO;
-    vec3 skyColor = vec3(0.1, 0.15, 0.25);   // Cool ambient from above
+    vec3 skyColor = vec3(0.1, 0.15, 0.25); // Cool ambient from above
     vec3 groundColor = vec3(0.05, 0.03, 0.01); // Warm ambient bounced from below
     float upFactor = N.y * 0.5 + 0.5; // 0.0 to 1.0 based on surface facing
     vec3 ambientLight = mix(groundColor, skyColor, upFactor);// Remove the Albedo *= line entirely!
-
+    ambientLight = vec3(0.01f);
+    ssao *= 1.0f;
     // Later, at the bottom of main():
-    vec3 ambient = ambientLight * Albedo * AO * AmbientOcclusion * (1.0 - Metallic);
-
+    vec3 ambient = ambientLight * Albedo * AO * ssao * (1.0 - Metallic);
     vec3 color = ambient + Lo;
-//    color *= 0.99f;
-
-    // 5. Tonemapping and Gamma Correction (Mandatory for PBR)
-
-    // At the end of main():
-    color = ACESFilm(color);
-    color = pow(color, vec3(1.0/2.2));   // Gamma correction
-
-//    color = vec3(pow(depth, 500.0f));
-//    color = vec3(Normal);
+    //color *= vec3(1.0f - pow(depth, 500.0f));
+    // color = vec3(Normal);
+//    color = vec3(1.0f - pow(depth, 500.0f));
 
     FragColor = vec4(color, 1.0);
+//
+//    // Diffuse IBL
+//    vec3 F_ambient = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, Roughness); // Note: needs a modified Fresnel function that takes roughness
+//    vec3 kS_ambient = F_ambient;
+//    vec3 kD_ambient = 1.0 - kS_ambient;
+//    kD_ambient *= 1.0 - Metallic;
+//
+//    // Sample the irradiance map using the surface normal
+//    vec3 irradiance = texture(irradianceMap, N).rgb;
+//    vec3 diffuseAmbient = irradiance * Albedo;
+//
+//    // Specular IBL
+//    vec3 R = reflect(-V, N); // Reflection vector
+//    const float MAX_REFLECTION_LOD = 4.0; // Based on how many mipmaps your prefilter map has
+//    vec3 prefilteredColor = textureLod(prefilterMap, R,  Roughness * MAX_REFLECTION_LOD).rgb;
+//    vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), Roughness)).rg;
+//    vec3 specularAmbient = prefilteredColor * (F_ambient * brdf.x + brdf.y);
+//
+//    // Combine, applying SSAO and Material AO
+//    vec3 ambient = (kD_ambient * diffuseAmbient + specularAmbient) * AO * ssao;
+//
+//    vec3 color = ambient + Lo;
+//    FragColor = vec4(color, 1.0);
 }
+
+//color *= vec3(1.0f - pow(depth, 500.0f));
+//    color = vec3(Normal);

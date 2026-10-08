@@ -32,11 +32,8 @@ class Camera {
 
   void Update(JPH::Mat44 head_mat);
 
-  void UpdateViewMatrix() const;
-
-  void UpdateProjectionMatrix() const;
-
-  void UpdateUboPos() const;
+  // for env map prebaking
+  void UpdateBakeEnv(JPH::Vec3 position, float yaw, float pitch);
 
   void MoveRotateView(float xoffset, float yoffset);
 
@@ -100,6 +97,14 @@ class Camera {
 
   Frustum GetFrustum() const noexcept;
 
+  void SetFovy(float fovy) {
+    fovy_ = fovy;
+  }
+
+  void SetDefaultFovy() {
+    SetFovy(glm::radians(45.0f));
+  }
+
  protected:
   void Init();
 
@@ -123,7 +128,6 @@ class Camera {
   glm::vec3 origin_ = glm::vec3(0.0f);
 
   float fovy_ = glm::radians(45.0f);
-
   float yaw_;
   float pitch_;
 

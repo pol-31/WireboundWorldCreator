@@ -482,10 +482,36 @@ SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
   return dfs(root_node_id);
 }
 
+enum class ZoneName {
+  CorridorLeft,
+  CorridorRight,
+  Entrance,
+  Hall,
+  MaintenanceRoom,
+  Outside,
+  ServiceRoomLeft,
+  ServiceRoomRight,
+  ServiceRoomMiddle,
+};
+
+static std::map<std::string_view, SceneZone::Properties> gZoneNameMapping = {
+  {"m_corridor_left", {false}},
+  {"m_corridor_right", {false}},
+  {"m_entrance", {false}},
+  {"m_hall", {false}},
+  {"m_maintenance_room", {false}},
+  {"m_outside", {true}},
+  {"m_service_room_left", {false}},
+  {"m_service_room_right", {false}},
+  {"m_service_room_middle", {false}},
+};
+
 void ParseZone(const tinygltf::Model& model, const tinygltf::Node& node,
                SceneTile* tile, const std::vector<Scene::Mesh>& meshes) {
   auto zone = new SceneZone();
   const auto& mesh = meshes[node.mesh];
+  zone->name = node.name;
+  zone->properties = gZoneNameMapping.at(mesh.name);
   zone->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
                             JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
   if (!node.translation.empty()) {
@@ -506,6 +532,7 @@ void ParseCharacter(const tinygltf::Model& model, int node_id, SceneTile* tile,
 void Scene::ConnectZonesWithPortals(int tile_id) {
   std::vector<SceneZone*>& zones = scene_data_.tiles[0]->zones;
   std::vector<ScenePortal>& portals = scene_data_.tiles[0]->portals;
+  std::vector<SceneNode*>& walls = scene_data_.tiles[0]->walls;
 
   for (size_t p = 0; p < portals.size(); ++p) {
     ScenePortal& portal_data = portals[p];
@@ -539,7 +566,25 @@ void Scene::ConnectZonesWithPortals(int tile_id) {
     if (connected_count < 2) {
       std::cerr << portal_data.name << " connected to only " << connected_count
                 << " zones" << std::endl;
-      ;
+    }
+  }
+  for (size_t w = 0; w < walls.size(); ++w) {
+    SceneNode* wall_node = walls[w];
+
+    JPH::Vec3 epsilon = JPH::Vec3::sReplicate(0.05f);
+    JPH::AABox expanded_portal_box = wall_node->global_bounds;
+    expanded_portal_box.mMin =
+        wall_node->global_bounds.mMin - epsilon;
+    expanded_portal_box.mMin.SetY(std::numeric_limits<float>::lowest());
+    expanded_portal_box.mMax =
+        wall_node->global_bounds.mMax + epsilon;
+    expanded_portal_box.mMax.SetY(std::numeric_limits<float>::max());
+
+    for (size_t z = 0; z < zones.size(); ++z) {
+      SceneZone* zone = zones[z];
+      if (zone->bounds.Overlaps(expanded_portal_box)) {
+        zone->walls.push_back(wall_node);
+      }
     }
   }
 }
@@ -565,13 +610,21 @@ void ParsePortal(const tinygltf::Model& model, const tinygltf::Node& node,
     if (child_type == Scene::Type::HingeBase) {
       portal.frame = CreateObjectNode(model, grand_child_id, meshes);
     } else if (child_type == Scene::Type::HingeMoving) {
-      portal.desk = CreateObjectNode(model, grand_child_id, meshes);
+      portal.desks.push_back(CreateObjectNode(model, grand_child_id, meshes));
     } else {
       portal.obj.push_back(CreateObjectNode(model, grand_child_id, meshes));
     }
   }
   tile->portals.push_back(portal);
 }
+
+enum class TileName {
+  Mansion,
+};
+
+static std::map<std::string_view, SceneTile::Properties> gTileNameMapping = {
+  {"m_mansion", {"../assets/hmap.hdr"}},
+};
 
 void ParseTile(const tinygltf::Model& model, const tinygltf::Node& tile_node,
                SceneTile* tile, const std::vector<Scene::Mesh>& meshes) {
@@ -587,6 +640,8 @@ void ParseTile(const tinygltf::Model& model, const tinygltf::Node& tile_node,
       ParseCharacter(model, child_id, tile, meshes);
     } else if (type == Scene::Type::Portal) {
       ParsePortal(model, node, tile, meshes);
+    } else if (type == Scene::Type::Wall) {
+      tile->walls.push_back(CreateObjectNode(model, child_id, meshes));
     } else {
       std::cerr << "another type" << std::endl;
       // idk
@@ -612,6 +667,7 @@ void ReadSceneHierarchy(Scene::SceneData& scene, const tinygltf::Model& model) {
                                 JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
 
       scene.tiles.push_back(tile);
+      tile->properties = gTileNameMapping.at(mesh.name);
       ParseTile(model, node, tile, meshes);
     } else if (type == Scene::Type::Player) {
       scene.player_node = CreateObjectNode(model, i, meshes);
@@ -674,6 +730,8 @@ Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
       type = Scene::Type::Dynamic;
     } else if (collision_value == "light") {
       type = Scene::Type::PointLight;
+    } else if (collision_value == "light_fake") {
+      type = Scene::Type::PointLightFake;
     } else if (collision_value == "none") {
       type = Scene::Type::None;
     } else if (collision_value == "hinge") {
@@ -688,7 +746,7 @@ Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
       type = Scene::Type::Portal;
     } else if (collision_value == "zone") {
       type = Scene::Type::Zone;
-    } else if (collision_value.starts_with("tile")) {
+    } else if (collision_value == "tile") {
       type = Scene::Type::Tile;
     } else if (collision_value == "terrain") {
       type = Scene::Type::Terrain;

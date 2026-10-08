@@ -48,11 +48,17 @@ void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
     }
     for (auto node : tile->portals) {
       auto mat = JPH::Mat44::sRotationTranslation(node.rotation, node.position);
-      dfs(node.desk, mat);
+      for (auto desk : node.desks) {
+        dfs(desk, mat);
+      }
       dfs(node.frame, mat);
       for (auto* o : node.obj) {
         dfs(o, mat);
       }
+    }
+    for (auto node : tile->walls) {
+      auto mat = JPH::Mat44::sIdentity();
+      dfs(node, mat);
     }
     for (auto& zone : tile->zones) {
       auto mat = JPH::Mat44::sTranslation(zone->translate);
