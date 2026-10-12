@@ -56,11 +56,21 @@ class Renderer : public WindowResizeListener {
 
   void DrawLightPass(CubemapRenderData cubemap, bool light_pass,
                      bool apply_shadows, bool render_light_sources,
-                     bool render_bloom);
+                     bool render_bloom, bool ibl, int cubemap_type);
 
   void RenderToTheScreen();
 
   GLuint GetLightingFbo();
+
+  void IblBakeRadiance(CubemapRenderData cubemap);
+  void IblBakePrefiltered(CubemapRenderData cubemap);
+  void IblBakeLut();
+
+  void SaveZoneIbl(const std::string& zone_name);
+
+  void SaveIblLut(const std::string& filepath);
+
+  void LoadZoneIbl(const std::string& zone_name);
 
   /// DBG Unused func for composite draw (picked apart by lines/triangles)
   // void DrawLine(RVec3Arg inFrom, RVec3Arg inTo, ColorArg inColor);
@@ -160,6 +170,19 @@ class Renderer : public WindowResizeListener {
   Shader sh_pass_through_;
   GLuint fbo_composite_ = 0;
   Texture tex_composite_;
+
+  void InitIbl();
+
+  Shader sh_ibl_radiance_;
+  GLuint fbo_capture_ = 0;
+  GLuint rbo_capture_ = 0;
+  GLuint tex_irradiance_map_ = 0;
+
+  Shader sh_ibl_prefiltered_;
+  GLuint tex_prefiltered_map_ = 0;
+
+  Shader sh_ibl_lut_;
+  GLuint tex_ibl_lut_ = 0;
 
   void RenderTerrain(TerrainRenderData terrain);
   void RenderCubemap(CubemapRenderData cubemap);

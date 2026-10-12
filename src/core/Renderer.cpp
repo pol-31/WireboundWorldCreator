@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <stb_image_write.h>
+
 #include "../common/models/DirectedLight.h"
 #include "../common/models/EnemyController.h"
 #include "../common/models/PlayerController.h"
@@ -30,7 +32,8 @@ const GLuint Renderer::cShadowCubeMapSize = 128;
 const int Renderer::cMaxPointLights = 32;
 const GLuint Renderer::cShadowMapSize = 512;
 
-const GLuint Renderer::cBloomSize = 256;
+//TODO: same because of gauss for now!!!
+const GLuint Renderer::cBloomSize = 512;
 const GLuint Renderer::cSsaoSize = 256;
 
 const int Renderer::cShadowObjectLod = 2;
@@ -136,6 +139,9 @@ Renderer::Renderer(const Scene* scene, const Camera* camera,
       player_(player),
 
       sh_cubemap_("../shaders/Skybox.vert", "../shaders/Skybox.frag", {0}),
+      sh_ibl_radiance_("../shaders/IblRadiance.vert", "../shaders/IblRadiance.frag", {0}),
+      sh_ibl_prefiltered_("../shaders/IblRadiance.vert", "../shaders/IblPrefiltered.frag", {0}),
+      sh_ibl_lut_("../shaders/DeferredShading.vert", "../shaders/IblLut.frag", {}),
       sh_terrain_("../shaders/Terrain.vert", "../shaders/Terrain.tesc",
                   "../shaders/Terrain.tese", "../shaders/Terrain.frag",
                   {0, 1, 2, 3}),
@@ -160,7 +166,7 @@ Renderer::Renderer(const Scene* scene, const Camera* camera,
       sh_geometry5_("../shaders/TriangleGeometry5.vert",
                     "../shaders/TriangleGeometry5.frag", {0, 1}),
       sh_deferred_shading_("../shaders/DeferredShading.vert",
-                           "../shaders/DeferredShading.frag", {0, 1, 2, 3, 6}),
+                           "../shaders/DeferredShading.frag", {0, 1, 2, 3, 6, 10, 11, 12/*, 14, 15*/}),
       sh_bloom_("../shaders/DeferredShading.vert", "../shaders/Bloom.frag",
                 {0}),
       sh_gauss_("../shaders/DeferredShading.vert", "../shaders/Gauss.frag",
@@ -207,7 +213,7 @@ void Renderer::DrawDirectionalLightShadowPass() {
                            shadow_maps_[i], 0);
     glClear(GL_DEPTH_BUFFER_BIT);
     glUniformMatrix4fv(0, 1, GL_FALSE,
-                       glm::value_ptr(l.source->lightSpaceMatrix));
+                       reinterpret_cast<const float*>(&l.source->lightSpaceMatrix));
     for (const auto& o : l.objects) {
       const auto& m = scene_->scene_data_.meshes[o.mesh_id];
       for (const auto& p : m.primitives_lods[cShadowObjectLod]) {
@@ -225,7 +231,7 @@ void Renderer::DrawDirectionalLightShadowPass() {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
                            shadow_maps_[i], 0);
     glUniformMatrix4fv(0, 1, GL_FALSE,
-                       glm::value_ptr(l.source->lightSpaceMatrix));
+                       reinterpret_cast<const float*>(&l.source->lightSpaceMatrix));
     for (const auto& data : l.object_animated) {
       RenderAnimated(data);
     }
@@ -373,12 +379,32 @@ void Renderer::DrawSsaoPass() {
   view_proj = glm::inverse(view_proj);
   // glUniformMatrix4fv(3, 1, false, glm::value_ptr(view_proj));
   glViewport(0, 0, cSsaoSize, cSsaoSize);
+  glViewport(0, 0, gWindowWidth, gWindowHeight);
   glUniform3fv(4, static_cast<GLsizei>(ssao_kernel_.size()),
                glm::value_ptr(ssao_kernel_[0]));
   glBindVertexArray(vao_ui_);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, gWindowWidth, gWindowHeight);
+
+
+    glViewport(0, 0, gWindowWidth, gWindowHeight);
+  bool horizontal = true;
+  bool first_iteration = true;
+  sh_gauss_.Bind();
+  for (unsigned int i = 0; i < 2; i++) {
+    break;
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[horizontal]);
+    glUniform1i(1, horizontal);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, first_iteration
+                                     ? tex_ssao_color_.GetId()
+                                     : tex_ping_pong_[!horizontal]);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    horizontal = !horizontal;
+      if (first_iteration) first_iteration = false;
+  }
+  //because of 2, now it's where it was
 }
 
 void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
@@ -580,9 +606,234 @@ void Renderer::RenderCubemap(CubemapRenderData cubemap) {
   glBindVertexArray(0);
 }
 
+void Renderer::InitIbl() {
+  glGenFramebuffers(1, &fbo_capture_);
+  glGenRenderbuffers(1, &rbo_capture_);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_capture_);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo_capture_);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo_capture_);
+
+  glGenTextures(1, &tex_irradiance_map_);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map_);
+  for (unsigned int i = 0; i < 6; ++i) {
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+  }
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_capture_);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo_capture_);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
+
+  glGenTextures(1, &tex_prefiltered_map_);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map_);
+  for (unsigned int i = 0; i < 6; ++i) {
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
+  }
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 4);
+  glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+  glGenTextures(1, &tex_ibl_lut_);
+  glBindTexture(GL_TEXTURE_2D, tex_ibl_lut_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, 512, 512, 0, GL_RG, GL_FLOAT, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+
+glm::mat4 gCaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+glm::mat4 gCaptureViews[] =
+{
+  glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+  glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+  glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+  glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+  glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+  glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+};
+
+void Renderer::IblBakeRadiance(CubemapRenderData cubemap) {
+  sh_ibl_radiance_.Bind();
+  glBindVertexArray(cubemap.vao);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture_id);
+  glUniformMatrix4fv(1, 1, false, glm::value_ptr(gCaptureProjection));
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_capture_);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo_capture_);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
+  glViewport(0, 0, 32, 32);
+  for (unsigned int i = 0; i < 6; ++i) {
+    glUniformMatrix4fv(2, 1, false, glm::value_ptr(gCaptureViews[i]));
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, tex_irradiance_map_, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+  }
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindVertexArray(0);
+}
+
+void Renderer::IblBakePrefiltered(CubemapRenderData cubemap) {
+  sh_ibl_prefiltered_.Bind();
+  glBindVertexArray(cubemap.vao);
+  glUniformMatrix4fv(1, 1, false, glm::value_ptr(gCaptureProjection));
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture_id);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_capture_);
+  unsigned int maxMipLevels = 5;
+  for (unsigned int mip = 0; mip < maxMipLevels; ++mip) {
+    unsigned int mipWidth  = 128 * std::pow(0.5, mip);
+    unsigned int mipHeight = 128 * std::pow(0.5, mip);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo_capture_);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+    glViewport(0, 0, mipWidth, mipHeight);
+
+    float roughness = (float)mip / (float)(maxMipLevels - 1);
+    glUniform1f(3, roughness);
+    for (unsigned int i = 0; i < 6; ++i) {
+      glUniformMatrix4fv(2, 1, false, glm::value_ptr(gCaptureViews[i]));
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                             GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, tex_prefiltered_map_, mip);
+
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+  }
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindVertexArray(0);
+}
+
+void Renderer::IblBakeLut() {
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_capture_);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo_capture_);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_ibl_lut_, 0);
+  glViewport(0, 0, 512, 512);
+  sh_ibl_lut_.Bind();
+  glBindVertexArray(vao_ui_);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+struct IBLHeader {
+    char magic[4] = {'M', 'I', 'B', 'L'}; // "My IBL"
+    uint32_t irradianceSize = 32;
+    uint32_t prefilterBaseSize = 128;
+    uint32_t prefilterMipLevels = 5;
+};
+
+void Renderer::SaveZoneIbl(const std::string& zone_name) {
+    std::string filepath = "../assets/ibl/" + zone_name + ".ibl";
+    std::ofstream out(filepath, std::ios::binary);
+    if (!out.is_open()) return;
+
+    IBLHeader header;
+    out.write(reinterpret_cast<const char*>(&header), sizeof(IBLHeader));
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo_capture_);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+    std::vector<float> irradiancePixels(32 * 32 * 3);
+    for (unsigned int i = 0; i < 6; ++i) {
+        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, tex_irradiance_map_, 0);
+        glReadPixels(0, 0, 32, 32, GL_RGB, GL_FLOAT, irradiancePixels.data());
+        out.write(reinterpret_cast<const char*>(irradiancePixels.data()), irradiancePixels.size() * sizeof(float));
+    }
+    unsigned int maxMipLevels = header.prefilterMipLevels;
+    for (unsigned int mip = 0; mip < maxMipLevels; ++mip) {
+        unsigned int mipSize = 128 >> mip;
+        std::vector<float> prefilterPixels(mipSize * mipSize * 3);
+        for (unsigned int i = 0; i < 6; ++i) {
+            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                   GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, tex_prefiltered_map_, mip);
+            glReadPixels(0, 0, mipSize, mipSize, GL_RGB, GL_FLOAT, prefilterPixels.data());
+            out.write(reinterpret_cast<const char*>(prefilterPixels.data()), prefilterPixels.size() * sizeof(float));
+        }
+    }
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+}
+
+void Renderer::LoadZoneIbl(const std::string& zone_name) {
+    std::string filepath = "../assets/ibl/" + zone_name + ".ibl";
+    std::ifstream in(filepath, std::ios::binary);
+    if (!in.is_open()) {
+        std::cerr << "Failed to open IBL file: " << filepath << std::endl;
+        return;
+    }
+
+    IBLHeader header;
+    in.read(reinterpret_cast<char*>(&header), sizeof(IBLHeader));
+
+    // Verify magic bytes
+    if (header.magic[0] != 'M' || header.magic[1] != 'I' ||
+        header.magic[2] != 'B' || header.magic[3] != 'L') {
+        std::cerr << "Invalid IBL file format: " << filepath << std::endl;
+        return;
+    }
+
+    // --- 1. LOAD IRRADIANCE MAP ---
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map_);
+    size_t irradianceFaceSize = header.irradianceSize * header.irradianceSize * 3;
+    std::vector<float> irradiancePixels(irradianceFaceSize);
+
+    for (unsigned int i = 0; i < 6; ++i) {
+        in.read(reinterpret_cast<char*>(irradiancePixels.data()), irradiancePixels.size() * sizeof(float));
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
+                     header.irradianceSize, header.irradianceSize, 0,
+                     GL_RGB, GL_FLOAT, irradiancePixels.data());
+    }
+
+    // --- 2. LOAD PREFILTERED MAP (WITH MIPS) ---
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map_);
+
+    for (unsigned int mip = 0; mip < header.prefilterMipLevels; ++mip) {
+        unsigned int mipSize = header.prefilterBaseSize >> mip;
+        size_t mipFaceSize = mipSize * mipSize * 3;
+        std::vector<float> prefilterPixels(mipFaceSize);
+
+        for (unsigned int i = 0; i < 6; ++i) {
+            in.read(reinterpret_cast<char*>(prefilterPixels.data()), prefilterPixels.size() * sizeof(float));
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mip, GL_RGB16F,
+                         mipSize, mipSize, 0,
+                         GL_RGB, GL_FLOAT, prefilterPixels.data());
+        }
+    }
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
+
+void Renderer::SaveIblLut(const std::string& filepath) {
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo_capture_);
+    glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_ibl_lut_, 0);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+    std::vector<float> lutPixels(512 * 512 * 3);
+    glReadPixels(0, 0, 512, 512, GL_RGB, GL_FLOAT, lutPixels.data());
+
+    stbi_write_hdr(filepath.c_str(), 512, 512, 3, lutPixels.data());
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+}
+
 void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
                              bool apply_shadows, bool render_light_sources,
-                             bool render_bloom) {
+                             bool render_bloom, bool ibl, int cubemap_type) {
   sh_deferred_shading_.DebugUpdate();
   sh_light_emitter_.DebugUpdate();
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_scene_);
@@ -605,15 +856,36 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   glActiveTexture(GL_TEXTURE2);
   glBindTexture(GL_TEXTURE_2D, tex_g_depth_);
   tex_ssao_color_.BindSampler(3);
+  // glActiveTexture(GL_TEXTURE3);
+  // glBindTexture(GL_TEXTURE_2D, tex_ping_pong_[true]);
+
+
+  int apply_ibl = 0;
+  if (ibl) {
+    glActiveTexture(GL_TEXTURE10);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map_);
+    glActiveTexture(GL_TEXTURE11);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map_);
+    // glActiveTexture(GL_TEXTURE14);
+    // glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map2_);
+    // glActiveTexture(GL_TEXTURE15);
+    // glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map2_);
+    glActiveTexture(GL_TEXTURE12);
+    glBindTexture(GL_TEXTURE_2D, tex_ibl_lut_);
+    // glUniform1f(16, blend_factor);
+    apply_ibl = 1;
+  }
+  glUniform1i(13, apply_ibl);
 
   int apply_dir_lights = 0;
   if (culled_data_->directed_lights_on) {
     apply_dir_lights = 1;
     glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_2D, shadow_maps_[0]);
-    glUniformMatrix4fv(7, 1, false, glm::value_ptr(culled_data_->dir_lights[0].source->lightSpaceMatrix));
-    glUniform3fv(8, 1, glm::value_ptr(culled_data_->dir_lights[0].source->dir));
-    glUniform3fv(9, 1, glm::value_ptr(culled_data_->dir_lights[0].source->color));
+    glUniformMatrix4fv(7, 1, false,
+                       reinterpret_cast<const float*>(&culled_data_->dir_lights[0].source->lightSpaceMatrix));
+    glUniform3fv(8, 1, &culled_data_->dir_lights[0].source->dir.mF32[0]);
+    glUniform3fv(9, 1, &culled_data_->dir_lights[0].source->color.mF32[0]);
   }
   glUniform1i(5, apply_dir_lights);
 
@@ -657,7 +929,8 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
 
       glUniform3fv(pos_loc, 1, glm::value_ptr(pos));
       glUniform1f(radius_loc, light.source->radius_);
-      glUniform3fv(color_loc, 1, glm::value_ptr(glm::vec3(1.0f)));
+      glUniform3fv(color_loc, 1, &light.source->color_.mF32[0]);
+      // glUniform3fv(color_loc, 1, glm::value_ptr(glm::vec3(1.0f)));
       // TODO:
       std::string samplerName = "shadowMaps[" + std::to_string(i) + "]";
       glUniform1i(glGetUniformLocation(sh_deferred_shading_.GetId(),
@@ -671,17 +944,34 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   }
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+
   // blit DEPTH to bloom fbo
   glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo_g_buffer_);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_scene_);
   glBlitFramebuffer(0, 0, gWindowWidth, gWindowHeight, 0, 0, gWindowWidth,
                     gWindowHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_scene_);
   glEnable(GL_DEPTH_TEST);
 
+
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_scene_);
   glDepthFunc(GL_LEQUAL);
-  RenderCubemap(cubemap);
+
+  // RenderCubemap(cubemap);
+  sh_cubemap_.Bind();
+  glBindVertexArray(cubemap.vao);
+  glActiveTexture(GL_TEXTURE0);
+  if (cubemap_type == 0) {
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture_id);
+  } else if (cubemap_type == 1) {
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map_);
+  } else {
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map_);
+  }
+  glDrawArrays(GL_TRIANGLES, 0, 36);
+  glBindVertexArray(0);
+
   glDepthFunc(GL_LESS);
+
 
   /// light sources (point light)
   if (render_light_sources) {
@@ -692,9 +982,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
       glUniformMatrix4fv(
           0, 1, GL_FALSE,
           reinterpret_cast<const float*>(&l.source->object_->global_transform));
-      // JPH::Vec4 colorVec = l.object_->color.ToVec4();
-      JPH::Vec4 colorVec = JPH::Vec4::sOne();
-      glUniform4fv(1, 1, &colorVec.mF32[0]);
+      glUniform4fv(1, 1, &l.source->color_.mF32[0]);
       for (const auto& p : m.primitives_lods[2]) {
         glDrawElementsBaseVertex(GL_TRIANGLES, p.index_count, p.index_type,
                                  (void*)p.index_byte_offset, p.base_vertex);
@@ -719,6 +1007,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   bool horizontal = true;
   if (render_bloom) {
     glViewport(0, 0, cBloomSize, cBloomSize);
+    glViewport(0, 0, gWindowWidth, gWindowHeight);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
     glClear(GL_COLOR_BUFFER_BIT);
     sh_bloom_.Bind();
@@ -727,11 +1016,13 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
     glBindTexture(GL_TEXTURE_2D, tex_scene_);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+    glViewport(0, 0, gWindowWidth, gWindowHeight);
     bool first_iteration = true;
-    int amount = 0;
+    int amount = 4;
     sh_gauss_.Bind();
     for (unsigned int i = 0; i < amount; i++) {
       glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[horizontal]);
+      glClear(GL_COLOR_BUFFER_BIT);
       glUniform1i(1, horizontal);
       glActiveTexture(GL_TEXTURE0);
       glBindTexture(GL_TEXTURE_2D, first_iteration
@@ -795,6 +1086,9 @@ void Renderer::DeInit() {
   textures.push_back(tex_g_albedo_spec_);
   textures.push_back(tex_bloom_);
   textures.push_back(tex_scene_);
+  textures.push_back(tex_irradiance_map_);
+  textures.push_back(tex_prefiltered_map_);
+  textures.push_back(tex_ibl_lut_);
   for (auto t : tex_ping_pong_) {
     textures.push_back(t);
   }
@@ -811,11 +1105,14 @@ void Renderer::DeInit() {
   fbos.push_back(fbo_g_buffer_);
   fbos.push_back(fbo_bloom_);
   fbos.push_back(fbo_scene_);
+  fbos.push_back(fbo_capture_);
   for (auto f : fbo_ping_pong_) {
     fbos.push_back(f);
   }
   fbos.push_back(fbo_composite_);
   glDeleteFramebuffers(fbos.size(), fbos.data());
+
+  glDeleteRenderbuffers(1, &rbo_capture_);
 
   glDeleteBuffers(1, &ssbo_instanced_);
 
@@ -854,6 +1151,8 @@ void Renderer::Init() {
   InitSsaoFbo();
 
   InitCompositeFbo();
+  InitIbl();
+  IblBakeLut();
 }
 
 void Renderer::InitCompositeFbo() {
@@ -976,7 +1275,7 @@ void Renderer::InitBloom() {
 
   glGenTextures(1, &tex_bloom_);
   glBindTexture(GL_TEXTURE_2D, tex_bloom_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, cBloomSize, cBloomSize, 0, GL_RGBA,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0, GL_RGBA,
                GL_FLOAT, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -1016,7 +1315,6 @@ void Renderer::InitScene() {
 }
 
 void Renderer::InitLights() {
-  /// dir lights: shadowmap (sun)  glGenFramebuffers(1, &fbo_depth_map_);
   glGenFramebuffers(1, &fbo_depth_map_);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_map_);
   glDrawBuffer(GL_NONE);
@@ -1081,9 +1379,8 @@ void Renderer::InitSsaoFbo() {
   GLuint color_buffer_id = 0;
   glGenTextures(1, &color_buffer_id);
   glBindTexture(GL_TEXTURE_2D, color_buffer_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, cSsaoSize, cSsaoSize, 0, GL_RED,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, gWindowWidth, gWindowHeight, 0, GL_RED,
                GL_FLOAT, nullptr);
-  std::cout << gWindowWidth << ' ' << gWindowHeight << std::endl;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 

@@ -1,7 +1,9 @@
 #version 460 core
 out vec4 FragColor;
-
 in vec2 TexCoords;
+
+const float PI = 3.14159265359;
+const int MAX_LIGHTS = 8;
 
 layout (location = 0) uniform sampler2D gNormal;      // .rg = Norm, .b = Roughness .a = Metallic
 layout (location = 1) uniform sampler2D gAlbedoSpec;  // .rgb = Albedo, .a = AO
@@ -9,16 +11,17 @@ layout (location = 2) uniform sampler2D gDepth;
 layout (location = 3) uniform sampler2D gSsao;
 layout (location = 4) uniform mat4 uInvViewProj;
 layout (location = 5) uniform int uApplyDirLights;
-
-//struct DirLight {
-//    vec3 Direction;
-//    vec3 Color;
-//};
-
 layout (location = 6) uniform sampler2D sunShadowMap;
 layout (location = 7) uniform mat4 sunLightSpaceMatrix;
 layout (location = 8) uniform vec3 sun_dir;
 layout (location = 9) uniform vec3 sun_color;
+layout (location = 10) uniform samplerCube uIrradianceMap;
+layout (location = 11) uniform samplerCube uPrefilterMap;
+layout (location = 12) uniform sampler2D uBrdfLut;
+layout (location = 13) uniform int uDoIbl;
+//layout (location = 14) uniform samplerCube uIrradianceMap2;
+//layout (location = 15) uniform samplerCube uPrefilterMap2;
+//layout (location = 16) uniform float uIblBlendFactor;
 
 struct PointLight {
     vec3 Position;
@@ -26,9 +29,6 @@ struct PointLight {
     float Radius;
 };
 
-const float PI = 3.14159265359;
-
-const int MAX_LIGHTS = 8;
 uniform int lights_num;
 uniform PointLight lights[MAX_LIGHTS];
 
@@ -53,6 +53,8 @@ vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
 );
 
 float PointShadowCalculation(float maxDist, int lightIndex, vec3 fragPos, vec3 lightPos, float NdotL) {
+//    lightPos.y *= -1.0f;
+//    lightPos.y += 2.0f;
     vec3 fragToLight = fragPos - lightPos;
     float currentDepth = length(fragToLight);
     float bias = max(0.5 * (1.0 - NdotL), 0.05);
@@ -70,7 +72,7 @@ float PointShadowCalculation(float maxDist, int lightIndex, vec3 fragPos, vec3 l
         ++total_done;
     }
     shadow /= float(total_done);
-    return shadow;
+    return 2.0f * shadow;
 }
 
 float DirectionalShadowCalculation(vec3 fragPos, vec3 n, vec3 sunL) {
@@ -204,7 +206,6 @@ float attenuation = 1.0 / (1.0 + factor_linear * dist + factor_quadratic * dist 
 
         // Radiance = Light Color * Attenuation
         vec3 radiance = lights[i].Color * attenuation;
-//        radiance = vec3(0.79f, 0.81f, 0.01f) * attenuation;
 
         // Cook-Torrance BRDF
         float NDF = DistributionGGX(N, H, Roughness);
@@ -224,6 +225,7 @@ float attenuation = 1.0 / (1.0 + factor_linear * dist + factor_quadratic * dist 
 
         // Apply your shadow calculation
         float shadow = 1.0f * PointShadowCalculation(maxDist, i, FragPos, lights[i].Position, NdotL);
+//        float shadow = 1.0f * PointShadowCalculation(maxDist, i, FragPos, vec3(0.0f, 1.0f, 0.0f), NdotL);
 
         // Accumulate light (Notice how shadow just scales the final radiance)
         Lo += (1.0 - shadow) * (kD * Albedo / PI + specular) * radiance * NdotL;
@@ -234,7 +236,7 @@ float attenuation = 1.0 / (1.0 + factor_linear * dist + factor_quadratic * dist 
         // L is constant for the whole scene, just inverted direction
         vec3 sunL = normalize(-sun_dir);
         vec3 sunH = normalize(V + sunL);
-        vec3 sunRadiance = sun_color * 10.0f;
+        vec3 sunRadiance = sun_color;
         float sunNDF = DistributionGGX(N, sunH, Roughness);
         float sunG   = GeometrySmith(N, V, sunL, Roughness);
         vec3 sunF    = fresnelSchlick(max(dot(sunH, V), 0.0), F0);
@@ -249,52 +251,44 @@ float attenuation = 1.0 / (1.0 + factor_linear * dist + factor_quadratic * dist 
         Lo += (1.0 - sunShadow) * (sunKD * Albedo / PI + sunSpecular) * sunRadiance * sunNdotL;
     }
 
-    // ----
-    // ----
-    // ----
 
-    // --- IBL AMBIENT LIGHTING ---
+    vec3 ambient = vec3(1.0f);
+    vec3 color = vec3(1.0f);
 
-    // 4. Ambient Lighting
-    //vec3 ambient = vec3(0.03) * Albedo * AO;
-    vec3 skyColor = vec3(0.1, 0.15, 0.25); // Cool ambient from above
-    vec3 groundColor = vec3(0.05, 0.03, 0.01); // Warm ambient bounced from below
-    float upFactor = N.y * 0.5 + 0.5; // 0.0 to 1.0 based on surface facing
-    vec3 ambientLight = mix(groundColor, skyColor, upFactor);// Remove the Albedo *= line entirely!
-    ambientLight = vec3(0.01f);
-    ssao *= 1.0f;
-    // Later, at the bottom of main():
-    vec3 ambient = ambientLight * Albedo * AO * ssao * (1.0 - Metallic);
-    vec3 color = ambient + Lo;
-    //color *= vec3(1.0f - pow(depth, 500.0f));
-    // color = vec3(Normal);
-//    color = vec3(1.0f - pow(depth, 500.0f));
+    if (uDoIbl == 1) {
+//        Albedo = Albedo * vec3(0.2f);
+        // Diffuse IBL
+//        Roughness = 0.9f;
+//        Metallic = 0.0f;
+        vec3 F_ambient = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, Roughness); // Note: needs a modified Fresnel function that takes roughness
+        vec3 kS_ambient = F_ambient;
+        vec3 kD_ambient = 1.0 - kS_ambient;
+        kD_ambient *= 1.0 - Metallic;
+        vec3 irradiance = texture(uIrradianceMap, N).rgb;
+        vec3 diffuseAmbient = irradiance * Albedo;
+        // Specular IBL
+        vec3 R = reflect(-V, N);
+        const float MAX_REFLECTION_LOD = 4.0;
+        vec3 prefilteredColor = textureLod(uPrefilterMap, R,  Roughness * MAX_REFLECTION_LOD).rgb;
+        vec2 brdf  = texture(uBrdfLut, vec2(max(dot(N, V), 0.0), Roughness)).rg;
+        vec3 specularAmbient = prefilteredColor * (F_ambient * brdf.x + brdf.y);
+        vec3 diffusePart = kD_ambient * diffuseAmbient * AO * ssao;
+        float specularOcclusion = mix(1.0, AO * ssao, clamp(Roughness * 2.0, 0.0f, 1.0f));
+        vec3 specularPart = specularAmbient * specularOcclusion;
+        ambient = diffusePart + specularPart;
 
+        //        color = vec3(1.0f);
+//                color = prefilteredColor;
+        color = 1.0f * ambient + 1.0f * Lo;
+    } else {
+        vec3 skyColor = vec3(0.1, 0.15, 0.25);   // Cool ambient from above
+        vec3 groundColor = vec3(0.05, 0.03, 0.01); // Warm ambient bounced from below
+        float upFactor = N.y * 0.5 + 0.5; // 0.0 to 1.0 based on surface facing
+        vec3 ambientLight = mix(groundColor, skyColor, upFactor);
+        ambient = ambientLight * Albedo * AO * ssao * (1.0 - Metallic);
+        color = ambient * 0.01f + Lo;
+//        color = vec3(0.0f);
+    }
     FragColor = vec4(color, 1.0);
-//
-//    // Diffuse IBL
-//    vec3 F_ambient = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, Roughness); // Note: needs a modified Fresnel function that takes roughness
-//    vec3 kS_ambient = F_ambient;
-//    vec3 kD_ambient = 1.0 - kS_ambient;
-//    kD_ambient *= 1.0 - Metallic;
-//
-//    // Sample the irradiance map using the surface normal
-//    vec3 irradiance = texture(irradianceMap, N).rgb;
-//    vec3 diffuseAmbient = irradiance * Albedo;
-//
-//    // Specular IBL
-//    vec3 R = reflect(-V, N); // Reflection vector
-//    const float MAX_REFLECTION_LOD = 4.0; // Based on how many mipmaps your prefilter map has
-//    vec3 prefilteredColor = textureLod(prefilterMap, R,  Roughness * MAX_REFLECTION_LOD).rgb;
-//    vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), Roughness)).rg;
-//    vec3 specularAmbient = prefilteredColor * (F_ambient * brdf.x + brdf.y);
-//
-//    // Combine, applying SSAO and Material AO
-//    vec3 ambient = (kD_ambient * diffuseAmbient + specularAmbient) * AO * ssao;
-//
-//    vec3 color = ambient + Lo;
-//    FragColor = vec4(color, 1.0);
 }
 
-//color *= vec3(1.0f - pow(depth, 500.0f));
-//    color = vec3(Normal);

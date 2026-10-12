@@ -54,10 +54,12 @@ struct RenderSettings {
   bool animate_animated = true;
   bool update_physics = true;
   bool update_buffer = true;
+  bool ibl = true;
 
   bool geometry_pass = true;
   bool light_pass = true;
   int objects_num = 500;
+  int cubemap_type = 0;
 };
 
 class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
@@ -124,7 +126,6 @@ class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
   float fps_ = 0;
 
  public:
-
   GameObject* hovered_object_ = nullptr;
 
 

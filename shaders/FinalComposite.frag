@@ -77,9 +77,6 @@ void main() {
     // 5. Apply Bloom (on top of the smoothed scene)
     vec3 bloomColor = texture(tex_bloom, TexCoords).rgb;
     vec3 mixedColor = finalSceneColor + (bloomColor * bloomIntensity * 1.0f);
-
-    // 6. Tonemapping and Gamma Correction
-    // (Reminder: Make sure you deleted ACES and pow() from your Light Pass!)
     vec3 mappedColor = vec3(1.0) - exp(-mixedColor * exposure * 1.0f);
     mappedColor = pow(mappedColor, vec3(1.0 / 2.2));
 

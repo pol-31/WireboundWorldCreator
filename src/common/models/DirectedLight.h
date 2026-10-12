@@ -1,15 +1,15 @@
 #ifndef WIREBOUNDWORLDCREATOR_DIRECTEDLIGHT_H
 #define WIREBOUNDWORLDCREATOR_DIRECTEDLIGHT_H
 
-#include <glm/glm.hpp>
+#include <Jolt/Jolt.h>
 
 #include "../../core/Frustum.h"
 
-struct DirectedLight {
-  glm::mat4 lightSpaceMatrix = glm::mat4(1.0f);
-  glm::vec3 dir = glm::vec3(0.1f, -0.4f, -0.1f);
-  glm::vec3 color = glm::vec3(1.0f);
-  Frustum frustum;
+  struct DirectedLight {
+  JPH::Mat44 lightSpaceMatrix = JPH::Mat44::sIdentity();
+  JPH::Vec3 dir = JPH::Vec3(1.0f, 0.0f, 0.0f);
+  JPH::Vec3 color = JPH::Vec3::sOne();
+  Frustum frustum = {};
 };
 
 #endif  //  WIREBOUNDWORLDCREATOR_DIRECTEDLIGHT_H

@@ -134,6 +134,7 @@ void main() {
                 //baseAlbedo = vec3(0.0f);
             }
         }
+//        ao_rough_metal.g *= 1.1f;
         //baseAlbedo = vec3(0.0f);
         //normalMapSample = vec3(0.5f, 0.5f, 1.0f);
         //ao_rough_metal = vec3(0.0f, 0.6f, 1.0f);

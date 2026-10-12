@@ -179,9 +179,9 @@ void UpdateLightFrustums(const Frustum& frustum_camera, PointLight& l) {
   // std::cout << total_faces_rendered << std::endl;
 }
 
-void WorldManager::Cull(bool render_player, bool skip_portals,
+void WorldManager::Cull(bool prebake_ibl_pass, bool skip_portals,
     bool render_animated, bool debug, int total_objects) {
-  final_render_data_.render_player = render_player;
+  final_render_data_.render_player = !prebake_ibl_pass;
   random_floats_ = std::uniform_real_distribution<float>(0.0, 1.0);
   generator_ = std::default_random_engine();
 
@@ -195,15 +195,20 @@ void WorldManager::Cull(bool render_player, bool skip_portals,
 
   bool apply_directed_light = false;
   std::vector<PointLight*> point_lights;
+
   for (int zone_id : active_zones_) {
     auto* zone = zones[zone_id];
-    for (auto& l : zone->point_lights_) {
-      point_lights.push_back(&l);
-    }
     if (zone->properties.outside) {
       apply_directed_light = true;
     }
+    if (prebake_ibl_pass && zone_id != cur_zone_id_) {
+      continue;
+    }
+    for (auto& l : zone->point_lights_) {
+      point_lights.push_back(&l);
+    }
   }
+
   final_render_data_.directed_lights_on = apply_directed_light;
 
   active_point_lights_ =
@@ -249,6 +254,9 @@ void WorldManager::Cull(bool render_player, bool skip_portals,
   };
 
   for (int zone_id : active_zones_) {
+    if (prebake_ibl_pass && zone_id != cur_zone_id_) {
+      continue;
+    }
     const auto* zone = zones[zone_id];
     const auto& static_objects = zone->static_objects_;
 
@@ -401,7 +409,7 @@ int WorldManager::FindNearestZone(JPH::Vec3 player_pos) {
 
 // Call this every frame in your Update loop
 
-void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos,
+bool WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos,
                                     JPH::BodyInterface* body_interface) {
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
   // cur_tile_id_ = 0;
@@ -409,12 +417,12 @@ void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos,
   if (cur_zone_id_ == -1) {
     cur_zone_id_ = FindNearestZone(player_pos);
     ActivateZone(cur_zone_id_, body_interface);
-    return;
+    return true;
   }
 
   // 2. O(1) Fast Path: Are we still in the same zone?
-  if (zones[cur_zone_id_]->bounds.Contains(player_pos)) {
-    return;  // Skip activation process entirely
+  if (zones[cur_zone_id_]->bounds.Scaled(JPH::Vec3::sReplicate(1.01f)).Contains(player_pos)) {
+    return false;  // Skip activation process entirely
   }
 
   // 3. O(K) Transition Path: We stepped out. Check connected zones via portals.
@@ -449,6 +457,7 @@ void WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos,
     std::cout << id << ' ';
   }
   std::cout << std::endl;
+  return true;
 }
 
 void WorldManager::ActivateZone(int zone_index,
@@ -468,11 +477,14 @@ void WorldManager::ActivateZone(int zone_index,
     dfs(dfs, obj);
   }
   active_zones_.push_back(zone_index);
-  std::cout << "Player entered Zone: " << cur_zone_id_ << std::endl;
+  // std::cout << "Player activated Zone: " << zone_index << std::endl;
   for (auto p : zones[cur_zone_id_]->portals) {
     auto near_zone_id = p->connected_zone_index_1;
-    if (near_zone_id == cur_zone_id_) {
+    if (near_zone_id == zone_index) {
       near_zone_id = p->connected_zone_index_2;
+    }
+    if (near_zone_id == cur_zone_id_) {
+      continue;
     }
     if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) ==
         active_zones_.end()) {
@@ -510,3 +522,9 @@ void WorldManager::DeactivateZone(int zone_index,
     }
   }
 }
+
+const SceneZone* WorldManager::GetCurrentZone() {
+  const auto& zones = scene_->scene_data_.tiles[0]->zones;
+  return zones[cur_zone_id_];
+}
+

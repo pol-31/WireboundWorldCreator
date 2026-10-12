@@ -71,14 +71,16 @@ class WorldManager {
                const std::vector<std::unique_ptr<Weapon>>& weapons,
                const std::vector<DirectedLight>& dir_lights);
 
-  void Cull(bool render_player, bool skip_portals,
+  void Cull(bool prebake_ibl_pass, bool skip_portals,
     bool render_animated, bool debug, int total_objects = 5000);
+
+  const SceneZone* GetCurrentZone();
 
   int FindNearestZone(JPH::Vec3 player_pos);
 
   bool IsZoneCulled(JPH::Vec3 pos);
 
-  void UpdatePlayerZone(JPH::Vec3 player_pos,
+  bool UpdatePlayerZone(JPH::Vec3 player_pos,
                         JPH::BodyInterface* body_interface);
 
  private:

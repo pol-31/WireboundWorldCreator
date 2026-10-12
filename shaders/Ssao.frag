@@ -71,7 +71,7 @@ void main() {
 
     occlusion = 1.0 - (occlusion / float(kernelSize));
 
-    float aoPower = 2.5; // Tweak this: 1.0 is linear, 3.0 is very dark
+    float aoPower = 1.0; // Tweak this: 1.0 is linear, 3.0 is very dark
     occlusion = pow(occlusion, aoPower);
 
     FragColor = occlusion;

@@ -70,10 +70,22 @@ class JobSystem;
 class TempAllocator;
 };  // namespace JPH
 
+inline JPH::Mat44 CreateOrthoMatrix(float left, float right, float bottom, float top, float near_plane, float far_plane) {
+  JPH::Mat44 mat = JPH::Mat44::sZero();
+  mat.SetColumn4(0, JPH::Vec4(2.0f / (right - left), 0.0f, 0.0f, 0.0f));
+  mat.SetColumn4(1, JPH::Vec4(0.0f, 2.0f / (top - bottom), 0.0f, 0.0f));
+  mat.SetColumn4(2, JPH::Vec4(0.0f, 0.0f, -2.0f / (far_plane - near_plane), 0.0f));
+  mat.SetColumn4(3, JPH::Vec4(
+      -(right + left) / (right - left),
+      -(top + bottom) / (top - bottom),
+      -(far_plane + near_plane) / (far_plane - near_plane),
+      1.0f
+  ));
+  return mat;
+}
+
 void UpdateDirLightFrustum(DirectedLight &light, const Camera *camera) {
   auto camera_pos = ToJph(camera->GetPosition());
-
-  JPH::Vec3 sun_dir = JPH::Vec3(light.dir.x, light.dir.y, light.dir.z).Normalized();
 
   // Focus the shadow map center slightly ahead of the player
   auto camera_forward = ToJph(camera->GetDirectionFront());
@@ -81,25 +93,19 @@ void UpdateDirLightFrustum(DirectedLight &light, const Camera *camera) {
 
   // Pull shadow camera BACK along -sun_dir so higher structures (roofs) are captured
   float shadow_distance = 30.0f;
-  JPH::Vec3 sun_position = focus_pt - sun_dir * shadow_distance;
+  JPH::Vec3 sun_position = focus_pt - light.dir * shadow_distance;
 
   JPH::Vec3 world_up(0.0f, 1.0f, 0.0f);
-  if (std::abs(sun_dir.Dot(world_up)) > 0.99f) {
+  if (std::abs(light.dir.Dot(world_up)) > 0.99f) {
     world_up = JPH::Vec3(1.0f, 0.0f, 0.0f);
   }
 
-  // Orthographic extents and depth bounds
   float ortho_size = 15.0f;
   float near_plane = 1.0f;
-  float far_plane = shadow_distance + 20.0f; // Cover full distance back to focus point + room behind
+  float far_plane = shadow_distance + 20.0f;
 
-  glm::mat4 lightProjection = glm::ortho(-ortho_size, ortho_size, -ortho_size, ortho_size, near_plane, far_plane);
-
-  glm::vec3 sun_pos_glm(sun_position.GetX(), sun_position.GetY(), sun_position.GetZ());
-  glm::vec3 focus_pt_glm(focus_pt.GetX(), focus_pt.GetY(), focus_pt.GetZ());
-  glm::vec3 up_glm(world_up.GetX(), world_up.GetY(), world_up.GetZ());
-
-  glm::mat4 lightView = glm::lookAt(sun_pos_glm, focus_pt_glm, up_glm);
+  JPH::Mat44 lightProjection = CreateOrthoMatrix(-ortho_size, ortho_size, -ortho_size, ortho_size, near_plane, far_plane);
+  JPH::Mat44 lightView = JPH::Mat44::sLookAt(sun_position, focus_pt, world_up);
   light.lightSpaceMatrix = lightProjection * lightView;
 }
 
@@ -110,68 +116,101 @@ struct PrebakeCameraDir {
 
 PrebakeCameraDir gPrebakeCameraDirs[] = {
   {0.0f, 0.0f},
-  {0.0f, 90.0f},
-  {0.0f, -90.0f},
-  {90.0f, 0.0f},
   {180.0f, 0.0f},
+  {-90.0f, 90.0f},
+  {-90.0f, -90.0f},
+  {90.0f, 0.0f},
   {-90.0f, 0.0f},
 };
 
 void Game::PrebakeEnvMaps() {
-  JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
-  gWindowWidth = 512;
-  gWindowHeight = 512;
-  glfwSetWindowSize(gWindow, gWindowWidth, gWindowHeight);
+    JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
+    gWindowWidth = 512;
+    gWindowHeight = 512;
+    glfwSetWindowSize(gWindow, gWindowWidth, gWindowHeight);
 
-  for (const SceneZone* zone : mdl_loader_.GetScene()->scene_data_.tiles[0]->zones) {
-    auto camera_pos = zone->bounds.GetCenter();
-    for (int i = 0; i < std::size(gPrebakeCameraDirs); ++i) {
+    stbi_flip_vertically_on_write(false);
 
-      glBindFramebuffer(GL_FRAMEBUFFER, 0);
-      glStencilFunc(GL_ALWAYS, 0, 0xFF);
-      glStencilMask(0xFF);
-      glClearColor(0.2f, 1.0f, 0.0f, 1.0f);
-      glEnable(GL_DEPTH_TEST);
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // --- 1. PROCESS EACH ROOM / ZONE ---
+    for (const SceneZone* zone : mdl_loader_.GetScene()->scene_data_.tiles[0]->zones) {
+    cubemap_.LoadDefaultCubemap();
+        auto camera_pos = zone->bounds.GetCenter();
 
-      auto camera_dirs = gPrebakeCameraDirs[i];
-      camera_.UpdateBakeEnv(camera_pos, camera_dirs.yaw, camera_dirs.pitch);
+        // Step A: Render the 6 environment faces to raw .hdr files
+        for (int i = 0; i < std::size(gPrebakeCameraDirs); ++i) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glEnable(GL_DEPTH_TEST);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-      for (auto &l : dir_lights_) {
-        UpdateDirLightFrustum(l, &camera_);
-      }
-      terrain_renderer_.Update(&camera_);
-      world_manager_.UpdatePlayerZone(camera_pos, &bi);
-      world_manager_.Cull(false, true, false, false, render_settings_.objects_num);
+            auto camera_dirs = gPrebakeCameraDirs[i];
+            camera_.UpdateBakeEnv(camera_pos, camera_dirs.yaw, camera_dirs.pitch);
 
-      glDisable(GL_BLEND);
-      renderer_.UpdateBuffer();
-      renderer_.DrawShadowPass();
-      renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData(),
-                                 render_settings_.triplanar_level,
-                                 true);
-      renderer_.DrawSsaoPass();
-      renderer_.DrawLightPass(
-          cubemap_.GetRenderData(), true, true,
-          true, true);
-      glEnable(GL_BLEND);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            for (auto &l : dir_lights_) {
+                UpdateDirLightFrustum(l, &camera_);
+            }
+            terrain_renderer_.Update(&camera_);
+            world_manager_.UpdatePlayerZone(camera_pos, &bi);
+            world_manager_.Cull(true, false, false, false, render_settings_.objects_num);
 
-      glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer_.GetLightingFbo());
-      glReadBuffer(GL_COLOR_ATTACHMENT0);
-      std::vector<float> pixels(gWindowWidth * gWindowHeight * 3);
-      glReadPixels(0, 0, gWindowWidth, gWindowHeight, GL_RGB, GL_FLOAT, pixels.data());
-      stbi_flip_vertically_on_write(true);
-      std::string filename = "../assets/ibl/" + zone->name + "_face_" + std::to_string(i) + ".hdr";
-      stbi_write_hdr(filename.c_str(), gWindowWidth, gWindowHeight, 3, pixels.data());
+            glDisable(GL_BLEND);
+            renderer_.UpdateBuffer();
+            // renderer_.DrawShadowPass();
+            renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData(),
+                                       render_settings_.triplanar_level,
+                                       true);
+            renderer_.DrawSsaoPass();
+            renderer_.DrawLightPass(cubemap_.GetRenderData(), true,
+              false, false, false, false, 0);
+
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer_.GetLightingFbo());
+            glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+            std::vector<float> pixels(gWindowWidth * gWindowHeight * 3);
+            glReadPixels(0, 0, gWindowWidth, gWindowHeight, GL_RGB, GL_FLOAT, pixels.data());
+
+            for (int y = 0; y < gWindowHeight; ++y) {
+                float* row = pixels.data() + y * gWindowWidth * 3;
+                for (int x = 0; x < gWindowWidth / 2; ++x) {
+                    float* a = row + x * 3;
+                    float* b = row + (gWindowWidth - 1 - x) * 3;
+                    std::swap(a[0], b[0]);
+                    std::swap(a[1], b[1]);
+                    std::swap(a[2], b[2]);
+                }
+            }
+
+            std::string filename = "../assets/ibl/" + zone->name + "_face_" + std::to_string(i) + ".hdr";
+            stbi_write_hdr(filename.c_str(), gWindowWidth, gWindowHeight, 3, pixels.data());
+        }
+        //
+        // // Step B: Load raw faces, bake Irradiance & Prefiltered maps, and save to binary .ibl
+        cubemap_.LoadZone(zone);
+        renderer_.IblBakeRadiance(cubemap_.GetRenderData());
+        renderer_.IblBakePrefiltered(cubemap_.GetRenderData());
+        renderer_.SaveZoneIbl(zone->name);
     }
-  }
+  // Step B: Load raw faces, bake Irradiance & Prefiltered maps, and save to binary .ibl
+  cubemap_.LoadDefaultCubemap();
 
+  // --- 2. BAKE & SAVE GLOBAL BRDF LUT (ONCE) ---
+  renderer_.IblBakeLut();
+  renderer_.SaveIblLut("../assets/ibl/brdf_lut.hdr");
+
+  // Restore viewport and window resolution
   camera_.SetDefaultFovy();
   auto default_res = GetWindowResolution(GetDefaultWindowResolutionId());
   gWindowWidth = default_res.width;
   gWindowHeight = default_res.height;
   glfwSetWindowSize(gWindow, gWindowWidth, gWindowHeight);
+
+  const SceneZone* cur_zone = world_manager_.GetCurrentZone();
+  cubemap_.LoadZone(cur_zone);
+  renderer_.LoadZoneIbl(cur_zone->name);
+  cubemap_.LoadDefaultCubemap();
 }
 
 
@@ -353,7 +392,7 @@ void Game::RunGameLoop() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glStencilFunc(GL_ALWAYS, 0, 0xFF);
     glStencilMask(0xFF);
-    glClearColor(0.2f, 1.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -409,10 +448,14 @@ void Game::RunGameLoop() {
 
     auto player_pos = player_->GetBody()->GetPosition();
     // std::cout << player_pos.GetX() << ' ' << player_pos.GetZ() << std::endl;
-    world_manager_.UpdatePlayerZone(player_pos, &bi);
-
+    bool new_zone_entered = world_manager_.UpdatePlayerZone(player_pos, &bi);
+    if (new_zone_entered) {
+      const SceneZone* currentZone = world_manager_.GetCurrentZone();
+      // cubemap_.LoadZone(currentZone);
+      renderer_.LoadZoneIbl(currentZone->name);
+    }
     if (render_settings_.cull) {
-      world_manager_.Cull(true, false, render_settings_.render_animated,
+      world_manager_.Cull(false, false, render_settings_.render_animated,
         render_physics_only_, render_settings_.objects_num);
     }
 
@@ -437,7 +480,7 @@ void Game::RunGameLoop() {
       renderer_.DrawLightPass(
           cubemap_.GetRenderData(), render_settings_.light_pass,
           render_settings_.apply_shadows, render_settings_.light_sources,
-          render_settings_.bloom);
+          render_settings_.bloom, render_settings_.ibl, render_settings_.cubemap_type);
     }
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -650,8 +693,17 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user
   } else {
     // no point light (it's not a ModelNode)
     if (mesh.type == Scene::Type::PointLight) {
+      std::vector<JPH::Vec4> colors;
+      colors.push_back(JPH::Color::sGreen.ToVec4());
+      colors.push_back(JPH::Color::sWhite.ToVec4());
+      colors.push_back(JPH::Color::sRed.ToVec4());
+      colors.push_back(JPH::Color::sBlue.ToVec4());
+      colors.push_back(JPH::Color::sYellow.ToVec4());
+      colors.push_back(JPH::Color::sBlack.ToVec4());
+      int color_id = node->node_id % colors.size();
       zone->point_lights_.emplace_back(node);
       zone->point_lights_.back().radius_ = 5.0f;
+      zone->point_lights_.back().color_ = 5.0f * JPH::Vec3(colors[color_id].GetX(), colors[color_id].GetY(), colors[color_id].GetZ());
       return;
     } else if (mesh.type == Scene::Type::PointLightFake) {
       zone->point_lights_fake_.emplace_back(node);
@@ -695,8 +747,8 @@ void Game::Init() {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glClearColor(0.2f, 0.7f, 0.1f, 1.0f);
-
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   // jph
 
   // Allocate temp memory
@@ -735,14 +787,18 @@ void Game::Init() {
   LoadScenes();
   InitScenesBodies();
 
-  dir_lights_.push_back({});
-  dir_lights_.back().dir = glm::normalize(glm::vec3(0.8f, -1.0f, -0.3f));
-  dir_lights_.back().color = glm::vec3(1.0f);
+  DirectedLight sun = {};
+  sun.dir = JPH::Vec3(0.8f, -1.0f, -0.3f).Normalized();
+  sun.color = JPH::Vec3::sReplicate(20.0f);
+  dir_lights_.push_back(sun);
 
   // terrain_renderer_.LoadHmap(&bi, scene->scene_data_.tiles[0]->properties.hmap_path);
   terrain_renderer_.LoadDefaultSurface(mBodyInterface);
 
   InitUi();
+  // cubemap_.LoadZone(world_manager_.GetCurrentZone());
+  cubemap_.LoadDefaultCubemap();
+
 
   global_data_.renderer = &renderer_;
   global_data_.ui_manager = mDebugUI.get();
@@ -1291,6 +1347,13 @@ void Game::InitUi() {
                                render_settings_.update_buffer =
                                    state == UICheckBox::EState::STATE_CHECKED;
                              });
+    mDebugUI->CreateCheckBox(main_menu, "ibl",
+                             render_settings_.ibl,
+                             [this](UICheckBox::EState state) {
+                               render_settings_.ibl =
+                                   state == UICheckBox::EState::STATE_CHECKED;
+                               std::cout << render_settings_.ibl << std::endl;
+                             });
     mDebugUI->CreateSlider(
         main_menu, "light distance", float(5.0f), 1, 25, 1,
         [this](float inValue) {
@@ -1326,6 +1389,11 @@ void Game::InitUi() {
                            float(render_settings_.triplanar_level), 1, 3, 1,
                            [this](float inValue) {
                              render_settings_.triplanar_level = (int)inValue;
+                           });
+    mDebugUI->CreateSlider(main_menu, "triplanar level",
+                           float(render_settings_.cubemap_type), 0, 2, 1,
+                           [this](float inValue) {
+                             render_settings_.cubemap_type = (int)inValue;
                            });
     mDebugUI->CreateTextButton(main_menu, "Physics Settings", [this]() {
       UIElement *phys_settings = mDebugUI->CreateMenu();

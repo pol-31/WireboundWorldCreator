@@ -11,18 +11,28 @@ struct CubemapRenderData {
   GLuint texture_id;
 };
 
+class SceneZone;
+
 class Cubemap {
  public:
-  Cubemap();
+  Cubemap() {
+    Init();
+  }
+
+  ~Cubemap() {
+    DeInit();
+  }
 
   CubemapRenderData GetRenderData() const noexcept;
 
-  GLint FormatStbImageToOpenGL(GLint channels) noexcept;
+  void LoadZone(const SceneZone* zone);
+
+  void LoadDefaultCubemap();
 
  private:
   void Init();
 
-  void InitBuffers();
+  void DeInit();
 
   Texture texture_;
   GLuint vao_ = 0;
