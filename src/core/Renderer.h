@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_set>
+
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Color.h>
 #include <Jolt/Core/Mutex.h>
@@ -66,11 +68,46 @@ class Renderer : public WindowResizeListener {
   void IblBakePrefiltered(CubemapRenderData cubemap);
   void IblBakeLut();
 
-  void SaveZoneIbl(const std::string& zone_name);
+  void SaveZoneIbl(const std::string& filepath);
 
   void SaveIblLut(const std::string& filepath);
 
-  void LoadZoneIbl(const std::string& zone_name);
+  void LoadIblZones(SceneZone::Properties cur, SceneZone::Properties next,
+    float dist_to_next);
+
+  void ReLoadIblZones();
+
+  // returns appropriate ibl zone name or {} if it shouldn't be baked
+  std::string GetIblBakeFilename(const std::string& zone_name);
+
+  struct IblProperties {
+    std::string_view path = {};
+    IblZoneType type = {};
+
+    // may be valid or may not - WorldManager and Renderer know what active
+    GLuint ibl_irradiance_map = 0;
+    GLuint ibl_prefilter_map = 0;
+  };
+
+  IblProperties ibl_zones_[2];
+  float ibl_zone_blending_ = 0.0f; // 0 for cur; 1 for next
+
+  void UpdateIblUbo(int apply_ibl);
+
+  struct IblUbo {
+    float uDoIbl = 1.0f; // int?
+    float uIblBlendFactor = 0.0f;
+    float cur_is_outside = 0.0f; // int?
+    float cur_intensity_ambient = 1.0f;
+    float cur_intensity_sun = 1.0f;
+    float cur_exposure = 1.0f;
+    float next_is_outside = 0.0f; // int?
+    float next_intensity_ambient = 1.0f;
+    float next_intensity_sun = 1.0f;
+    float next_exposure = 1.0f;
+  };
+  IblUbo ibl_ubo_data_;
+  GLuint ubo_ibl_ = 0;
 
   /// DBG Unused func for composite draw (picked apart by lines/triangles)
   // void DrawLine(RVec3Arg inFrom, RVec3Arg inTo, ColorArg inColor);
@@ -176,10 +213,8 @@ class Renderer : public WindowResizeListener {
   Shader sh_ibl_radiance_;
   GLuint fbo_capture_ = 0;
   GLuint rbo_capture_ = 0;
-  GLuint tex_irradiance_map_ = 0;
 
   Shader sh_ibl_prefiltered_;
-  GLuint tex_prefiltered_map_ = 0;
 
   Shader sh_ibl_lut_;
   GLuint tex_ibl_lut_ = 0;

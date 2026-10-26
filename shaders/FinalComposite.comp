@@ -1,6 +1,7 @@
 #version 460 core
-out vec4 FragColor;
-in vec2 TexCoords;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(binding = 0, rgba8) uniform image2D img_output;
 
 layout (location = 0) uniform sampler2D tex_scene;
 layout (location = 1) uniform sampler2D tex_bloom;
@@ -14,6 +15,19 @@ const float FXAA_REDUCE_MIN = 1.0 / 128.0;
 const float FXAA_REDUCE_MUL = 1.0 / 8.0;
 const float FXAA_SPAN_MAX = 8.0;
 
+layout(std140, binding = 1) uniform Ibl {
+    float uDoIbl;
+    float uIblBlendFactor;
+    float cur_is_outside;
+    float cur_intensity_ambient;
+    float cur_intensity_sun;
+    float cur_exposure;
+    float next_is_outside;
+    float next_intensity_ambient;
+    float next_intensity_sun;
+    float next_exposure;
+} ibl;
+
 //vec3 ACESFilm(vec3 x) {
 //    float a = 2.51;
 //    float b = 0.03;
@@ -26,6 +40,9 @@ const float FXAA_SPAN_MAX = 8.0;
 //    color = pow(color, vec3(1.0/2.2));   // Gamma correction
 
 void main() {
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = textureSize(tex_scene, 0);
+    vec2 TexCoords = (vec2(texelCoord) + 0.5) / vec2(size);
     // 1. FXAA Edge Detection Samples
     vec3 rgbNW = texture(tex_scene, TexCoords + vec2(-1.0, -1.0) * uTexelSize).rgb;
     vec3 rgbNE = texture(tex_scene, TexCoords + vec2(1.0, -1.0) * uTexelSize).rgb;
@@ -74,11 +91,14 @@ void main() {
         finalSceneColor = rgbB;
     }
 
+
+    float zone_exposure = mix(ibl.cur_exposure, ibl.next_exposure, ibl.uIblBlendFactor);
+
     // 5. Apply Bloom (on top of the smoothed scene)
     vec3 bloomColor = texture(tex_bloom, TexCoords).rgb;
     vec3 mixedColor = finalSceneColor + (bloomColor * bloomIntensity * 1.0f);
-    vec3 mappedColor = vec3(1.0) - exp(-mixedColor * exposure * 1.0f);
+    vec3 mappedColor = vec3(1.0) - exp(-mixedColor * exposure * zone_exposure);
     mappedColor = pow(mappedColor, vec3(1.0 / 2.2));
 
-    FragColor = vec4(mappedColor, 1.0);
+    imageStore(img_output, texelCoord, vec4(mappedColor, 1.0));
 }

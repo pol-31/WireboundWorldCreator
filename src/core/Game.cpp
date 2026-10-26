@@ -133,6 +133,10 @@ void Game::PrebakeEnvMaps() {
 
     // --- 1. PROCESS EACH ROOM / ZONE ---
     for (const SceneZone* zone : mdl_loader_.GetScene()->scene_data_.tiles[0]->zones) {
+      auto ibl_name = renderer_.GetIblBakeFilename(zone->name);
+      if (ibl_name.empty()) {
+        continue;
+      }
     cubemap_.LoadDefaultCubemap();
         auto camera_pos = zone->bounds.GetCenter();
 
@@ -183,20 +187,20 @@ void Game::PrebakeEnvMaps() {
                 }
             }
 
-            std::string filename = "../assets/ibl/" + zone->name + "_face_" + std::to_string(i) + ".hdr";
+          // not necessary, but good for dbg
+            std::string filename = "../assets/ibl/" + ibl_name + "_face_" + std::to_string(i) + ".hdr";
             stbi_write_hdr(filename.c_str(), gWindowWidth, gWindowHeight, 3, pixels.data());
         }
         //
         // // Step B: Load raw faces, bake Irradiance & Prefiltered maps, and save to binary .ibl
-        cubemap_.LoadZone(zone);
+        cubemap_.LoadZone(zone); // we need this only to load to OpenGL to bake ibl
         renderer_.IblBakeRadiance(cubemap_.GetRenderData());
         renderer_.IblBakePrefiltered(cubemap_.GetRenderData());
-        renderer_.SaveZoneIbl(zone->name);
-    }
-  // Step B: Load raw faces, bake Irradiance & Prefiltered maps, and save to binary .ibl
-  cubemap_.LoadDefaultCubemap();
 
-  // --- 2. BAKE & SAVE GLOBAL BRDF LUT (ONCE) ---
+        std::string filepath = "../assets/ibl/" + ibl_name + ".ibl";
+        renderer_.SaveZoneIbl(filepath);
+    }
+  cubemap_.LoadDefaultCubemap();
   renderer_.IblBakeLut();
   renderer_.SaveIblLut("../assets/ibl/brdf_lut.hdr");
 
@@ -209,8 +213,9 @@ void Game::PrebakeEnvMaps() {
 
   const SceneZone* cur_zone = world_manager_.GetCurrentZone();
   cubemap_.LoadZone(cur_zone);
-  renderer_.LoadZoneIbl(cur_zone->name);
+  // renderer_.LoadZoneIbl(cur_zone->name);
   cubemap_.LoadDefaultCubemap();
+  renderer_.ReLoadIblZones();
 }
 
 
@@ -284,10 +289,10 @@ void Game::RenderFps() {
 void Game::Run() {
   while (true) {
     if (state_ == State::Game) {
-      glEnable(GL_STENCIL_TEST);
+      // glEnable(GL_STENCIL_TEST);
       glEnable(GL_CULL_FACE);
       glEnable(GL_DEPTH_TEST);
-      glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+      // glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
       camera_.HideCursor();
       glfwSetScrollCallback(gWindow, GameScrollCallback);
       glfwSetMouseButtonCallback(gWindow, GameMouseButtonCallback);
@@ -295,7 +300,7 @@ void Game::Run() {
       glfwSetCursorPosCallback(gWindow, GameCursorPosCallback);
       RunGameLoop();
     } else if (state_ == State::Menu) {
-      glDisable(GL_STENCIL_TEST);
+      // glDisable(GL_STENCIL_TEST);
       glDisable(GL_CULL_FACE);
       glDisable(GL_DEPTH_TEST);
       camera_.ShowCursor();
@@ -379,6 +384,38 @@ void Game::RenderHoveredObjectPrompt() {
   }
 }
 
+void Game::UpdatePlayerZone() {
+    JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
+  auto player_pos = player_->GetBody()->GetPosition();
+  // std::cout << player_pos.GetX() << ' ' << player_pos.GetZ() << std::endl;
+  bool new_zone_entered = world_manager_.UpdatePlayerZone(player_pos, &bi);
+  // cubemap_.LoadZone(cur_zone);
+  std::unordered_map<IblZoneType, float> ibl_types;
+  auto& zones = mdl_loader_.GetScene()->scene_data_.tiles[0]->zones;
+  const auto* cur_zone = world_manager_.GetCurrentZone();
+  int cur_zone_id = world_manager_.GetCurrentZoneId();
+
+  ScenePortal* closest_portal = nullptr;
+  float dist_to_closest_portal = -std::numeric_limits<float>::lowest();
+  for (const auto& portal : cur_zone->portals) {
+    float dist = (portal->position - player_pos).Length();
+    if (dist < dist_to_closest_portal) {
+      dist_to_closest_portal = dist;
+      closest_portal = portal;
+    }
+  }
+  if (closest_portal->connected_zone_index_1 == cur_zone_id) {
+    renderer_.LoadIblZones(
+      zones[closest_portal->connected_zone_index_1]->properties,
+      zones[closest_portal->connected_zone_index_2]->properties,
+      dist_to_closest_portal);
+  } else {
+    renderer_.LoadIblZones(
+      zones[closest_portal->connected_zone_index_2]->properties,
+      zones[closest_portal->connected_zone_index_1]->properties,
+      dist_to_closest_portal);
+  }
+}
 
 void Game::RunGameLoop() {
   while (true) {
@@ -389,16 +426,15 @@ void Game::RunGameLoop() {
     if (state_ != State::Game) {
       break;
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glStencilFunc(GL_ALWAYS, 0, 0xFF);
-    glStencilMask(0xFF);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // glStencilFunc(GL_ALWAYS, 0, 0xFF);
+    // glStencilMask(0xFF);
+    // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     UpdateDeltaTime();
-
-    JPH::BodyInterface &bi = mPhysicsSystem->GetBodyInterface();
 
     if (render_settings_.update_physics) {
       // Reinitialize the job system if the concurrency setting changed
@@ -446,14 +482,8 @@ void Game::RunGameLoop() {
     camera_.Update(player_->GetBody()->GetCameraBoneMatrix());
     terrain_renderer_.Update(&camera_);
 
-    auto player_pos = player_->GetBody()->GetPosition();
-    // std::cout << player_pos.GetX() << ' ' << player_pos.GetZ() << std::endl;
-    bool new_zone_entered = world_manager_.UpdatePlayerZone(player_pos, &bi);
-    if (new_zone_entered) {
-      const SceneZone* currentZone = world_manager_.GetCurrentZone();
-      // cubemap_.LoadZone(currentZone);
-      renderer_.LoadZoneIbl(currentZone->name);
-    }
+    UpdatePlayerZone();
+
     if (render_settings_.cull) {
       world_manager_.Cull(false, false, render_settings_.render_animated,
         render_physics_only_, render_settings_.objects_num);
@@ -552,9 +582,10 @@ void Game::UpdateDeltaTime() {
   }
 }
 
-JPH::Ref<JPH::Shape> CreateMeshShape(const Scene::Mesh &mesh) {
+JPH::Ref<JPH::Shape> CreateMeshShape(const Scene::Mesh &mesh,
+  AssetProperties::CollisionType collision_type) {
   JPH::Ref<JPH::Shape> local_shape;
-  if (mesh.collision_type == Scene::CollisionType::Sphere) {
+  if (collision_type == AssetProperties::CollisionType::Sphere) {
     float radius = (mesh.max[0] - mesh.min[0]) * 0.5f;
     JPH::SphereShapeSettings sphere_settings(radius);
     // Safely create via Jolt reference counting
@@ -579,6 +610,9 @@ JPH::Ref<JPH::Shape> CreateMeshShape(const Scene::Mesh &mesh) {
 void InitSceneGlobalTransforms(std::vector<SceneTile *> &tiles) {
   std::function<void(SceneNode *, const JPH::Mat44 &)> dfs =
       [&](SceneNode *node, const JPH::Mat44 &parent) {
+        if (!node) {
+          return;
+        }
         auto local = node->local_transform.Matrix();
         auto global_transform = parent * local;
         node->global_transform = global_transform;
@@ -655,31 +689,126 @@ JPH::Color DefineColor(JPH::EMotionType body_type, JPH::BodyID body_id) {
   return color;
 }
 
+JPH::Ref<JPH::Shape> CreateContainer(const SceneNode* node) {
+  // std::cout << "+1 container" << std::endl;
+  JPH::StaticCompoundShapeSettings compoundSettings;
+  JPH::AABox aabb = node->local_bounds;
+  JPH::Vec3 center = aabb.GetCenter();
+  JPH::Vec3 extent = aabb.GetExtent();
+  float halfW = 0.5f * (extent.GetX() + extent.GetZ());
+  float halfH = extent.GetY();
+  float wallThickness = std::min(0.05f, halfW * 0.2f);
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX(), center.GetY() - halfH + wallThickness * 0.5f, center.GetZ()),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShape(JPH::Vec3(halfW, wallThickness * 0.5f, halfW))
+  );
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX(), center.GetY() + wallThickness * 0.5f, center.GetZ() + halfW - wallThickness * 0.5f),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShape(JPH::Vec3(halfW - wallThickness, halfH - wallThickness * 0.5f, wallThickness * 0.5f))
+  );
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX(), center.GetY() + wallThickness * 0.5f, center.GetZ() - halfW + wallThickness * 0.5f),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShape(JPH::Vec3(halfW - wallThickness, halfH - wallThickness * 0.5f, wallThickness * 0.5f))
+  );
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX() + halfW - wallThickness * 0.5f, center.GetY() + wallThickness * 0.5f, center.GetZ()),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShape(JPH::Vec3(wallThickness * 0.5f, halfH - wallThickness * 0.5f, halfW - wallThickness))
+  );
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX() - halfW + wallThickness * 0.5f, center.GetY() + wallThickness * 0.5f, center.GetZ()),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShape(JPH::Vec3(wallThickness * 0.5f, halfH - wallThickness * 0.5f, halfW - wallThickness))
+  );
+  return compoundSettings.Create().Get();
+}
+
+JPH::Ref<JPH::Shape> CreateCabinet(const SceneNode* node) {
+  // std::cout << "+1 cabinet" << std::endl;
+  JPH::StaticCompoundShapeSettings compoundSettings;
+  JPH::AABox aabb = node->local_bounds;
+  JPH::Vec3 center = aabb.GetCenter();
+  JPH::Vec3 extent = aabb.GetExtent();
+  float halfW = extent.GetX();
+  float halfH = extent.GetY();
+  float halfD = extent.GetZ();
+  float wallThickness = std::min(0.05f, std::min(halfW, halfD) * 0.1f);
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX(), center.GetY() - halfH + wallThickness * 0.5f, center.GetZ()),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShapeSettings(JPH::Vec3(halfW, wallThickness * 0.5f, halfD))
+  );
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX(), center.GetY() + halfH - wallThickness * 0.5f, center.GetZ()),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShapeSettings(JPH::Vec3(halfW, wallThickness * 0.5f, halfD))
+  );
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX(), center.GetY(), center.GetZ() - halfD + wallThickness * 0.5f),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShapeSettings(JPH::Vec3(halfW - wallThickness, halfH - wallThickness, wallThickness * 0.5f))
+  );
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX() - halfW + wallThickness * 0.5f, center.GetY(), center.GetZ()),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShapeSettings(JPH::Vec3(wallThickness * 0.5f, halfH - wallThickness, halfD))
+  );
+  compoundSettings.AddShape(
+      JPH::Vec3(center.GetX() + halfW - wallThickness * 0.5f, center.GetY(), center.GetZ()),
+      JPH::Quat::sIdentity(),
+      new JPH::BoxShapeSettings(JPH::Vec3(wallThickness * 0.5f, halfH - wallThickness, halfD))
+  );
+  float innerBottomY = center.GetY() - halfH + wallThickness;
+  float innerTopY = center.GetY() + halfH - wallThickness;
+  float innerHeight = innerTopY - innerBottomY;
+  for (int i = 1; i <= 2; ++i) {
+    float shelfY = innerBottomY + innerHeight * (static_cast<float>(i) / 3.0f);
+    compoundSettings.AddShape(
+        JPH::Vec3(center.GetX(), shelfY, center.GetZ()),
+        JPH::Quat::sIdentity(),
+        new JPH::BoxShapeSettings(JPH::Vec3(halfW - wallThickness, wallThickness * 0.5f, halfD - wallThickness))
+    );
+  }
+  return compoundSettings.Create().Get();
+}
+
 // zone might be as well nullptr in case of character TODO: bear it out
 void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user_data) {
-  // TODO: should we do smt with it?... probably there shouldn't be those
   if (node->mesh_index == -1) return;
   const auto scene = mdl_loader_.GetScene();
   const auto &mesh = scene->scene_data_.meshes[node->mesh_index];
-  JPH::Ref<JPH::Shape> local_shape = CreateMeshShape(mesh);
+  auto mesh_properties = GetAssetDefaultProperties(mesh.name);
+  auto mesh_collision_type = mesh_properties.collision_type;
+  auto mesh_type = mesh_properties.type;
+  JPH::Ref<JPH::Shape> local_shape;
+  if (mesh_collision_type == AssetProperties::CollisionType::Container) {
+    local_shape = CreateContainer(node);
+  } else if (mesh_collision_type == AssetProperties::CollisionType::Cabinet) {
+    local_shape = CreateCabinet(node);
+  } else {
+    local_shape = CreateMeshShape(mesh, mesh_collision_type);
+  }
   JPH::EMotionType motion_type = JPH::EMotionType::Static;
   JPH::ObjectLayer object_layer = Layers::NON_MOVING;
   JPH::Ref<JPH::Shape> shape_settings = local_shape;
   JPH::EActivation activation_state = JPH::EActivation::DontActivate;
-  if (mesh.type == Scene::Type::Dynamic ||
-      mesh.type == Scene::Type::HingeMoving) {
+  if (mesh_type == AssetProperties::Type::Dynamic ||
+      mesh_type == AssetProperties::Type::HingeMoving) {
     motion_type = JPH::EMotionType::Dynamic;
     object_layer = Layers::MOVING;
     node->can_be_activated = true;
     // activation_state = JPH::EActivation::Activate;
     zone->static_objects_.emplace_back(node);
-  } else if (mesh.type == Scene::Type::Hinge) {
+  } else if (mesh_type == AssetProperties::Type::Hinge) {
     motion_type = JPH::EMotionType::Kinematic;
     object_layer = Layers::MOVING;
     zone->static_objects_.emplace_back(node);
     hinges_.emplace_back(std::make_unique<Hinge>(mPhysicsSystem, node));
     // std::cout << "+1 hinge" << std::endl;
-  } else if (mesh.type == Scene::Type::Character) {
+  } else if (mesh_type == AssetProperties::Type::Character) {
     characters_.push_back(std::make_unique<EnemyController>(
         character_shared_data_.get(), node, &scene->character_skins_[0],
         &scene->character_rig_));
@@ -692,7 +821,7 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user
     return;
   } else {
     // no point light (it's not a ModelNode)
-    if (mesh.type == Scene::Type::PointLight) {
+    if (mesh_type == AssetProperties::Type::PointLight) {
       std::vector<JPH::Vec4> colors;
       colors.push_back(JPH::Color::sGreen.ToVec4());
       colors.push_back(JPH::Color::sWhite.ToVec4());
@@ -705,14 +834,14 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user
       zone->point_lights_.back().radius_ = 5.0f;
       zone->point_lights_.back().color_ = 5.0f * JPH::Vec3(colors[color_id].GetX(), colors[color_id].GetY(), colors[color_id].GetZ());
       return;
-    } else if (mesh.type == Scene::Type::PointLightFake) {
+    } else if (mesh_type == AssetProperties::Type::PointLightFake) {
       zone->point_lights_fake_.emplace_back(node);
       return;
-    } else if (mesh.type == Scene::Type::Portal ||
-               mesh.type == Scene::Type::None ||
-               mesh.type == Scene::Type::HingeBase) {
+    } else if (mesh_type == AssetProperties::Type::Portal ||
+               mesh_type == AssetProperties::Type::None ||
+               mesh_type == AssetProperties::Type::HingeBase) {
       zone->static_objects_.push_back(node);
-      // TODO: non-physics bodies
+      // non-physics bodies
       return;
     } else {
       zone->static_objects_.push_back(node);
@@ -734,7 +863,7 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user
   obj_settings.mMassPropertiesOverride.mMass = 10.0f;
   if (jph_user_data != 0) {
     obj_settings.mUserData = jph_user_data;
-  } else if (mesh.type == Scene::Type::Hinge) {
+  } else if (mesh_type == AssetProperties::Type::Hinge) {
     obj_settings.mUserData = reinterpret_cast<uint64_t>(hinges_.back().get());
   }
   node->body_id =
@@ -743,12 +872,12 @@ void Game::CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user
 }
 
 void Game::Init() {
-  glEnable(GL_MULTISAMPLE);
+  // glEnable(GL_MULTISAMPLE);
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-  glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+  // glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
   // jph
 
   // Allocate temp memory
@@ -1160,6 +1289,7 @@ void Game::LoadScenes() {
   mdl_loader_.LoadScene(
       "C:\\Users\\Pavlo\\Desktop\\assets\\SceneBackyard.gltf",
       {"C:\\Users\\Pavlo\\Desktop\\assets\\OutdoorStuff.gltf",
+      "C:\\Users\\Pavlo\\Desktop\\assets\\DownloadedSkyrim.gltf",
       "C:\\Users\\Pavlo\\Desktop\\assets\\House.gltf"});
   mdl_loader_.LoadSceneMaterials(
       "C:\\Users\\Pavlo\\Desktop\\assets\\Materials.gltf");
@@ -1169,6 +1299,7 @@ void Game::LoadScenes() {
       "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryadno",
       "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ryshnuk",
       "C:\\Users\\Pavlo\\Desktop\\assets\\Embroidery\\ribbons");
+  mdl_loader_.LoadSkyrimMaterials("C:\\Users\\Pavlo\\Desktop\\assets\\SkyrimTextures");
   mdl_loader_.LoadCharacters("C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf",
                              {"C:\\Users\\Pavlo\\Desktop\\assets\\Human.gltf"});
   // TODO: create CharacterSkeleton.gltf
@@ -1209,6 +1340,9 @@ void Game::InitScenesBodies() {
       for (auto portal : zone->portals) {
         int hinges_was = hinges_.size();
         // DESK, NOT FRAME, because frame doesn't have a jph body
+        if (!portal->frame) {
+          continue;
+        }
         if (!portal->desks[0]->body_id.IsInvalid()) {
           for (SceneNode* desk : portal->desks) {
             zone->static_objects_.emplace_back(desk);

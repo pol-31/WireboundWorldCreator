@@ -75,6 +75,9 @@ class WorldManager {
     bool render_animated, bool debug, int total_objects = 5000);
 
   const SceneZone* GetCurrentZone();
+  [[nodiscard]] int GetCurrentZoneId() const noexcept {
+    return cur_zone_id_;
+  }
 
   int FindNearestZone(JPH::Vec3 player_pos);
 
@@ -82,6 +85,10 @@ class WorldManager {
 
   bool UpdatePlayerZone(JPH::Vec3 player_pos,
                         JPH::BodyInterface* body_interface);
+
+  const std::vector<int>& GetActiveZones() const noexcept {
+    return active_zones_;
+  }
 
  private:
   void ActivateZone(int zone_index, JPH::BodyInterface* body_interface);

@@ -36,6 +36,8 @@ class ModelLoader {
                               std::string_view path_ryshnuk,
                               std::string_view path_ribbons);
 
+  void LoadSkyrimMaterials(std::string_view path);
+
   void LoadCharacters(std::string_view skeleton_path,
                       std::vector<std::string_view> skin_paths);
 

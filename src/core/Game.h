@@ -43,7 +43,7 @@ class DebugUI;
 class UiScene;
 
 struct RenderSettings {
-  int triplanar_level = 1;  // floor, walls, ceiling: 1, 2, 3
+  int triplanar_level = 2;  // floor, walls, ceiling: 1, 2, 3
   bool ssao = true;
   bool render_shadows = true;
   bool bloom = true;
@@ -98,6 +98,8 @@ class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
   void RunMenuLoop();
 
   void RenderHoveredObjectPrompt();
+
+  void UpdatePlayerZone();
 
   int mMaxConcurrentJobs = 1;  // thread::hardware_concurrency();
   JPH::TempAllocator *mTempAllocator = nullptr;

@@ -59,7 +59,8 @@ void WorldManager::PushFrustumCulled(
     // return rest + dispersion * random_floats_(generator_);
   };
   new_instance.color = JPH::Vec4(GetRandomValue(), GetRandomValue(), GetRandomValue(), 255.0f);
-  if (scene_data.meshes[node->mesh_index].type == Scene::Type::Wall) {
+  if (GetAssetDefaultProperties(scene_data.meshes[node->mesh_index].name).type
+    == AssetProperties::Type::Wall) {
     if (new_instance.material_id == static_cast<int>(MaterialIndex::Clay)) {
       new_instance.use_triplanar = 40;
     } else {
@@ -288,8 +289,9 @@ void WorldManager::Cull(bool prebake_ibl_pass, bool skip_portals,
     for (auto& obj : static_objects) {
       if (skip_portals) {
         auto mesh_index = obj.object_->mesh_index;
-        auto mesh_type = scene_->scene_data_.meshes[mesh_index].type;
-        if (mesh_type == Scene::Type::HingeMoving) {
+        auto mesh_type =
+          GetAssetDefaultProperties(scene_->scene_data_.meshes[mesh_index].name).type;
+        if (mesh_type == AssetProperties::Type::HingeMoving) {
           continue;
         }
       }
@@ -462,7 +464,12 @@ bool WorldManager::UpdatePlayerZone(JPH::Vec3 player_pos,
 
 void WorldManager::ActivateZone(int zone_index,
                                 JPH::BodyInterface* body_interface) {
-  auto dfs = [&](auto& self, SceneNode* node) -> void {
+
+  //TODO: based on distance between the portals
+  // 1. activate jph bodies
+  // 2. load ibl
+
+  auto ActivateJphBodies = [&](auto& self, SceneNode* node) -> void {
     JPH::BodyID body_id = node->body_id;
     if (!body_id.IsInvalid() && node->can_be_activated) {
       body_interface->ActivateBody(body_id);
@@ -474,13 +481,14 @@ void WorldManager::ActivateZone(int zone_index,
   const auto& zones = scene_->scene_data_.tiles[0]->zones;
   const SceneZone* zone = zones[zone_index];
   for (SceneNode* obj : zone->object_nodes) {
-    dfs(dfs, obj);
+    ActivateJphBodies(ActivateJphBodies, obj);
   }
+
   active_zones_.push_back(zone_index);
   // std::cout << "Player activated Zone: " << zone_index << std::endl;
   for (auto p : zones[cur_zone_id_]->portals) {
     auto near_zone_id = p->connected_zone_index_1;
-    if (near_zone_id == zone_index) {
+    if (near_zone_id == zone_index) { // self
       near_zone_id = p->connected_zone_index_2;
     }
     if (near_zone_id == cur_zone_id_) {
@@ -491,13 +499,6 @@ void WorldManager::ActivateZone(int zone_index,
       ActivateZone(near_zone_id, body_interface);
     }
   }
-  // for (const auto& obj : scene_->scene_data_.tiles[0]->portals) {
-  //   dfs(dfs, obj.desk);
-  //   dfs(dfs, obj.frame);
-  //   for (auto& child : obj.obj) {
-  //     dfs(dfs, child);
-  //   }
-  // }
 }
 
 void WorldManager::DeactivateZone(int zone_index,
@@ -513,8 +514,11 @@ void WorldManager::DeactivateZone(int zone_index,
   std::erase(active_zones_, zone_index);
   for (auto p : zones[cur_zone_id_]->portals) {
     auto near_zone_id = p->connected_zone_index_1;
-    if (near_zone_id == cur_zone_id_) {
+    if (near_zone_id == zone_index) { // self
       near_zone_id = p->connected_zone_index_2;
+    }
+    if (near_zone_id == cur_zone_id_) {
+      continue;
     }
     if (std::find(active_zones_.begin(), active_zones_.end(), near_zone_id) !=
         active_zones_.end()) {

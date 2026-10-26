@@ -31,8 +31,9 @@ layout(binding = 3) uniform sampler2DArray uAlbedoEmbroidery1;
 layout(binding = 4) uniform sampler2DArray uAlbedoEmbroidery2;
 layout(binding = 5) uniform sampler2DArray uAlbedoEmbroidery3;
 layout(binding = 6) uniform sampler2DArray uAlbedoEmbroidery4;
+layout(binding = 7) uniform sampler2DArray uAlbedoSkyrim;
 
-layout(location = 7) uniform int uTriplanarSize;
+layout(location = 8) uniform int uTriplanarSize;
 
 // 1. Core Triplanar Sampler: Samples ONE scale of the texture
 vec3 SampleTriplanar(sampler2DArray tex, vec3 scaledPos, vec3 weights, float layer) {
@@ -104,19 +105,21 @@ void main() {
         // --- SCALES ---
         float baseScale = (1.0f / fs_in.use_triplanar);
         float scaleClose = baseScale * 4.0f;  // Extreme macro detail (mud wall cracks)
-        float scaleMid   = baseScale * 1.0f;  // Normal room scale
-        float scaleFar   = baseScale * 0.5f;  // Low frequency to break tiling down halls
+        float scaleMid   = baseScale * 2.0f;  // Normal room scale
+        float scaleFar   = baseScale * 1.0f;  // Low frequency to break tiling down halls
 
         float layer = float(fs_in.material_id);
 
         // --- THE MAGIC: 3 Lines of Code ---
 
-        if (fs_in.material_id == 2) {
-            // clay (walls, ceiling)
-            baseAlbedo = vec3(0.9f);
-            ao_rough_metal.r = 1.0f;
-            ao_rough_metal.g = 0.85f;
-            ao_rough_metal.b = 0.0f;
+        // clay (walls, ceiling)
+        baseAlbedo = vec3(0.99f);
+        ao_rough_metal = vec3(1.0f, 0.85f, 0.0f);
+        if (fs_in.material_id >= 11) {
+            // skyrim
+            vec3 tc = vec3(fs_in.TexCoords.xy, float(fs_in.material_id - 11));
+            tc.y = -tc.y;
+            baseAlbedo = texture(uAlbedoSkyrim, tc).rgb;
         } else {
             if (uTriplanarSize == 2) {
                 baseAlbedo      = SampleTriplanar2Level(uAlbedo,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
@@ -133,7 +136,9 @@ void main() {
                 baseAlbedo = texture(uAlbedo, tc).rgb;
                 //baseAlbedo = vec3(0.0f);
             }
+            baseAlbedo = baseAlbedo * 0.2f + 0.9f;
         }
+
 //        ao_rough_metal.g *= 1.1f;
         //baseAlbedo = vec3(0.0f);
         //normalMapSample = vec3(0.5f, 0.5f, 1.0f);
@@ -154,6 +159,11 @@ void main() {
                 baseAlbedo = texture(uAlbedoEmbroidery3, tc).rgb;
             } else if (fs_in.material_id == 10) {
                 baseAlbedo = texture(uAlbedoEmbroidery4, tc).rgb;
+            } else {
+                tc = vec3(fs_in.TexCoords, float(fs_in.material_id - 11));
+                tc.y = -tc.y;
+                baseAlbedo = texture(uAlbedoSkyrim, tc).rgb;
+//                baseAlbedo = vec3(1.0f);
             }
         }
     }
@@ -164,10 +174,17 @@ void main() {
 
 
 //    gPosition = vec4(fs_in.FragPos, ao_rough_metal.g);
+
     vec3 tangentNormal = normalMapSample * 2.0 - 1.0;
+    if (fs_in.use_triplanar != 0) {
+        float normalStrength = 0.15;
+        tangentNormal.xy *= normalStrength;
+    }
+    tangentNormal = normalize(tangentNormal);
     mat3 TBN = mat3(normalize(fs_in.TBN[0]), normalize(fs_in.TBN[1]), normalize(fs_in.TBN[2]));
-//    gNormal = vec4(normalize(TBN * tangentNormal), ao_rough_metal.b);
     gNormal = vec4(EncodeNormal(normalize(TBN * tangentNormal)), ao_rough_metal.g, ao_rough_metal.b);
+
+    //    gNormal = vec4(normalize(TBN * tangentNormal), ao_rough_metal.b);
 
     gAlbedoSpec = vec4(baseAlbedo, ao_rough_metal.r);
 }

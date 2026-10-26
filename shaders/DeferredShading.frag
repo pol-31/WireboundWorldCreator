@@ -18,10 +18,8 @@ layout (location = 9) uniform vec3 sun_color;
 layout (location = 10) uniform samplerCube uIrradianceMap;
 layout (location = 11) uniform samplerCube uPrefilterMap;
 layout (location = 12) uniform sampler2D uBrdfLut;
-layout (location = 13) uniform int uDoIbl;
-//layout (location = 14) uniform samplerCube uIrradianceMap2;
-//layout (location = 15) uniform samplerCube uPrefilterMap2;
-//layout (location = 16) uniform float uIblBlendFactor;
+layout (location = 14) uniform samplerCube uIrradianceMap2;
+layout (location = 15) uniform samplerCube uPrefilterMap2;
 
 struct PointLight {
     vec3 Position;
@@ -43,6 +41,19 @@ layout(std140, binding = 0) uniform Camera {
     mat4 view;
     mat4 proj;
 } camera;
+
+layout(std140, binding = 1) uniform Ibl {
+    float uDoIbl;
+    float uIblBlendFactor;
+    float cur_is_outside;
+    float cur_intensity_ambient;
+    float cur_intensity_sun;
+    float cur_exposure;
+    float next_is_outside;
+    float next_intensity_ambient;
+    float next_intensity_sun;
+    float next_exposure;
+} ibl;
 
 const vec3 sampleOffsetDirections[20] = vec3[](
 vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1),
@@ -72,7 +83,7 @@ float PointShadowCalculation(float maxDist, int lightIndex, vec3 fragPos, vec3 l
         ++total_done;
     }
     shadow /= float(total_done);
-    return 2.0f * shadow;
+    return 1.0f * shadow;
 }
 
 float DirectionalShadowCalculation(vec3 fragPos, vec3 n, vec3 sunL) {
@@ -231,6 +242,7 @@ float attenuation = 1.0 / (1.0 + factor_linear * dist + factor_quadratic * dist 
         Lo += (1.0 - shadow) * (kD * Albedo / PI + specular) * radiance * NdotL;
     }
 
+    float ibl_sun_intensity = mix(ibl.cur_intensity_sun, ibl.next_intensity_sun, ibl.uIblBlendFactor);
     // --- DIRECTIONAL LIGHT (THE SUN) ---
     if (uApplyDirLights == 1) {
         // L is constant for the whole scene, just inverted direction
@@ -248,38 +260,36 @@ float attenuation = 1.0 / (1.0 + factor_linear * dist + factor_quadratic * dist 
         sunKD *= 1.0 - Metallic;
         float sunNdotL = max(dot(N, sunL), 0.0);
         float sunShadow = 1.0f * DirectionalShadowCalculation(FragPos, N, sunL);
-        Lo += (1.0 - sunShadow) * (sunKD * Albedo / PI + sunSpecular) * sunRadiance * sunNdotL;
+        Lo += ibl_sun_intensity * (1.0 - sunShadow) * (sunKD * Albedo / PI + sunSpecular) * sunRadiance * sunNdotL;
     }
 
 
     vec3 ambient = vec3(1.0f);
     vec3 color = vec3(1.0f);
 
-    if (uDoIbl == 1) {
-//        Albedo = Albedo * vec3(0.2f);
-        // Diffuse IBL
-//        Roughness = 0.9f;
-//        Metallic = 0.0f;
+    if (ibl.uDoIbl == 1) {
         vec3 F_ambient = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, Roughness); // Note: needs a modified Fresnel function that takes roughness
         vec3 kS_ambient = F_ambient;
         vec3 kD_ambient = 1.0 - kS_ambient;
         kD_ambient *= 1.0 - Metallic;
-        vec3 irradiance = texture(uIrradianceMap, N).rgb;
-        vec3 diffuseAmbient = irradiance * Albedo;
-        // Specular IBL
         vec3 R = reflect(-V, N);
         const float MAX_REFLECTION_LOD = 4.0;
-        vec3 prefilteredColor = textureLod(uPrefilterMap, R,  Roughness * MAX_REFLECTION_LOD).rgb;
+
+        vec3 irradianceA = texture(uIrradianceMap, N).rgb;
+        vec3 prefilteredColorA = textureLod(uPrefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb;
+        vec3 irradianceB = texture(uIrradianceMap2, N).rgb;
+        vec3 prefilteredColorB = textureLod(uPrefilterMap2, R, Roughness * MAX_REFLECTION_LOD).rgb;
+        vec3 irradiance = mix(irradianceA, irradianceB, ibl.uIblBlendFactor);
+        vec3 prefilteredColor = mix(prefilteredColorA, prefilteredColorB, ibl.uIblBlendFactor);
+        vec3 diffuseAmbient = irradiance * Albedo;
+
         vec2 brdf  = texture(uBrdfLut, vec2(max(dot(N, V), 0.0), Roughness)).rg;
         vec3 specularAmbient = prefilteredColor * (F_ambient * brdf.x + brdf.y);
         vec3 diffusePart = kD_ambient * diffuseAmbient * AO * ssao;
         float specularOcclusion = mix(1.0, AO * ssao, clamp(Roughness * 2.0, 0.0f, 1.0f));
         vec3 specularPart = specularAmbient * specularOcclusion;
         ambient = diffusePart + specularPart;
-
-        //        color = vec3(1.0f);
-//                color = prefilteredColor;
-        color = 1.0f * ambient + 1.0f * Lo;
+        color = ambient + Lo;
     } else {
         vec3 skyColor = vec3(0.1, 0.15, 0.25);   // Cool ambient from above
         vec3 groundColor = vec3(0.05, 0.03, 0.01); // Warm ambient bounced from below

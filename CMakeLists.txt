@@ -83,6 +83,8 @@ add_executable(WireboundWorldCreator
         src/common/models/Hinge.cpp
         src/common/models/Hinge.h
         src/core/WindowResizeListener.h
+        src/common/models/AssetProperties.cpp
+        src/common/models/AssetProperties.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)
@@ -108,6 +110,13 @@ target_link_libraries(WireboundWorldCreator
         PUBLIC nanosvg
         PUBLIC Jolt
 )
+
+# If using modern CMake (recommended):
+target_link_options(WireboundWorldCreator PRIVATE -static)
+
+# Alternatively, if that throws errors, you can add it globally:
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static")
 
 # TODO: rapidjson don't like new gcc...
 # c++23 installed here on my pc; you better to replace or just remove

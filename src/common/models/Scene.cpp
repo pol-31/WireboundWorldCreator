@@ -17,7 +17,10 @@ JPH::Mat44 SceneNodePose::Matrix() const noexcept {
 void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
                                   std::vector<SceneTile*>& tiles) {
   std::function<void(SceneNode*, const JPH::Mat44&)> dfs =
-      [&](SceneNode* node, const JPH::Mat44& parent) {
+    [&](SceneNode* node, const JPH::Mat44& parent) {
+      if (!node) {
+        return;
+      }
         auto local = node->local_transform.Matrix();
         JPH::Mat44 global_transform;
 

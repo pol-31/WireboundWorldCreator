@@ -16,6 +16,7 @@
 #include "../Material.h"
 #include "PointLight.h"
 #include "StaticObject.h"
+#include "AssetProperties.h"
 
 enum class CharacterAnimType {
   Idle,
@@ -87,6 +88,11 @@ enum class MaterialIndex {
   Ryadno,      // special
   Ryshnuk,     // special
   Ribbons,     // special
+  Skyrim1,
+  Skyrim2,
+  Skyrim3,
+  Skyrim4,
+  Skyrim5,
 };
 
 /// for animated there's no children and global_transform used as model_mat
@@ -123,9 +129,21 @@ struct ScenePortal {
   int connected_zone_index_2 = -1;
 };
 
+enum class IblZoneType {
+  None,
+  House,
+  Outside,
+  Mansion
+};
+
 struct SceneZone {
   struct Properties {
     bool outside = false;
+    float intensity_ambient = 0.01f;
+    float intensity_sun = 1.0f;
+    float exposure = 1.0f; // to exp() of the tone mapping
+    IblZoneType ibl_type = IblZoneType::None;
+    // glm::vec3 ambient_tint; idk... we have ibl for that
   };
   std::vector<SceneNode*> object_nodes;
   std::vector<ScenePortal*> portals;
@@ -136,7 +154,7 @@ struct SceneZone {
   std::vector<PointLight> point_lights_;
   std::vector<StaticObject> static_objects_;
   std::vector<SceneNode*> walls;
-  Properties properties;
+  Properties properties = {};
 };
 
 struct SceneTile {
@@ -154,25 +172,6 @@ struct SceneTile {
 };
 
 struct Scene {
-  enum class CollisionType { Cube, Sphere, Capsule, Cylinder };
-
-  enum class Type {
-    Static,
-    Dynamic,
-    PointLight,
-    PointLightFake,
-    None,
-    Hinge,
-    HingeBase,
-    HingeMoving,
-    Portal,
-    Zone,
-    Tile,
-    Terrain,
-    Wall,
-    Character,
-    Player,
-  };
 
   /// idk, let's separate by Blender obj names
   enum class CharacterType {
@@ -245,13 +244,10 @@ struct Scene {
   };
 
   struct Mesh {
-    std::string name;
+    std::string name; // type & collision type through the AssetProperties.h
     std::vector<std::vector<Primitive>> primitives_lods;  // near - mid - far
     glm::vec3 min = glm::vec3(0.0f);
     glm::vec3 max = glm::vec3(0.0f);
-
-    Type type = Type::Static;
-    CollisionType collision_type;  // defines how to reinterpret in dbg render
   };
 
   struct SceneData {
@@ -306,6 +302,7 @@ struct Scene {
   GLuint material_ryadno_ = 0;
   GLuint material_ryshnuk_ = 0;
   GLuint material_ribbons_ = 0;
+  GLuint material_skyrim_ = 0;
 
   void UpdateRenderTransform(const JPH::BodyLockInterface& bli,
                              std::vector<SceneTile*>& tiles);

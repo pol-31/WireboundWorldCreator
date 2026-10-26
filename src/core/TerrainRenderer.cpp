@@ -10,7 +10,9 @@
 #include <stb_image.h>
 
 #include "../common/Material.h"
+#include "../common/models/Scene.h"
 #include "../io/Window.h"
+#include "../common/models/Scene.h"
 #include "Layers.h"
 
 TerrainRenderer::TerrainRenderer(const MaterialArray* material)
@@ -69,7 +71,7 @@ void TerrainRenderer::LoadDefaultSurface(JPH::BodyInterface* body_interface) {
 
 void TerrainRenderer::InitializeBody(JPH::BodyInterface* body_interface,
     int terrain_size, const std::vector<float>& height_data) {
-  float factor = 1.0f / 16.0f;
+  float factor = 1.0f / 8.0f;
   JPH::Vec3 offset = JPH::Vec3(-512.0f, 0.0f, -512.0f) * factor;
   JPH::Vec3 scale = JPH::Vec3(1.0f * factor, 1.0f, 1.0f * factor);
   JPH::HeightFieldShapeSettings shape_settings(height_data.data(), offset,
@@ -94,6 +96,6 @@ void TerrainRenderer::InitializeBody(JPH::BodyInterface* body_interface,
 }
 
 TerrainRenderData TerrainRenderer::GetRenderData() const noexcept {
-  int material_id = 0;
+  auto material_id = static_cast<int>(MaterialIndex::Grass);
   return {mesh_.GetVao(), GeoClipmaps::gPatchNum, hmap_.GetId(), material_id};
 }

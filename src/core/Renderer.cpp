@@ -28,11 +28,12 @@ const int Renderer::cMaxInstancesRigged = 10;
 const int Renderer::cMaxLines = 100 * 3;
 
 const int Renderer::cMaxDirectedLights = 4;
-const GLuint Renderer::cShadowCubeMapSize = 128;
+const GLuint Renderer::cShadowCubeMapSize = 64;
 const int Renderer::cMaxPointLights = 32;
 const GLuint Renderer::cShadowMapSize = 512;
 
 //TODO: same because of gauss for now!!!
+// not used
 const GLuint Renderer::cBloomSize = 512;
 const GLuint Renderer::cSsaoSize = 256;
 
@@ -60,7 +61,7 @@ GLuint CreateShadowCubeMapArray() {
 
   // Allocate storage for max_lights * 6 cubemap faces
   glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 1, GL_DEPTH_COMPONENT24,
-                 Renderer::cShadowMapSize, Renderer::cShadowMapSize,
+                 Renderer::cShadowCubeMapSize, Renderer::cShadowCubeMapSize,
                  max_lights * 6);
 
   glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -146,11 +147,6 @@ Renderer::Renderer(const Scene* scene, const Camera* camera,
                   "../shaders/Terrain.tese", "../shaders/Terrain.frag",
                   {0, 1, 2, 3}),
       sh_lines_("../shaders/Line.vert", "../shaders/Line.frag", {}),
-      // sh_shadow_dir_apply_("../shaders/TriangleNormalDir.vert",
-      //                           "../shaders/TriangleNormalDir.frag", {1}),
-      // sh_shadow_point_apply_("../shaders/TriangleNormalPoint.vert",
-      //                             "../shaders/TriangleNormalPoint.frag",
-      //                             {1}),
       sh_shadow_dir_("../shaders/TriangleShadowDir.vert",
                      "../shaders/TriangleShadowDir.frag", {}),
       sh_shadow_dir5_("../shaders/TriangleShadowDir5.vert",
@@ -160,25 +156,21 @@ Renderer::Renderer(const Scene* scene, const Camera* camera,
       sh_shadow_point5_("../shaders/TriangleShadowPoint5.vert",
                         "../shaders/TriangleShadowPoint.frag", {}),
       sh_geometry_("../shaders/TriangleGeometry.vert",
-                   "../shaders/TriangleGeometry.frag", {0, 1, 2, 3, 4, 5, 6}),
+                   "../shaders/TriangleGeometry.frag", {0, 1, 2, 3, 4, 5, 6, 7}),
       sh_geometry_dbg_("../shaders/TriangleGeometry.vert",
                    "../shaders/TriangleGeometryDbg.frag", {}),
       sh_geometry5_("../shaders/TriangleGeometry5.vert",
                     "../shaders/TriangleGeometry5.frag", {0, 1}),
       sh_deferred_shading_("../shaders/DeferredShading.vert",
-                           "../shaders/DeferredShading.frag", {0, 1, 2, 3, 6, 10, 11, 12/*, 14, 15*/}),
-      sh_bloom_("../shaders/DeferredShading.vert", "../shaders/Bloom.frag",
-                {0}),
-      sh_gauss_("../shaders/DeferredShading.vert", "../shaders/Gauss.frag",
-                {0}),
-      sh_composite_("../shaders/DeferredShading.vert",
-                    "../shaders/FinalComposite.frag", {0, 1}),
+                           "../shaders/DeferredShading.frag", {0, 1, 2, 3, 6, 10, 11, 12, 14, 15}),
+      sh_bloom_("../shaders/Bloom.comp", {0}),
+      sh_gauss_("../shaders/Gauss.comp", {0}),
+      sh_ssao_("../shaders/Ssao.comp", {0, 1, 2}),
+      sh_composite_("../shaders/FinalComposite.comp", {0, 1}),
       sh_pass_through_("../shaders/DeferredShading.vert",
                        "../shaders/PassThrough.frag", {0}),
       sh_light_emitter_("../shaders/LightEmitter.vert",
                         "../shaders/LightEmitter.frag", {}),
-      sh_ssao_("../shaders/DeferredShading.vert", "../shaders/Ssao.frag",
-               {0, 1, 2}),
       sh_wall_("../shaders/Mazanka.vert", "../shaders/Mazanka.frag", {}) {
   Init();
 }
@@ -270,12 +262,12 @@ void GetLightFaceViewProj(const WorldManager::FinalPointLight& l, int face) {
 }
 
 void Renderer::DrawPointLightShadowPass() {
+  if (culled_data_->point_lights.empty()) {
+    return;
+  }
   int num_to_add = culled_data_->point_lights.size() - shadow_cubemaps_.size();
   for (int i = 0; i < num_to_add; ++i) {
     shadow_cubemaps_.push_back(CreateShadowCubeMapArray());
-  }
-  if (culled_data_->point_lights.empty()) {
-    return;
   }
   glViewport(0, 0, cShadowCubeMapSize, cShadowCubeMapSize);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_depth_cubemap_);
@@ -346,11 +338,12 @@ void Renderer::DrawShadowPass() {
   // DrawPointLightShadowPass();
   // glDisable(GL_POLYGON_OFFSET_FILL);
 
-  glDisable(GL_CULL_FACE);
-  // glCullFace(GL_FRONT);
-  DrawDirectionalLightShadowPass();
-  DrawPointLightShadowPass();
+  // glDisable(GL_CULL_FACE);
   glEnable(GL_CULL_FACE);
+  DrawDirectionalLightShadowPass();
+  glCullFace(GL_FRONT);
+  DrawPointLightShadowPass();
+  glCullFace(GL_BACK);
 }
 
 void RenderPlayer(const AnimatedRenderData& data) {
@@ -367,44 +360,31 @@ void RenderPlayer(const AnimatedRenderData& data) {
 }
 
 void Renderer::DrawSsaoPass() {
+  sh_ssao_.DebugUpdate();
   sh_ssao_.Bind();
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_ssao_);
-  glClear(GL_COLOR_BUFFER_BIT);
+  // glBindFramebuffer(GL_FRAMEBUFFER, fbo_ssao_);
+  // glClear(GL_COLOR_BUFFER_BIT);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex_g_depth_);
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, tex_g_normal_);
   tex_ssao_noise_.BindSampler(2);
+  glm::vec2 window_res = glm::vec2(gWindowWidth, gWindowHeight);
+  glUniform2fv(3, 1, glm::value_ptr(window_res));
   auto view_proj = camera_->GetViewMatrix() * camera_->GetProjMatrix();
   view_proj = glm::inverse(view_proj);
   // glUniformMatrix4fv(3, 1, false, glm::value_ptr(view_proj));
-  glViewport(0, 0, cSsaoSize, cSsaoSize);
-  glViewport(0, 0, gWindowWidth, gWindowHeight);
+  // glViewport(0, 0, cSsaoSize, cSsaoSize);
+  // glViewport(0, 0, gWindowWidth, gWindowHeight);
   glUniform3fv(4, static_cast<GLsizei>(ssao_kernel_.size()),
                glm::value_ptr(ssao_kernel_[0]));
-  glBindVertexArray(vao_ui_);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glViewport(0, 0, gWindowWidth, gWindowHeight);
+  // glBindVertexArray(vao_ui_);
+  // glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  // glViewport(0, 0, gWindowWidth, gWindowHeight);
+    glBindImageTexture(0, tex_ssao_color_.GetId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
+  glDispatchCompute((gWindowWidth + 15) / 16, (gWindowHeight + 15) / 16, 1);
 
-
-    glViewport(0, 0, gWindowWidth, gWindowHeight);
-  bool horizontal = true;
-  bool first_iteration = true;
-  sh_gauss_.Bind();
-  for (unsigned int i = 0; i < 2; i++) {
-    break;
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[horizontal]);
-    glUniform1i(1, horizontal);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, first_iteration
-                                     ? tex_ssao_color_.GetId()
-                                     : tex_ping_pong_[!horizontal]);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    horizontal = !horizontal;
-      if (first_iteration) first_iteration = false;
-  }
-  //because of 2, now it's where it was
 }
 
 void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
@@ -412,9 +392,8 @@ void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
   glBindVertexArray(scene_->scene_data_.vao);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_g_buffer_);
   glViewport(0, 0, gWindowWidth, gWindowHeight);
-  glClearColor(0.0, 0.0, 0.0, 1.0);
+  // glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glCullFace(GL_BACK);
   sh_geometry_.DebugUpdate();
   sh_geometry_.Bind();
 
@@ -426,7 +405,8 @@ void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
     glBindTextureUnit(4, scene_->material_ryadno_);
     glBindTextureUnit(5, scene_->material_ryshnuk_);
     glBindTextureUnit(6, scene_->material_ribbons_);
-    glUniform1i(7, triplanar_level);
+    glBindTextureUnit(7, scene_->material_skyrim_);
+    glUniform1i(8, triplanar_level);
 
     for (const auto& o : culled_data_->camera.objects_lod0) {
       int lod = 0;
@@ -475,13 +455,13 @@ void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
 }
 
 int GetDbgShapeId(const std::vector<Scene::Mesh>& dbg_meshes,
-                  Scene::CollisionType type) {
-  // TODO: we probably can do this just once
+                  AssetProperties::CollisionType type) {
   for (int i = 0; i < dbg_meshes.size(); i++) {
-    if (dbg_meshes[i].collision_type == type) {
+    if (GetAssetDefaultProperties(dbg_meshes[i].name).collision_type == type) {
       return i;
     }
   }
+  /// the cube by default
   return 0;
 }
 
@@ -500,7 +480,8 @@ void Renderer::RenderDebug() {
     int lod = 0;
     const auto& m = scene_->scene_data_.meshes[o.mesh_id];
     int dbg_shape_id =
-        GetDbgShapeId(scene_->scene_dbg_shapes_.meshes, m.collision_type);
+        GetDbgShapeId(scene_->scene_dbg_shapes_.meshes,
+          GetAssetDefaultProperties(m.name).collision_type);
     const auto& m_dbg = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
     for (const auto& p : m_dbg.primitives_lods[lod]) {
       glDrawElementsInstancedBaseVertexBaseInstance(
@@ -513,7 +494,8 @@ void Renderer::RenderDebug() {
     int lod = 0;
     const auto& m = scene_->scene_data_.meshes[o.mesh_id];
     int dbg_shape_id =
-        GetDbgShapeId(scene_->scene_dbg_shapes_.meshes, m.collision_type);
+        GetDbgShapeId(scene_->scene_dbg_shapes_.meshes,
+          GetAssetDefaultProperties(m.name).collision_type);
     const auto& m_dbg = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
     for (const auto& p : m_dbg.primitives_lods[lod]) {
       glDrawElementsInstancedBaseVertexBaseInstance(
@@ -526,7 +508,8 @@ void Renderer::RenderDebug() {
     int lod = 0;
     const auto& m = scene_->scene_data_.meshes[o.mesh_id];
     int dbg_shape_id =
-        GetDbgShapeId(scene_->scene_dbg_shapes_.meshes, m.collision_type);
+      GetDbgShapeId(scene_->scene_dbg_shapes_.meshes,
+        GetAssetDefaultProperties(m.name).collision_type);
     const auto& m_dbg = scene_->scene_dbg_shapes_.meshes[dbg_shape_id];
     for (const auto& p : m_dbg.primitives_lods[lod]) {
       glDrawElementsInstancedBaseVertexBaseInstance(
@@ -615,34 +598,31 @@ void Renderer::InitIbl() {
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo_capture_);
 
-  glGenTextures(1, &tex_irradiance_map_);
-  glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map_);
-  for (unsigned int i = 0; i < 6; ++i) {
-    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+  for (int ibl = 0; ibl < 2; ++ibl) {
+    glGenTextures(1, &ibl_zones_[ibl].ibl_irradiance_map);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[ibl].ibl_irradiance_map);
+    for (unsigned int i = 0; i < 6; ++i) {
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glGenTextures(1, &ibl_zones_[ibl].ibl_prefilter_map);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[ibl].ibl_prefilter_map);
+    for (unsigned int i = 0; i < 6; ++i) {
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 4);
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
   }
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_capture_);
-  glBindRenderbuffer(GL_RENDERBUFFER, rbo_capture_);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
-
-  glGenTextures(1, &tex_prefiltered_map_);
-  glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map_);
-  for (unsigned int i = 0; i < 6; ++i) {
-    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
-  }
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 4);
-  glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
   glGenTextures(1, &tex_ibl_lut_);
   glBindTexture(GL_TEXTURE_2D, tex_ibl_lut_);
@@ -677,7 +657,7 @@ void Renderer::IblBakeRadiance(CubemapRenderData cubemap) {
   for (unsigned int i = 0; i < 6; ++i) {
     glUniformMatrix4fv(2, 1, false, glm::value_ptr(gCaptureViews[i]));
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, tex_irradiance_map_, 0);
+                           GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ibl_zones_[0].ibl_irradiance_map, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLES, 0, 36);
   }
@@ -706,7 +686,7 @@ void Renderer::IblBakePrefiltered(CubemapRenderData cubemap) {
     for (unsigned int i = 0; i < 6; ++i) {
       glUniformMatrix4fv(2, 1, false, glm::value_ptr(gCaptureViews[i]));
       glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                             GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, tex_prefiltered_map_, mip);
+                             GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ibl_zones_[0].ibl_prefilter_map, mip);
 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -736,8 +716,7 @@ struct IBLHeader {
     uint32_t prefilterMipLevels = 5;
 };
 
-void Renderer::SaveZoneIbl(const std::string& zone_name) {
-    std::string filepath = "../assets/ibl/" + zone_name + ".ibl";
+void Renderer::SaveZoneIbl(const std::string& filepath) {
     std::ofstream out(filepath, std::ios::binary);
     if (!out.is_open()) return;
 
@@ -750,7 +729,7 @@ void Renderer::SaveZoneIbl(const std::string& zone_name) {
     std::vector<float> irradiancePixels(32 * 32 * 3);
     for (unsigned int i = 0; i < 6; ++i) {
         glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                               GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, tex_irradiance_map_, 0);
+                               GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ibl_zones_[0].ibl_irradiance_map, 0);
         glReadPixels(0, 0, 32, 32, GL_RGB, GL_FLOAT, irradiancePixels.data());
         out.write(reinterpret_cast<const char*>(irradiancePixels.data()), irradiancePixels.size() * sizeof(float));
     }
@@ -760,7 +739,7 @@ void Renderer::SaveZoneIbl(const std::string& zone_name) {
         std::vector<float> prefilterPixels(mipSize * mipSize * 3);
         for (unsigned int i = 0; i < 6; ++i) {
             glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                   GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, tex_prefiltered_map_, mip);
+                                   GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ibl_zones_[0].ibl_prefilter_map, mip);
             glReadPixels(0, 0, mipSize, mipSize, GL_RGB, GL_FLOAT, prefilterPixels.data());
             out.write(reinterpret_cast<const char*>(prefilterPixels.data()), prefilterPixels.size() * sizeof(float));
         }
@@ -770,53 +749,117 @@ void Renderer::SaveZoneIbl(const std::string& zone_name) {
 
 }
 
-void Renderer::LoadZoneIbl(const std::string& zone_name) {
-    std::string filepath = "../assets/ibl/" + zone_name + ".ibl";
-    std::ifstream in(filepath, std::ios::binary);
-    if (!in.is_open()) {
-        std::cerr << "Failed to open IBL file: " << filepath << std::endl;
-        return;
-    }
+Renderer::IblProperties gIblZones[] = {
+  {"../assets/ibl/entrance.ibl", IblZoneType::None, 0, 0},
+  {"../assets/ibl/entrance.ibl", IblZoneType::House, 0, 0},
+  {"../assets/ibl/outside.ibl", IblZoneType::Outside, 0, 0},
+  {"../assets/ibl/entrance.ibl", IblZoneType::Mansion, 0, 0},
+};
 
-    IBLHeader header;
-    in.read(reinterpret_cast<char*>(&header), sizeof(IBLHeader));
+std::string Renderer::GetIblBakeFilename(const std::string& zone_name) {
+  if (zone_name == "zone_home_main") {
+    return "entrance";
+  }
+  if (zone_name == "zone_outside") {
+    return "outside";
+  }
+  return {};
+}
 
-    // Verify magic bytes
-    if (header.magic[0] != 'M' || header.magic[1] != 'I' ||
-        header.magic[2] != 'B' || header.magic[3] != 'L') {
-        std::cerr << "Invalid IBL file format: " << filepath << std::endl;
-        return;
-    }
+void LoadIbl(Renderer::IblProperties& zone, IblZoneType new_type) {
+  auto properties = gIblZones[static_cast<int>(new_type)];
+  properties.ibl_irradiance_map = zone.ibl_irradiance_map;
+  properties.ibl_prefilter_map = zone.ibl_prefilter_map;
+  zone = properties;
+  std::ifstream in(zone.path.data(), std::ios::binary);
+  if (!in.is_open()) {
+    std::cerr << "Failed to open IBL file: " << zone.path << std::endl;
+    return;
+  }
 
-    // --- 1. LOAD IRRADIANCE MAP ---
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map_);
-    size_t irradianceFaceSize = header.irradianceSize * header.irradianceSize * 3;
-    std::vector<float> irradiancePixels(irradianceFaceSize);
+  IBLHeader header;
+  in.read(reinterpret_cast<char*>(&header), sizeof(IBLHeader));
+
+  if (header.magic[0] != 'M' || header.magic[1] != 'I' ||
+      header.magic[2] != 'B' || header.magic[3] != 'L') {
+    std::cerr << "Invalid IBL file format: " << zone.path << std::endl;
+    return;
+  }
+
+  glBindTexture(GL_TEXTURE_CUBE_MAP, zone.ibl_irradiance_map);
+  size_t irradianceFaceSize = header.irradianceSize * header.irradianceSize * 3;
+  std::vector<float> irradiancePixels(irradianceFaceSize);
+
+  for (unsigned int i = 0; i < 6; ++i) {
+    in.read(reinterpret_cast<char*>(irradiancePixels.data()), irradiancePixels.size() * sizeof(float));
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
+                 header.irradianceSize, header.irradianceSize, 0,
+                 GL_RGB, GL_FLOAT, irradiancePixels.data());
+  }
+
+  glBindTexture(GL_TEXTURE_CUBE_MAP, zone.ibl_prefilter_map);
+
+  for (unsigned int mip = 0; mip < header.prefilterMipLevels; ++mip) {
+    unsigned int mipSize = header.prefilterBaseSize >> mip;
+    size_t mipFaceSize = mipSize * mipSize * 3;
+    std::vector<float> prefilterPixels(mipFaceSize);
 
     for (unsigned int i = 0; i < 6; ++i) {
-        in.read(reinterpret_cast<char*>(irradiancePixels.data()), irradiancePixels.size() * sizeof(float));
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
-                     header.irradianceSize, header.irradianceSize, 0,
-                     GL_RGB, GL_FLOAT, irradiancePixels.data());
+      in.read(reinterpret_cast<char*>(prefilterPixels.data()), prefilterPixels.size() * sizeof(float));
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mip, GL_RGB16F,
+                   mipSize, mipSize, 0,
+                   GL_RGB, GL_FLOAT, prefilterPixels.data());
     }
+  }
+  glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
 
-    // --- 2. LOAD PREFILTERED MAP (WITH MIPS) ---
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map_);
+void Renderer::ReLoadIblZones() {
+  LoadIbl(ibl_zones_[0], ibl_zones_[0].type);
+  LoadIbl(ibl_zones_[1], ibl_zones_[1].type);
+}
 
-    for (unsigned int mip = 0; mip < header.prefilterMipLevels; ++mip) {
-        unsigned int mipSize = header.prefilterBaseSize >> mip;
-        size_t mipFaceSize = mipSize * mipSize * 3;
-        std::vector<float> prefilterPixels(mipFaceSize);
+void Renderer::LoadIblZones(SceneZone::Properties cur, SceneZone::Properties next, float dist_to_next) {
+  ibl_ubo_data_.cur_is_outside = cur.outside ? 1.0f : 0.0f;
+  ibl_ubo_data_.cur_intensity_ambient = cur.intensity_ambient;
+  ibl_ubo_data_.cur_intensity_sun = cur.intensity_sun;
+  ibl_ubo_data_.cur_exposure = cur.exposure;
+  ibl_ubo_data_.next_is_outside = next.outside ? 1.0f : 0.0f;
+  ibl_ubo_data_.next_intensity_ambient = next.intensity_ambient;
+  ibl_ubo_data_.next_intensity_sun = next.intensity_sun;
+  ibl_ubo_data_.next_exposure = next.exposure;
 
-        for (unsigned int i = 0; i < 6; ++i) {
-            in.read(reinterpret_cast<char*>(prefilterPixels.data()), prefilterPixels.size() * sizeof(float));
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mip, GL_RGB16F,
-                         mipSize, mipSize, 0,
-                         GL_RGB, GL_FLOAT, prefilterPixels.data());
-        }
+  if (cur.ibl_type == IblZoneType::None) {
+    return;
+  }
+  if (ibl_zones_[0].type != cur.ibl_type) {
+    if (cur.ibl_type == ibl_zones_[1].type) {
+      std::swap(ibl_zones_[0], ibl_zones_[1]);
+      return;
     }
+    // if neither cur nor next, then we load new and our cur becomes our prev
+    ibl_zones_[1].type = ibl_zones_[0].type;
+    ibl_zones_[1].path = ibl_zones_[0].path;
+    LoadIbl(ibl_zones_[0], cur.ibl_type);
+  }
+  if (next.ibl_type == IblZoneType::None) {
+    return;
+  }
+  if (ibl_zones_[1].type != next.ibl_type) {
+    // already did swap, need to load new
+    LoadIbl(ibl_zones_[1], next.ibl_type);
+  }
+  // if close_dist close to 0, we're close to the door, so it's 0.5f
+  // so our range is 1.0f to 0.5f
+  dist_to_next -= 1.5f;
 
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+  if (dist_to_next < 0.5f) {
+    ibl_zone_blending_ = 0.5f;
+  } else {
+    ibl_zone_blending_ = std::clamp(dist_to_next, 0.5f, 1.0f);
+  }
+  ibl_zone_blending_ = 1.0f - ibl_zone_blending_;
+  // std::cout << (int)ibl_zones_[0].type << ' ' << (int)ibl_zones_[1].type << ' ' << ibl_zone_blending_ << std::endl;
 }
 
 void Renderer::SaveIblLut(const std::string& filepath) {
@@ -838,10 +881,10 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   sh_light_emitter_.DebugUpdate();
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_scene_);
   glDisable(GL_DEPTH_TEST);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT);
 
   if (!light_pass) {
-    glDisable(GL_DEPTH_TEST);
+    // glDisable(GL_DEPTH_TEST);
     return;
   }
 
@@ -863,22 +906,24 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   int apply_ibl = 0;
   if (ibl) {
     glActiveTexture(GL_TEXTURE10);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map_);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[0].ibl_irradiance_map);
     glActiveTexture(GL_TEXTURE11);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map_);
-    // glActiveTexture(GL_TEXTURE14);
-    // glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map2_);
-    // glActiveTexture(GL_TEXTURE15);
-    // glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map2_);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[0].ibl_prefilter_map);
+    glActiveTexture(GL_TEXTURE14);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[1].ibl_irradiance_map);
+    glActiveTexture(GL_TEXTURE15);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[1].ibl_prefilter_map);
     glActiveTexture(GL_TEXTURE12);
     glBindTexture(GL_TEXTURE_2D, tex_ibl_lut_);
-    // glUniform1f(16, blend_factor);
+    // glUniform1f(16, ibl_zone_blending_);
+    // std::cout << ibl_zone_blending_ << std::endl;
     apply_ibl = 1;
+    UpdateIblUbo(apply_ibl);
   }
-  glUniform1i(13, apply_ibl);
+  // glUniform1i(13, apply_ibl);
 
   int apply_dir_lights = 0;
-  if (culled_data_->directed_lights_on) {
+  if (culled_data_->directed_lights_on && apply_shadows) {
     apply_dir_lights = 1;
     glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_2D, shadow_maps_[0]);
@@ -957,15 +1002,16 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   glDepthFunc(GL_LEQUAL);
 
   // RenderCubemap(cubemap);
+  sh_cubemap_.DebugUpdate();
   sh_cubemap_.Bind();
   glBindVertexArray(cubemap.vao);
   glActiveTexture(GL_TEXTURE0);
   if (cubemap_type == 0) {
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture_id);
   } else if (cubemap_type == 1) {
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_irradiance_map_);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[0].ibl_irradiance_map);
   } else {
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_prefiltered_map_);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[0].ibl_prefilter_map);
   }
   glDrawArrays(GL_TRIANGLES, 0, 36);
   glBindVertexArray(0);
@@ -1006,37 +1052,41 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
 
   bool horizontal = true;
   if (render_bloom) {
-    glViewport(0, 0, cBloomSize, cBloomSize);
-    glViewport(0, 0, gWindowWidth, gWindowHeight);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
-    glClear(GL_COLOR_BUFFER_BIT);
     sh_bloom_.Bind();
-    glBindVertexArray(vao_ui_);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex_scene_);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    glViewport(0, 0, gWindowWidth, gWindowHeight);
+    glBindImageTexture(0, tex_bloom_, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+    glDispatchCompute((gWindowWidth + 15) / 16, (gWindowHeight + 15) / 16, 1);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     bool first_iteration = true;
-    int amount = 4;
+    int amount = 2;
     sh_gauss_.Bind();
     for (unsigned int i = 0; i < amount; i++) {
-      glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[horizontal]);
-      glClear(GL_COLOR_BUFFER_BIT);
-      glUniform1i(1, horizontal);
+      GLuint input_tex = first_iteration ? tex_bloom_ : tex_ping_pong_[!horizontal];
+      GLuint output_tex = tex_ping_pong_[horizontal];
+
+      // Bind input texture
       glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, first_iteration
-                                       ? tex_bloom_
-                                       : tex_ping_pong_[!horizontal]);
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      glBindTexture(GL_TEXTURE_2D, input_tex);
+
+      // Bind output image target
+      glBindImageTexture(0, output_tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+
+      // Set uniforms
+      glUniform1i(1, horizontal ? 1 : 0); // horizontal flag
+
+      // Dispatch
+      glDispatchCompute((gWindowWidth + 15) / 16, (gWindowHeight + 15) / 16, 1);
+      glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
       horizontal = !horizontal;
       if (first_iteration) first_iteration = false;
     }
   }
   // glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, gWindowWidth, gWindowHeight);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_composite_);
-  glClear(GL_COLOR_BUFFER_BIT);
+  // glBindFramebuffer(GL_FRAMEBUFFER, fbo_composite_);
+  // glClear(GL_COLOR_BUFFER_BIT);
   sh_composite_.DebugUpdate();
   sh_composite_.Bind();
   float bloom_intensity = 1.0f;
@@ -1047,12 +1097,15 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   glUniform1f(2, bloom_intensity);
   glUniform1f(3, bloom_exposure);
   glUniform2fv(4, 1, glm::value_ptr(bloom_texel_size));
-  glBindVertexArray(vao_ui_);
+  // glBindVertexArray(vao_ui_);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex_scene_);
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, tex_ping_pong_[!horizontal]);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  glBindImageTexture(0, tex_composite_.GetId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+  glDispatchCompute((gWindowWidth + 15) / 16, (gWindowHeight + 15) / 16, 1);
+  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+  // glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 
   /// lines
@@ -1086,8 +1139,10 @@ void Renderer::DeInit() {
   textures.push_back(tex_g_albedo_spec_);
   textures.push_back(tex_bloom_);
   textures.push_back(tex_scene_);
-  textures.push_back(tex_irradiance_map_);
-  textures.push_back(tex_prefiltered_map_);
+  textures.push_back(ibl_zones_[0].ibl_irradiance_map);
+  textures.push_back(ibl_zones_[1].ibl_irradiance_map);
+  textures.push_back(ibl_zones_[0].ibl_prefilter_map);
+  textures.push_back(ibl_zones_[1].ibl_prefilter_map);
   textures.push_back(tex_ibl_lut_);
   for (auto t : tex_ping_pong_) {
     textures.push_back(t);
@@ -1127,6 +1182,8 @@ void Renderer::DeInit() {
   vbos.push_back(vbo_lines_);
   vbos.push_back(vbo_wall_);
   glDeleteBuffers(vbos.size(), vbos.data());
+
+  glCreateBuffers(1, &ubo_ibl_);
 }
 
 void Renderer::Init() {
@@ -1153,11 +1210,23 @@ void Renderer::Init() {
   InitCompositeFbo();
   InitIbl();
   IblBakeLut();
+
+
+  glCreateBuffers(1, &ubo_ibl_);
+  glNamedBufferStorage(ubo_ibl_, sizeof(IblUbo), nullptr,
+                       GL_DYNAMIC_STORAGE_BIT);
+  glBindBufferBase(GL_UNIFORM_BUFFER, 1, ubo_ibl_);
+}
+
+void Renderer::UpdateIblUbo(int apply_ibl) {
+  ibl_ubo_data_.uDoIbl = static_cast<float>(apply_ibl);
+  ibl_ubo_data_.uIblBlendFactor = ibl_zone_blending_;
+  glNamedBufferSubData(ubo_ibl_, 0, sizeof(IblUbo), &ibl_ubo_data_);
 }
 
 void Renderer::InitCompositeFbo() {
-  glGenFramebuffers(1, &fbo_composite_);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_composite_);
+  // glGenFramebuffers(1, &fbo_composite_);
+  // glBindFramebuffer(GL_FRAMEBUFFER, fbo_composite_);
 
   GLuint tex_composite_id = 0;
   glGenTextures(1, &tex_composite_id);
@@ -1166,13 +1235,13 @@ void Renderer::InitCompositeFbo() {
                GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         tex_composite_id, 0);
-  unsigned int composite_attachment[1] = {GL_COLOR_ATTACHMENT0};
-  glDrawBuffers(1, composite_attachment);
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    std::cout << "Framebuffer not complete!" << std::endl;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         // tex_composite_id, 0);
+  // unsigned int composite_attachment[1] = {GL_COLOR_ATTACHMENT0};
+  // glDrawBuffers(1, composite_attachment);
+  // if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    // std::cout << "Framebuffer not complete!" << std::endl;
+  // glBindFramebuffer(GL_FRAMEBUFFER, 0);
   tex_composite_ = Texture(tex_composite_id, gWindowWidth, gWindowHeight,
                            GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE);
 }
@@ -1253,10 +1322,10 @@ void Renderer::InitUi() {
 }
 
 void Renderer::InitGauss() {
-  glGenFramebuffers(2, fbo_ping_pong_);
+  // glGenFramebuffers(2, fbo_ping_pong_);
   glGenTextures(2, tex_ping_pong_);
   for (unsigned int i = 0; i < 2; i++) {
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[i]);
+    // glBindFramebuffer(GL_FRAMEBUFFER, fbo_ping_pong_[i]);
     glBindTexture(GL_TEXTURE_2D, tex_ping_pong_[i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0,
                  GL_RGBA, GL_FLOAT, nullptr);
@@ -1264,28 +1333,28 @@ void Renderer::InitGauss() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           tex_ping_pong_[i], 0);
+    // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           // tex_ping_pong_[i], 0);
   }
 }
 
 void Renderer::InitBloom() {
-  glGenFramebuffers(1, &fbo_bloom_);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
+  // glGenFramebuffers(1, &fbo_bloom_);
+  // glBindFramebuffer(GL_FRAMEBUFFER, fbo_bloom_);
 
   glGenTextures(1, &tex_bloom_);
   glBindTexture(GL_TEXTURE_2D, tex_bloom_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gWindowWidth, gWindowHeight, 0, GL_RGBA,
-               GL_FLOAT, NULL);
+               GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         tex_bloom_, 0);
-  unsigned int bloom_attachment[1] = {GL_COLOR_ATTACHMENT0};
-  glDrawBuffers(1, bloom_attachment);
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    std::cout << "Framebuffer not complete!" << std::endl;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         // tex_bloom_, 0);
+  // unsigned int bloom_attachment[1] = {GL_COLOR_ATTACHMENT0};
+  // glDrawBuffers(1, bloom_attachment);
+  // if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    // std::cout << "Framebuffer not complete!" << std::endl;
+  // glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::InitScene() {
@@ -1373,22 +1442,22 @@ void Renderer::InitSsaoNoise() {
 }
 
 void Renderer::InitSsaoFbo() {
-  glGenFramebuffers(1, &fbo_ssao_);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_ssao_);
+  // glGenFramebuffers(1, &fbo_ssao_);
+  // glBindFramebuffer(GL_FRAMEBUFFER, fbo_ssao_);
 
   GLuint color_buffer_id = 0;
   glGenTextures(1, &color_buffer_id);
   glBindTexture(GL_TEXTURE_2D, color_buffer_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, gWindowWidth, gWindowHeight, 0, GL_RED,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, gWindowWidth, gWindowHeight, 0, GL_RED,
                GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         color_buffer_id, 0);
+  // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         // color_buffer_id, 0);
 
   tex_ssao_color_ = Texture(color_buffer_id, gWindowWidth, gWindowHeight,
-                            GL_RED, GL_RED, GL_FLOAT);
+                            GL_RED, GL_R8, GL_FLOAT);
 }
 
 void Renderer::InitializeProceduralWall() {
@@ -1456,4 +1525,5 @@ void Renderer::OnWindowResize() {
   glBindVertexArray(0);
   DeInit();
   Init();
+  ReLoadIblZones();
 }

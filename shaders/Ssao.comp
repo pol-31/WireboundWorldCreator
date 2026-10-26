@@ -1,11 +1,12 @@
 #version 460 core
-out float FragColor;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-in vec2 TexCoords;
+layout(binding = 0, rgba16f) uniform image2D img_output;
 
 layout (location = 0) uniform sampler2D gDepth;
 layout (location = 1) uniform sampler2D gNormal;
 layout (location = 2) uniform sampler2D texNoise;
+layout (location = 3) uniform vec2 uWindowResolution;
 layout (location = 4) uniform vec3 samples[64];
 
 layout(std140, binding = 0) uniform Camera {
@@ -17,12 +18,10 @@ layout(std140, binding = 0) uniform Camera {
     mat4 proj;
 } camera;
 
-int kernelSize = 64;
+int kernelSize = 16;
+//int kernelSize = 64;
 float radius = 0.5;
 float bias = 0.025;
-
-// Match screen resolution / 4 (for 4x4 noise texture)
-const vec2 noiseScale = vec2(1600.0 / 4.0, 900.0 / 4.0);
 
 // Reconstruct View Space Position directly using inverse Projection Matrix
 vec3 ReconstructViewPos(vec2 uv, float depth, mat4 invProj) {
@@ -43,15 +42,22 @@ vec3 DecodeNormal(vec2 enc) {
 }
 
 void main() {
-    mat4 invProj = inverse(camera.proj);
-    float depth = texture(gDepth, TexCoords).r;
-    vec3 fragPos = ReconstructViewPos(TexCoords, depth, invProj);
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = textureSize(gDepth, 0);
+    vec2 texCoords = (vec2(texelCoord) + 0.5) / vec2(size);
 
-    vec4 normData = texture(gNormal, TexCoords);
+    mat4 invProj = inverse(camera.proj);
+    float depth = texture(gDepth, texCoords).r;
+    vec3 fragPos = ReconstructViewPos(texCoords, depth, invProj);
+
+    vec4 normData = texture(gNormal, texCoords);
     vec3 worldNormal = DecodeNormal(normData.xy);
     vec3 normal = normalize(mat3(camera.view) * worldNormal); // Convert to View Space!
 
-    vec3 randomVec = normalize(texture(texNoise, TexCoords * noiseScale).xyz);
+
+    // Match screen resolution / 4 (for 4x4 noise texture)
+    vec2 noiseScale = uWindowResolution / 4.0f;
+    vec3 randomVec = normalize(texture(texNoise, texCoords * noiseScale).xyz);
     vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
     vec3 bitangent = cross(normal, tangent);
     mat3 TBN = mat3(tangent, bitangent, normal);
@@ -71,8 +77,8 @@ void main() {
 
     occlusion = 1.0 - (occlusion / float(kernelSize));
 
-    float aoPower = 1.0; // Tweak this: 1.0 is linear, 3.0 is very dark
+    float aoPower = 1.5; // Tweak this: 1.0 is linear, 3.0 is very dark
     occlusion = pow(occlusion, aoPower);
 
-    FragColor = occlusion;
+    imageStore(img_output, texelCoord, vec4(occlusion, occlusion, occlusion, 1.0));
 }

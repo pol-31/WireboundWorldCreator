@@ -494,16 +494,34 @@ enum class ZoneName {
   ServiceRoomMiddle,
 };
 
+SceneZone::Properties gSceneZoneOusideProps = {
+  true, 1.0f, 0.3f, 0.5f, IblZoneType::Outside
+};
+SceneZone::Properties gSceneZoneInsideProps = {
+  false, 1.0f, 1.0f, 5.0f, IblZoneType::House
+};
+
 static std::map<std::string_view, SceneZone::Properties> gZoneNameMapping = {
-  {"m_corridor_left", {false}},
-  {"m_corridor_right", {false}},
-  {"m_entrance", {false}},
-  {"m_hall", {false}},
-  {"m_maintenance_room", {false}},
-  {"m_outside", {true}},
-  {"m_service_room_left", {false}},
-  {"m_service_room_right", {false}},
-  {"m_service_room_middle", {false}},
+  {"m_zone_toilet", gSceneZoneOusideProps},
+  {"m_zone_barn", gSceneZoneInsideProps},
+  {"m_zone_barn_front", gSceneZoneOusideProps},
+  {"m_zone_barn_behind", gSceneZoneOusideProps},
+  {"m_zone_barn_side", gSceneZoneOusideProps},
+  {"m_zone_entrance", gSceneZoneOusideProps},
+  {"m_zone_forest", gSceneZoneOusideProps},
+  {"m_zone_home_unheated", gSceneZoneInsideProps},
+  {"m_zone_home_entryway", gSceneZoneInsideProps},
+  {"m_zone_home_storehouse", gSceneZoneInsideProps},
+  {"m_zone_home_main", gSceneZoneInsideProps},
+  {"m_zone_home_behind", gSceneZoneOusideProps},
+  {"m_zone_home2_unheated", gSceneZoneInsideProps},
+  {"m_zone_home2_entryway", gSceneZoneInsideProps},
+  {"m_zone_home2_storehouse", gSceneZoneInsideProps},
+  {"m_zone_home2_main", gSceneZoneInsideProps},
+  {"m_zone_home2_behind", gSceneZoneOusideProps},
+  {"m_zone_valley", gSceneZoneOusideProps},
+  {"m_zone_outside", gSceneZoneOusideProps},
+  {"m_zone_garden", gSceneZoneOusideProps},
 };
 
 void ParseZone(const tinygltf::Model& model, const tinygltf::Node& node,
@@ -606,10 +624,11 @@ void ParsePortal(const tinygltf::Model& model, const tinygltf::Node& node,
   }
   for (auto grand_child_id : node.children) {
     const auto& child_node = model.nodes[grand_child_id];
-    Scene::Type child_type = meshes[child_node.mesh].type;
-    if (child_type == Scene::Type::HingeBase) {
+    AssetProperties::Type child_type =
+      GetAssetDefaultProperties(meshes[child_node.mesh].name).type;
+    if (child_type == AssetProperties::Type::HingeBase) {
       portal.frame = CreateObjectNode(model, grand_child_id, meshes);
-    } else if (child_type == Scene::Type::HingeMoving) {
+    } else if (child_type == AssetProperties::Type::HingeMoving) {
       portal.desks.push_back(CreateObjectNode(model, grand_child_id, meshes));
     } else {
       portal.obj.push_back(CreateObjectNode(model, grand_child_id, meshes));
@@ -623,7 +642,7 @@ enum class TileName {
 };
 
 static std::map<std::string_view, SceneTile::Properties> gTileNameMapping = {
-  {"m_mansion", {"../assets/hmap.hdr"}},
+  {"m_tile_mansion", {"../assets/hmap.hdr"}},
 };
 
 void ParseTile(const tinygltf::Model& model, const tinygltf::Node& tile_node,
@@ -633,14 +652,15 @@ void ParseTile(const tinygltf::Model& model, const tinygltf::Node& tile_node,
     // if (node.mesh == -1) {
     //   continue;
     // }
-    Scene::Type type = meshes[node.mesh].type;
-    if (type == Scene::Type::Zone) {
+    AssetProperties::Type type =
+      GetAssetDefaultProperties(meshes[node.mesh].name).type;
+    if (type == AssetProperties::Type::Zone) {
       ParseZone(model, node, tile, meshes);
-    } else if (type == Scene::Type::Character) {
+    } else if (type == AssetProperties::Type::Character) {
       ParseCharacter(model, child_id, tile, meshes);
-    } else if (type == Scene::Type::Portal) {
+    } else if (type == AssetProperties::Type::Portal) {
       ParsePortal(model, node, tile, meshes);
-    } else if (type == Scene::Type::Wall) {
+    } else if (type == AssetProperties::Type::Wall) {
       tile->walls.push_back(CreateObjectNode(model, child_id, meshes));
     } else {
       std::cerr << "another type" << std::endl;
@@ -658,8 +678,9 @@ void ReadSceneHierarchy(Scene::SceneData& scene, const tinygltf::Model& model) {
     if (mesh_id == -1) {
       continue;
     }
-    Scene::Type type = meshes[mesh_id].type;
-    if (type == Scene::Type::Tile) {
+    AssetProperties::Type type =
+      GetAssetDefaultProperties(meshes[mesh_id].name).type;
+    if (type == AssetProperties::Type::Tile) {
       auto tile = new SceneTile();
 
       const auto& mesh = meshes[node.mesh];
@@ -669,7 +690,7 @@ void ReadSceneHierarchy(Scene::SceneData& scene, const tinygltf::Model& model) {
       scene.tiles.push_back(tile);
       tile->properties = gTileNameMapping.at(mesh.name);
       ParseTile(model, node, tile, meshes);
-    } else if (type == Scene::Type::Player) {
+    } else if (type == AssetProperties::Type::Player) {
       scene.player_node = CreateObjectNode(model, i, meshes);
     }
   }
@@ -706,6 +727,11 @@ std::map<std::string, MaterialIndex> material_str_to_enum = {
     {"08_ryadno", MaterialIndex::Ryadno},
     {"09_ryshnuk", MaterialIndex::Ryshnuk},
     {"10_ribbons", MaterialIndex::Ribbons},
+    {"11_skyrim_1", MaterialIndex::Skyrim1},
+    {"12_skyrim_2", MaterialIndex::Skyrim2},
+    {"13_skyrim_3", MaterialIndex::Skyrim3},
+    {"14_skyrim_4", MaterialIndex::Skyrim4},
+    {"15_skyrim_5", MaterialIndex::Skyrim5},
 };
 
 int MapSceneMaterial(int idx,
@@ -720,61 +746,6 @@ int MapSceneMaterial(int idx,
     // std::cerr << "at least one " << std::endl;
   }
   return material_id;
-}
-
-Scene::Type GetModelType(const tinygltf::Mesh& mesh) {
-  auto type = Scene::Type::Static;
-  if (mesh.extras.Has("body")) {
-    std::string collision_value = mesh.extras.Get("body").Get<std::string>();
-    if (collision_value == "dynamic") {
-      type = Scene::Type::Dynamic;
-    } else if (collision_value == "light") {
-      type = Scene::Type::PointLight;
-    } else if (collision_value == "light_fake") {
-      type = Scene::Type::PointLightFake;
-    } else if (collision_value == "none") {
-      type = Scene::Type::None;
-    } else if (collision_value == "hinge") {
-      type = Scene::Type::Hinge;
-    } else if (collision_value == "hinge_base") {
-      type = Scene::Type::HingeBase;
-    } else if (collision_value == "hinge_moving") {
-      type = Scene::Type::HingeMoving;
-    } else if (collision_value == "wall") {
-      type = Scene::Type::Wall;
-    } else if (collision_value == "portal") {
-      type = Scene::Type::Portal;
-    } else if (collision_value == "zone") {
-      type = Scene::Type::Zone;
-    } else if (collision_value == "tile") {
-      type = Scene::Type::Tile;
-    } else if (collision_value == "terrain") {
-      type = Scene::Type::Terrain;
-    } else if (collision_value == "character") {
-      type = Scene::Type::Character;
-    } else if (collision_value == "player") {
-      type = Scene::Type::Player;
-    }
-  }
-  return type;
-}
-
-Scene::CollisionType GetCollisionType(const tinygltf::Mesh& mesh) {
-  auto type = Scene::CollisionType::Cube;
-  if (mesh.extras.Has("collision")) {
-    std::string collision_value =
-        mesh.extras.Get("collision").Get<std::string>();
-    if (collision_value == "sphere") {
-      type = Scene::CollisionType::Sphere;
-    } else if (collision_value == "capsule") {
-      type = Scene::CollisionType::Capsule;
-    } else if (collision_value == "cylinder") {
-      type = Scene::CollisionType::Cylinder;
-    } else if (collision_value == "cube") {
-      type = Scene::CollisionType::Cube;
-    }
-  }
-  return type;
 }
 
 const tinygltf::Accessor& LoadIndexBuffer(const tinygltf::Model& model,
@@ -894,8 +865,6 @@ void ModelLoader::LoadBuffers(const tinygltf::Model& model,
   std::vector<int> tile_ids;
   for (const auto& mesh : model.meshes) {
     Scene::Mesh new_mesh;
-    new_mesh.collision_type = GetCollisionType(mesh);
-    new_mesh.type = GetModelType(mesh);
     new_mesh.name = mesh.name;
     meshes.push_back(new_mesh);
   }
@@ -1009,8 +978,6 @@ ModelLoader::BufferData LoadMeshesHero(const tinygltf::Model& model,
     if (!bucket.initialized) {
       // First time seeing this base mesh: copy the intrinsic properties
       bucket.mesh.name = base_name;
-      bucket.mesh.type = m.type;
-      bucket.mesh.collision_type = m.collision_type;
       bucket.mesh.min = m.min;
       bucket.mesh.max = m.max;
       bucket.mesh.primitives_lods.resize(3);
@@ -1362,10 +1329,16 @@ void ModelLoader::LoadEmbroideryTextures(std::string_view path_tablecloth,
                                          std::string_view path_ryadno,
                                          std::string_view path_ryshnuk,
                                          std::string_view path_ribbons) {
+  stbi_set_flip_vertically_on_load(true);
   scene_.material_tablecloth_ = LoadTextureArrayFromFolder(path_tablecloth);
   scene_.material_ryadno_ = LoadTextureArrayFromFolder(path_ryadno);
   scene_.material_ryshnuk_ = LoadTextureArrayFromFolder(path_ryshnuk);
   scene_.material_ribbons_ = LoadTextureArrayFromFolder(path_ribbons);
+}
+
+void ModelLoader::LoadSkyrimMaterials(std::string_view path) {
+  stbi_set_flip_vertically_on_load(true);
+  scene_.material_skyrim_ = LoadTextureArrayFromFolder(path);
 }
 
 void InitBackupMaterial(std::vector<uint8_t>& albedo,
@@ -1431,6 +1404,16 @@ void ModelLoader::LoadSceneMaterials(std::string_view path) {
       case MaterialIndex::Ryshnuk:
         break;
       case MaterialIndex::Ribbons:
+        break;
+      case MaterialIndex::Skyrim1:
+        break;
+      case MaterialIndex::Skyrim2:
+        break;
+      case MaterialIndex::Skyrim3:
+        break;
+      case MaterialIndex::Skyrim4:
+        break;
+      case MaterialIndex::Skyrim5:
         break;
       default:
         bindLayer(pack.albedo, m.pbrMetallicRoughness.baseColorTexture.index,
