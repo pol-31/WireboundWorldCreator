@@ -4,6 +4,7 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include "miniaudio.h"
 
 #include "../../core/Frustum.h"
 #include "CharacterSharedData.h"
@@ -27,7 +28,8 @@ class Character : public GameObject {
   [[nodiscard]] bool IsDead() const noexcept { return state_ == State::Dead; }
 
   Character(CharacterSharedData* shared_data, SceneNode* scene_node,
-            const Scene::CharacterData* model, const Scene::CharacterRig* skin);
+            const Scene::CharacterData* model, const Scene::CharacterRig* skin,
+            ma_engine* audio_engine, ma_sound_group* sfx_group);
 
   AnimatedRenderData GetAnimatedRenderData() const;
 
@@ -118,6 +120,12 @@ class Character : public GameObject {
 
   [[nodiscard]] float GetSpeed() const noexcept { return speed_; }
 
+  void PlayFootstepSound();
+  void PlaySpeechSound(int id);
+
+  int prev_footstep_sound_id_ = 0;
+  int prev_speech_sound_id_ = 0;
+
   static const float cWalkSpeed;
   static const float cRunSpeed;
   static const float cJumpSpeed;
@@ -129,7 +137,8 @@ class Character : public GameObject {
 
   JPH::Ref<JPH::CharacterVirtual> CreateJphCharacter(SceneNode* node);
 
-  const SceneNode* scene_node_;
+  void UpdateAudio();
+
   const Scene::CharacterData* model_ = nullptr;
   const Scene::CharacterRig* skin_ = nullptr;
   CharacterSharedData* shared_data_ = nullptr;
@@ -158,6 +167,11 @@ class Character : public GameObject {
   float health_ = cMaxHealth;
   float speed_ = 0.0f;
   bool mAllowSliding = false;
+
+  ma_engine* audio_engine_ = nullptr;
+  ma_sound_group* sfx_group_ = nullptr;
+  ma_sound sound_footstep_;
+  ma_sound sound_speech_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_CHARACTER_H

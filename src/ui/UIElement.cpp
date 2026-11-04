@@ -180,7 +180,7 @@ void UIElement::AutoLayout() {
   }
   auto height = GetHeight();
   if (height > 0) {
-    std::cout << height << std::endl;
+    //std::cout << height << std::endl;
   }
 }
 

@@ -95,13 +95,31 @@ enum class MaterialIndex {
   Skyrim5,
 };
 
+/// Primitive is geometry with 1 material; loaded once, immutable
+struct ScenePrimitive {
+  size_t index_count;
+  size_t index_byte_offset;
+  int base_vertex;
+  GLenum index_type;
+  uint32_t material_id;
+};
+
+struct SceneMesh {
+  int id = 0;
+  std::string name; // type & collision type through the AssetProperties.h
+  std::vector<std::vector<ScenePrimitive>> primitives_lods;  // near - mid - far
+  glm::vec3 min = glm::vec3(0.0f);
+  glm::vec3 max = glm::vec3(0.0f);
+};
+
 /// for animated there's no children and global_transform used as model_mat
 struct SceneNode {
+  std::string name;
   std::vector<SceneNode*> children;
   SceneNode* parent = nullptr;
   JPH::BodyID body_id;
 
-  int mesh_index = -1;
+  const SceneMesh* mesh = nullptr;
   const JPH::Shape* shape = nullptr;
 
   JPH::AABox local_bounds;
@@ -117,16 +135,13 @@ struct SceneNode {
 struct ScenePortal {
   /// THIS node is a portal, same as with zones;
   /// we just unpacked the name and the bounds
-  JPH::AABox bounds;
-  std::string name;
-
+  SceneNode* scene_node = nullptr;
+  SceneNode* parent = nullptr; /// we update hierarchy transform from it
   SceneNode* frame = nullptr;
   std::vector<SceneNode*> desks;
-  std::vector<SceneNode*> obj;
-  JPH::Vec3 position = JPH::Vec3::sZero();
-  JPH::Quat rotation = JPH::Quat::sIdentity();
-  int connected_zone_index_1 = -1;
-  int connected_zone_index_2 = -1;
+  std::vector<SceneNode*> hinges;
+  int zone_1 = -1;
+  int zone_2 = -1;
 };
 
 enum class IblZoneType {
@@ -145,30 +160,17 @@ struct SceneZone {
     IblZoneType ibl_type = IblZoneType::None;
     // glm::vec3 ambient_tint; idk... we have ibl for that
   };
+  SceneNode* scene_node = nullptr;
   std::vector<SceneNode*> object_nodes;
   std::vector<ScenePortal*> portals;
-  JPH::Vec3 translate;
-  JPH::AABox bounds;
-  std::string name;
-  std::vector<StaticObject> point_lights_fake_;
-  std::vector<PointLight> point_lights_;
-  std::vector<StaticObject> static_objects_;
-  std::vector<SceneNode*> walls;
+  std::vector<std::unique_ptr<StaticObject>> point_lights_fake_;
+  std::vector<std::unique_ptr<PointLight>> point_lights_;
+  std::vector<std::unique_ptr<StaticObject>> static_objects_;
   Properties properties = {};
 };
 
 struct SceneTile {
-  struct Properties {
-    std::string_view hmap_path;
-  };
-  std::vector<SceneZone*> zones;
-  std::vector<SceneNode*> walls;
-  std::vector<ScenePortal> portals;
-  std::vector<SceneNode*> characters;
-  JPH::AABox bounds;
-  std::string name;
-  std::string hmap_path;
-  Properties properties;
+  SceneNode* scene_node = nullptr;
 };
 
 struct Scene {
@@ -234,26 +236,18 @@ struct Scene {
     std::map<WeaponAnimType, int> mapping;
   };
 
-  /// Primitive is geometry with 1 material; loaded once, immutable
-  struct Primitive {
-    size_t index_count;
-    size_t index_byte_offset;
-    int base_vertex;
-    GLenum index_type;
-    uint32_t material_id;
-  };
-
-  struct Mesh {
-    std::string name; // type & collision type through the AssetProperties.h
-    std::vector<std::vector<Primitive>> primitives_lods;  // near - mid - far
-    glm::vec3 min = glm::vec3(0.0f);
-    glm::vec3 max = glm::vec3(0.0f);
-  };
-
   struct SceneData {
-    std::vector<Mesh> meshes;
+    std::vector<SceneMesh> meshes;
 
     std::vector<SceneTile*> tiles;
+
+    /// --- --- --- --- ---
+    std::vector<SceneNode*> object_nodes;
+    std::vector<SceneZone*> zones;
+    std::vector<ScenePortal> portals;
+    std::vector<SceneNode*> characters;
+    /// --- --- --- --- ---
+
     SceneNode* player_node;
 
     // std::vector<ModelNode*> nodes;
@@ -261,6 +255,13 @@ struct Scene {
     GLuint vbo = 0;
     GLuint ebo = 0;
   };
+
+  struct TerrainData {
+    std::string name;
+    JPH::VertexList jolt_vertices;
+    JPH::IndexedTriangleList jolt_triangles;
+  };
+  std::vector<TerrainData> terrain_datas;
 
   MaterialArray materials;  // shared for all scenes, for DBG use just index=0
   SceneData scene_data_;
@@ -271,7 +272,7 @@ struct Scene {
     GLuint vbo = 0;
     GLuint ebo = 0;
     Material material;
-    std::vector<Mesh> meshes;
+    std::vector<SceneMesh> meshes;
     std::vector<SceneNode*> nodes;
     std::string name;
     std::vector<int> render_nodes;
@@ -284,7 +285,7 @@ struct Scene {
     GLuint vbo = 0;
     GLuint ebo = 0;
     WeaponRig rig;
-    std::vector<Mesh> meshes;
+    std::vector<SceneMesh> meshes;
     std::vector<SceneNode*> nodes;
     Material material;
     std::string name;
@@ -304,8 +305,7 @@ struct Scene {
   GLuint material_ribbons_ = 0;
   GLuint material_skyrim_ = 0;
 
-  void UpdateRenderTransform(const JPH::BodyLockInterface& bli,
-                             std::vector<SceneTile*>& tiles);
+  void UpdateRenderTransform(const JPH::BodyLockInterface& bli);
 
   void ConnectZonesWithPortals(int tile_id);
 };
@@ -315,7 +315,7 @@ struct AnimatedRenderData {
   int bones_offset;
   GLuint vao;
   const Material* material;
-  const std::vector<Scene::Mesh>* meshes;
+  const std::vector<SceneMesh>* meshes;
   int lod = 2;  // 0, 1, 2
 };
 

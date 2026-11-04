@@ -253,4 +253,6 @@ class Renderer : public WindowResizeListener {
   Shader sh_wall_;
   GLuint vao_wall_ = 0;
   GLuint vbo_wall_ = 0;
+
+  Texture tex_perlin_;
 };

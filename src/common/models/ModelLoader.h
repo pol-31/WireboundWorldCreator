@@ -3,6 +3,8 @@
 
 #include <glad/glad.h>
 #include <tiny_gltf.h>
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
 
 #include <map>
 #include <memory>
@@ -62,7 +64,7 @@ class ModelLoader {
 
  private:
   void LoadBuffers(const tinygltf::Model& model,
-                   std::vector<Scene::Mesh>& meshes);
+                   std::vector<SceneMesh>& meshes);
   BufferDataAnimated LoadBuffersAnimated(const tinygltf::Model& model);
 
   Material LoadMaterial(std::string_view path, tinygltf::Model& model,

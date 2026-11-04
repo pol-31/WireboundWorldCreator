@@ -6,15 +6,24 @@
 #include <Jolt/Physics/Body/BodyLockInterface.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include "miniaudio.h"
 
 #include "../../Core/Layers.h"
 #include "Animator.h"
 #include "Character.h"
 
 Weapon::Weapon(const Scene::WeaponData* model,
-               JPH::PhysicsSystem* physics_system, Animator* animator)
-    : model_(model), physics_system_(physics_system), animator_(animator) {
+               JPH::PhysicsSystem* physics_system, Animator* animator,
+               ma_engine* audio_engine, ma_sound_group* sfx_group)
+    : model_(model),
+physics_system_(physics_system),
+animator_(animator),
+audio_engine_(audio_engine),
+sfx_group_(sfx_group) {
   CreatePhysicBody(JPH::Vec3(1.0f, 1.0f, 1.0f));
+  ma_sound_init_from_file(audio_engine_, "../assets/audio/sound_gun_shoot.mp3", 0, sfx_group_, NULL, &sound_shoot_);
+  ma_sound_init_from_file(audio_engine_, "../assets/audio/sound_gun_reload.mp3", 0, sfx_group_, NULL, &sound_reload_);
+  ma_sound_init_from_file(audio_engine_, "../assets/audio/sound_gun_pickup.mp3", 0, sfx_group_, NULL, &sound_pickup_);
 }
 
 void Weapon::CreatePhysicBody(const JPH::Vec3& position) {
@@ -89,23 +98,33 @@ AnimatedRenderData Weapon::GetAnimatedRenderData() const {
 }
 
 bool Weapon::TryShoot(const JPH::Vec3& eye_pos, const JPH::Vec3& forward_dir) {
-  // if (op_state_ != OperationalState::Idle) {
-  //   return;
-  // }
+  if (op_state_ != OperationalState::Idle) {
+    return false;
+  }
+  op_state_ = OperationalState::Shoot;
   // if (bullets_left_ == 0) {
   //   std::cerr << "a ni ma bullets" << std::endl;
   //   //TODO: render ui message
   //   return;
   // }
+  // auto position = GetPosition();
+  // ma_sound_set_position(&sound_shoot_, position.GetX(), position.GetY(), position.GetZ());
+  ma_sound_stop(&sound_shoot_); // TODO: sound too long now
+  ma_sound_seek_to_pcm_frame(&sound_shoot_, 0);
+  ma_sound_start(&sound_shoot_);
   animator_->StartWeapon(animation_id_, WeaponAnimType::Shoot, false);
   return true;
 }
 
 void Weapon::Reload() {
+  if (op_state_ != OperationalState::Idle) {
+    return;
+  }
+  // auto position = GetPosition();
+  // ma_sound_set_position(&sound_reload_, position.GetX(), position.GetY(), position.GetZ());
+  ma_sound_start(&sound_reload_);
   animator_->StartWeapon(animation_id_, WeaponAnimType::Reload, false);
-  // if (op_state_ != OperationalState::Idle) {
-  //   return;
-  // }
+  op_state_ = OperationalState::Reload;
   // if (bullets_left_ == bullets_max_) {
   //   return;
   // }
@@ -114,13 +133,17 @@ void Weapon::Reload() {
 }
 
 void Weapon::Update(float dt) {
-  // if (op_state_ == OperationalState::Idle) {
-  //   return;
-  // }
-  // const auto& animation = animator_->GetInstance(animation_id_);
-  // if (animation.is_idle) {
-  //   op_state_ = OperationalState::Idle;
-  // }
+  auto position = GetPosition();
+  ma_sound_set_position(&sound_shoot_, position.GetX(), position.GetY(), position.GetZ());
+  ma_sound_set_position(&sound_reload_, position.GetX(), position.GetY(), position.GetZ());
+  ma_sound_set_position(&sound_pickup_, position.GetX(), position.GetY(), position.GetZ());
+  if (op_state_ == OperationalState::Idle) {
+    return;
+  }
+  const auto& animation = animator_->GetInstanceWeapon(animation_id_);
+  if (animation.core_instance.is_idle) {
+    op_state_ = OperationalState::Idle;
+  }
 }
 
 void Weapon::Equip(Character* new_owner) {
@@ -134,6 +157,9 @@ void Weapon::Equip(Character* new_owner) {
       model_->nodes[model_->rig.core_rig.skeletonRoot], &model_->nodes,
       &model_->rig);
   animator_->StartWeapon(animation_id_, WeaponAnimType::Idle, false);
+  // auto position = GetPosition();
+  // ma_sound_set_position(&sound_pickup_, position.GetX(), position.GetY(), position.GetZ());
+  ma_sound_start(&sound_pickup_);
 }
 
 void Weapon::Drop(const JPH::Vec3& position, const JPH::Vec3& impulse) {

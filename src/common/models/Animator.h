@@ -39,9 +39,11 @@ class Animator {
   struct CharacterInstance {
     CharacterState state = CharacterState::Normal;
     CoreInstance core_instance;
+    bool left_foot_stepped = false;
+    bool right_foot_stepped = false;
     bool has_pistol = false;
     const Scene::CharacterRig* skin = nullptr;
-    const Character* character = nullptr;
+    Character* character = nullptr; // non-const, we emit footstep sound
     // final render yaw (bone upper body already blended INTO the rig globals)
     float body_yaw_ = 0.0f;
     bool strafing_ = false;
@@ -70,7 +72,7 @@ class Animator {
   size_t AddInstanceCharacter(const SceneNode* root_node,
                               const std::vector<SceneNode*>* nodes,
                               const Scene::CharacterRig* skin,
-                              const Character* character);
+                              Character* character);
 
   size_t AddInstanceWeapon(const SceneNode* root_node,
                            const std::vector<SceneNode*>* nodes,

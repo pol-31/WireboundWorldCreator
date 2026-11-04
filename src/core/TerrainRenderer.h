@@ -3,6 +3,7 @@
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
 
 #include "../render/Shader.h"
 #include "../render/Texture.h"
@@ -30,6 +31,11 @@ class TerrainRenderer {
 
   /// instead of LoadHmap
   void LoadDefaultSurface(JPH::BodyInterface* body_interface);
+
+  void LoadFromScene(
+  JPH::BodyInterface* body_interface,
+  JPH::VertexList jolt_vertices,
+  JPH::IndexedTriangleList jolt_triangles);
 
   void Update(const Camera* camera) { mesh_.Update(camera); }
 

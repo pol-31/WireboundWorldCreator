@@ -2,6 +2,7 @@
 #define WIREBOUNDWORLDCREATOR_GAME_H
 
 #include <Jolt/Jolt.h>
+#include <Jolt/Core/Core.h>
 #include <Jolt/Core/JobSystem.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Math/Real.h>
@@ -13,6 +14,12 @@
 #include <Jolt/Physics/Collision/Shape/SubShapeID.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Skeleton/SkeletonPose.h>
+
+// otherwise it breaks after miniaudio including:
+// mJobSystemValidating = new JPH::JobSystemSingleThreaded(JPH::cMaxPhysicsJobs);
+// #define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include "miniaudio.h"
 
 #include <chrono>
 #include <glm/glm.hpp>
@@ -76,7 +83,7 @@ class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
 
   Game();
 
-  ~Game();
+  ~Game() override;
 
   void Run();
 
@@ -169,7 +176,18 @@ class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
   std::unique_ptr<DebugUI> mDebugUI;
   std::unique_ptr<UiScene> ui_menu_scene_;
 
-  void CreateBodyForNode(SceneNode *node, SceneZone *zone, uint64_t jph_user_data = 0);
+  void CreateBodyForNode(SceneNode *node);
+
+  void InitAudio();
+  void PlayImpactSound(int material_1, int material_2, JPH::Vec3 position);
+
+  ma_engine audio_engine_;
+  ma_sound ambient_music_;
+  float music_level_ = 0.55f;
+
+  ma_sound_group sfx_group_;
+  float sounds_level_ = 1.0f;
+  std::vector<std::unique_ptr<ma_sound>> collision_sounds_;
 
  public:
   /// ContactListener callbacks

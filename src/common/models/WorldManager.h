@@ -2,9 +2,11 @@
 #define WIREBOUNDWORLDCREATOR_WORLDMANAGER_H
 
 #include <memory>
+#include <set>
 #include <vector>
 
 #include <Jolt/Jolt.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
 
 #include "../../core/Frustum.h"
 #include "Scene.h"
@@ -86,7 +88,7 @@ class WorldManager {
   bool UpdatePlayerZone(JPH::Vec3 player_pos,
                         JPH::BodyInterface* body_interface);
 
-  const std::vector<int>& GetActiveZones() const noexcept {
+  const std::set<int>& GetActiveZones() const noexcept {
     return active_zones_;
   }
 
@@ -99,6 +101,9 @@ class WorldManager {
                           const std::vector<PointLight*>& zone_point_lights,
                           JPH::Vec3 pos, AnimatedRenderData render_data,
                           bool apply_directed_lights, bool is_player);
+
+  std::set<int> GetActiveRenderZones();
+  std::set<int> GetActivePhysicsZones();
 
   // struct Zone {
   //   Scene::ModelNode* scene_node = nullptr;
@@ -130,13 +135,8 @@ class WorldManager {
   const std::vector<std::unique_ptr<EnemyController>>& characters_;
   const std::vector<std::unique_ptr<Weapon>>& weapons_;
   const std::vector<DirectedLight>& dir_lights_;
-  // std::vector<Zone> zones_;
-  // int player_zone_ = 0;
-  // std::vector<Tile> tiles_;
-  // int player_tile_ = -1;
-  int cur_tile_id_ = -1;
   int cur_zone_id_ = -1;
-  std::vector<int> active_zones_;
+  std::set<int> active_zones_;
   // relative to cur scene for sure
 
   void PushFrustumCulled(const std::vector<const SceneNode*>& objects,
@@ -166,7 +166,7 @@ class WorldManager {
     std::vector<InstanceGpu> ssbo_data;
     std::vector<FinalPointLight> point_lights;
     std::vector<FinalDirLight> dir_lights;
-    std::vector<int> active_zones;
+    std::set<int> active_zones;
     FinalCamera camera;
     std::vector<const SceneNode*> point_lights_fake;
     bool directed_lights_on = true;

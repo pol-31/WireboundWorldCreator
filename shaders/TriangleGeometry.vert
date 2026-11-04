@@ -52,6 +52,7 @@ void main() {
     vs_out.vert_color = color;
     vs_out.material_id = instances[index].materialId;
     vs_out.use_triplanar = instances[index].useTriplanar;
+    vs_out.Normal = in_normal;
 
     mat3 normalMatrix = transpose(inverse(mat3(model)));
     vec3 T = normalize(normalMatrix * in_tangent.xyz);

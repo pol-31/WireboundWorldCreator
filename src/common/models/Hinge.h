@@ -8,11 +8,9 @@
 
 #include "GameObject.h"
 
-class SceneNode;
-
 class Hinge : public GameObject {
 public:
-  Hinge(JPH::PhysicsSystem* physics_system, const SceneNode* scene_node);
+  Hinge(JPH::PhysicsSystem* physics_system, SceneNode* scene_node);
 
   void Interact(Character* interactor) override;
 
@@ -38,7 +36,6 @@ private:
   JPH::PhysicsSystem* physics_system_ = nullptr;
   JPH::Ref<JPH::Constraint> constraint_ = nullptr;
   bool is_broken_ = false;
-  const SceneNode* scene_node_ = nullptr;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_HINGE_H

@@ -51,7 +51,7 @@ void Cubemap::LoadZone(const SceneZone* zone) {
   const float black_pixel[3] = {0.0f, 0.0f, 0.0f};
 
   for (int i = 0; i < 6; ++i) {
-    std::string filename = "../assets/ibl/" + zone->name + "_face_" + std::to_string(i) + ".hdr";
+    std::string filename = "../assets/ibl/" + zone->scene_node->name + "_face_" + std::to_string(i) + ".hdr";
 
     float* data = nullptr;
     int face_width = 1;

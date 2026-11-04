@@ -10,7 +10,8 @@ class PlayerController {
  public:
   PlayerController(const Camera* camera, CharacterSharedData* shared_data,
                    SceneNode* scene_node, const Scene::CharacterData* model,
-                   const Scene::CharacterRig* skin);
+                   const Scene::CharacterRig* skin,
+            ma_engine* audio_engine, ma_sound_group* sfx_group);
 
   Character* GetBody() { return &character_; }
   const Character* GetBody() const { return &character_; }
@@ -61,6 +62,7 @@ class PlayerController {
   JPH::BodyID mDragBody = JPH::BodyID();
   JPH::Ref<JPH::Constraint> mDragConstraint = nullptr;
   JPH::uint mDragVertexIndex = ~JPH::uint(0);
+  JPH::Quat mDragBodyRotation = JPH::Quat::sIdentity();
   float mDragVertexPreviousInvMass = 0.0f;
   float mDragFraction = 0.0f;
 

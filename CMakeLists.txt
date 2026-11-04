@@ -85,6 +85,9 @@ add_executable(WireboundWorldCreator
         src/core/WindowResizeListener.h
         src/common/models/AssetProperties.cpp
         src/common/models/AssetProperties.h
+        src/common/models/StaticObject.cpp
+        src/common/models/PointLight.cpp
+        src/common/models/GameObject.cpp
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)
@@ -95,6 +98,7 @@ target_include_directories(WireboundWorldCreator
         PUBLIC ${EXTERNAL_DIR}/glm/glm
         PUBLIC ${EXTERNAL_DIR}/utfcpp
         PUBLIC ${EXTERNAL_DIR}/JoltPhysics-5.5.0/Jolt
+        PUBLIC ${EXTERNAL_DIR}/miniaudio-0.11.26
 #        PUBLIC ${EXTERNAL_DIR}/stb
 #        PUBLIC ${CMAKE_SOURCE_DIR}/external/rapidjson/include
 #        PRIVATE ${CMAKE_SOURCE_DIR}/external/tinygltf
@@ -108,6 +112,7 @@ target_link_libraries(WireboundWorldCreator
         PUBLIC rapidjson
         PRIVATE tinygltf
         PUBLIC nanosvg
+        PUBLIC miniaudio
         PUBLIC Jolt
 )
 

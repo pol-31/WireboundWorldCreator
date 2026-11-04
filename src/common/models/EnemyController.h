@@ -10,7 +10,8 @@ class EnemyController {
 
   EnemyController(CharacterSharedData* shared_data, SceneNode* scene_node,
                   const Scene::CharacterData* model,
-                  const Scene::CharacterRig* skin);
+                  const Scene::CharacterRig* skin,
+            ma_engine* audio_engine, ma_sound_group* sfx_group);
 
   void UpdateLogic(const JPH::PhysicsSystem* physics_system, float dt);
 

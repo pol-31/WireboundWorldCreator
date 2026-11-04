@@ -39,6 +39,64 @@ const GLuint Renderer::cSsaoSize = 256;
 
 const int Renderer::cShadowObjectLod = 2;
 
+// not used: sh_shadow_dir_apply_
+// not used: sh_shadow_point_apply_
+
+// geometry into shadowmaps (more obj that geometry pass - outside the view)
+// Shadow Pass (before / parallel geometry) : sh_shadow_dir_
+// Shadow Pass : sh_shadow_point_
+// Light Pass (final) : sh_deferred_shading_
+// Light Pass light emitters : sh_light_emitter_
+
+// SO to capture shadows we capture it with default params, while
+// apply it with params only in Light pass, so we should discard our
+// custom params from Shadow pass and bear them out to Light pass
+
+Renderer::Renderer(const Scene* scene, const Camera* camera,
+                   const std::unique_ptr<PlayerController>* player,
+                   const WorldManager::ZoneCulledData* culled_data)
+    : scene_(scene),
+      camera_(camera),
+      culled_data_(culled_data),
+      player_(player),
+
+      sh_cubemap_("../shaders/Skybox.vert", "../shaders/Skybox.frag", {0}),
+      sh_ibl_radiance_("../shaders/IblRadiance.vert", "../shaders/IblRadiance.frag", {0}),
+      sh_ibl_prefiltered_("../shaders/IblRadiance.vert", "../shaders/IblPrefiltered.frag", {0}),
+      sh_ibl_lut_("../shaders/DeferredShading.vert", "../shaders/IblLut.frag", {}),
+      sh_terrain_("../shaders/Terrain.vert", "../shaders/Terrain.tesc",
+                  "../shaders/Terrain.tese", "../shaders/Terrain.frag",
+                  {0, 1, 2, 3}),
+      sh_lines_("../shaders/Line.vert", "../shaders/Line.frag", {}),
+      sh_shadow_dir_("../shaders/TriangleShadowDir.vert",
+                     "../shaders/TriangleShadowDir.frag", {}),
+      sh_shadow_dir5_("../shaders/TriangleShadowDir5.vert",
+                     "../shaders/TriangleShadowDir.frag", {}),
+      sh_shadow_point_("../shaders/TriangleShadowPoint.vert",
+                       "../shaders/TriangleShadowPoint.frag", {}),
+      sh_shadow_point5_("../shaders/TriangleShadowPoint5.vert",
+                        "../shaders/TriangleShadowPoint.frag", {}),
+      sh_geometry_("../shaders/TriangleGeometry.vert",
+                   "../shaders/TriangleGeometry.frag", {0, 1, 2, 3, 4, 5, 6, 7, 9}),
+      sh_geometry_dbg_("../shaders/TriangleGeometry.vert",
+                   "../shaders/TriangleGeometryDbg.frag", {}),
+      sh_geometry5_("../shaders/TriangleGeometry5.vert",
+                    "../shaders/TriangleGeometry5.frag", {0, 1}),
+      sh_deferred_shading_("../shaders/DeferredShading.vert",
+                           "../shaders/DeferredShading.frag", {0, 1, 2, 3, 6, 10, 11, 12, 14, 15}),
+      sh_bloom_("../shaders/Bloom.comp", {0}),
+      sh_gauss_("../shaders/Gauss.comp", {0}),
+      sh_ssao_("../shaders/Ssao.comp", {0, 1, 2}),
+      sh_composite_("../shaders/FinalComposite.comp", {0, 1}),
+      sh_pass_through_("../shaders/DeferredShading.vert",
+                       "../shaders/PassThrough.frag", {0}),
+      sh_light_emitter_("../shaders/LightEmitter.vert",
+                        "../shaders/LightEmitter.frag", {}),
+      sh_wall_("../shaders/Mazanka.vert", "../shaders/Mazanka.frag", {}),
+      tex_perlin_("../assets/perlin512.png", Texture::Type::TerrainR8) {
+  Init();
+}
+
 GLuint CreateShadowMap() {
   GLuint depth_map = 0;
   glGenTextures(1, &depth_map);
@@ -102,7 +160,7 @@ void BindAnimatedRenderData(const AnimatedRenderData& data) {
   BindMaterial(*data.material);
 }
 
-void RenderAnimatedPrimitive(const Scene::Primitive& p) {
+void RenderAnimatedPrimitive(const ScenePrimitive& p) {
   glDrawElementsBaseVertex(GL_TRIANGLES, p.index_count, p.index_type,
                            reinterpret_cast<void*>(p.index_byte_offset),
                            static_cast<GLint>(p.base_vertex));
@@ -111,68 +169,11 @@ void RenderAnimatedPrimitive(const Scene::Primitive& p) {
 void RenderAnimated(const AnimatedRenderData& data) {
   BindAnimatedRenderData(data);
   for (int i = 0; i < data.meshes->size(); ++i) {
-    const Scene::Mesh& m = (*data.meshes)[i];
+    const SceneMesh& m = (*data.meshes)[i];
     for (const auto& p : m.primitives_lods[data.lod]) {
       RenderAnimatedPrimitive(p);
     }
   }
-}
-
-// not used: sh_shadow_dir_apply_
-// not used: sh_shadow_point_apply_
-
-// geometry into shadowmaps (more obj that geometry pass - outside the view)
-// Shadow Pass (before / parallel geometry) : sh_shadow_dir_
-// Shadow Pass : sh_shadow_point_
-// Light Pass (final) : sh_deferred_shading_
-// Light Pass light emitters : sh_light_emitter_
-
-// SO to capture shadows we capture it with default params, while
-// apply it with params only in Light pass, so we should discard our
-// custom params from Shadow pass and bear them out to Light pass
-
-Renderer::Renderer(const Scene* scene, const Camera* camera,
-                   const std::unique_ptr<PlayerController>* player,
-                   const WorldManager::ZoneCulledData* culled_data)
-    : scene_(scene),
-      camera_(camera),
-      culled_data_(culled_data),
-      player_(player),
-
-      sh_cubemap_("../shaders/Skybox.vert", "../shaders/Skybox.frag", {0}),
-      sh_ibl_radiance_("../shaders/IblRadiance.vert", "../shaders/IblRadiance.frag", {0}),
-      sh_ibl_prefiltered_("../shaders/IblRadiance.vert", "../shaders/IblPrefiltered.frag", {0}),
-      sh_ibl_lut_("../shaders/DeferredShading.vert", "../shaders/IblLut.frag", {}),
-      sh_terrain_("../shaders/Terrain.vert", "../shaders/Terrain.tesc",
-                  "../shaders/Terrain.tese", "../shaders/Terrain.frag",
-                  {0, 1, 2, 3}),
-      sh_lines_("../shaders/Line.vert", "../shaders/Line.frag", {}),
-      sh_shadow_dir_("../shaders/TriangleShadowDir.vert",
-                     "../shaders/TriangleShadowDir.frag", {}),
-      sh_shadow_dir5_("../shaders/TriangleShadowDir5.vert",
-                     "../shaders/TriangleShadowDir.frag", {}),
-      sh_shadow_point_("../shaders/TriangleShadowPoint.vert",
-                       "../shaders/TriangleShadowPoint.frag", {}),
-      sh_shadow_point5_("../shaders/TriangleShadowPoint5.vert",
-                        "../shaders/TriangleShadowPoint.frag", {}),
-      sh_geometry_("../shaders/TriangleGeometry.vert",
-                   "../shaders/TriangleGeometry.frag", {0, 1, 2, 3, 4, 5, 6, 7}),
-      sh_geometry_dbg_("../shaders/TriangleGeometry.vert",
-                   "../shaders/TriangleGeometryDbg.frag", {}),
-      sh_geometry5_("../shaders/TriangleGeometry5.vert",
-                    "../shaders/TriangleGeometry5.frag", {0, 1}),
-      sh_deferred_shading_("../shaders/DeferredShading.vert",
-                           "../shaders/DeferredShading.frag", {0, 1, 2, 3, 6, 10, 11, 12, 14, 15}),
-      sh_bloom_("../shaders/Bloom.comp", {0}),
-      sh_gauss_("../shaders/Gauss.comp", {0}),
-      sh_ssao_("../shaders/Ssao.comp", {0, 1, 2}),
-      sh_composite_("../shaders/FinalComposite.comp", {0, 1}),
-      sh_pass_through_("../shaders/DeferredShading.vert",
-                       "../shaders/PassThrough.frag", {0}),
-      sh_light_emitter_("../shaders/LightEmitter.vert",
-                        "../shaders/LightEmitter.frag", {}),
-      sh_wall_("../shaders/Mazanka.vert", "../shaders/Mazanka.frag", {}) {
-  Init();
 }
 
 // TODO: shadow maps / cubemaps.. we can't just create 10, or at scene init;
@@ -246,7 +247,7 @@ static const FaceTarget kCubeFaces[6] = {
 };
 
 void GetLightFaceViewProj(const WorldManager::FinalPointLight& l, int face) {
-  auto jph_pos = l.source->object_->global_bounds.GetCenter();
+  auto jph_pos = l.source->GetSceneNode()->global_bounds.GetCenter();
   auto radius = l.source->radius_;
   auto pos = glm::vec3(jph_pos.GetX(), jph_pos.GetY(), jph_pos.GetZ());
   float aspect = 1.0f;
@@ -349,7 +350,7 @@ void Renderer::DrawShadowPass() {
 void RenderPlayer(const AnimatedRenderData& data) {
   BindAnimatedRenderData(data);
   for (int i = 0; i < data.meshes->size(); ++i) {
-    const Scene::Mesh& m = (*data.meshes)[i];
+    const SceneMesh& m = (*data.meshes)[i];
     if (i == 1) {
       continue;  // for character only;
     }
@@ -397,8 +398,10 @@ void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
   sh_geometry_.DebugUpdate();
   sh_geometry_.Bind();
 
-  if (render_geometry) {
-    glBindTextureUnit(0, scene_->materials.albedo);
+  if (!render_geometry) {
+    return;
+  }
+  glBindTextureUnit(0, scene_->materials.albedo);
     glBindTextureUnit(1, scene_->materials.normal);
     glBindTextureUnit(2, scene_->materials.rough_metal_ao);
     glBindTextureUnit(3, scene_->material_tablecloth_);
@@ -407,6 +410,7 @@ void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
     glBindTextureUnit(6, scene_->material_ribbons_);
     glBindTextureUnit(7, scene_->material_skyrim_);
     glUniform1i(8, triplanar_level);
+    tex_perlin_.BindSampler(9);
 
     for (const auto& o : culled_data_->camera.objects_lod0) {
       int lod = 0;
@@ -451,10 +455,9 @@ void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
     for (const auto& data : culled_data_->camera.object_animated) {
       RenderAnimated(data);
     }
-  }
 }
 
-int GetDbgShapeId(const std::vector<Scene::Mesh>& dbg_meshes,
+int GetDbgShapeId(const std::vector<SceneMesh>& dbg_meshes,
                   AssetProperties::CollisionType type) {
   for (int i = 0; i < dbg_meshes.size(); i++) {
     if (GetAssetDefaultProperties(dbg_meshes[i].name).collision_type == type) {
@@ -529,8 +532,8 @@ void Renderer::RenderWalls() {
 
   std::vector<JPH::AABox> wall_bounds;
   for (int zone_id : culled_data_->active_zones) {
-    const auto* zone = scene_->scene_data_.tiles[0]->zones[zone_id];
-    wall_bounds.push_back(zone->bounds);
+    const auto* zone = scene_->scene_data_.zones[zone_id];
+    wall_bounds.push_back(zone->scene_node->global_bounds);
   }
 
   for (const JPH::AABox& aabb : wall_bounds) {
@@ -556,6 +559,7 @@ void Renderer::RenderWalls() {
 }
 
 void Renderer::RenderTerrain(TerrainRenderData terrain) {
+  return;
   sh_terrain_.DebugUpdate();
   if (glfwGetKey(gWindow, GLFW_KEY_1)) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -957,7 +961,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
       const auto& light = culled_data_->point_lights[i];
       glActiveTexture(GL_TEXTURE3 + i);
       glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, shadow_cubemaps_[i]);
-      auto jph_pos = light.source->object_->global_bounds.GetCenter();
+      auto jph_pos = light.source->GetSceneNode()->global_bounds.GetCenter();
 
       auto pos = glm::vec3(jph_pos.GetX(), jph_pos.GetY(), jph_pos.GetZ());
 
@@ -1024,10 +1028,10 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
     glBindVertexArray(scene_->scene_data_.vao);
     sh_light_emitter_.Bind();
     for (const auto& l : culled_data_->point_lights) {
-      const auto& m = scene_->scene_data_.meshes[l.source->object_->mesh_index];
+      const auto& m = *l.source->GetSceneNode()->mesh;
       glUniformMatrix4fv(
           0, 1, GL_FALSE,
-          reinterpret_cast<const float*>(&l.source->object_->global_transform));
+          reinterpret_cast<const float*>(&l.source->GetSceneNode()->global_transform));
       glUniform4fv(1, 1, &l.source->color_.mF32[0]);
       for (const auto& p : m.primitives_lods[2]) {
         glDrawElementsBaseVertex(GL_TRIANGLES, p.index_count, p.index_type,
@@ -1035,7 +1039,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
       }
     }
     for (const auto& l : culled_data_->point_lights_fake) {
-      const auto& m = scene_->scene_data_.meshes[l->mesh_index];
+      const auto& m = *l->mesh;
       glUniformMatrix4fv(
           0, 1, GL_FALSE,
           reinterpret_cast<const float*>(&l->global_transform));

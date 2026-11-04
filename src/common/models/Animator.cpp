@@ -9,39 +9,19 @@
 
 const int Animator::gMaxBones = 1000;
 
-// int FindFrame(const std::vector<float>& times, float t) {
-//   if (t <= times[0]) return 0;
-//
-//   auto count = times.size();
-//   for (int i = 0; i < count - 1; ++i) {
-//     if (t < times[i + 1]) return i;
-//   }
-//
-//   return count - 2;  // last valid segment
-// }
-
 int FindFrame(const std::vector<float>& times, float t) {
-  // 1. Guard against empty or single-frame animations
   if (times.size() <= 1) return 0;
-
-  // 2. Early exit if we are before or exactly at the start
   if (t <= times[0]) return 0;
-
-  // 3. Cast to int to prevent unsigned underflow math
   int count = static_cast<int>(times.size());
-
   for (int i = 0; i < count - 1; ++i) {
     if (t < times[i + 1]) return i;
   }
-
-  // 4. Return the last valid starting frame for interpolation
   return count - 2;
 }
 
 void WrapTime(Animator::CoreInstance& instance,
               const std::vector<float>& times) {
   auto count = times.size();
-  // Safeguard: If there's no animation data or only 1 frame, clamp and return.
   if (count <= 1) {
     if (count == 1) instance.time = times[0];
     return;
@@ -51,7 +31,6 @@ void WrapTime(Animator::CoreInstance& instance,
   float end = times[count - 1];
   float duration = end - start;
 
-  // Safeguard: Prevent division by zero in fmod if duration is extremely small
   if (duration <= 0.00001f) {
     instance.time = start;
     return;
@@ -59,16 +38,12 @@ void WrapTime(Animator::CoreInstance& instance,
 
   if (instance.time > end) {
     if (instance.is_looped) {
-      // Preserve the overflow time using fmod
       instance.time = start + std::fmod(instance.time - start, duration);
     } else {
-      // Clamp to the end and mark as idle
       instance.is_idle = true;
       instance.time = end;
     }
   }
-  // Optional: Handle the case where time is less than start
-  // (useful if your game allows playing animations in reverse)
   else if (instance.time < start) {
     if (instance.is_looped) {
       instance.time = end - std::fmod(start - instance.time, duration);
@@ -105,7 +80,7 @@ void Animator::Clear() {
 size_t Animator::AddInstanceCharacter(const SceneNode* root_node,
                                       const std::vector<SceneNode*>* nodes,
                                       const Scene::CharacterRig* skin,
-                                      const Character* character) {
+                                      Character* character) {
   for (int i = 0; i < instances_characters_.size(); ++i) {
     auto& instance = instances_characters_[i];
     if (!instance.core_instance.is_alive) {
@@ -237,25 +212,21 @@ CharacterBlendingPoses GetCharacterBlendingPose(JPH::Vec3 velocity,
 }
 
 void Animator::CompensateLowerToUpperSpines(CharacterInstance& instance) {
-  /// --- DISTRIBUTED 3-AXIS UPPER BODY ALIGNMENT ---
   auto hips_idx = instance.skin->hips_id;
   auto spine0_idx = instance.skin->spine0_id;
   auto spine1_idx = instance.skin->spine1_id;
   auto spine2_idx = instance.skin->spine2_id;
 
-  // 1. Fetch current raw animated local rotations
   JPH::Quat q_hips = instance.core_instance.current_locals[hips_idx].r;
   JPH::Quat q_spine0 = instance.core_instance.current_locals[spine0_idx].r;
   JPH::Quat q_spine1 = instance.core_instance.current_locals[spine1_idx].r;
   JPH::Quat q_spine2 = instance.core_instance.current_locals[spine2_idx].r;
 
-  // 2. Compute RAW animated model-space transforms
   JPH::Quat raw_m_hips = q_hips;
   JPH::Quat raw_m_spine0 = raw_m_hips * q_spine0;
   JPH::Quat raw_m_spine1 = raw_m_spine0 * q_spine1;
   JPH::Quat raw_m_spine2 = raw_m_spine1 * q_spine2;
 
-  // 3. Fetch default rest pose locals
   JPH::Quat d_spine0 =
       instance.core_instance.current_locals_default[spine0_idx].r;
   JPH::Quat d_spine1 =
@@ -263,35 +234,27 @@ void Animator::CompensateLowerToUpperSpines(CharacterInstance& instance) {
   JPH::Quat d_spine2 =
       instance.core_instance.current_locals_default[spine2_idx].r;
 
-  // 4. Compute FULL IDEAL model-space chain
   JPH::Quat ideal_hips =
       JPH::Quat::sRotation(JPH::Vec3::sAxisX(), JPH::DegreesToRadians(-90.0f));
   JPH::Quat ideal_spine0 = ideal_hips * d_spine0;
   JPH::Quat ideal_spine1 = ideal_spine0 * d_spine1;
   JPH::Quat ideal_spine2 = ideal_spine1 * d_spine2;
 
-  // 5. Calculate sequential blend weights (1/3, 2/3, 3/3)
   float w0 = (1.0f / 3.0f) * instance.armed_weight;
   float w1 = (2.0f / 3.0f) * instance.armed_weight;
   float w2 = (3.0f / 3.0f) * instance.armed_weight;
 
-  // 6. Compute TARGET model-space for each bone by blending RAW towards IDEAL
   JPH::Quat target_m_spine0 = raw_m_spine0.SLERP(ideal_spine0, w0);
   JPH::Quat target_m_spine1 = raw_m_spine1.SLERP(ideal_spine1, w1);
   JPH::Quat target_m_spine2 = raw_m_spine2.SLERP(ideal_spine2, w2);
 
-  // 7. Extract new local rotations sequentially based on the newly corrected
-  // parents Spine0 connects to the untouched Hips
   instance.core_instance.current_locals[spine0_idx].r =
       (raw_m_hips.Inversed() * target_m_spine0).Normalized();
-  // Spine1 connects to the new target Spine0
   instance.core_instance.current_locals[spine1_idx].r =
       (target_m_spine0.Inversed() * target_m_spine1).Normalized();
-  // Spine2 connects to the new target Spine1
   instance.core_instance.current_locals[spine2_idx].r =
       (target_m_spine1.Inversed() * target_m_spine2).Normalized();
 
-  // 8. Neutralize local translation dips evenly across ALL spine joints
   for (auto idx : {spine0_idx, spine1_idx, spine2_idx}) {
     const auto& a = instance.core_instance.current_locals[idx].t;
     const auto& b = instance.core_instance.current_locals_default[idx].t;
@@ -305,8 +268,7 @@ void Animator::Update(bool skip) {
     return;
   }
   std::vector<JPH::Mat44> all_jointMatrices;
-  // Assuming ~65 bones per instance TODO: differs for the gun and for the
-  // character
+  // 65 bones per instance? TODO: differs for the gun and for the character
   all_jointMatrices.reserve(
       (instances_characters_.size() + instances_weapons_.size()) * 80);
   for (auto& instance : instances_characters_) {
@@ -378,9 +340,7 @@ static JPH::Quat ReadQuat(const std::vector<float>& v, int index) {
 
 void Animator::ApplyDeltas(CharacterInstance& instance,
                            JPH::Vec3 prev_move_dir) {
-  // 1. Update the Armed Weight
   float raise_speed = 6.0f;
-  // Ensure we dynamically target 1.0f or 0.0f based on character state
   bool is_aiming = instance.character->IsAiming();
   float target_armed_weight = is_aiming ? 1.0f : 0.0f;
 
@@ -392,7 +352,6 @@ void Animator::ApplyDeltas(CharacterInstance& instance,
         instance.armed_weight - raise_speed * gDeltaTime, target_armed_weight);
   }
 
-  // 2. Spine / Body Alignment Logic (Unchanged)
   float aim_yaw = instance.character->GetHeadYaw();
   float aim_pitch = instance.character->GetHeadPitch();
   if (instance.character->GetMoveDirection() != JPH::Vec3::sZero()) {
@@ -455,13 +414,11 @@ void Animator::ApplyDeltas(CharacterInstance& instance,
   float yaw_weight = -diff / 90.0f;
   float pitch_weight = std::clamp(aim_pitch / 90.0f, -1.0f, 1.0f);
 
-  // 3. Blend and Apply Deltas
   const auto& def_deltas = instance.skin->default_deltas;
   const auto& pis_deltas = instance.skin->pistol_deltas;
   float w = instance.armed_weight;
 
   for (size_t i = 0; i < instance.core_instance.current_locals.size(); ++i) {
-    // --- UNARMED CALCULATION ---
     JPH::Quat yaw_def = JPH::Quat::sIdentity();
     if (yaw_weight > 0.0f)
       yaw_def = JPH::Quat::sIdentity().SLERP(def_deltas.right[i].r, yaw_weight);
@@ -490,7 +447,6 @@ void Animator::ApplyDeltas(CharacterInstance& instance,
     else if (pitch_weight < 0.0f)
       t_def += def_deltas.down[i].t * -pitch_weight;
 
-    // --- ARMED CALCULATION ---
     JPH::Quat yaw_pis = JPH::Quat::sIdentity();
     if (yaw_weight > 0.0f)
       yaw_pis = JPH::Quat::sIdentity().SLERP(pis_deltas.right[i].r, yaw_weight);
@@ -519,12 +475,9 @@ void Animator::ApplyDeltas(CharacterInstance& instance,
     else if (pitch_weight < 0.0f)
       t_pis += pis_deltas.down[i].t * -pitch_weight;
 
-    // --- FINAL BLEND ---
-    // Smoothly transition between the unarmed delta state and armed delta state
     JPH::Quat final_comb_delta = comb_def.SLERP(comb_pis, w).Normalized();
     JPH::Vec3 final_t_delta = (t_def * (1.0f - w)) + (t_pis * w);
 
-    // Apply to current locals
     auto new_rot =
         final_comb_delta * instance.core_instance.current_locals[i].r;
     if (new_rot.LengthSq() > 0.0001f) {
@@ -541,9 +494,6 @@ void Animator::EvaluateWeightedAnimation(CharacterInstance& instance,
                                          const Scene::Animation& animation,
                                          float weight) {
   if (weight <= 0.001f) return;
-
-  // 1. Create a temporary pose array filled with default transforms for THIS
-  // animation
   std::vector<SceneNodePose> temp_pose =
       instance.core_instance.current_locals_default;
 
@@ -551,7 +501,6 @@ void Animator::EvaluateWeightedAnimation(CharacterInstance& instance,
   WrapTime(instance.core_instance,
            animation.samplers[animation.channels[0].sampler].times);
 
-  // 2. OVERWRITE the defaults with animated channels (Do NOT use += here)
   for (const auto& channel : animation.channels) {
     const auto& sampler = animation.samplers[channel.sampler];
     const auto& times = sampler.times;
@@ -568,7 +517,7 @@ void Animator::EvaluateWeightedAnimation(CharacterInstance& instance,
     if (channel.target_path == "translation") {
       auto a = ReadVec3(values, frame);
       auto b = ReadVec3(values, next);
-      temp_pose[node].t = a + alpha * (b - a);  // Assignment, not addition!
+      temp_pose[node].t = a + alpha * (b - a);
     } else if (channel.target_path == "rotation") {
       auto a = ReadQuat(values, frame);
       auto b = ReadQuat(values, next);
@@ -576,12 +525,10 @@ void Animator::EvaluateWeightedAnimation(CharacterInstance& instance,
     } else if (channel.target_path == "scale") {
       auto a = ReadVec3(values, frame);
       auto b = ReadVec3(values, next);
-      temp_pose[node].s = a + alpha * (b - a);  // Assignment, not addition!
+      temp_pose[node].s = a + alpha * (b - a);
     }
   }
 
-  // 3. Accumulate this specific animation's final pose into the global
-  // character pose
   for (int i = 0; i < instance.core_instance.nodes->size(); ++i) {
     instance.core_instance.current_locals[i].t += temp_pose[i].t * weight;
     instance.core_instance.current_locals[i].s += temp_pose[i].s * weight;
@@ -606,18 +553,15 @@ void Animator::InitLocalsCharacter(CharacterInstance& instance,
         JPH::Quat(0.0f, 0.0f, 0.0f, 0.0f);
   }
 
-  // 3. Evaluate Blend Weights
   float weight_idle = 0.0f;
   float weight_walk = 0.0f;
   float weight_run = 0.0f;
 
   auto cur_speed = instance.character->GetSpeed();
   if (cur_speed <= Character::cWalkSpeed) {
-    // Blending between Idle (0.0) and Walk (walk_speed)
     weight_walk = cur_speed / Character::cWalkSpeed;
     weight_idle = 1.0f - weight_walk;
   } else {
-    // Blending between Walk (walk_speed) and Run (run_speed)
     weight_run = (cur_speed - Character::cWalkSpeed) /
                  (Character::cRunSpeed - Character::cWalkSpeed);
     weight_walk = 1.0f - weight_run;
@@ -627,6 +571,41 @@ void Animator::InitLocalsCharacter(CharacterInstance& instance,
   CharacterAnimType idle_crouch_type = CharacterAnimType::IdleCrouch;
   bool character_crouch = instance.character->IsCrouch();
   bool character_aiming = instance.character->IsAiming();
+
+  float time = instance.core_instance.time;
+
+  if (weight_idle < 0.3f) {
+    float leftStart = 0.0f, leftEnd = 0.1f;
+    float rightStart = 0.45f, rightEnd = 0.55f;
+    if (character_crouch) {
+      leftStart = 0.15f; leftEnd = 0.25f;
+      rightStart = 0.65f; rightEnd = 0.75f;
+    }
+    else if (weight_run > 0.5f) {
+      leftStart = 0.00f; leftEnd = 0.10f;
+      rightStart = 0.30f; rightEnd = 0.40f;
+    }
+    if (time >= leftStart && time <= leftEnd) {
+      if (!instance.left_foot_stepped) {
+        instance.character->PlayFootstepSound();
+        instance.left_foot_stepped = true;
+      }
+    } else {
+      instance.left_foot_stepped = false;
+    }
+    if (time >= rightStart && time <= rightEnd) {
+      if (!instance.right_foot_stepped) {
+        instance.character->PlayFootstepSound();
+        instance.right_foot_stepped = true;
+      }
+    } else {
+      instance.right_foot_stepped = false;
+    }
+  }
+  else {
+    instance.left_foot_stepped = false;
+    instance.right_foot_stepped = false;
+  }
 
   if (character_aiming) {
     idle_stand_type = CharacterAnimType::IdleNoArm;
@@ -687,8 +666,7 @@ void Animator::InitLocalsCharacter(CharacterInstance& instance,
     CharacterBlendingPoses pose_walk = cPoseWalk;
     float weight_crouch = (weight_walk + weight_run) * instance.crouch_weight;
     weight_walk = (weight_walk + weight_run) * (1.0f - instance.crouch_weight);
-    if (dir_sideways ==
-        1.0f) {  // Changed to > 0.5f just to be safe against float precision
+    if (dir_sideways == 1.0f) {
       if (weight_walk > 0.001f)
         EvaluateWeightedAnimation(
             instance,

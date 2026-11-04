@@ -3,8 +3,9 @@
 EnemyController::EnemyController(CharacterSharedData* shared_data,
                                  SceneNode* scene_node,
                                  const Scene::CharacterData* model,
-                                 const Scene::CharacterRig* skin)
-    : character_(shared_data, scene_node, model, skin) {
+                                 const Scene::CharacterRig* skin,
+            ma_engine* audio_engine, ma_sound_group* sfx_group)
+    : character_(shared_data, scene_node, model, skin, audio_engine, sfx_group) {
   character_.jph_character_->SetCharacterVsCharacterCollision(
       &character_.shared_data_->mCharacterVsCharacterCollision_);
   auto patrol_path = ParseCharacterPath(scene_node);

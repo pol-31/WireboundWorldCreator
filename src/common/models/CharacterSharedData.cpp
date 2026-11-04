@@ -115,12 +115,63 @@ bool CharacterSharedData::CastProbe(JPH::Vec3 pos, JPH::Vec3 dir,
   JPH::RayCastResult hit;
   IgnoreSingleBodyFilter player_filter = IgnoreSingleBodyFilter(source_body_id);
   had_hit = physics_system_->GetNarrowPhaseQuery().CastRay(
-    ray, hit, JPH::SpecifiedBroadPhaseLayerFilter(BroadPhaseLayers::MOVING),
-    JPH::SpecifiedObjectLayerFilter(Layers::MOVING), player_filter);
-
+    ray, hit, {}, {}, player_filter);
   outPosition = ray.GetPointOnRay(hit.mFraction);
   outFraction = hit.mFraction;
   outID = hit.mBodyID;
+
+  /*
+   bool had_hit = false;
+JPH::RRayCast ray{start, direction};
+JPH::RayCastResult hit;
+IgnoreSingleBodyFilter player_filter = IgnoreSingleBodyFilter(source_body_id);
+
+had_hit = physics_system_->GetNarrowPhaseQuery().CastRay(
+  ray, hit, {}, {}, player_filter);
+
+JPH::Mat44 decal_matrix = JPH::Mat44::sIdentity();
+
+if (had_hit) {
+  JPH::Vec3 outPosition = ray.GetPointOnRay(hit.mFraction);
+  float outFraction = hit.mFraction;
+  JPH::BodyID outID = hit.mBodyID;
+
+  // 1. Extract world-space surface normal using Jolt's body lock
+  JPH::Vec3 normal(0.0f, 1.0f, 0.0f);
+  {
+    JPH::BodyLockRead lock(physics_system_->GetBodyLockInterface(), outID);
+    if (lock.Succeeded()) {
+      const JPH::Body& body = lock.GetBody();
+      normal = body.GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, outPosition);
+    }
+  }
+
+  // 2. Nudge position slightly away from the wall to prevent Z-fighting artifacts
+  JPH::Vec3 biased_position = outPosition + (normal * 0.002f);
+
+  // 3. Compute orthogonal Tangent and Bitangent vectors
+  JPH::Vec3 world_up(0.0f, 1.0f, 0.0f);
+  if (std::abs(normal.Dot(world_up)) > 0.99f) {
+    world_up = JPH::Vec3(0.0f, 0.0f, 1.0f); // Safe fallback if hitting flat floor/ceiling
+  }
+  JPH::Vec3 tangent = world_up.Cross(normal).Normalized();
+  JPH::Vec3 bitangent = normal.Cross(tangent).Normalized();
+
+  // 4. Construct the JPH::Mat44 matrix
+  // Columns map to: [0] = Tangent (X), [1] = Bitangent (Y), [2] = Normal (Z), [3] = Position (W)
+  decal_matrix = JPH::Mat44(
+    JPH::Vec4(tangent, 0.0f),
+    JPH::Vec4(bitangent, 0.0f),
+    JPH::Vec4(normal, 0.0f),
+    JPH::Vec4(biased_position, 1.0f)
+  );
+}
+   *
+   */
+
+  // had_hit = physics_system_->GetNarrowPhaseQuery().CastRay(
+  // ray, hit, JPH::SpecifiedBroadPhaseLayerFilter(BroadPhaseLayers::MOVING),
+  // JPH::SpecifiedObjectLayerFilter(Layers::MOVING), player_filter);
 
   // if (had_hit)
   //   mDebugRenderer->DrawMarker(outPosition, JPH::Color::sYellow, 0.1f);
@@ -133,6 +184,33 @@ bool CharacterSharedData::CastProbe(JPH::Vec3 pos, JPH::Vec3 dir,
   }
   return had_hit;
 }
+
+struct ShootDecalInfo {
+  JPH::Vec3 position;
+  JPH::Vec3 normal;
+  float roll_angle = 0.0f; // Adds visual variety
+  int atlas_index = 0;
+};
+
+class DecalManager {
+private:
+  static constexpr size_t kMaxDecals = 20;
+  std::array<ShootDecalInfo, kMaxDecals> decals_;
+  size_t head_ = 0;
+  size_t count_ = 0;
+
+public:
+  void AddDecal(const ShootDecalInfo& decal) {
+    decals_[head_] = decal;
+    head_ = (head_ + 1) % kMaxDecals; // Overwrites oldest on overflow
+    if (count_ < kMaxDecals) {
+      count_++;
+    }
+  }
+
+  size_t GetCount() const { return count_; }
+  const ShootDecalInfo& GetDecal(size_t index) const { return decals_[index]; }
+};
 
 // void CharacterSharedData::Shoot(JPH::Vec3 pos, JPH::Vec3 dir, JPH::BodyID source_body_id) {
 //   JPH::RVec3 hit_position;

@@ -23,8 +23,9 @@ PlayerController::PlayerController(const Camera *camera,
                                    CharacterSharedData *shared_data,
                                    SceneNode *scene_node,
                                    const Scene::CharacterData *model,
-                                   const Scene::CharacterRig *skin)
-    : character_(shared_data, scene_node, model, skin), camera_(camera) {
+                                   const Scene::CharacterRig *skin,
+            ma_engine* audio_engine, ma_sound_group* sfx_group)
+    : character_(shared_data, scene_node, model, skin, audio_engine, sfx_group), camera_(camera) {
   character_.jph_character_->SetCharacterVsCharacterCollision(
       &shared_data->mCharacterVsCharacterCollision_);
   character_.jph_character_->SetListener(shared_data->contact_listener_);
@@ -282,23 +283,25 @@ void PlayerController::UpdateObjectDragging() {
   switch (bi.GetBodyType(mDragBody)) {
     case JPH::EBodyType::RigidBody:
       bi.SetPositionAndRotation(mDragAnchor->GetID(), new_pos,
-                                JPH::Quat::sIdentity(),
+                                mDragBodyRotation,
                                 JPH::EActivation::DontActivate);
+      bi.SetAngularVelocity(mDragBody, JPH::Vec3::sZero());
+      bi.SetLinearVelocity(mDragBody, JPH::Vec3::sZero());
       break;
     case JPH::EBodyType::SoftBody: {
-      JPH::BodyLockWrite lock(
-          GetSharedData()->physics_system_->GetBodyLockInterface(), mDragBody);
-      if (lock.Succeeded()) {
-        JPH::Body &body = lock.GetBody();
-        JPH::SoftBodyMotionProperties *mp =
-            static_cast<JPH::SoftBodyMotionProperties *>(
-                body.GetMotionProperties());
-        JPH::SoftBodyVertex &v = mp->GetVertex(mDragVertexIndex);
-        v.mVelocity =
-            body.GetRotation().Conjugated() *
-            JPH::Vec3(new_pos - body.GetCenterOfMassTransform() * v.mPosition) /
-            gDeltaTimePhysics;
-      }
+      // JPH::BodyLockWrite lock(
+      //     GetSharedData()->physics_system_->GetBodyLockInterface(), mDragBody);
+      // if (lock.Succeeded()) {
+      //   JPH::Body &body = lock.GetBody();
+      //   JPH::SoftBodyMotionProperties *mp =
+      //       static_cast<JPH::SoftBodyMotionProperties *>(
+      //           body.GetMotionProperties());
+      //   JPH::SoftBodyVertex &v = mp->GetVertex(mDragVertexIndex);
+      //   v.mVelocity =
+      //       body.GetRotation().Conjugated() *
+      //       JPH::Vec3(new_pos - body.GetCenterOfMassTransform() * v.mPosition) /
+      //       gDeltaTimePhysics;
+      // }
     } break;
   }
   bi.ActivateBody(mDragBody);
@@ -340,14 +343,14 @@ void PlayerController::StartObjectDragging() {
       } else if (drag_body.IsDynamic()) {
         JPH::DistanceConstraintSettings settings;
         settings.mPoint1 = settings.mPoint2 = hit_position;
-        settings.mLimitsSpringSettings.mFrequency =
-            2.0f;  // div by world_scale==1
-        settings.mLimitsSpringSettings.mDamping = 1.0f;
+        settings.mLimitsSpringSettings.mFrequency = 4.0f;
+        settings.mLimitsSpringSettings.mDamping = 2.0f;
 
         JPH::Body *drag_anchor = bi.CreateBody(JPH::BodyCreationSettings(
             new JPH::SphereShape(0.01f), hit_position, JPH::Quat::sIdentity(),
             JPH::EMotionType::Static, Layers::NON_MOVING));
         mDragAnchor = drag_anchor;
+        mDragBodyRotation = drag_body.GetRotation();
 
         mDragConstraint = settings.Create(*drag_anchor, drag_body);
         GetSharedData()->physics_system_->AddConstraint(mDragConstraint);

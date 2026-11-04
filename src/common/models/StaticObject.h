@@ -5,13 +5,12 @@
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Body/BodyID.h>
+#include "GameObject.h"
 
-class SceneNode;
-
-struct StaticObject {
-  const SceneNode* object_;
-
-  StaticObject(const SceneNode* object) : object_(object) {}
+class StaticObject : public GameObject {
+public:
+  StaticObject(SceneNode* scene_node);
+  InteractPrompt GetInteractPrompt(Character* interactor) override;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_STATICOBJECT_H

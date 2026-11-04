@@ -31,5 +31,8 @@ set(INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(JoltPhysics-5.5.0/Build EXCLUDE_FROM_ALL)
 
+add_subdirectory(miniaudio-0.11.26 EXCLUDE_FROM_ALL)
+set(MINIAUDIO_INSTALL OFF CACHE BOOL "miniaudio install" FORCE)
+
 
 # rapidjson header-only, so included directly

@@ -458,17 +458,71 @@ void UploadBuffers(GLuint* vao, GLuint* vbo, GLuint* ebo,
   glBindVertexArray(0);
 }
 
+ScenePortal ParsePortal(const tinygltf::Model& model, SceneNode* node,
+const std::vector<SceneMesh>& meshes,
+           std::vector<SceneZone*>& zones,
+           std::vector<ScenePortal>& portals,
+SceneNode* parent);
+
+SceneZone* ParseZone(const tinygltf::Model& model, SceneNode* node,
+const std::vector<SceneMesh>& meshes,
+std::vector<SceneZone*>& zones,
+std::vector<ScenePortal>& portals,
+SceneNode* parent);
+
 SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
-                            const std::vector<Scene::Mesh>& meshes) {
+                            const std::vector<SceneMesh>& meshes,
+                            std::vector<SceneZone*>& zones,
+                            std::vector<ScenePortal>& portals) {
   std::function<SceneNode*(int)> dfs = [&](int id) {
     auto node = new SceneNode();
     const auto& scene_node = model.nodes[id];
-    node->mesh_index = scene_node.mesh;
     node->local_transform.r = GetNodeRotation(model.nodes[id]);
     node->local_transform.t = GetNodeTranslation(model.nodes[id]);
     node->local_transform.s = GetNodeScale(model.nodes[id]);
     node->node_id = id;
+    node->name = scene_node.name;
+    if (node->name == "zone_SkyrimHouseZones1") {
+      // std::cout << "here" << std::endl;
+    }
     if (scene_node.mesh != -1) {
+      node->mesh = &meshes[scene_node.mesh];
+      const auto& mesh = meshes[scene_node.mesh];
+      node->local_bounds =
+          JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
+                     JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
+    }
+    for (auto child_id : scene_node.children) {
+      const auto& child_scene_node = model.nodes[child_id];
+      auto child_node = dfs(child_id);
+      node->children.push_back(child_node);
+      if (child_scene_node.mesh != -1) {
+        const auto& child_mesh = meshes[child_scene_node.mesh];
+        auto type = GetAssetDefaultProperties(child_mesh.name).type;
+        if (type == AssetProperties::Type::Zone) {
+          zones.push_back(ParseZone(model, child_node, meshes, zones, portals, node));
+        } else if (type == AssetProperties::Type::Portal) {
+          portals.push_back(ParsePortal(model, child_node, meshes, zones, portals, node));
+        }
+      }
+    }
+    return node;
+  };
+  return dfs(root_node_id);
+}
+
+SceneNode* CreateObjectNode(const tinygltf::Model& model, int root_node_id,
+                            const std::vector<SceneMesh>& meshes) {
+  std::function<SceneNode*(int)> dfs = [&](int id) {
+    auto node = new SceneNode();
+    const auto& scene_node = model.nodes[id];
+    node->local_transform.r = GetNodeRotation(model.nodes[id]);
+    node->local_transform.t = GetNodeTranslation(model.nodes[id]);
+    node->local_transform.s = GetNodeScale(model.nodes[id]);
+    node->node_id = id;
+    node->name = scene_node.name;
+    if (scene_node.mesh != -1) {
+      node->mesh = &meshes[scene_node.mesh];
       const auto& mesh = meshes[scene_node.mesh];
       node->local_bounds =
           JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
@@ -524,55 +578,49 @@ static std::map<std::string_view, SceneZone::Properties> gZoneNameMapping = {
   {"m_zone_garden", gSceneZoneOusideProps},
 };
 
-void ParseZone(const tinygltf::Model& model, const tinygltf::Node& node,
-               SceneTile* tile, const std::vector<Scene::Mesh>& meshes) {
+SceneZone* ParseZone(const tinygltf::Model& model, SceneNode* node,
+const std::vector<SceneMesh>& meshes,
+std::vector<SceneZone*>& zones,
+std::vector<ScenePortal>& portals,
+SceneNode* parent) {
   auto zone = new SceneZone();
-  const auto& mesh = meshes[node.mesh];
-  zone->name = node.name;
-  zone->properties = gZoneNameMapping.at(mesh.name);
-  zone->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
-                            JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
-  if (!node.translation.empty()) {
-    zone->translate = ReadVec3(node.translation, 0);
+  zone->scene_node = node;
+  const auto& mesh = *node->mesh;
+  auto zone_props_it = gZoneNameMapping.find(mesh.name);
+  if (zone_props_it != gZoneNameMapping.end()) {
+    zone->properties = zone_props_it->second;
+  } else {
+    zone->properties = gSceneZoneInsideProps;
   }
-  tile->zones.push_back(zone);
-  for (const auto& child_id : node.children) {
-    zone->object_nodes.push_back(CreateObjectNode(model, child_id, meshes));
-  }
-}
-
-void ParseCharacter(const tinygltf::Model& model, int node_id, SceneTile* tile,
-                    const std::vector<Scene::Mesh>& meshes) {
-  const auto& node = model.nodes[node_id];
-  tile->characters.push_back(CreateObjectNode(model, node_id, meshes));
+  return zone;
 }
 
 void Scene::ConnectZonesWithPortals(int tile_id) {
-  std::vector<SceneZone*>& zones = scene_data_.tiles[0]->zones;
-  std::vector<ScenePortal>& portals = scene_data_.tiles[0]->portals;
-  std::vector<SceneNode*>& walls = scene_data_.tiles[0]->walls;
+  std::vector<SceneZone*>& zones = scene_data_.zones;
+  std::vector<ScenePortal>& portals = scene_data_.portals;
 
   for (size_t p = 0; p < portals.size(); ++p) {
     ScenePortal& portal_data = portals[p];
 
     JPH::Vec3 epsilon = JPH::Vec3::sReplicate(0.05f);
-    JPH::AABox expanded_portal_box = portal_data.bounds;
-    expanded_portal_box.mMin =
-        portal_data.bounds.mMin + portal_data.position - epsilon;
-    expanded_portal_box.mMin.SetY(std::numeric_limits<float>::lowest());
-    expanded_portal_box.mMax =
-        portal_data.bounds.mMax + portal_data.position + epsilon;
-    expanded_portal_box.mMax.SetY(std::numeric_limits<float>::max());
+    JPH::AABox expanded_portal_box = portal_data.scene_node->global_bounds;
+    // expanded_portal_box.mMin =
+        // portal_data.bounds.mMin + portal_data.position - epsilon;
+    // expanded_portal_box.mMin.SetY(std::numeric_limits<float>::lowest());
+    // expanded_portal_box.mMax =
+        // portal_data.bounds.mMax + portal_data.position + epsilon;
+    // expanded_portal_box.mMax.SetY(std::numeric_limits<float>::max());
 
     int connected_count = 0;
 
     for (size_t z = 0; z < zones.size(); ++z) {
       SceneZone* zone = zones[z];
-      if (zone->bounds.Overlaps(expanded_portal_box)) {
+      auto zone_bounds = zone->scene_node->global_bounds;
+      if (zone_bounds.Overlaps(expanded_portal_box)) {
         if (connected_count == 0) {
-          portal_data.connected_zone_index_1 = z;
+          portal_data.zone_1 = z;
         } else if (connected_count == 1) {
-          portal_data.connected_zone_index_2 = z;
+          portal_data.zone_2 = z;
         }
         zone->portals.push_back(&portal_data);
         connected_count++;
@@ -582,123 +630,94 @@ void Scene::ConnectZonesWithPortals(int tile_id) {
       }
     }
     if (connected_count < 2) {
-      std::cerr << portal_data.name << " connected to only " << connected_count
+      std::cerr << portal_data.scene_node->name << " connected to only " << connected_count
                 << " zones" << std::endl;
-    }
-  }
-  for (size_t w = 0; w < walls.size(); ++w) {
-    SceneNode* wall_node = walls[w];
-
-    JPH::Vec3 epsilon = JPH::Vec3::sReplicate(0.05f);
-    JPH::AABox expanded_portal_box = wall_node->global_bounds;
-    expanded_portal_box.mMin =
-        wall_node->global_bounds.mMin - epsilon;
-    expanded_portal_box.mMin.SetY(std::numeric_limits<float>::lowest());
-    expanded_portal_box.mMax =
-        wall_node->global_bounds.mMax + epsilon;
-    expanded_portal_box.mMax.SetY(std::numeric_limits<float>::max());
-
-    for (size_t z = 0; z < zones.size(); ++z) {
-      SceneZone* zone = zones[z];
-      if (zone->bounds.Overlaps(expanded_portal_box)) {
-        zone->walls.push_back(wall_node);
-      }
     }
   }
 }
 
 // TODO: leak new
 
-void ParsePortal(const tinygltf::Model& model, const tinygltf::Node& node,
-                 SceneTile* tile, const std::vector<Scene::Mesh>& meshes) {
+ScenePortal ParsePortal(const tinygltf::Model& model, SceneNode* node,
+const std::vector<SceneMesh>& meshes,
+           std::vector<SceneZone*>& zones,
+           std::vector<ScenePortal>& portals,
+SceneNode* parent) {
   ScenePortal portal;
-  const auto& mesh = meshes[node.mesh];
-  portal.bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
-                             JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
-  portal.name = node.name;
-  if (!node.translation.empty()) {
-    portal.position = ReadVec3(node.translation, 0);
-  }
-  if (!node.rotation.empty()) {
-    portal.rotation = ReadQuat(node.rotation, 0);
-  }
-  for (auto grand_child_id : node.children) {
-    const auto& child_node = model.nodes[grand_child_id];
+  portal.scene_node = node;
+  const auto& mesh = *node->mesh;
+  for (SceneNode* child_node : node->children) {
     AssetProperties::Type child_type =
-      GetAssetDefaultProperties(meshes[child_node.mesh].name).type;
+      GetAssetDefaultProperties(child_node->mesh->name).type;
     if (child_type == AssetProperties::Type::HingeBase) {
-      portal.frame = CreateObjectNode(model, grand_child_id, meshes);
+      for (SceneNode* grand_child_node : child_node->children) {
+        AssetProperties::Type grand_child_type =
+          GetAssetDefaultProperties(grand_child_node->mesh->name).type;
+        if (grand_child_type == AssetProperties::Type::Hinge) {
+          portal.hinges.push_back(grand_child_node);
+        }
+      }
+      portal.frame = child_node;
     } else if (child_type == AssetProperties::Type::HingeMoving) {
-      portal.desks.push_back(CreateObjectNode(model, grand_child_id, meshes));
-    } else {
-      portal.obj.push_back(CreateObjectNode(model, grand_child_id, meshes));
+      portal.desks.push_back(child_node);
     }
   }
-  tile->portals.push_back(portal);
+  return portal;
 }
 
-enum class TileName {
-  Mansion,
-};
-
-static std::map<std::string_view, SceneTile::Properties> gTileNameMapping = {
-  {"m_tile_mansion", {"../assets/hmap.hdr"}},
-};
-
-void ParseTile(const tinygltf::Model& model, const tinygltf::Node& tile_node,
-               SceneTile* tile, const std::vector<Scene::Mesh>& meshes) {
-  for (const auto& child_id : tile_node.children) {
-    const auto& node = model.nodes[child_id];
-    // if (node.mesh == -1) {
-    //   continue;
-    // }
-    AssetProperties::Type type =
-      GetAssetDefaultProperties(meshes[node.mesh].name).type;
-    if (type == AssetProperties::Type::Zone) {
-      ParseZone(model, node, tile, meshes);
-    } else if (type == AssetProperties::Type::Character) {
-      ParseCharacter(model, child_id, tile, meshes);
-    } else if (type == AssetProperties::Type::Portal) {
-      ParsePortal(model, node, tile, meshes);
-    } else if (type == AssetProperties::Type::Wall) {
-      tile->walls.push_back(CreateObjectNode(model, child_id, meshes));
-    } else {
-      std::cerr << "another type" << std::endl;
-      // idk
-    }
-  }
-  // ConnectZonesWithPortals(tile->zones, tile->portals);
-}
+//
+// enum class TileName {
+//   Mansion,
+// };
+//
+// static std::map<std::string_view, SceneTile::Properties> gTileNameMapping = {
+//   {"m_tile_mansion", {"../assets/hmap.hdr"}},
+// };
 
 void ReadSceneHierarchy(Scene::SceneData& scene, const tinygltf::Model& model) {
-  const std::vector<Scene::Mesh>& meshes = scene.meshes;
-  for (size_t i = 0; i < model.nodes.size(); ++i) {
+  const std::vector<SceneMesh>& meshes = scene.meshes;
+  for (auto i : model.scenes[0].nodes) {
     const auto& node = model.nodes[i];
     auto mesh_id = node.mesh;
     if (mesh_id == -1) {
+      scene.object_nodes.push_back(CreateObjectNode(model, i, meshes, scene.zones, scene.portals));
       continue;
     }
+    auto new_node = CreateObjectNode(model, i, meshes, scene.zones, scene.portals);
+    const auto& mesh = *new_node->mesh;
     AssetProperties::Type type =
-      GetAssetDefaultProperties(meshes[mesh_id].name).type;
+      GetAssetDefaultProperties(mesh.name).type;
     if (type == AssetProperties::Type::Tile) {
       auto tile = new SceneTile();
-
-      const auto& mesh = meshes[node.mesh];
-      tile->bounds = JPH::AABox(JPH::Vec3(mesh.min.x, mesh.min.y, mesh.min.z),
-                                JPH::Vec3(mesh.max.x, mesh.max.y, mesh.max.z));
-
+      tile->scene_node = new_node;
       scene.tiles.push_back(tile);
-      tile->properties = gTileNameMapping.at(mesh.name);
-      ParseTile(model, node, tile, meshes);
+      scene.object_nodes.push_back(new_node);
+      // tile->properties = gTileNameMapping.at(mesh.name);
     } else if (type == AssetProperties::Type::Player) {
-      scene.player_node = CreateObjectNode(model, i, meshes);
+      scene.player_node = new_node;
+    } else if (type == AssetProperties::Type::Character) {
+      scene.characters.push_back(new_node);
+    } else if (type == AssetProperties::Type::Zone) {
+      scene.zones.push_back(ParseZone(model, new_node, meshes, scene.zones, scene.portals, nullptr));
+      scene.object_nodes.push_back(new_node);
+    } else if (type == AssetProperties::Type::Portal) {
+      scene.portals.push_back(ParsePortal(model, new_node, meshes, scene.zones, scene.portals, nullptr));
+      scene.object_nodes.push_back(new_node);
+    } else {
+      scene.object_nodes.push_back(new_node);
+      // std::cerr << "another type" << std::endl;
+      // idk
     }
+    // if (node.mesh == -1) {
+    //   continue;
+    // }
   }
+  std::cout << "zones total: " << scene.zones.size() << std::endl;
 }
 
 void ReadNodeHierarchy(std::vector<SceneNode*>& nodes,
                        const tinygltf::Model& model,
-                       const std::vector<Scene::Mesh>& meshes) {
+                       const std::vector<SceneMesh>& meshes) {
   nodes.clear();
   nodes.resize(model.nodes.size());
   for (size_t i = 0; i < model.nodes.size(); ++i) {
@@ -803,9 +822,80 @@ const tinygltf::Accessor& LoadBufferSafely(
   return accessor;
 }
 
-std::vector<Scene::Primitive> LoadPrimitives(const tinygltf::Model& model,
+void CreateJoltTerrainMesh(
+      const tinygltf::Model& model,
+      const tinygltf::Mesh& mesh,
+      JPH::VertexList& jolt_vertices,
+      JPH::IndexedTriangleList& jolt_triangles) {
+    using namespace JPH;
+    uint32_t vertex_offset = 0;
+
+    // Loop through all primitives in the mesh
+    for (const auto& primitive : mesh.primitives) {
+        // 1. Extract Positions
+        auto pos_it = primitive.attributes.find("POSITION");
+        if (pos_it == primitive.attributes.end()) continue;
+
+        const auto& posAccessor = model.accessors[pos_it->second];
+        assert(posAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+        assert(posAccessor.type == TINYGLTF_TYPE_VEC3);
+
+        const auto& bufferView = model.bufferViews[posAccessor.bufferView];
+        const auto& buffer = model.buffers[bufferView.buffer];
+
+        // Handle potential stride (interleaved buffers) safely
+        const unsigned char* base_ptr = buffer.data.data() + bufferView.byteOffset + posAccessor.byteOffset;
+        size_t stride = bufferView.byteStride;
+        if (stride == 0) {
+            stride = 3 * sizeof(float); // Tightly packed default
+        }
+
+        size_t num_vertices = posAccessor.count;
+        for (size_t i = 0; i < num_vertices; ++i) {
+            const float* vertex_data = reinterpret_cast<const float*>(base_ptr + i * stride);
+            jolt_vertices.push_back(Float3(vertex_data[0], vertex_data[1], vertex_data[2]));
+        }
+
+        // 2. Extract Indices
+        if (primitive.indices < 0) continue; // Terrain must be indexed
+
+        const auto& idxAccessor = model.accessors[primitive.indices];
+        const auto& idxBufferView = model.bufferViews[idxAccessor.bufferView];
+        const auto& idxBuffer = model.buffers[idxBufferView.buffer];
+        const void* indices_ptr = idxBuffer.data.data() + idxBufferView.byteOffset + idxAccessor.byteOffset;
+
+        size_t num_indices = idxAccessor.count;
+
+        for (size_t i = 0; i < num_indices; i += 3) {
+            uint32_t i0 = 0, i1 = 0, i2 = 0;
+            if (idxAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
+                const uint16_t* p = reinterpret_cast<const uint16_t*>(indices_ptr);
+                i0 = p[i]; i1 = p[i + 1]; i2 = p[i + 2];
+            } else if (idxAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
+                const uint32_t* p = reinterpret_cast<const uint32_t*>(indices_ptr);
+                i0 = p[i]; i1 = p[i + 1]; i2 = p[i + 2];
+            } else if (idxAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE ||
+                       idxAccessor.componentType == TINYGLTF_COMPONENT_TYPE_BYTE) {
+                const uint8_t* p = reinterpret_cast<const uint8_t*>(indices_ptr);
+                i0 = p[i]; i1 = p[i + 1]; i2 = p[i + 2];
+            }
+
+            IndexedTriangle triangle;
+            triangle.mIdx[0] = i0 + vertex_offset;
+            triangle.mIdx[1] = i1 + vertex_offset;
+            triangle.mIdx[2] = i2 + vertex_offset;
+            triangle.mMaterialIndex = 0;
+
+            jolt_triangles.push_back(triangle);
+        }
+
+        vertex_offset += static_cast<uint32_t>(num_vertices);
+    }
+}
+
+std::vector<ScenePrimitive> LoadPrimitives(const tinygltf::Model& model,
                                              std::string_view name,
-                                             Scene::Mesh& new_mesh,
+                                             SceneMesh& new_mesh,
                                              ModelLoader::BufferData& data,
                                              bool map_materials = false) {
   auto found_it = model.meshes.end();
@@ -819,7 +909,7 @@ std::vector<Scene::Primitive> LoadPrimitives(const tinygltf::Model& model,
   }
 
   const tinygltf::Mesh& mesh = *found_it;
-  std::vector<Scene::Primitive> new_primitives;
+  std::vector<ScenePrimitive> new_primitives;
   glm::vec3 mesh_min(std::numeric_limits<float>::max());
   glm::vec3 mesh_max(std::numeric_limits<float>::lowest());
   for (const auto& primitive : mesh.primitives) {
@@ -847,7 +937,7 @@ std::vector<Scene::Primitive> LoadPrimitives(const tinygltf::Model& model,
     if (map_materials) {
       material_id = MapSceneMaterial(material_id, model.materials);
     }
-    Scene::Primitive new_primitive(idxAccessor.count, index_byte_offset,
+    ScenePrimitive new_primitive(idxAccessor.count, index_byte_offset,
                                    data.current_base_vertex, gl_idx_type,
                                    static_cast<uint32_t>(material_id));
     new_primitives.push_back(new_primitive);
@@ -859,35 +949,57 @@ std::vector<Scene::Primitive> LoadPrimitives(const tinygltf::Model& model,
 }
 
 void ModelLoader::LoadBuffers(const tinygltf::Model& model,
-                              std::vector<Scene::Mesh>& meshes) {
+                              std::vector<SceneMesh>& meshes) {
   // TODO: for some meshes we don't need the geometry (like zones/characters)
   // TODO: are these extras of the node OR of the mesh?
   std::vector<int> tile_ids;
-  for (const auto& mesh : model.meshes) {
-    Scene::Mesh new_mesh;
+  for (int i = 0; i < model.meshes.size(); ++i) {
+    const auto& mesh = model.meshes[i];
+    SceneMesh new_mesh;
     new_mesh.name = mesh.name;
+    new_mesh.id = i;
     meshes.push_back(new_mesh);
   }
 }
 
 struct MeshFile {
   tinygltf::Model model;
-  std::vector<Scene::Mesh> meshes;
+  std::vector<SceneMesh> meshes;
 };
 #include <algorithm>
 #include <string>
 #include <vector>
 
 ModelLoader::BufferData LoadMeshes(
-    std::vector<Scene::Mesh>& meshes_scene,
+    std::vector<SceneMesh>& meshes_scene,
     const std::vector<MeshFile>& meshes_files,
-    const tinygltf::Model& model_no_lods) {
+    const tinygltf::Model& model_no_lods,
+    std::vector<Scene::TerrainData>& scene_terrain_data) {
 
   ModelLoader::BufferData buffer;
 
   for (auto& m : meshes_scene) {
     // 1. Strip any "_lod" suffix to get the clean base name
     std::string base_name = m.name;
+    auto mesh_type = GetAssetDefaultProperties(m.name).type;
+    if (mesh_type == AssetProperties::Type::Tile) {
+      auto found_it = model_no_lods.meshes.end();
+      for (auto it = model_no_lods.meshes.begin(); it != model_no_lods.meshes.end(); ++it) {
+        if (it->name == base_name) {
+          found_it = it;
+        }
+      }
+      if (found_it == model_no_lods.meshes.end()) {
+        throw std::runtime_error("mesh name not found");
+      }
+
+      const tinygltf::Mesh& mesh = *found_it;
+      auto new_terrain_data = Scene::TerrainData{};
+      new_terrain_data.name = base_name;
+      CreateJoltTerrainMesh(model_no_lods, mesh, new_terrain_data.jolt_vertices, new_terrain_data.jolt_triangles);
+      scene_terrain_data.push_back(new_terrain_data);
+      // continue; -> still creating the mesh
+    }
     size_t lod_pos = base_name.find("_lod");
     if (lod_pos != std::string::npos) {
       base_name = base_name.substr(0, lod_pos);
@@ -898,9 +1010,9 @@ ModelLoader::BufferData LoadMeshes(
     // 2. Find the MeshFile that contains a mesh matching lod0_name
     auto it_file = std::find_if(meshes_files.begin(), meshes_files.end(),
       [&](const MeshFile& obj) {
-        // Inner search: look through the Scene::Mesh vector for the right name
+        // Inner search: look through the SceneMesh vector for the right name
         auto it_mesh = std::find_if(obj.meshes.begin(), obj.meshes.end(),
-          [&](const Scene::Mesh& mesh) {
+          [&](const SceneMesh& mesh) {
             return mesh.name == lod0_name;
           });
         return it_mesh != obj.meshes.end();
@@ -929,7 +1041,7 @@ ModelLoader::BufferData LoadMeshes(
 
 ModelLoader::BufferData LoadDebugMeshes(
     const tinygltf::Model& model,
-    std::vector<Scene::Mesh>& meshes) {
+    std::vector<SceneMesh>& meshes) {
   ModelLoader::BufferData buffer;
   for (auto& m : meshes) {
     m.primitives_lods.resize(3);
@@ -947,11 +1059,11 @@ ModelLoader::BufferData LoadDebugMeshes(
 #include <vector>
 
 ModelLoader::BufferData LoadMeshesHero(const tinygltf::Model& model,
-                                       std::vector<Scene::Mesh>& meshes) {
+                                       std::vector<SceneMesh>& meshes) {
   ModelLoader::BufferData buffer;
 
   struct MeshBucket {
-    Scene::Mesh mesh;
+    SceneMesh mesh;
     bool initialized = false;
     bool has_lod[3] = {false, false, false};
   };
@@ -1039,7 +1151,7 @@ void ModelLoader::LoadDebugShapes(std::string_view path) {
   BufferData buffer_data =
       LoadDebugMeshes(model, scene_.scene_dbg_shapes_.meshes);
 
-  ReadSceneHierarchy(scene_.scene_dbg_shapes_, model);
+  //ReadSceneHierarchy(scene_.scene_dbg_shapes_, model);
   UploadBuffers(&scene_.scene_dbg_shapes_.vao, &scene_.scene_dbg_shapes_.vbo,
                 &scene_.scene_dbg_shapes_.ebo, buffer_data);
 }
@@ -1055,7 +1167,7 @@ void ModelLoader::LoadScene(std::string_view path,
     LoadBuffers(mesh_files[i].model, mesh_files[i].meshes);
   }
   BufferData buffer_data =
-      LoadMeshes(scene_.scene_data_.meshes, mesh_files, model);
+      LoadMeshes(scene_.scene_data_.meshes, mesh_files, model, scene_.terrain_datas);
 
   ReadSceneHierarchy(scene_.scene_data_, model);
   UploadBuffers(&scene_.scene_data_.vao, &scene_.scene_data_.vbo,

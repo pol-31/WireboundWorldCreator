@@ -1,11 +1,14 @@
 #ifndef WIREBOUNDWORLDCREATOR_GAMEOBJECT_H
 #define WIREBOUNDWORLDCREATOR_GAMEOBJECT_H
 
-#include <string_view>
+#include <string>
 
 #include <Jolt/Jolt.h>
 
+#include "AssetProperties.h"
+
 class Character;
+struct SceneNode;
 
 class GameObject {
 public:
@@ -23,9 +26,22 @@ public:
   // if prompt is empty, we remove it from game::hovered_object and can drag it
   virtual InteractPrompt GetInteractPrompt(Character* interactor) { return {}; }
 
-  virtual JPH::Vec3 GetPosition() const {
-    return JPH::Vec3::sZero();
+  virtual JPH::Vec3 GetPosition() const;
+
+  SceneNode* GetSceneNode() noexcept {
+    return scene_node_;
   }
+
+  const SceneNode* GetSceneNode() const noexcept {
+    return scene_node_;
+  }
+
+  const AssetProperties& GetAssetProperties() const;
+
+  float lastCollisionSoundTime = 0.0f;
+
+protected:
+  SceneNode* scene_node_ = nullptr;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_GAMEOBJECT_H

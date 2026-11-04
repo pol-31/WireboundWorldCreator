@@ -1,6 +1,8 @@
 #ifndef WIREBOUNDWORLDCREATOR_WEAPON_H
 #define WIREBOUNDWORLDCREATOR_WEAPON_H
 
+#include "miniaudio.h"
+
 #include "Scene.h"
 #include "GameObject.h"
 
@@ -15,7 +17,7 @@ class Weapon : public GameObject {
   enum class OperationalState { Idle, Reload, Shoot };
 
   Weapon(const Scene::WeaponData* model, JPH::PhysicsSystem* physics_system,
-         Animator* animator);
+         Animator* animator, ma_engine* audio_engine, ma_sound_group* sfx_group);
 
   /// --- all interaction interface ---
   bool TryShoot(const JPH::Vec3& eye_pos, const JPH::Vec3& forward_dir);
@@ -54,6 +56,12 @@ class Weapon : public GameObject {
   // Only valid if PhysicsState::Dropped
   Character* owner_ = nullptr;
   JPH::BodyID jph_body_id_;
+
+  ma_engine* audio_engine_ = nullptr;
+  ma_sound_group* sfx_group_ = nullptr;
+  ma_sound sound_shoot_;
+  ma_sound sound_reload_;
+  ma_sound sound_pickup_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_WEAPON_H

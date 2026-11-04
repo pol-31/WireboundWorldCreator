@@ -14,8 +14,7 @@ JPH::Mat44 SceneNodePose::Matrix() const noexcept {
 /// but in case attached jph body, we should take it instead,
 /// because we created it on that first global pos,
 /// so everything in the hands of JPH since then
-void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
-                                  std::vector<SceneTile*>& tiles) {
+void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli) {
   std::function<void(SceneNode*, const JPH::Mat44&)> dfs =
     [&](SceneNode* node, const JPH::Mat44& parent) {
       if (!node) {
@@ -45,29 +44,10 @@ void Scene::UpdateRenderTransform(const JPH::BodyLockInterface& bli,
         }
       };
 
-  for (auto& tile : tiles) {
-    for (auto node : tile->characters) {
-      dfs(node, JPH::Mat44::sIdentity());
-    }
-    for (auto node : tile->portals) {
-      auto mat = JPH::Mat44::sRotationTranslation(node.rotation, node.position);
-      for (auto desk : node.desks) {
-        dfs(desk, mat);
-      }
-      dfs(node.frame, mat);
-      for (auto* o : node.obj) {
-        dfs(o, mat);
-      }
-    }
-    for (auto node : tile->walls) {
-      auto mat = JPH::Mat44::sIdentity();
-      dfs(node, mat);
-    }
-    for (auto& zone : tile->zones) {
-      auto mat = JPH::Mat44::sTranslation(zone->translate);
-      for (auto node : zone->object_nodes) {
-        dfs(node, mat);
-      }
-    }
+  for (auto node : scene_data_.characters) {
+    dfs(node, JPH::Mat44::sIdentity());
+  }
+  for (auto node : scene_data_.object_nodes) {
+    dfs(node, JPH::Mat44::sIdentity());
   }
 }

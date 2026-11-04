@@ -99,3 +99,28 @@ TerrainRenderData TerrainRenderer::GetRenderData() const noexcept {
   auto material_id = static_cast<int>(MaterialIndex::Grass);
   return {mesh_.GetVao(), GeoClipmaps::gPatchNum, hmap_.GetId(), material_id};
 }
+
+void TerrainRenderer::LoadFromScene(
+  JPH::BodyInterface* body_interface,
+  JPH::VertexList jolt_vertices,
+  JPH::IndexedTriangleList jolt_triangles) {
+  JPH::MeshShapeSettings settings(jolt_vertices, jolt_triangles);
+  settings.Sanitize(); // Recommended to clean up bad/degenerate triangles
+
+  // 4. Create the Shape
+  JPH::MeshShapeSettings::ShapeResult shape_result = settings.Create();
+  if (shape_result.HasError()) {
+    throw std::runtime_error("Failed to create Jolt MeshShape: "
+      + std::string(shape_result.GetError()));
+  }
+  JPH::ShapeRefC local_shape = shape_result.Get();
+  JPH::Vec3 translation(0.0f, 0.0f, 0.0f);
+  JPH::Quat rotation = JPH::Quat::sIdentity();
+  JPH::EMotionType motion_type = JPH::EMotionType::Static;
+  JPH::ObjectLayer object_layer =
+      Layers::NON_MOVING /* Your non-moving layer, e.g., Layers::NON_MOVING */;
+  JPH::BodyCreationSettings obj_settings(local_shape, translation, rotation,
+                                         motion_type, object_layer);
+  JPH::EActivation activation_state = JPH::EActivation::DontActivate;
+  body_id_ = body_interface->CreateAndAddBody(obj_settings, activation_state);
+}

@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "miniaudio.h"
+
 #include "../../core/Layers.h"
 #include "Animator.h"
 
@@ -52,6 +54,8 @@ void Character::Death() {
   state_ = State::Dead;
   shared_data_->animator_->StartCharacter(animation_id_,
                                           CharacterAnimType::Hurt, false);
+  PlaySpeechSound(3);
+  UpdateAudio();
 }
 
 void Character::Revive() {
@@ -93,13 +97,28 @@ JPH::Ref<JPH::CharacterVirtual> Character::CreateJphCharacter(SceneNode* node) {
   return character;
 }
 
+std::string_view gSoundsSpeech[] = {
+  "../assets/audio/sound_human_cough.mp3",
+  "../assets/audio/sound_human_laugh.mp3",
+  "../assets/audio/sound_human_roar.mp3",
+  "../assets/audio/sound_human_scream.mp3",
+};
+
+std::string_view gSoundsFootstep[] = {
+  "../assets/audio/sound_footstep_grass.mp3",
+  "../assets/audio/sound_footstep_wood.mp3",
+};
+
 Character::Character(CharacterSharedData* shared_data, SceneNode* scene_node,
                      const Scene::CharacterData* model,
-                     const Scene::CharacterRig* skin)
-    : scene_node_(scene_node),
-      model_(model),
+                     const Scene::CharacterRig* skin,
+                     ma_engine* audio_engine, ma_sound_group* sfx_group)
+    : model_(model),
       skin_(skin),
-      shared_data_(shared_data) {
+      shared_data_(shared_data),
+audio_engine_(audio_engine),
+sfx_group_(sfx_group) {
+  scene_node_ = scene_node;
   jph_character_ = CreateJphCharacter(scene_node);
   // When initializing a character/door/chest in Jolt:
   jph_character_->SetUserData(reinterpret_cast<uint64_t>(this));
@@ -107,6 +126,9 @@ Character::Character(CharacterSharedData* shared_data, SceneNode* scene_node,
   animation_id_ = shared_data_->animator_->AddInstanceCharacter(
       model_->nodes[skin->core_rig.skeletonRoot], &model_->nodes, skin, this);
   shared_data_->mCharacterVsCharacterCollision_.Add(jph_character_);
+
+  ma_sound_init_from_file(audio_engine_, gSoundsFootstep[0].data(), 0, sfx_group_, NULL, &sound_footstep_);
+  ma_sound_init_from_file(audio_engine_, gSoundsSpeech[0].data(), 0, sfx_group_, NULL, &sound_speech_);
 }
 
 JPH::Quat Character::GetRenderRotation() const noexcept {
@@ -164,15 +186,11 @@ void Character::PostPhysicsUpdate(JPH::Vec3 gravity, float dt) {
   JPH::Quat total_rotation = q_yaw * q_pitch;
   look_direction_ = total_rotation * JPH::Vec3(1.0f, 0.0f, 0.0f); // forward: +x
 
-  // 1. Calculate Target Speed based on input
   float target_speed = 0.0f;
   if (movement_direction_.Length() > 0.1f) {
     target_speed = is_sprinting_ ? cRunSpeed : cWalkSpeed;
   }
 
-  // 2. Snappy Exponential Acceleration (The "Logarithmic" feel)
-  // A high sharpness (e.g., 10.0f - 15.0f) means it reaches target speed almost
-  // instantly but still has a micro-blend to prevent snapping the animation.
   float sharpness = 12.0f;
   speed_ += (target_speed - speed_) * (1.0f - std::exp(-sharpness * dt));
 
@@ -236,6 +254,14 @@ void Character::PostPhysicsUpdate(JPH::Vec3 gravity, float dt) {
   // std::cout << new_velocity.GetX() << ' ' << new_velocity.GetX() <<
   // std::endl;
   jph_character_->SetLinearVelocity(new_velocity);
+
+  UpdateAudio();
+}
+
+void Character::UpdateAudio() {
+  auto position = GetPosition();
+  ma_sound_set_position(&sound_footstep_, position.GetX(), position.GetY(), position.GetZ());
+  ma_sound_set_position(&sound_speech_, position.GetX(), position.GetY(), position.GetZ());
 }
 
 bool Character::IsStanding() {
@@ -337,25 +363,62 @@ void Character::Disarm() {
 }
 
 JPH::Mat44 Character::GetWeaponSocketMatrix() const {
-  // 1. Get the full matrix (contains the 90-deg rotation AND the 0.01 scale)
   JPH::Mat44 bone_model_space =
       shared_data_->animator_->GetNodeGlobalTransformCharacter(
           animation_id_, skin_->hand_bone_id);
-
-  // 2. Normalize the axes.
-  // This DESTROYS the 0.01 scale but KEEPS the 90-deg rotation.
   JPH::Vec3 x = bone_model_space.GetAxisX().Normalized();
   JPH::Vec3 y = bone_model_space.GetAxisY().Normalized();
   JPH::Vec3 z = bone_model_space.GetAxisZ().Normalized();
   JPH::Vec3 translation = bone_model_space.GetTranslation();
-
-  // 3. Rebuild the clean matrix (Scale is now exactly 1.0)
   JPH::Mat44 clean_socket_space =
       JPH::Mat44(JPH::Vec4(x, 0.0f), JPH::Vec4(y, 0.0f), JPH::Vec4(z, 0.0f),
                  JPH::Vec4(translation, 1.0f));
-
   JPH::Mat44 character_world =
       JPH::Mat44::sRotationTranslation(GetRenderRotation(), GetPosition());
-
   return character_world * clean_socket_space;
+}
+
+void Character::PlayFootstepSound() {
+  int id = 0;
+  JPH::BodyID floor_body_id = jph_character_->GetGroundBodyID();
+  if (!floor_body_id.IsInvalid()) {
+    JPH::BodyLockRead lock(shared_data_->physics_system_->GetBodyLockInterface(), floor_body_id);
+    if (lock.Succeeded()) {
+      const JPH::Body& floor_body = lock.GetBody();
+      auto* game_object = reinterpret_cast<GameObject*>(floor_body.GetUserData());
+      const auto& floor_props = game_object->GetAssetProperties();
+      if (floor_props.type == AssetProperties::Type::Tile) {
+        id = 0;
+      } else {
+        id = 1;
+      }
+    }
+  }
+  if (prev_footstep_sound_id_ == id) {
+    ma_sound_stop(&sound_footstep_);
+    ma_sound_seek_to_pcm_frame(&sound_footstep_, 0);
+    ma_sound_start(&sound_footstep_);
+    return;
+  }
+  ma_sound_stop(&sound_speech_);
+  ma_sound_seek_to_pcm_frame(&sound_footstep_, 0);
+  ma_sound_uninit(&sound_footstep_);
+  ma_sound_init_from_file(audio_engine_, gSoundsFootstep[id].data(), 0, sfx_group_, NULL, &sound_footstep_);
+  ma_sound_start(&sound_footstep_);
+  prev_footstep_sound_id_ = id;
+}
+
+void Character::PlaySpeechSound(int id) {
+  if (prev_speech_sound_id_ == id) {
+    ma_sound_stop(&sound_speech_);
+    ma_sound_seek_to_pcm_frame(&sound_speech_, 0);
+    ma_sound_start(&sound_speech_);
+    return;
+  }
+  ma_sound_stop(&sound_speech_);
+  ma_sound_seek_to_pcm_frame(&sound_speech_, 0);
+  ma_sound_uninit(&sound_speech_);
+  ma_sound_init_from_file(audio_engine_, gSoundsSpeech[id].data(), 0, sfx_group_, NULL, &sound_speech_);
+  ma_sound_start(&sound_speech_);
+  prev_speech_sound_id_ = id;
 }

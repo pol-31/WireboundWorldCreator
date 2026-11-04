@@ -7,9 +7,10 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 
 #include "GameObject.h"
+#include "Scene.h"
+#include "miniaudio.h"
 
 class Scene;
-class SceneNode;
 class Hinge;
 
 class Door : public GameObject {
@@ -21,7 +22,8 @@ class Door : public GameObject {
   }
 
   void Initialize(JPH::PhysicsSystem* physics_system,
-       SceneNode* desk, JPH::BodyID frame_body_id);
+       SceneNode* desk, JPH::BodyID frame_body_id,
+       ma_engine* audio_engine, ma_sound_group* sfx_group);
 
   InteractPrompt GetInteractPrompt(Character* interactor) override;
 
@@ -29,10 +31,13 @@ class Door : public GameObject {
 
   JPH::Vec3 GetPosition() const override;
 
+
+    void Update(JPH::BodyInterface* bi, float deltaTime);
+
  private:
   JPH::PhysicsSystem* physics_system_ = nullptr;
-  SceneNode* scene_node_ = nullptr;
   std::vector<Hinge*> hinges_;
+  ma_sound sound_creak_;
 };
 
 #endif  // WIREBOUNDWORLDCREATOR_DOOR_H

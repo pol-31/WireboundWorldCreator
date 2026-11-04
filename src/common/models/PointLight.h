@@ -3,16 +3,18 @@
 
 #include <Jolt/Jolt.h>
 #include "../../core/Frustum.h"
+#include "GameObject.h"
 
-class SceneNode;
-
-struct PointLight {
+class PointLight : public GameObject {
+public:
   struct CullingData {
     Frustum frustum;
     bool is_visible = true;
   };
 
-  const SceneNode* object_;
+  PointLight(SceneNode* scene_node);
+  InteractPrompt GetInteractPrompt(Character* interactor) override;
+
   JPH::Vec3 color_ = JPH::Vec3::sOne();
   float factor_linear_ = 0.09f;
   float factor_quadratic_ = 0.032f;

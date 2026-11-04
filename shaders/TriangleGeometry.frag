@@ -34,6 +34,7 @@ layout(binding = 6) uniform sampler2DArray uAlbedoEmbroidery4;
 layout(binding = 7) uniform sampler2DArray uAlbedoSkyrim;
 
 layout(location = 8) uniform int uTriplanarSize;
+layout(location = 9) uniform sampler2D uPerlin;
 
 // 1. Core Triplanar Sampler: Samples ONE scale of the texture
 vec3 SampleTriplanar(sampler2DArray tex, vec3 scaledPos, vec3 weights, float layer) {
@@ -85,34 +86,23 @@ void main() {
     vec3 ao_rough_metal = vec3(0.0f, 0.6f, 1.0f);
 
     if (fs_in.use_triplanar != 0) {
-        // --- TRIPLANAR WEIGHTS ---
         vec3 blendWeights = abs(fs_in.TBN[2]);
         blendWeights = (blendWeights - 0.2) * 7.0;
         blendWeights = max(blendWeights, 0.0);
         blendWeights /= (blendWeights.x + blendWeights.y + blendWeights.z);
 
-        // --- DISTANCES FOR INTERIORS ---
         float distToCam = length(camera.pos - fs_in.FragPos);
-
-        // Super Close (0m to 3m) blending into Mid (3m to 6m)
         float blendCloseMid = smoothstep(3.0, 6.0, distToCam);
-
-        // Mid (6m to 15m) blending into Far (15m to 25m corridor length)
         float blendMidFar = smoothstep(15.0, 25.0, distToCam);
-
         float blendCloseFar = smoothstep(3.0, 10.0, distToCam);
 
-        // --- SCALES ---
         float baseScale = (1.0f / fs_in.use_triplanar);
-        float scaleClose = baseScale * 4.0f;  // Extreme macro detail (mud wall cracks)
-        float scaleMid   = baseScale * 2.0f;  // Normal room scale
-        float scaleFar   = baseScale * 1.0f;  // Low frequency to break tiling down halls
+        float scaleClose = baseScale * 4.0f;
+        float scaleMid   = baseScale * 2.0f;
+        float scaleFar   = baseScale * 1.0f;
 
         float layer = float(fs_in.material_id);
 
-        // --- THE MAGIC: 3 Lines of Code ---
-
-        // clay (walls, ceiling)
         baseAlbedo = vec3(0.99f);
         ao_rough_metal = vec3(1.0f, 0.85f, 0.0f);
         if (fs_in.material_id >= 11) {
@@ -122,9 +112,53 @@ void main() {
             baseAlbedo = texture(uAlbedoSkyrim, tc).rgb;
         } else {
             if (uTriplanarSize == 2) {
-                baseAlbedo      = SampleTriplanar2Level(uAlbedo,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
-                normalMapSample = SampleTriplanar2Level(uNormal,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
-                ao_rough_metal  = SampleTriplanar2Level(uAoRoughMetal, fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
+                if (fs_in.material_id == 2) {
+                    // wall clay
+                    baseAlbedo = SampleTriplanar2Level(uAlbedo, fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
+                    normalMapSample = SampleTriplanar2Level(uNormal, fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
+                    ao_rough_metal = SampleTriplanar2Level(uAoRoughMetal, fs_in.FragPos, blendWeights, layer, scaleClose, scaleFar, blendCloseFar);
+                } else {
+                    float noise = texture(uPerlin, fs_in.FragPos.xz * 0.03).r;
+                    float slope = normalize(fs_in.Normal.xyz).y;
+                    slope += (noise - 0.5) * 1.0925; // Adjust 0.25 to control how wild/random the transition is
+                    float grassWeight = smoothstep(0.7, 0.8, slope);
+                    float rockWeight  = 1.0 - smoothstep(0.3, 0.4, slope);
+                    float sandWeight  = clamp(1.0 - (grassWeight + rockWeight), 0.0, 1.0);
+                    float totalWeight = grassWeight + sandWeight + rockWeight;
+                    grassWeight /= totalWeight;
+                    sandWeight  /= totalWeight;
+                    rockWeight  /= totalWeight;
+
+                    float layerGrass = 5.0;
+                    float layerSand  = 0.0;
+                    float layerRock  = 1.0;
+
+                    vec3 albedoGrass = SampleTriplanar2Level(uAlbedo, fs_in.FragPos, blendWeights, layerGrass, scaleClose, scaleFar, blendCloseFar);
+                    vec3 albedoSand  = SampleTriplanar2Level(uAlbedo, fs_in.FragPos, blendWeights, layerSand,  scaleClose, scaleFar, blendCloseFar);
+                    vec3 albedoRock  = SampleTriplanar2Level(uAlbedo, fs_in.FragPos, blendWeights, layerRock,  scaleClose, scaleFar, blendCloseFar);
+                    baseAlbedo = (albedoGrass * grassWeight) +
+                    (albedoSand  * sandWeight)  +
+                    (albedoRock  * rockWeight);
+
+                    if (distToCam < 1.0f) {
+                        vec3 normGrass = SampleTriplanar2Level(uNormal, fs_in.FragPos, blendWeights, layerGrass, scaleClose, scaleFar, blendCloseFar);
+                        vec3 normSand  = SampleTriplanar2Level(uNormal, fs_in.FragPos, blendWeights, layerSand,  scaleClose, scaleFar, blendCloseFar);
+                        vec3 normRock  = SampleTriplanar2Level(uNormal, fs_in.FragPos, blendWeights, layerRock,  scaleClose, scaleFar, blendCloseFar);
+                        normalMapSample = (normGrass * grassWeight) +
+                        (normSand  * sandWeight)  +
+                        (normRock  * rockWeight);
+
+                        vec3 armGrass = SampleTriplanar2Level(uAoRoughMetal, fs_in.FragPos, blendWeights, layerGrass, scaleClose, scaleFar, blendCloseFar);
+                        vec3 armSand  = SampleTriplanar2Level(uAoRoughMetal, fs_in.FragPos, blendWeights, layerSand,  scaleClose, scaleFar, blendCloseFar);
+                        vec3 armRock  = SampleTriplanar2Level(uAoRoughMetal, fs_in.FragPos, blendWeights, layerRock,  scaleClose, scaleFar, blendCloseFar);
+                        ao_rough_metal = (armGrass * grassWeight) +
+                        (armSand  * sandWeight)  +
+                        (armRock  * rockWeight);
+                    } else {
+                        ao_rough_metal.g = 0.9f;
+                        ao_rough_metal.b = 0.1f;
+                    }
+                }
             } else if (uTriplanarSize == 3) {
                 baseAlbedo      = SampleTriplanar3Level(uAlbedo,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleMid, scaleFar, blendCloseMid, blendMidFar);
                 normalMapSample = SampleTriplanar3Level(uNormal,       fs_in.FragPos, blendWeights, layer, scaleClose, scaleMid, scaleFar, blendCloseMid, blendMidFar);
@@ -134,18 +168,14 @@ void main() {
                 normalMapSample = texture(uNormal, tc).rgb;
                 ao_rough_metal = texture(uAoRoughMetal, tc).rgb;
                 baseAlbedo = texture(uAlbedo, tc).rgb;
-                //baseAlbedo = vec3(0.0f);
             }
-            baseAlbedo = baseAlbedo * 0.2f + 0.9f;
+            if (fs_in.material_id == 2) {
+                baseAlbedo = baseAlbedo * 0.2f + 0.9f;
+            }
         }
-
-//        ao_rough_metal.g *= 1.1f;
-        //baseAlbedo = vec3(0.0f);
-        //normalMapSample = vec3(0.5f, 0.5f, 1.0f);
-        //ao_rough_metal = vec3(0.0f, 0.6f, 1.0f);
     } else {
         vec3 tc = vec3(fs_in.TexCoords, float(fs_in.material_id));
-        if (fs_in.material_id < 5) {
+        if (fs_in.material_id < 6) {
             normalMapSample = texture(uNormal, tc).rgb;
             ao_rough_metal = texture(uAoRoughMetal, tc).rgb;
             baseAlbedo = texture(uAlbedo, tc).rgb * fs_in.vert_color.rgb / 255.0f;
@@ -163,18 +193,9 @@ void main() {
                 tc = vec3(fs_in.TexCoords, float(fs_in.material_id - 11));
                 tc.y = -tc.y;
                 baseAlbedo = texture(uAlbedoSkyrim, tc).rgb;
-//                baseAlbedo = vec3(1.0f);
             }
         }
     }
-
-    //ao_rough_metal.r = 1.0f;
-    //ao_rough_metal.g = 0.99f;
-    //ao_rough_metal.b = 0.1f;
-
-
-//    gPosition = vec4(fs_in.FragPos, ao_rough_metal.g);
-
     vec3 tangentNormal = normalMapSample * 2.0 - 1.0;
     if (fs_in.use_triplanar != 0) {
         float normalStrength = 0.15;
@@ -183,8 +204,5 @@ void main() {
     tangentNormal = normalize(tangentNormal);
     mat3 TBN = mat3(normalize(fs_in.TBN[0]), normalize(fs_in.TBN[1]), normalize(fs_in.TBN[2]));
     gNormal = vec4(EncodeNormal(normalize(TBN * tangentNormal)), ao_rough_metal.g, ao_rough_metal.b);
-
-    //    gNormal = vec4(normalize(TBN * tangentNormal), ao_rough_metal.b);
-
     gAlbedoSpec = vec4(baseAlbedo, ao_rough_metal.r);
 }

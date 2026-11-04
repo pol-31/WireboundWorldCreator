@@ -31,11 +31,24 @@ struct AssetProperties {
     Player,
   };
 
+  enum class AudioMaterial {
+    Metal = 0,
+    Wood = 1,
+    Glass = 2,
+    Coin = 3,
+    Flesh = 4,
+    // Stone = 2,
+    // Dirt = 3,
+    // Flesh = 4
+};
+
   Type type = Type::Static;
   CollisionType collision_type = CollisionType::Cube;
   float mass = 10.0f;
   bool isPickable = false;
   bool isInteractable = false;
+  AudioMaterial audio_material = AudioMaterial::Metal;
+  std::string interaction_prompt = ""; // e.g., "Open", "Pick Up", "Inspect"
 };
 
 const AssetProperties& GetAssetDefaultProperties(const std::string& meshName);

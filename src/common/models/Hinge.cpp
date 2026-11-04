@@ -7,9 +7,10 @@
 #include "Scene.h"
 
 Hinge::Hinge(JPH::PhysicsSystem* physics_system,
-      const SceneNode* scene_node)
-    : physics_system_(physics_system),
-      scene_node_(scene_node) {}
+      SceneNode* scene_node)
+    : physics_system_(physics_system) {
+  scene_node_ = scene_node;
+}
 
 void Hinge::TakeDamage(JPH::Vec3 impulse, JPH::RVec3 hit_pos, float damage) {
   if (Dismantle()) {
