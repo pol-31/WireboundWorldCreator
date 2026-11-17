@@ -37,7 +37,7 @@ std::array<std::string, 6> gDefaultPaths{
   "../assets/skybox/field_posy.jpg", "../assets/skybox/field_negy.jpg",
   "../assets/skybox/field_posz.jpg", "../assets/skybox/field_negz.jpg"};
 
-void Cubemap::LoadZone(const SceneZone* zone) {
+void Cubemap::LoadZone(const std::string& zone_name) {
   GLuint opengl_id = 0;
   glGenTextures(1, &opengl_id);
   glBindTexture(GL_TEXTURE_CUBE_MAP, opengl_id);
@@ -51,7 +51,7 @@ void Cubemap::LoadZone(const SceneZone* zone) {
   const float black_pixel[3] = {0.0f, 0.0f, 0.0f};
 
   for (int i = 0; i < 6; ++i) {
-    std::string filename = "../assets/ibl/" + zone->scene_node->name + "_face_" + std::to_string(i) + ".hdr";
+    std::string filename = "../assets/ibl/" + zone_name + "_face_" + std::to_string(i) + ".hdr";
 
     float* data = nullptr;
     int face_width = 1;

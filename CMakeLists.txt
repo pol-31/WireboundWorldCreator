@@ -87,7 +87,10 @@ add_executable(WireboundWorldCreator
         src/common/models/AssetProperties.h
         src/common/models/StaticObject.cpp
         src/common/models/PointLight.cpp
+        src/common/models/Particle.cpp
         src/common/models/GameObject.cpp
+        src/common/models/ShootDecalInfo.h
+        src/render/SpriteUv.h
 )
 
 set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external)

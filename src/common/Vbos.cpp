@@ -1007,12 +1007,12 @@ std::string_view ToString(SpriteId id) {
   return gSpriteNames[static_cast<size_t>(id)];
 }
 
-const std::string gUiSpritesPath = "../assets/UiSprites.txt";
+const std::string gUiSpritesPath = "../assets/TexAtlas.txt";
 
 void ReadUiSprites() {
   std::ifstream in_file(gUiSpritesPath);
   if (!in_file.is_open()) {
-    throw std::runtime_error("Unable to open UiSprites file");
+    throw std::runtime_error("Unable to open TexAtlas file");
   }
   std::string name;
   SpriteTc t;
@@ -1021,7 +1021,7 @@ void ReadUiSprites() {
     gUiSprites[static_cast<size_t>(id)] = t;
   }
   if (!in_file.eof()) {
-    throw std::runtime_error("Malformed UiSprites file");
+    throw std::runtime_error("Malformed TexAtlas file");
   }
 }
 

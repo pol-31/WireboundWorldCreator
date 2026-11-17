@@ -29,6 +29,8 @@ struct AssetProperties {
     Wall,
     Character,
     Player,
+    Ibl,
+    Transparent,
   };
 
   enum class AudioMaterial {

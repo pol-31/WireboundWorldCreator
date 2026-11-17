@@ -182,7 +182,9 @@ std::filesystem::file_time_type Shader::GetLastModificationTime() {
 }
 
 void Shader::DebugUpdate() {
-  // return;
+#ifdef NDEBUG
+  return;
+#endif
   namespace fs = std::filesystem;
   auto new_time = GetLastModificationTime();
   if (new_time <= last_modification_time_) {

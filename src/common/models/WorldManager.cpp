@@ -70,7 +70,7 @@ void WorldManager::PushFrustumCulled(
   }
   ssbo_data[node->mesh->id].push_back(std::move(new_instance));
   for (const SceneNode* child : node->children) {
-    PushFrustumCulled(child, ssbo_data, debug);
+    // PushFrustumCulled(child, ssbo_data, debug);
   }
 }
 
@@ -85,7 +85,7 @@ void WorldManager::PushFrustumCulled(
 }
 
 // specifically for character and weapons (they're not included by zones)
-bool WorldManager::IsZoneCulled(JPH::Vec3 pos) {
+bool WorldManager::IsZoneCulled(const std::set<int>& zones, JPH::Vec3 pos) {
   auto character_zone = FindNearestZone(pos);
   auto it =
       std::find(active_zones_.begin(), active_zones_.end(), character_zone);
@@ -108,11 +108,12 @@ int GetLodByDist(JPH::Vec3 camera_pos, JPH::Vec3 obj_pos) {
 }
 
 void WorldManager::CullAnimatedObject(
+    const std::set<int>& zones,
     const Frustum& camera_frustum, JPH::Vec3 camera_pos,
     const std::vector<PointLight*>& zone_point_lights, JPH::Vec3 pos,
     AnimatedRenderData render_data, bool apply_directed_lights,
     bool is_player) {
-  if (IsZoneCulled(pos)) {
+  if (IsZoneCulled(zones, pos)) {
     return;
   }
   auto bounds = GetDefaultBounds();
@@ -198,7 +199,9 @@ void WorldManager::Cull(bool prebake_ibl_pass, bool skip_portals,
   bool apply_directed_light = false;
   std::vector<PointLight*> point_lights;
 
-  for (int zone_id : active_zones_) {
+  auto active_render_zones = GetActiveRenderZones();
+
+  for (int zone_id : active_render_zones) {
     auto* zone = zones[zone_id];
     if (zone->properties.outside) {
       apply_directed_light = true;
@@ -218,12 +221,14 @@ void WorldManager::Cull(bool prebake_ibl_pass, bool skip_portals,
           point_lights.size());
   active_dir_lights_ =
       std::vector<std::vector<const SceneNode*>>(dir_lights_.size());
+  active_camera_transparent = std::vector<const SceneNode*>();
   active_camera_lod0 = std::vector<const SceneNode*>();
   active_camera_lod1 = std::vector<const SceneNode*>();
   active_camera_lod2 = std::vector<const SceneNode*>();
   final_render_data_.ssbo_data.clear();
   final_render_data_.point_lights_fake.clear();
 
+  final_render_data_.camera.objects_transparent.clear();
   final_render_data_.camera.objects_lod0.clear();
   final_render_data_.camera.objects_lod1.clear();
   final_render_data_.camera.objects_lod2.clear();
@@ -255,26 +260,105 @@ void WorldManager::Cull(bool prebake_ibl_pass, bool skip_portals,
     }
   };
 
-  for (int zone_id : active_zones_) {
+  auto CheckStaticObjects = [&] (const std::vector<std::unique_ptr<StaticObject>>& static_objects) {
+    for (auto& obj : static_objects) {
+      SceneNode* obj_scene_node = obj->GetSceneNode();
+      if (skip_portals) {
+        auto mesh_type =
+          GetAssetDefaultProperties(obj_scene_node->mesh->name).type;
+        if (mesh_type == AssetProperties::Type::HingeMoving) {
+          continue;
+        }
+      }
+      if (camera_frustum.Overlaps(obj_scene_node->global_bounds)) {
+        if (--total_objects < 0) {
+          continue;
+        }
+        //TODO: closes point of aabb instead
+        auto lod = GetLodByDist(camera_pos, obj_scene_node->global_bounds.GetCenter());
+        if (lod == 0) {
+          active_camera_lod0.push_back(obj_scene_node);
+        } else if (lod == 1) {
+          active_camera_lod1.push_back(obj_scene_node);
+        } else {
+          active_camera_lod2.push_back(obj_scene_node);
+        }
+      }
+    }
+  };
+
+  auto CheckTransparentObjects = [&] (const std::vector<std::unique_ptr<StaticObject>>& static_objects) {
+    for (auto& obj : static_objects) {
+      SceneNode* obj_scene_node = obj->GetSceneNode();
+      if (skip_portals) {
+        auto mesh_type =
+          GetAssetDefaultProperties(obj_scene_node->mesh->name).type;
+        if (mesh_type == AssetProperties::Type::HingeMoving) {
+          continue;
+        }
+      }
+      if (camera_frustum.Overlaps(obj_scene_node->global_bounds)) {
+        if (--total_objects < 0) {
+          continue;
+        }
+        active_camera_transparent.push_back(obj_scene_node);
+      }
+    }
+  };
+
+  auto CheckStaticObjectsLight = [&] (const std::vector<std::unique_ptr<StaticObject>>& static_objects) {
+    for (auto& obj : static_objects) {
+      SceneNode* obj_scene_node = obj->GetSceneNode();
+      if (skip_portals) {
+        auto mesh_type =
+          GetAssetDefaultProperties(obj_scene_node->mesh->name).type;
+        if (mesh_type == AssetProperties::Type::HingeMoving) {
+          continue;
+        }
+      }
+      if (apply_directed_light) {
+        for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
+          const auto& light = dir_lights_[light_id];
+          if (light.frustum.Overlaps(obj_scene_node->global_bounds)) {
+            active_dir_lights_[light_id].push_back(obj_scene_node);
+          }
+        }
+      }
+      for (int light_id = 0; light_id < point_lights.size(); ++light_id) {
+        const auto& light = point_lights[light_id];
+        auto light_pos = light->GetSceneNode()->global_bounds.GetCenter();
+        for (int face = 0; face < 6; ++face) {
+          if (!light->frustum_[face].is_visible) {
+            continue;
+          }
+          if (light->frustum_[face].frustum.Overlaps(
+                  obj_scene_node->global_bounds, light_pos, light->radius_)) {
+            active_point_lights_[light_id][face].push_back(obj_scene_node);
+                  }
+        }
+      }
+    }
+  };
+
+  for (int zone_id : active_render_zones) {
     if (prebake_ibl_pass && zone_id != cur_zone_id_) {
       continue;
     }
     const auto* zone = zones[zone_id];
-    const auto& static_objects = zone->static_objects_;
 
     if (render_animated) {
       for (const auto& c : characters_) {
-        CullAnimatedObject(camera_frustum, ToJph(camera_->GetPosition()),
+        CullAnimatedObject(active_render_zones, camera_frustum, ToJph(camera_->GetPosition()),
                            point_lights, c->GetBody()->GetPosition(),
                            c->GetBody()->GetAnimatedRenderData(),
                            apply_directed_light, false);
       }
-      CullAnimatedObject(camera_frustum, ToJph(camera_->GetPosition()),
+      CullAnimatedObject(active_render_zones, camera_frustum, ToJph(camera_->GetPosition()),
                          point_lights, player_->GetBody()->GetPosition(),
                          player_->GetBody()->GetAnimatedRenderData(),
                          apply_directed_light, true);
       for (const auto& w : weapons_) {
-        CullAnimatedObject(camera_frustum, ToJph(camera_->GetPosition()),
+        CullAnimatedObject(active_render_zones, camera_frustum, ToJph(camera_->GetPosition()),
                            point_lights, w->GetPosition(),
                            w->GetAnimatedRenderData(),
                            apply_directed_light, false);
@@ -287,51 +371,10 @@ void WorldManager::Cull(bool prebake_ibl_pass, bool skip_portals,
       }
     }
 
-    for (auto& obj : static_objects) {
-      if (skip_portals) {
-        auto mesh_index = obj->GetSceneNode()->mesh;
-        auto mesh_type =
-          GetAssetDefaultProperties(obj->GetSceneNode()->mesh->name).type;
-        if (mesh_type == AssetProperties::Type::HingeMoving) {
-          continue;
-        }
-      }
-      if (camera_frustum.Overlaps(obj->GetSceneNode()->global_bounds)) {
-        if (--total_objects < 0) {
-          continue;
-        }
-        //TODO: closes point of aabb instead
-        auto lod = GetLodByDist(camera_pos, obj->GetSceneNode()->global_bounds.GetCenter());
-        if (lod == 0) {
-          active_camera_lod0.push_back(obj->GetSceneNode());
-        } else if (lod == 1) {
-          active_camera_lod1.push_back(obj->GetSceneNode());
-        } else {
-          active_camera_lod2.push_back(obj->GetSceneNode());
-        }
-      }
-      if (apply_directed_light) {
-        for (int light_id = 0; light_id < dir_lights_.size(); ++light_id) {
-          const auto& light = dir_lights_[light_id];
-          if (light.frustum.Overlaps(obj->GetSceneNode()->global_bounds)) {
-            active_dir_lights_[light_id].push_back(obj->GetSceneNode());
-          }
-        }
-      }
-      for (int light_id = 0; light_id < point_lights.size(); ++light_id) {
-        const auto& light = point_lights[light_id];
-        auto light_pos = light->GetSceneNode()->global_bounds.GetCenter();
-        for (int face = 0; face < 6; ++face) {
-          if (!light->frustum_[face].is_visible) {
-            continue;
-          }
-          if (light->frustum_[face].frustum.Overlaps(
-                  obj->GetSceneNode()->global_bounds, light_pos, light->radius_)) {
-            active_point_lights_[light_id][face].push_back(obj->GetSceneNode());
-          }
-        }
-      }
-    }
+    CheckStaticObjects(zone->static_objects_);
+    CheckStaticObjectsLight(zone->static_objects_);
+    CheckTransparentObjects(zone->transparent_objects_);
+    CheckStaticObjectsLight(zone->transparent_objects_);
   }
 
   /// linealization (we have FrustumCulledObjects, now
@@ -340,16 +383,32 @@ void WorldManager::Cull(bool prebake_ibl_pass, bool skip_portals,
   /// --- SO HERE we packing instnce data (ssbo) camera - plight - dlight
   const Scene::SceneData& scene_data = scene_->scene_data_;
   int meshes_num = scene_data.meshes.size();
+  auto ssbo_data_cam_transparent = std::vector<std::vector<InstanceGpu>>(meshes_num);
   auto ssbo_data_cam_lod0 = std::vector<std::vector<InstanceGpu>>(meshes_num);
   auto ssbo_data_cam_lod1 = std::vector<std::vector<InstanceGpu>>(meshes_num);
   auto ssbo_data_cam_lod2 = std::vector<std::vector<InstanceGpu>>(meshes_num);
   auto ssbo_data_pl =
       std::vector<std::array<std::vector<std::vector<InstanceGpu>>, 6>>();
   auto ssbo_data_dl = std::vector<std::vector<std::vector<InstanceGpu>>>();
+  PushFrustumCulled(active_camera_transparent, ssbo_data_cam_transparent, debug);
   PushFrustumCulled(active_camera_lod0, ssbo_data_cam_lod0, debug);
   PushFrustumCulled(active_camera_lod1, ssbo_data_cam_lod1, debug);
   PushFrustumCulled(active_camera_lod2, ssbo_data_cam_lod2, debug);
   // std::cout << zone->portals.size() << std::endl;
+
+  /// --- DECALS ---
+  const SceneMesh& decal_mesh = scene_->scene_data_.meshes[scene_->mesh_shoot_hole_id];
+  for (const auto& d : *decals_) {
+    auto decal_pos = d.transform.GetTranslation();
+    if (camera_frustum.Overlaps(JPH::AABox(decal_pos, 0.1f))) {
+      InstanceGpu new_instance;
+      new_instance.model = d.transform;
+      new_instance.material_id =
+        decal_mesh.primitives_lods[0][0].material_id;
+      // auto lod = GetLodByDist(camera_pos, decal_pos);
+      ssbo_data_cam_transparent[decal_mesh.id].push_back(std::move(new_instance));
+    }
+  }
 
   for (int i = 0; i < active_point_lights_.size(); ++i) {
     ssbo_data_pl.push_back(
@@ -367,6 +426,7 @@ void WorldManager::Cull(bool prebake_ibl_pass, bool skip_portals,
   }
 
   final_render_data_.ssbo_data.clear();
+  PackSSBO(ssbo_data_cam_transparent, final_render_data_.camera.objects_transparent);
   PackSSBO(ssbo_data_cam_lod0, final_render_data_.camera.objects_lod0);
   PackSSBO(ssbo_data_cam_lod1, final_render_data_.camera.objects_lod1);
   PackSSBO(ssbo_data_cam_lod2, final_render_data_.camera.objects_lod2);
@@ -384,23 +444,23 @@ void WorldManager::Cull(bool prebake_ibl_pass, bool skip_portals,
     l_out.source = &dir_lights_[i];
     PackSSBO(ssbo_data_dl[i], l_out.objects);
   }
-  final_render_data_.active_zones = active_zones_;
+  final_render_data_.active_zones = active_render_zones;
 }
 
 int WorldManager::FindNearestZone(JPH::Vec3 player_pos) {
   const auto& zones = scene_->scene_data_.zones;
 
-  int nearest_index = -1;
+  int nearest_index = 0;
   float min_sq_dist = FLT_MAX;
 
   for (int i = 0; i < zones.size(); ++i) {
     // GetSqDistanceTo returns 0.0f if the point is inside the AABB
     float sq_dist = zones[i]->scene_node->global_bounds.GetSqDistanceTo(player_pos);
 
-    if (sq_dist < min_sq_dist) {
-      min_sq_dist = sq_dist;
-      nearest_index = i;
-    }
+    // if (sq_dist < min_sq_dist) {
+    //   min_sq_dist = sq_dist;
+    //   nearest_index = i;
+    // }
 
     // Early exit: We are perfectly inside a zone
     if (sq_dist == 0.0f) {

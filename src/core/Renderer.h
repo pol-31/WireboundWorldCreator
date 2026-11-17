@@ -42,27 +42,30 @@ class Renderer : public WindowResizeListener {
 
   void RenderDebug();
 
-  void UpdateBuffer();
+  void UpdateBuffer(size_t objects_num);
 
   /// we have culled objects from WorldManager, so we just
   /// DrawShadowPass() -> DrawGeometryPass() -> DrawLightPass()
   /// OR just RenderDebug();
   void DrawShadowPass();
 
-  void DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
-                        bool render_geometry);
+  void DrawGeometryPass(
+    TerrainRenderData terrain,
+    int triplanar_level,
+    bool render_geometry);
 
   // void DrawBloom();
 
-  void DrawSsaoPass();
+  void DrawSsaoPass(float kernel_size, float radius, float bias);
 
   void DrawLightPass(CubemapRenderData cubemap, bool light_pass,
-                     bool apply_shadows, bool render_light_sources,
-                     bool render_bloom, bool ibl, int cubemap_type);
+                      bool apply_shadows, bool render_light_sources,
+                      bool render_bloom, bool ibl, int cubemap_type);
 
   void RenderToTheScreen();
 
   GLuint GetLightingFbo();
+  GLuint GetLightingTex();
 
   void IblBakeRadiance(CubemapRenderData cubemap);
   void IblBakePrefiltered(CubemapRenderData cubemap);
@@ -78,7 +81,8 @@ class Renderer : public WindowResizeListener {
   void ReLoadIblZones();
 
   // returns appropriate ibl zone name or {} if it shouldn't be baked
-  std::string GetIblBakeFilename(const std::string& zone_name);
+  std::string GetIblBakeFilename(const std::string& ibl_name);
+  std::string GetIblBakeFilename(IblZoneType ibl_type);
 
   struct IblProperties {
     std::string_view path = {};
@@ -124,9 +128,6 @@ class Renderer : public WindowResizeListener {
   static const int cMaxPointLights;
   static const GLuint cShadowMapSize;
 
-  static const GLuint cBloomSize;
-  static const GLuint cSsaoSize;
-
   static const int cShadowObjectLod;
 
  private:
@@ -139,6 +140,8 @@ class Renderer : public WindowResizeListener {
   void InitSsaoNoise();
 
   void InitSsaoFbo();
+
+  Shader sh_transparent_;
 
   Texture tex_ssao_noise_;
   GLuint fbo_ssao_ = 0;

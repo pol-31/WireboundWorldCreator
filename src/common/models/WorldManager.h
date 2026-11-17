@@ -10,6 +10,7 @@
 
 #include "../../core/Frustum.h"
 #include "Scene.h"
+#include "ShootDecalInfo.h"
 
 class Camera;
 class PlayerController;
@@ -61,6 +62,7 @@ class WorldManager {
     std::vector<AnimatedRenderData> object_animated;
   };
   struct FinalCamera {
+    std::vector<SsboOffsetObject> objects_transparent;
     std::vector<SsboOffsetObject> objects_lod0;
     std::vector<SsboOffsetObject> objects_lod1;
     std::vector<SsboOffsetObject> objects_lod2;
@@ -83,7 +85,7 @@ class WorldManager {
 
   int FindNearestZone(JPH::Vec3 player_pos);
 
-  bool IsZoneCulled(JPH::Vec3 pos);
+  bool IsZoneCulled(const std::set<int>& zones, JPH::Vec3 pos);
 
   bool UpdatePlayerZone(JPH::Vec3 player_pos,
                         JPH::BodyInterface* body_interface);
@@ -92,32 +94,23 @@ class WorldManager {
     return active_zones_;
   }
 
+  void SetDecals(const std::vector<ShootDecalInfo>* decals) {
+    decals_ = decals;
+  }
+
  private:
   void ActivateZone(int zone_index, JPH::BodyInterface* body_interface);
 
   void DeactivateZone(int zone_index, JPH::BodyInterface* body_interface);
 
-  void CullAnimatedObject(const Frustum& frustum_camera, JPH::Vec3 camera_pos,
+  void CullAnimatedObject(const std::set<int>& zones,
+                          const Frustum& frustum_camera, JPH::Vec3 camera_pos,
                           const std::vector<PointLight*>& zone_point_lights,
                           JPH::Vec3 pos, AnimatedRenderData render_data,
                           bool apply_directed_lights, bool is_player);
 
   std::set<int> GetActiveRenderZones();
   std::set<int> GetActivePhysicsZones();
-
-  // struct Zone {
-  //   Scene::ModelNode* scene_node = nullptr;
-  //   std::vector<int> point_lights;
-  //   std::vector<int> dir_lights;
-  //   std::vector<int> characters;
-  //   std::vector<int> weapons;
-  //   std::vector<int> objects;
-  // };
-  //
-  // struct Tile {
-  //   std::string_view hmap_path;
-  //   JPH::AABox bounds;
-  // };
 
   // TileRenderer tile_renderer_; // hmaps geoclipmaps
 
@@ -135,6 +128,7 @@ class WorldManager {
   const std::vector<std::unique_ptr<EnemyController>>& characters_;
   const std::vector<std::unique_ptr<Weapon>>& weapons_;
   const std::vector<DirectedLight>& dir_lights_;
+  const std::vector<ShootDecalInfo>* decals_;
   int cur_zone_id_ = -1;
   std::set<int> active_zones_;
   // relative to cur scene for sure
@@ -152,6 +146,7 @@ class WorldManager {
   std::vector<std::array<std::vector<const SceneNode*>, 6>>
       active_point_lights_;
   std::vector<std::vector<const SceneNode*>> active_dir_lights_;
+  std::vector<const SceneNode*> active_camera_transparent;
   std::vector<const SceneNode*> active_camera_lod0;
   std::vector<const SceneNode*> active_camera_lod1;
   std::vector<const SceneNode*> active_camera_lod2;

@@ -1,6 +1,8 @@
 #ifndef WIREBOUNDWORLDCREATOR_SRC_CORE_CUBEMAP_H_
 #define WIREBOUNDWORLDCREATOR_SRC_CORE_CUBEMAP_H_
 
+#include <string_view>
+
 #include <glad/glad.h>
 
 #include "../render/Shader.h"
@@ -25,7 +27,7 @@ class Cubemap {
 
   CubemapRenderData GetRenderData() const noexcept;
 
-  void LoadZone(const SceneZone* zone);
+  void LoadZone(const std::string& zone);
 
   void LoadDefaultCubemap();
 

@@ -35,6 +35,7 @@
 #include "../common/models/EnemyController.h"
 #include "../common/models/ModelLoader.h"
 #include "../common/models/PlayerController.h"
+#include "../common/models/Particle.h"
 #include "../common/models/PointLight.h"
 #include "../common/models/StaticObject.h"
 #include "../io/Camera.h"
@@ -65,8 +66,12 @@ struct RenderSettings {
 
   bool geometry_pass = true;
   bool light_pass = true;
-  int objects_num = 500;
+  int objects_num = 5000;
   int cubemap_type = 0;
+
+  float ssao_kernel_size = 16.0f;
+  float ssao_radius = 0.5f;
+  float ssao_bias = 0.025f;
 };
 
 class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
@@ -188,6 +193,9 @@ class Game : public JPH::ContactListener, public JPH::CharacterContactListener {
   ma_sound_group sfx_group_;
   float sounds_level_ = 1.0f;
   std::vector<std::unique_ptr<ma_sound>> collision_sounds_;
+
+  ParticleManager particle_manager_; // after ui_renderer
+  int prev_decals_num_ = 0;
 
  public:
   /// ContactListener callbacks

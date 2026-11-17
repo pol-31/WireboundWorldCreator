@@ -95,7 +95,7 @@ void UpdateDirLightFrustum(DirectedLight &light, const Camera *camera) {
 
   // Pull shadow camera BACK along -sun_dir so higher structures (roofs) are
   // captured
-  float shadow_distance = 30.0f;
+  float shadow_distance = 10.0f;
   JPH::Vec3 sun_position = focus_pt - light.dir * shadow_distance;
 
   JPH::Vec3 world_up(0.0f, 1.0f, 0.0f);
@@ -105,7 +105,7 @@ void UpdateDirLightFrustum(DirectedLight &light, const Camera *camera) {
 
   float ortho_size = 15.0f;
   float near_plane = 1.0f;
-  float far_plane = shadow_distance + 20.0f;
+  float far_plane = shadow_distance + 10.0f;
 
   JPH::Mat44 lightProjection = CreateOrthoMatrix(
       -ortho_size, ortho_size, -ortho_size, ortho_size, near_plane, far_plane);
@@ -132,14 +132,11 @@ void Game::PrebakeEnvMaps() {
   stbi_flip_vertically_on_write(false);
 
   // --- 1. PROCESS EACH ROOM / ZONE ---
-  for (const SceneZone *zone :
-       mdl_loader_.GetScene()->scene_data_.zones) {
-    auto ibl_name = renderer_.GetIblBakeFilename(zone->scene_node->name);
-    if (ibl_name.empty()) {
-      continue;
-    }
+  for (const SceneNode *ibl_node :
+       mdl_loader_.GetScene()->scene_data_.ibl) {
+    auto ibl_name = renderer_.GetIblBakeFilename(ibl_node->name);
     cubemap_.LoadDefaultCubemap();
-    auto camera_pos = zone->scene_node->global_bounds.GetCenter();
+    auto camera_pos = ibl_node->local_transform.t;
 
     // Step A: Render the 6 environment faces to raw .hdr files
     for (int i = 0; i < std::size(gPrebakeCameraDirs); ++i) {
@@ -160,11 +157,13 @@ void Game::PrebakeEnvMaps() {
                           render_settings_.objects_num);
 
       glDisable(GL_BLEND);
-      renderer_.UpdateBuffer();
+      renderer_.UpdateBuffer(render_settings_.objects_num);
       // renderer_.DrawShadowPass();
       renderer_.DrawGeometryPass(terrain_renderer_.GetRenderData(),
                                  render_settings_.triplanar_level, true);
-      renderer_.DrawSsaoPass();
+      renderer_.DrawSsaoPass(render_settings_.ssao_kernel_size,
+        render_settings_.ssao_radius,
+        render_settings_.ssao_bias);
       renderer_.DrawLightPass(cubemap_.GetRenderData(), true, false, false,
                               false, false, 0);
 
@@ -198,7 +197,7 @@ void Game::PrebakeEnvMaps() {
     //
     // // Step B: Load raw faces, bake Irradiance & Prefiltered maps, and save
     // to binary .ibl
-    cubemap_.LoadZone(zone);  // we need this only to load to OpenGL to bake ibl
+    cubemap_.LoadZone(ibl_name);  // we need this only to load to OpenGL to bake ibl
     renderer_.IblBakeRadiance(cubemap_.GetRenderData());
     renderer_.IblBakePrefiltered(cubemap_.GetRenderData());
 
@@ -217,7 +216,7 @@ void Game::PrebakeEnvMaps() {
   glfwSetWindowSize(gWindow, gWindowWidth, gWindowHeight);
 
   const SceneZone *cur_zone = world_manager_.GetCurrentZone();
-  cubemap_.LoadZone(cur_zone);
+  cubemap_.LoadZone(renderer_.GetIblBakeFilename(cur_zone->properties.ibl_type));
   // renderer_.LoadZoneIbl(cur_zone->name);
   cubemap_.LoadDefaultCubemap();
   renderer_.ReLoadIblZones();
@@ -228,7 +227,9 @@ Game::Game()
       world_manager_(mdl_loader_.GetScene(), &camera_, player_, characters_,
                      weapons_, dir_lights_),
       renderer_(mdl_loader_.GetScene(), &camera_, &player_,
-                world_manager_.GetCulledData()) {
+                world_manager_.GetCulledData()),
+      ui_renderer_(),
+      particle_manager_(ui_renderer_.GetTexId(), ui_renderer_.GetSpriteUvs("FlowerWhite")) {
   Init();
 }
 
@@ -240,8 +241,8 @@ void Game::RenderInterface() {
   if (player_->GetBody()->IsAiming()) {
     ui_renderer_.AddSprite(
         "GoldenCircle",
-        glm::vec2(gWindowWidth, gWindowHeight) - half_target_size,
-        glm::vec2(target_size), glm::vec4(1.0f));
+        glm::vec2(gWindowWidth, gWindowHeight) / 2.0f - half_target_size,
+        glm::vec2(target_size), glm::vec4(255.0f));
   }
   const glm::vec2 start_hp_pos = glm::vec2(10.0f, 45.0f);
   glm::vec2 hp_pos = start_hp_pos;
@@ -260,10 +261,10 @@ void Game::RenderInterface() {
   for (int i = 0; i < 7; ++i) {
     hp_pos.x += hp_size.x;
     ui_renderer_.AddSprite("HealthPoint", hp_pos, hp_size * 2.0f,
-                           glm::vec4(1.0f));
+                           glm::vec4(255.0f));
   }
   ui_renderer_.AddSprite("Gear", glm::vec2(gWindowWidth * 0.9f, 5.0f),
-                         hp_size * 4.0f, glm::vec4(1.0f));
+                         hp_size * 4.0f, glm::vec4(255.0f));
 
   // ---
 
@@ -344,7 +345,7 @@ void Game::UpdateHoveredObject() {
     uint64_t user_data = mPhysicsSystem->GetBodyInterface().GetUserData(hit_id);
     if (user_data != 0) {
       GameObject *obj = reinterpret_cast<GameObject *>(user_data);
-      if (!obj->GetInteractPrompt(player_->GetBody()).prompt.empty()) {
+      if (GetAssetDefaultProperties(obj->GetSceneNode()->mesh->name).type != AssetProperties::Type::Dynamic) {
         hovered_object_ = obj;
       }
     }
@@ -442,52 +443,51 @@ void Game::RunGameLoop() {
     glEnable(GL_DEPTH_TEST);
 
     UpdateDeltaTime();
+    // Reinitialize the job system if the concurrency setting changed
+    if (mMaxConcurrentJobs != mJobSystem->GetMaxConcurrency())
+      static_cast<JPH::JobSystemThreadPool *>(mJobSystem)
+          ->SetNumThreads(mMaxConcurrentJobs - 1);
+
+    for (auto &l : dir_lights_) {
+      UpdateDirLightFrustum(l, &camera_);
+    }
+
+    /// pre physics update
+    for (auto &c : characters_) {
+      c->UpdateLogic(mPhysicsSystem, gDeltaTimePhysics);
+      c->GetBody()->PrePhysicsUpdate(mPhysicsSystem, mTempAllocator,
+                                     gDeltaTimePhysics);
+    }
+
+    player_->UpdateObjectDragging();
+    player_->UpdateCoverState();
+    player_->HandleCoverMovement(glfwGetKey(gWindow, GLFW_KEY_A) ==
+                                 GLFW_PRESS);
+    player_->UpdateView();
+    player_->GetBody()->PrePhysicsUpdate(mPhysicsSystem, mTempAllocator,
+                                         gDeltaTimePhysics);
 
     if (render_settings_.update_physics) {
-      // Reinitialize the job system if the concurrency setting changed
-      if (mMaxConcurrentJobs != mJobSystem->GetMaxConcurrency())
-        static_cast<JPH::JobSystemThreadPool *>(mJobSystem)
-            ->SetNumThreads(mMaxConcurrentJobs - 1);
-
-      for (auto &l : dir_lights_) {
-        UpdateDirLightFrustum(l, &camera_);
-      }
-
-      /// pre physics update
-      for (auto &c : characters_) {
-        c->UpdateLogic(mPhysicsSystem, gDeltaTimePhysics);
-        c->GetBody()->PrePhysicsUpdate(mPhysicsSystem, mTempAllocator,
-                                       gDeltaTimePhysics);
-      }
-
-      player_->UpdateObjectDragging();
-      player_->UpdateCoverState();
-      player_->HandleCoverMovement(glfwGetKey(gWindow, GLFW_KEY_A) ==
-                                   GLFW_PRESS);
-      player_->UpdateView();
-      player_->GetBody()->PrePhysicsUpdate(mPhysicsSystem, mTempAllocator,
-                                           gDeltaTimePhysics);
-
       /// physics update
       mPhysicsSystem->Update(gDeltaTimePhysics, 1, mTempAllocator, mJobSystem);
-      const JPH::BodyLockInterface &bli =
-          mPhysicsSystem->GetBodyLockInterface();
-      mdl_loader_.GetScene()->UpdateRenderTransform(bli);
+    }
+    const JPH::BodyLockInterface &bli =
+        mPhysicsSystem->GetBodyLockInterface();
+    mdl_loader_.GetScene()->UpdateRenderTransform(bli);
 
-      /// post physics update
-      for (auto &c : characters_) {
-        c->GetBody()->PostPhysicsUpdate(mPhysicsSystem->GetGravity(),
-                                        gDeltaTimePhysics);
-      }
+    /// post physics update
+    for (auto &c : characters_) {
+      c->GetBody()->PostPhysicsUpdate(mPhysicsSystem->GetGravity(),
+                                      gDeltaTimePhysics);
       player_->GetBody()->PostPhysicsUpdate(mPhysicsSystem->GetGravity(),
                                             gDeltaTimePhysics);
-    }
 
-    for (auto& d : doors_) {
-      d->Update(mBodyInterface, gDeltaTimePhysics);
-    }
-    for (auto& w : weapons_) {
-      w->Update(gDeltaTimePhysics);
+      for (auto& d : doors_) {
+        d->Update(mBodyInterface, gDeltaTimePhysics);
+      }
+      for (auto& w : weapons_) {
+        w->Update(gDeltaTimePhysics);
+      }
     }
 
     auto player_pos = player_->GetBody()->GetPosition();
@@ -498,6 +498,33 @@ void Game::RunGameLoop() {
                                      player_dir.GetY(), player_dir.GetZ());
 
     animator_.Update(!render_settings_.animate_animated);
+    const auto& decals = character_shared_data_->GetShootDecals();
+    auto cur_decals_num = decals.size();
+    if (prev_decals_num_ < cur_decals_num) {
+      ParticleSourceConfig shootHoleConfig;
+      auto jph_pos = decals.back().transform.GetTranslation();
+      shootHoleConfig.position = glm::vec3(jph_pos.GetX(), jph_pos.GetY(), jph_pos.GetZ());
+      std::cout << "emit at " << shootHoleConfig.position.x << ' '
+      << shootHoleConfig.position.y << ' ' << shootHoleConfig.position.z << std::endl;
+      shootHoleConfig.direction = {0.0f, -1.0f, 0.0f};
+      shootHoleConfig.spread = {0.2f, 0.0f, 0.2f};
+      shootHoleConfig.speedMin = 1.0f;
+      shootHoleConfig.speedMax = 5.0f;
+      shootHoleConfig.lifetimeMin = 0.6f;
+      shootHoleConfig.lifetimeMax = 0.8f;
+      shootHoleConfig.sizeMin = 0.03f;
+      shootHoleConfig.sizeMax = 0.05f;
+      shootHoleConfig.colorMin = {0.0f, 0.0f, 0.0f, 1.0f};
+      shootHoleConfig.colorMax = {1.0f, 1.0f, 0.0f, 1.0f};
+      shootHoleConfig.gravity = -10.0f;
+      shootHoleConfig.oneShot = true;
+      shootHoleConfig.emissionRate = 5.0f;
+      shootHoleConfig.burstCount = 20;
+      shootHoleConfig.materialId = 0;
+      particle_manager_.AddSource(shootHoleConfig);
+      prev_decals_num_ = cur_decals_num;
+    }
+    particle_manager_.Update(gDeltaTimePhysics);
 
     camera_.Update(player_->GetBody()->GetCameraBoneMatrix());
     // terrain_renderer_.Update(&camera_);
@@ -512,7 +539,7 @@ void Game::RunGameLoop() {
     glDisable(GL_BLEND);
 
     if (render_settings_.update_buffer) {
-      renderer_.UpdateBuffer();
+      renderer_.UpdateBuffer(render_settings_.objects_num);
     }
 
     if (render_physics_only_) {
@@ -525,7 +552,9 @@ void Game::RunGameLoop() {
                                  render_settings_.triplanar_level,
                                  render_settings_.geometry_pass);
       if (render_settings_.ssao) {
-        renderer_.DrawSsaoPass();
+        renderer_.DrawSsaoPass(render_settings_.ssao_kernel_size,
+          render_settings_.ssao_radius,
+          render_settings_.ssao_bias);
       }
       renderer_.DrawLightPass(
           cubemap_.GetRenderData(), render_settings_.light_pass,
@@ -535,16 +564,16 @@ void Game::RunGameLoop() {
     }
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    RenderInterface();
-
-    ui_renderer_.Render();
 
     if (!render_physics_only_) {
       renderer_.RenderToTheScreen();
     }
 
     ui_menu_scene_->MouseCancel();
+    RenderInterface();
     RenderFps();
+
+    particle_manager_.Render();
 
     UpdateHoveredObject();
 
@@ -808,6 +837,11 @@ void Game::CreateBodyForNode(SceneNode *node) {
     }
     return;  // we do it in a separate call
   }
+
+  if (mesh.name == "m_skyrim_light_fire") {
+    // std::cout << "herer" << std::endl;
+  }
+
   std::vector<SceneZone *> zones;
   for (SceneZone *z : scene->scene_data_.zones) {
     if (z->scene_node->global_bounds.Overlaps(node->global_bounds)) {
@@ -815,8 +849,8 @@ void Game::CreateBodyForNode(SceneNode *node) {
     }
   }
   if (zones.empty()) {
-    std::cerr << "Game::CreateBodyForNode no zone" << std::endl;
-    return;
+    std::cout << "Game::CreateBodyForNode no zone, set to 0" << std::endl;
+    zones.push_back(scene->scene_data_.zones[0]);
   }
   JPH::Ref<JPH::Shape> local_shape;
   if (mesh_collision_type == AssetProperties::CollisionType::Container) {
@@ -853,6 +887,7 @@ void Game::CreateBodyForNode(SceneNode *node) {
   JPH::Ref<JPH::Shape> shape_settings = local_shape;
   JPH::EActivation activation_state = JPH::EActivation::DontActivate;
   uint64_t jph_user_data = 0;
+
   if (mesh_type == AssetProperties::Type::Dynamic ||
       mesh_type == AssetProperties::Type::HingeMoving) {
     motion_type = JPH::EMotionType::Dynamic;
@@ -902,6 +937,11 @@ void Game::CreateBodyForNode(SceneNode *node) {
     // jph_user_data = reinterpret_cast<uint64_t>(
         // static_cast<GameObject *>(&zones[0]->point_lights_.back()));
     return;
+  } else if (mesh_type == AssetProperties::Type::Transparent) {
+    for (auto zone : zones) {
+      zone->transparent_objects_.push_back(std::make_unique<StaticObject>(node));
+    }
+    return;
   } else if (mesh_type == AssetProperties::Type::PointLightFake) {
     for (auto zone : zones) {
       zone->point_lights_fake_.push_back(std::make_unique<StaticObject>(node));
@@ -931,12 +971,16 @@ void Game::CreateBodyForNode(SceneNode *node) {
     motion_type = JPH::EMotionType::Static;
     object_layer = Layers::NON_MOVING;
     activation_state = JPH::EActivation::DontActivate;
-  } else {
+  } else if (mesh_type == AssetProperties::Type::Static ||
+    mesh_type == AssetProperties::Type::Wall) {
     for (auto zone : zones) {
       zone->static_objects_.push_back(std::make_unique<StaticObject>(node));
     }
     jph_user_data = reinterpret_cast<uint64_t>(
         static_cast<GameObject *>(zones[0]->static_objects_.back().get()));
+  } else {
+    std::cerr << "+ 1 unhandled type" << std::endl;
+    return;
   }
 
   if (!node->body_id.IsInvalid()) {
@@ -1011,6 +1055,8 @@ void Game::Init() {
   LoadScenes();
   InitScenesBodies();
 
+  world_manager_.SetDecals(&character_shared_data_->GetShootDecals());
+
   DirectedLight sun = {};
   sun.dir = JPH::Vec3(0.8f, -1.0f, -0.3f).Normalized();
   sun.color = JPH::Vec3::sReplicate(20.0f);
@@ -1026,6 +1072,25 @@ void Game::Init() {
   InitUi();
   // cubemap_.LoadZone(world_manager_.GetCurrentZone());
   cubemap_.LoadDefaultCubemap();
+
+  // Test particles at (0,0,0) — flame/spark effect
+  ParticleSourceConfig testConfig;
+  testConfig.position = {0.0f, 1.0f, 0.0f};
+  testConfig.direction = {0.0f, 1.0f, 0.0f};
+  testConfig.spread = {0.2f, 0.0f, 0.2f};
+  testConfig.speedMin = 0.5f;
+  testConfig.speedMax = 2.0f;
+  testConfig.lifetimeMin = 1.0f;
+  testConfig.lifetimeMax = 10.0f;
+  testConfig.sizeMin = 0.03f;
+  testConfig.sizeMax = 0.05f;
+  testConfig.colorMin = {1.0f, 1.0f, 1.0f, 1.0f};
+  testConfig.colorMax = {1.0f, 1.0f, 1.0f, 1.0f};
+  testConfig.gravity = -2.0f;
+  testConfig.oneShot = false;
+  testConfig.emissionRate = 5.0f;
+  testConfig.materialId = 0;
+  particle_manager_.AddSource(testConfig);
 
   global_data_.renderer = &renderer_;
   global_data_.ui_manager = mDebugUI.get();
@@ -1061,7 +1126,9 @@ void GameMouseButtonCallback(GLFWwindow *window, int button, int action,
     if (game->player_->IsDragging()) {
       game->player_->ReleaseObjectDragging(50.0f);
     } else {
-      game->player_->Shoot();
+      if (game->player_->GetBody()->IsAiming()) {
+        game->player_->Shoot();
+      }
     }
   } else if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_MIDDLE) {
     game->player_->SetAiming(true);
@@ -1817,6 +1884,24 @@ void Game::InitUi() {
             }
           }
         });
+    mDebugUI->CreateSlider(
+        graphic_settings, "ssao kernel", render_settings_.ssao_kernel_size,
+        0, 64, 4,
+        [this](float inValue) {
+          render_settings_.ssao_kernel_size = inValue;
+        });
+    mDebugUI->CreateSlider(
+        graphic_settings, "ssao radius", render_settings_.ssao_radius,
+        0, 1, 0.01,
+        [this](float inValue) {
+          render_settings_.ssao_radius = inValue;
+        });
+    mDebugUI->CreateSlider(
+        graphic_settings, "ssao bias", render_settings_.ssao_bias,
+        0, 2, 0.01,
+        [this](float inValue) {
+          render_settings_.ssao_bias = inValue;
+        });
     mDebugUI->CreateTextButton(graphic_settings, "prebake env maps",
                                [this] { this->PrebakeEnvMaps(); });
     auto window_resolutions_strings = GenWindowResolutionStrings();
@@ -1833,8 +1918,8 @@ void Game::InitUi() {
           SetFullscreen(state == UICheckBox::EState::STATE_CHECKED);
         });
     mDebugUI->CreateSlider(
-        graphic_settings, "objects num", float(render_settings_.objects_num), 1, 500,
-        1,
+        graphic_settings, "objects num", float(render_settings_.objects_num), 1, 5000,
+        10,
         [this](float inValue) { render_settings_.objects_num = int(inValue); });
     mDebugUI->CreateSlider(graphic_settings, "triplanar level",
                            float(render_settings_.triplanar_level), 1, 3, 1,

@@ -140,8 +140,8 @@ struct ScenePortal {
   SceneNode* frame = nullptr;
   std::vector<SceneNode*> desks;
   std::vector<SceneNode*> hinges;
-  int zone_1 = -1;
-  int zone_2 = -1;
+  int zone_1 = 0;
+  int zone_2 = 0;
 };
 
 enum class IblZoneType {
@@ -166,6 +166,7 @@ struct SceneZone {
   std::vector<std::unique_ptr<StaticObject>> point_lights_fake_;
   std::vector<std::unique_ptr<PointLight>> point_lights_;
   std::vector<std::unique_ptr<StaticObject>> static_objects_;
+  std::vector<std::unique_ptr<StaticObject>> transparent_objects_;
   Properties properties = {};
 };
 
@@ -246,6 +247,7 @@ struct Scene {
     std::vector<SceneZone*> zones;
     std::vector<ScenePortal> portals;
     std::vector<SceneNode*> characters;
+    std::vector<SceneNode*> ibl;
     /// --- --- --- --- ---
 
     SceneNode* player_node;
@@ -304,6 +306,8 @@ struct Scene {
   GLuint material_ryshnuk_ = 0;
   GLuint material_ribbons_ = 0;
   GLuint material_skyrim_ = 0;
+
+  size_t mesh_shoot_hole_id = 0;
 
   void UpdateRenderTransform(const JPH::BodyLockInterface& bli);
 

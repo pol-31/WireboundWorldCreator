@@ -5,6 +5,7 @@ layout(location = 2) in vec2 in_texcoord;
 layout(location = 3) in vec4 in_tangent;
 
 out vec4 vert_color;
+out vec2 tex_coord;
 
 layout (location = 0) uniform mat4 model;
 layout (location = 1) uniform vec4 color;
@@ -21,6 +22,13 @@ layout(std140, binding = 0) uniform Camera {
 void main() {
     uint index = gl_InstanceID + gl_BaseInstance;
     vert_color = color;
-    vec4 worldPos = model * vec4(in_vertex, 1.0);
-    gl_Position = camera.proj * camera.view * worldPos;
+    vec3 position = model[3].xyz;
+    mat3 billboard = mat3(
+        -camera.forward,
+        camera.up,
+        -camera.right
+    );
+    vec3 worldPos = billboard * in_vertex + position;
+    gl_Position = camera.proj * camera.view * vec4(worldPos, 1.0);
+    tex_coord = in_texcoord;
 }

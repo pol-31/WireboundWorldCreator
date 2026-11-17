@@ -101,24 +101,24 @@ std::map<std::string, AssetProperties> gMeshNameToProperties = {
      {AssetProperties::Type::Static, AssetProperties::CollisionType::Cube,
       10.0f, false, false, AssetProperties::AudioMaterial::Wood, ""}},
     {"m_skyrim_flower",
-     {AssetProperties::Type::Dynamic, AssetProperties::CollisionType::Cube,
+     {AssetProperties::Type::Transparent, AssetProperties::CollisionType::Cube,
       10.0f, false, false, AssetProperties::AudioMaterial::Flesh, ""}},
     {"m_skyrim_fork",
      {AssetProperties::Type::Dynamic, AssetProperties::CollisionType::Cube,
       10.0f, false, false, AssetProperties::AudioMaterial::Metal, ""}},
-    {"m_skyrim_handing_idk_1",
+    {"m_skyrim_hanging_idk1",
+     {AssetProperties::Type::Transparent, AssetProperties::CollisionType::Cube, 10.0f,
+      false, false, AssetProperties::AudioMaterial::Flesh, ""}},
+    {"m_skyrim_hanging_idk2",
      {AssetProperties::Type::None, AssetProperties::CollisionType::Cube, 10.0f,
       false, false, AssetProperties::AudioMaterial::Flesh, ""}},
-    {"m_skyrim_handing_idk_2",
-     {AssetProperties::Type::None, AssetProperties::CollisionType::Cube, 10.0f,
+    {"m_skyrim_hanging_idk3",
+     {AssetProperties::Type::Transparent, AssetProperties::CollisionType::Cube, 10.0f,
       false, false, AssetProperties::AudioMaterial::Flesh, ""}},
-    {"m_skyrim_handing_idk_3",
-     {AssetProperties::Type::None, AssetProperties::CollisionType::Cube, 10.0f,
+    {"m_skyrim_hanging_idk4",
+     {AssetProperties::Type::Transparent, AssetProperties::CollisionType::Cube, 10.0f,
       false, false, AssetProperties::AudioMaterial::Flesh, ""}},
-    {"m_skyrim_handing_idk_4",
-     {AssetProperties::Type::None, AssetProperties::CollisionType::Cube, 10.0f,
-      false, false, AssetProperties::AudioMaterial::Flesh, ""}},
-    {"m_skyrim_handing_idk_5",
+    {"m_skyrim_hanging_idk5",
      {AssetProperties::Type::None, AssetProperties::CollisionType::Cube, 10.0f,
       false, false, AssetProperties::AudioMaterial::Flesh, ""}},
     {"m_skyrim_horn_cup",
@@ -201,6 +201,9 @@ std::map<std::string, AssetProperties> gMeshNameToProperties = {
       10.0f, false, false, AssetProperties::AudioMaterial::Flesh, ""}},
     {"m_skyrim_wall_fish",
      {AssetProperties::Type::Static, AssetProperties::CollisionType::Cube,
+      10.0f, false, false, AssetProperties::AudioMaterial::Flesh, ""}},
+    {"m_skyrim_light_fire",
+     {AssetProperties::Type::PointLight, AssetProperties::CollisionType::Cube,
       10.0f, false, false, AssetProperties::AudioMaterial::Flesh, ""}},
 
     /// House + hinges
@@ -440,12 +443,16 @@ const AssetProperties& GetAssetDefaultProperties(const std::string& name) {
   static const AssetProperties default_npc_prop{
       AssetProperties::Type::Character, AssetProperties::CollisionType::Capsule,
       10.0f, false, false};
+  static const AssetProperties default_ibl_prop{
+      AssetProperties::Type::Ibl, AssetProperties::CollisionType::Cube,
+      10.0f, false, false};
   auto it = gMeshNameToProperties.find(name);
   if (it == gMeshNameToProperties.end()) {
     if (name.rfind("m_tile", 0) == 0) return default_tile_prop;
     if (name.rfind("m_zone", 0) == 0) return default_zone_prop;
     if (name.rfind("m_portal", 0) == 0) return default_portal_prop;
     if (name.rfind("m_npc", 0) == 0) return default_npc_prop;
+    if (name.rfind("m_ibl", 0) == 0) return default_ibl_prop;
     return default_prop;
   }
   return it->second;

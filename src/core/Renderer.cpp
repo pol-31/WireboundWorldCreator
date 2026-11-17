@@ -23,19 +23,18 @@
 //       due to huge ssbo instance buffer modification
 
 // const GLuint Renderer::cShadowMapSize = 256;
-const int Renderer::cMaxInstances = 10000;
+const int Renderer::cMaxInstances = 100000;
 const int Renderer::cMaxInstancesRigged = 10;
 const int Renderer::cMaxLines = 100 * 3;
 
 const int Renderer::cMaxDirectedLights = 4;
 const GLuint Renderer::cShadowCubeMapSize = 64;
-const int Renderer::cMaxPointLights = 32;
-const GLuint Renderer::cShadowMapSize = 512;
+const int Renderer::cMaxPointLights = 4;
+const GLuint Renderer::cShadowMapSize = 256;
 
-//TODO: same because of gauss for now!!!
-// not used
-const GLuint Renderer::cBloomSize = 512;
-const GLuint Renderer::cSsaoSize = 256;
+//TODO: not used; same because of gauss for now!!!
+// const GLuint Renderer::cBloomSize = 512;
+// const GLuint Renderer::cSsaoSize = 256;
 
 const int Renderer::cShadowObjectLod = 2;
 
@@ -91,10 +90,20 @@ Renderer::Renderer(const Scene* scene, const Camera* camera,
       sh_pass_through_("../shaders/DeferredShading.vert",
                        "../shaders/PassThrough.frag", {0}),
       sh_light_emitter_("../shaders/LightEmitter.vert",
-                        "../shaders/LightEmitter.frag", {}),
+                        "../shaders/LightEmitter.frag", {2}),
       sh_wall_("../shaders/Mazanka.vert", "../shaders/Mazanka.frag", {}),
-      tex_perlin_("../assets/perlin512.png", Texture::Type::TerrainR8) {
+      tex_perlin_("../assets/perlin512.png", Texture::Type::TerrainR8),
+      sh_transparent_("../shaders/TriangleGeometry.vert", "../shaders/Transparent.frag", {0}) {
   Init();
+}
+
+uint32_t GetNumPointLights(int actual_num) {
+  uint32_t num_lights = static_cast<uint32_t>(actual_num);
+  if (num_lights > Renderer::cMaxPointLights) {
+    // std::cerr << "too much num_lights: " << num_lights << std::endl;
+    num_lights = Renderer::cMaxPointLights;
+  }
+  return num_lights;
 }
 
 GLuint CreateShadowMap() {
@@ -266,7 +275,8 @@ void Renderer::DrawPointLightShadowPass() {
   if (culled_data_->point_lights.empty()) {
     return;
   }
-  int num_to_add = culled_data_->point_lights.size() - shadow_cubemaps_.size();
+  uint32_t num_lights = GetNumPointLights(culled_data_->point_lights.size());
+  int num_to_add = num_lights - shadow_cubemaps_.size();
   for (int i = 0; i < num_to_add; ++i) {
     shadow_cubemaps_.push_back(CreateShadowCubeMapArray());
   }
@@ -275,7 +285,7 @@ void Renderer::DrawPointLightShadowPass() {
   sh_shadow_point_.DebugUpdate();
   sh_shadow_point_.Bind();
   glBindVertexArray(scene_->scene_data_.vao);
-  for (int i = 0; i < culled_data_->point_lights.size(); ++i) {
+  for (int i = 0; i < num_lights; ++i) {
     const auto& l = culled_data_->point_lights[i];
     for (int face = 0; face < 6; ++face) {
       GLint layer =
@@ -302,7 +312,7 @@ void Renderer::DrawPointLightShadowPass() {
   }
   sh_shadow_point5_.DebugUpdate();
   sh_shadow_point5_.Bind();
-  for (int i = 0; i < culled_data_->point_lights.size(); ++i) {
+  for (int i = 0; i < num_lights; ++i) {
     const auto& l = culled_data_->point_lights[i];
     for (int face = 0; face < 6; ++face) {
       if (l.object_animated[face].empty()) {
@@ -320,12 +330,13 @@ void Renderer::DrawPointLightShadowPass() {
   }
 }
 
-void Renderer::UpdateBuffer() {
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
+void Renderer::UpdateBuffer(size_t objects_num) {
   if (!culled_data_->ssbo_data.empty()) {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_instanced_);
+    objects_num = std::min(objects_num, culled_data_->ssbo_data.size());
     glBufferSubData(
         GL_SHADER_STORAGE_BUFFER, 0,
-        culled_data_->ssbo_data.size() * sizeof(WorldManager::InstanceGpu),
+        objects_num * sizeof(WorldManager::InstanceGpu),
         culled_data_->ssbo_data.data());
   }
 }
@@ -360,7 +371,7 @@ void RenderPlayer(const AnimatedRenderData& data) {
   }
 }
 
-void Renderer::DrawSsaoPass() {
+void Renderer::DrawSsaoPass(float kernel_size, float radius, float bias) {
   sh_ssao_.DebugUpdate();
   sh_ssao_.Bind();
   // glBindFramebuffer(GL_FRAMEBUFFER, fbo_ssao_);
@@ -374,10 +385,13 @@ void Renderer::DrawSsaoPass() {
   glUniform2fv(3, 1, glm::value_ptr(window_res));
   auto view_proj = camera_->GetViewMatrix() * camera_->GetProjMatrix();
   view_proj = glm::inverse(view_proj);
+  glUniform1f(4, kernel_size);
+  glUniform1f(5, radius);
+  glUniform1f(6, bias);
   // glUniformMatrix4fv(3, 1, false, glm::value_ptr(view_proj));
   // glViewport(0, 0, cSsaoSize, cSsaoSize);
   // glViewport(0, 0, gWindowWidth, gWindowHeight);
-  glUniform3fv(4, static_cast<GLsizei>(ssao_kernel_.size()),
+  glUniform3fv(7, static_cast<GLsizei>(ssao_kernel_.size()),
                glm::value_ptr(ssao_kernel_[0]));
   // glBindVertexArray(vao_ui_);
   // glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -388,8 +402,10 @@ void Renderer::DrawSsaoPass() {
 
 }
 
-void Renderer::DrawGeometryPass(TerrainRenderData terrain, int triplanar_level,
-                                bool render_geometry) {
+void Renderer::DrawGeometryPass(
+    TerrainRenderData terrain,
+    int triplanar_level,
+    bool render_geometry) {
   glBindVertexArray(scene_->scene_data_.vao);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_g_buffer_);
   glViewport(0, 0, gWindowWidth, gWindowHeight);
@@ -524,6 +540,7 @@ void Renderer::RenderDebug() {
 }
 
 void Renderer::RenderWalls() {
+  return; // not used
   sh_wall_.DebugUpdate();
   sh_wall_.Bind();
 
@@ -559,7 +576,7 @@ void Renderer::RenderWalls() {
 }
 
 void Renderer::RenderTerrain(TerrainRenderData terrain) {
-  return;
+  return; // not used
   sh_terrain_.DebugUpdate();
   if (glfwGetKey(gWindow, GLFW_KEY_1)) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -760,14 +777,18 @@ Renderer::IblProperties gIblZones[] = {
   {"../assets/ibl/entrance.ibl", IblZoneType::Mansion, 0, 0},
 };
 
-std::string Renderer::GetIblBakeFilename(const std::string& zone_name) {
-  if (zone_name == "zone_home_main") {
-    return "entrance";
-  }
-  if (zone_name == "zone_outside") {
+std::string Renderer::GetIblBakeFilename(const std::string& ibl_name) {
+  if (ibl_name == "ibl_outside_village") {
     return "outside";
   }
-  return {};
+  return "entrance"; // ibl_inside_village
+}
+
+std::string Renderer::GetIblBakeFilename(IblZoneType ibl_type) {
+  if (ibl_type == IblZoneType::Outside) {
+    return "outside";
+  }
+  return "entrance";
 }
 
 void LoadIbl(Renderer::IblProperties& zone, IblZoneType new_type) {
@@ -943,8 +964,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
   glUniformMatrix4fv(4, 1, false, glm::value_ptr(view_proj));
 
 
-  const uint32_t num_lights =
-      static_cast<uint32_t>(culled_data_->point_lights.size());
+  uint32_t num_lights = GetNumPointLights(culled_data_->point_lights.size());
   glUniform1i(glGetUniformLocation(sh_deferred_shading_.GetId(), "lights_num"),
               num_lights);
 
@@ -957,7 +977,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
     lightColors.reserve(num_lights);
     farPlanes.reserve(num_lights);
 
-    for (int i = 0; i < culled_data_->point_lights.size(); ++i) {
+    for (int i = 0; i < num_lights; ++i) {
       const auto& light = culled_data_->point_lights[i];
       glActiveTexture(GL_TEXTURE3 + i);
       glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, shadow_cubemaps_[i]);
@@ -1001,32 +1021,30 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
                     gWindowHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
   glEnable(GL_DEPTH_TEST);
 
-
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_scene_);
   glDepthFunc(GL_LEQUAL);
 
-  // RenderCubemap(cubemap);
-  sh_cubemap_.DebugUpdate();
-  sh_cubemap_.Bind();
-  glBindVertexArray(cubemap.vao);
-  glActiveTexture(GL_TEXTURE0);
-  if (cubemap_type == 0) {
-    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture_id);
-  } else if (cubemap_type == 1) {
-    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[0].ibl_irradiance_map);
-  } else {
-    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[0].ibl_prefilter_map);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glDepthMask(GL_FALSE);
+  sh_transparent_.Bind();
+  glBindVertexArray(scene_->scene_data_.vao);
+  glBindTextureUnit(0, scene_->material_skyrim_);
+  for (const auto& o : culled_data_->camera.objects_transparent) {
+    const auto& m = scene_->scene_data_.meshes[o.mesh_id];
+    for (const auto& p : m.primitives_lods[0]) {
+      glDrawElementsInstancedBaseVertexBaseInstance(
+          GL_TRIANGLES, p.index_count, p.index_type,
+          (void*)p.index_byte_offset, o.instances_num, p.base_vertex,
+          o.instance_offset);
+    }
   }
-  glDrawArrays(GL_TRIANGLES, 0, 36);
-  glBindVertexArray(0);
-
-  glDepthFunc(GL_LESS);
-
 
   /// light sources (point light)
   if (render_light_sources) {
     glBindVertexArray(scene_->scene_data_.vao);
     sh_light_emitter_.Bind();
+    glBindTextureUnit(2, scene_->material_skyrim_);
     for (const auto& l : culled_data_->point_lights) {
       const auto& m = *l.source->GetSceneNode()->mesh;
       glUniformMatrix4fv(
@@ -1034,6 +1052,7 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
           reinterpret_cast<const float*>(&l.source->GetSceneNode()->global_transform));
       glUniform4fv(1, 1, &l.source->color_.mF32[0]);
       for (const auto& p : m.primitives_lods[2]) {
+        glUniform1ui(3, p.material_id);
         glDrawElementsBaseVertex(GL_TRIANGLES, p.index_count, p.index_type,
                                  (void*)p.index_byte_offset, p.base_vertex);
       }
@@ -1052,6 +1071,26 @@ void Renderer::DrawLightPass(CubemapRenderData cubemap, bool light_pass,
       }
     }
   }
+
+  glDepthMask(GL_TRUE);
+  glDisable(GL_BLEND);
+
+  // RenderCubemap(cubemap);
+  sh_cubemap_.DebugUpdate();
+  sh_cubemap_.Bind();
+  glBindVertexArray(cubemap.vao);
+  glActiveTexture(GL_TEXTURE0);
+  if (cubemap_type == 0) {
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture_id);
+  } else if (cubemap_type == 1) {
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[0].ibl_irradiance_map);
+  } else {
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_zones_[0].ibl_prefilter_map);
+  }
+  glDrawArrays(GL_TRIANGLES, 0, 36);
+  glBindVertexArray(0);
+
+  glDepthFunc(GL_LESS);
   glDisable(GL_DEPTH_TEST);
 
   bool horizontal = true;
@@ -1133,7 +1172,11 @@ void Renderer::RenderToTheScreen() {
 }
 
 GLuint Renderer::GetLightingFbo() {
-  return fbo_composite_;
+  return fbo_scene_;
+}
+
+GLuint Renderer::GetLightingTex() {
+  return tex_scene_;
 }
 
 void Renderer::DeInit() {

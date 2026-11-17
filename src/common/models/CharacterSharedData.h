@@ -7,6 +7,7 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 
 #include "Door.h"
+#include "ShootDecalInfo.h"
 
 class Animator;
 class EnemyController;
@@ -24,7 +25,15 @@ class CharacterSharedData {
                  float& outFraction, JPH::RVec3& outPosition,
                  JPH::BodyID& outID, JPH::BodyID source_body_id);
 
+  bool CastProbeShoot(JPH::Vec3 pos, JPH::Vec3 dir, float inProbeLength,
+                 JPH::SubShapeID &outSubShapeId, float& outFraction, JPH::RVec3& outPosition,
+                 JPH::BodyID& outID, JPH::BodyID source_body_id);
+
   void Shoot(JPH::Vec3 pos, JPH::Vec3 dir, JPH::BodyID source_body_id);
+
+  const std::vector<ShootDecalInfo>& GetShootDecals() const noexcept {
+    return shoot_decals_;
+  }
 
   /// set at Initialize()
   JPH::PhysicsSystem* physics_system_;
@@ -40,6 +49,7 @@ class CharacterSharedData {
 
   std::vector<std::unique_ptr<EnemyController>>* characters_;
   std::vector<Door>* doors_;
+  std::vector<ShootDecalInfo> shoot_decals_;
 };
 
 class IgnoreSingleBodyFilter : public JPH::BodyFilter {

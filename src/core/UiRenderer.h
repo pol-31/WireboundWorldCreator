@@ -7,10 +7,21 @@
 
 #include "../render/Shader.h"
 #include "../render/Texture.h"
+#include "../render/SpriteUv.h"
 
 class UiRenderer {
- public:
+public:
+  struct Vertex {
+    glm::vec2 position;
+    glm::vec2 uv;
+    glm::vec4 color;
+  };
+
   UiRenderer();
+
+  ~UiRenderer() {
+    DeInit();
+  }
 
   //  fill vbo -> render all collected text -> clear buffer for next frame
   void Render();
@@ -27,19 +38,18 @@ class UiRenderer {
   void AddSprite(std::string_view name, glm::vec2 position_pix,
                  glm::vec2 size_pix, glm::vec4 color);
 
+  SpriteUv GetSpriteUvs(const std::string& name);
+
+  GLuint GetTexId() const noexcept {
+    return texture_ui_.GetId();
+  }
+
   static const int cMaxRenderChars;
 
  private:
-  struct SpriteUV {
-    glm::vec2 min_uv;
-    glm::vec2 max_uv;
-  };
+  void Init();
 
-  struct Vertex {
-    glm::vec2 position;
-    glm::vec2 uv;
-    glm::vec4 color;
-  };
+  void DeInit();
 
   void UpdateVbo();
 
@@ -58,7 +68,7 @@ class UiRenderer {
   float font_middle_offset_ = 0.0f;
 
   // SpriteAtlas:
-  std::unordered_map<std::string, SpriteUV> sprite_atlas_;
+  std::unordered_map<std::string, SpriteUv> sprite_atlas_;
   Texture texture_ui_;
 
   Shader shader_text_;

@@ -159,24 +159,6 @@ static JPH::Quat ReadQuat(const std::vector<double>& v, int index) {
                    static_cast<float>(v[index * 4 + 3]));
 }
 
-// void ReadPose(const Scene::Animation& anim,
-//   std::vector<Scene::NodePose>& locals, CharacterPoseDir pose) {
-//   for (const auto& channel : anim.channels) {
-//     const auto& sampler = anim.samplers[channel.sampler];
-//     const auto& values = sampler.values;
-//     int node = channel.target_node;
-//     auto frame = static_cast<int>(pose);
-//     //frame = 0;
-//     if (channel.target_path == "translation") {
-//       locals[node].t = ReadVec3(values, frame);
-//     } else if (channel.target_path == "rotation") {
-//       locals[node].r = ReadQuat(values, frame).Normalized();
-//     } else if (channel.target_path == "scale") {
-//       locals[node].s = ReadVec3(values, frame);
-//     }
-//   }
-// }
-
 void ReadPose(const Scene::Animation& anim, std::vector<SceneNodePose>& locals,
               CharacterPoseDir pose) {
   for (const auto& channel : anim.channels) {
@@ -548,7 +530,7 @@ enum class ZoneName {
   ServiceRoomMiddle,
 };
 
-SceneZone::Properties gSceneZoneOusideProps = {
+SceneZone::Properties gSceneZoneOutsideProps = {
   true, 1.0f, 0.3f, 0.5f, IblZoneType::Outside
 };
 SceneZone::Properties gSceneZoneInsideProps = {
@@ -556,26 +538,12 @@ SceneZone::Properties gSceneZoneInsideProps = {
 };
 
 static std::map<std::string_view, SceneZone::Properties> gZoneNameMapping = {
-  {"m_zone_toilet", gSceneZoneOusideProps},
-  {"m_zone_barn", gSceneZoneInsideProps},
-  {"m_zone_barn_front", gSceneZoneOusideProps},
-  {"m_zone_barn_behind", gSceneZoneOusideProps},
-  {"m_zone_barn_side", gSceneZoneOusideProps},
-  {"m_zone_entrance", gSceneZoneOusideProps},
-  {"m_zone_forest", gSceneZoneOusideProps},
-  {"m_zone_home_unheated", gSceneZoneInsideProps},
-  {"m_zone_home_entryway", gSceneZoneInsideProps},
-  {"m_zone_home_storehouse", gSceneZoneInsideProps},
-  {"m_zone_home_main", gSceneZoneInsideProps},
-  {"m_zone_home_behind", gSceneZoneOusideProps},
-  {"m_zone_home2_unheated", gSceneZoneInsideProps},
-  {"m_zone_home2_entryway", gSceneZoneInsideProps},
-  {"m_zone_home2_storehouse", gSceneZoneInsideProps},
-  {"m_zone_home2_main", gSceneZoneInsideProps},
-  {"m_zone_home2_behind", gSceneZoneOusideProps},
-  {"m_zone_valley", gSceneZoneOusideProps},
-  {"m_zone_outside", gSceneZoneOusideProps},
-  {"m_zone_garden", gSceneZoneOusideProps},
+  {"m_zone_0_fallback_zone", gSceneZoneOutsideProps}, // used
+  {"m_zone_SkyrimHouseZones1", gSceneZoneInsideProps},
+  {"m_zone_SkyrimHouseZones2", gSceneZoneInsideProps},
+  {"m_zone_SkyrimHouseZones3", gSceneZoneInsideProps},
+  {"m_zone_SkyrimHouseZones4", gSceneZoneInsideProps},
+  {"m_zone_0_outside", gSceneZoneOutsideProps}, // unused?
 };
 
 SceneZone* ParseZone(const tinygltf::Model& model, SceneNode* node,
@@ -630,8 +598,9 @@ void Scene::ConnectZonesWithPortals(int tile_id) {
       }
     }
     if (connected_count < 2) {
-      std::cerr << portal_data.scene_node->name << " connected to only " << connected_count
-                << " zones" << std::endl;
+      std::cout << portal_data.scene_node->name << " connected to only " << connected_count
+                << " zones, set to default 0" << std::endl;
+      zones[0]->portals.push_back(&portal_data);
     }
   }
 }
@@ -665,17 +634,9 @@ SceneNode* parent) {
   return portal;
 }
 
-//
-// enum class TileName {
-//   Mansion,
-// };
-//
-// static std::map<std::string_view, SceneTile::Properties> gTileNameMapping = {
-//   {"m_tile_mansion", {"../assets/hmap.hdr"}},
-// };
-
 void ReadSceneHierarchy(Scene::SceneData& scene, const tinygltf::Model& model) {
   const std::vector<SceneMesh>& meshes = scene.meshes;
+  scene.zones.push_back({}); // zone_0_fallback_zone
   for (auto i : model.scenes[0].nodes) {
     const auto& node = model.nodes[i];
     auto mesh_id = node.mesh;
@@ -695,10 +656,17 @@ void ReadSceneHierarchy(Scene::SceneData& scene, const tinygltf::Model& model) {
       // tile->properties = gTileNameMapping.at(mesh.name);
     } else if (type == AssetProperties::Type::Player) {
       scene.player_node = new_node;
+    } else if (type == AssetProperties::Type::Ibl) {
+      scene.ibl.push_back(new_node);
     } else if (type == AssetProperties::Type::Character) {
       scene.characters.push_back(new_node);
     } else if (type == AssetProperties::Type::Zone) {
-      scene.zones.push_back(ParseZone(model, new_node, meshes, scene.zones, scene.portals, nullptr));
+      auto new_zone = ParseZone(model, new_node, meshes, scene.zones, scene.portals, nullptr);
+      if (new_zone->scene_node->name == "zone_0_fallback_zone") {
+        scene.zones[0] = new_zone;
+      } else {
+        scene.zones.push_back(new_zone);
+      }
       scene.object_nodes.push_back(new_node);
     } else if (type == AssetProperties::Type::Portal) {
       scene.portals.push_back(ParsePortal(model, new_node, meshes, scene.zones, scene.portals, nullptr));
@@ -1160,6 +1128,12 @@ void ModelLoader::LoadScene(std::string_view path,
     const std::vector<std::string_view>& meshes_paths) {
   auto model = LoadModel(loader_, path);
   LoadBuffers(model, scene_.scene_data_.meshes);
+
+  SceneMesh shoot_hole_mesh;
+  shoot_hole_mesh.id = scene_.scene_data_.meshes.size();
+  shoot_hole_mesh.name = "m_skyrim_shoot_hole";
+  scene_.scene_data_.meshes.push_back(shoot_hole_mesh);
+  scene_.mesh_shoot_hole_id = shoot_hole_mesh.id;
 
   std::vector<MeshFile> mesh_files(meshes_paths.size());
   for (int i = 0; i < meshes_paths.size(); ++i) {

@@ -8,7 +8,7 @@
 #include "Animator.h"
 
 const float Character::cWalkSpeed = 3.0f;
-const float Character::cRunSpeed = 12.0f;
+const float Character::cRunSpeed = 8.0f;
 const float Character::cJumpSpeed = 4.0f;
 const float Character::cMaxHealth = 100.0f;
 
@@ -234,7 +234,7 @@ void Character::PostPhysicsUpdate(JPH::Vec3 gravity, float dt) {
       state_ = State::kIdle;
     }
     if (jump_triggered_ && moving_towards_ground) {
-      new_velocity += 1.5f * cJumpSpeed * jph_character_->GetUp();
+      new_velocity += 3.5f * cJumpSpeed * jph_character_->GetUp();
       jump_triggered_ = false;
       state_ = State::kStunned;
     }

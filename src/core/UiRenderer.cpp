@@ -14,6 +14,10 @@ UiRenderer::UiRenderer()
       shader_text_("../shaders/Ui.vert", "../shaders/Text.frag", {0}),
       shader_ui_("../shaders/Ui.vert", "../shaders/Ui.frag", {0}),
       texture_ui_("../assets/TexAtlas.png", Texture::Type::UiAtlas) {
+  Init();
+}
+
+void UiRenderer::Init() {
   std::vector<std::uint8_t> font_data =
       ReadData("../assets/Roboto-Regular.ttf");
   stbtt_fontinfo font;
@@ -107,6 +111,12 @@ UiRenderer::UiRenderer()
   LoadAtlasInfo("../assets/TexCoordsInfo.txt");
 }
 
+void UiRenderer::DeInit() {
+  glDeleteVertexArrays(1, &vao_);
+  glDeleteBuffers(1, &vbo_);
+  glDeleteBuffers(1, &ebo_);
+}
+
 void UiRenderer::LoadAtlasInfo(const std::string& filepath) {
   std::ifstream file(filepath);
   if (!file.is_open()) {
@@ -178,6 +188,15 @@ void UiRenderer::Render() {
   vbo_data_text_.clear();
 }
 
+SpriteUv UiRenderer::GetSpriteUvs(const std::string& name) {
+  auto it = sprite_atlas_.find(std::string(name));
+  if (it == sprite_atlas_.end()) {
+    std::cerr << "Warning: Sprite not found: " << name << "\n";
+    return sprite_atlas_.at("PressedKey");
+  }
+  return it->second;
+}
+
 void UiRenderer::AddSprite(std::string_view name, glm::vec2 position_pix,
                            glm::vec2 size_pix, glm::vec4 color) {
   if (color == glm::vec4(1.0f)) {
@@ -188,17 +207,17 @@ void UiRenderer::AddSprite(std::string_view name, glm::vec2 position_pix,
     std::cerr << "Warning: Sprite not found: " << name << "\n";
     return;
   }
-  const SpriteUV& uv = it->second;
+  const SpriteUv& uv = it->second;
 
   float x0 = position_pix.x;
   float y0 = position_pix.y;
   float x1 = position_pix.x + size_pix.x;
   float y1 = position_pix.y + size_pix.y;
 
-  Vertex v0{{x0, y0}, {uv.min_uv.x, uv.max_uv.y}, color};
-  Vertex v1{{x0, y1}, {uv.min_uv.x, uv.min_uv.y}, color};
-  Vertex v2{{x1, y1}, {uv.max_uv.x, uv.min_uv.y}, color};
-  Vertex v3{{x1, y0}, {uv.max_uv.x, uv.max_uv.y}, color};
+  Vertex v0{{x0, y0}, {uv.min.x, uv.max.y}, color};
+  Vertex v1{{x0, y1}, {uv.min.x, uv.min.y}, color};
+  Vertex v2{{x1, y1}, {uv.max.x, uv.min.y}, color};
+  Vertex v3{{x1, y0}, {uv.max.x, uv.max.y}, color};
 
   vbo_data_ui_.push_back(v0);
   vbo_data_ui_.push_back(v1);
